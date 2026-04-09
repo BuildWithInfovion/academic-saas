@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/BuildWithInfovion/academic-saas/issues"
   },
-  "homepage": "https://github.com/BuildWithInfovion/academic-saas#readme"
+  "homepage": "https://github.com/BuildWithInfovion/academic-saas#readme",
+  "devDependencies": {
+    "prisma": "^7.4.1"
+  }
 }
