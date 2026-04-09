@@ -1,28 +1,39 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { ReactNode, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
-import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
-import PortalShell from '@/components/portal-shell';
+import { getRoleRoute } from '@/lib/auth-utils';
 
-const PORTAL_ROLES = {
+const PORTAL_ROLES: Record<string, string[]> = {
   director: ['super_admin'],
   principal: ['principal'],
   teacher: ['teacher'],
   student: ['student'],
   parent: ['parent'],
+  receptionist: ['receptionist'],
 };
 
-type PortalLayoutProps = {
-  children: ReactNode;
-  params: { role: keyof typeof PORTAL_ROLES };
-};
-
-export default function PortalLayout({
-  children,
-  params,
-}: PortalLayoutProps) {
+export default function PortalLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const accessToken
+  const params = useParams();
+  const role = params?.role as string;
+  const { accessToken, user } = useAuthStore();
+
+  useEffect(() => {
+    if (!accessToken || !user) {
+      router.replace('/');
+      return;
+    }
+
+    const allowedRoles = PORTAL_ROLES[role];
+    if (!allowedRoles) return;
+
+    const hasRole = user.roles.some((r: string) => allowedRoles.includes(r));
+    if (!hasRole) {
+      router.replace(getRoleRoute(user.roles));
+    }
+  }, [accessToken, user, role, router]);
+
+  return <>{children}</>;
+}
