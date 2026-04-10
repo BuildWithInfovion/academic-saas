@@ -1,4 +1,7 @@
-FROM node:20-alpine
+FROM node:20-slim
+
+# Required for Prisma on Debian slim
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -17,5 +20,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Start — NestJS builds to dist/src/main.js
+# Start
 CMD ["node", "dist/src/main"]
