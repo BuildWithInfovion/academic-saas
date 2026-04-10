@@ -262,6 +262,21 @@ export class AcademicService {
     });
   }
 
+  /**
+   * For a teacher: all units where they are assigned as subject teacher.
+   * Returns { academicUnit, subject } pairs.
+   */
+  async getMySubjectUnits(institutionId: string, userId: string) {
+    return this.prisma.academicUnitSubject.findMany({
+      where: { institutionId, teacherUserId: userId },
+      select: {
+        academicUnit: { select: { id: true, name: true, displayName: true } },
+        subject: { select: { id: true, name: true, code: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   // ── Academic Years ──────────────────────────────────────────────────────────
 
   async getYears(institutionId: string) {

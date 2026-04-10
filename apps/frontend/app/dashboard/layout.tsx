@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
 
-const DASHBOARD_ROLES = ['admin'];
+const DASHBOARD_ROLES = ['admin', 'super_admin'];
 
 const Icons: Record<string, () => JSX.Element> = {
   overview:   () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
@@ -23,6 +23,7 @@ const Icons: Record<string, () => JSX.Element> = {
   staff:      () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   announce:   () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>,
   settings:   () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>,
+  staff_att:  () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>,
 };
 
 const menuGroups = [
@@ -49,13 +50,23 @@ const menuGroups = [
   {
     label: 'Finance & Staff',
     items: [
-      { label: 'Fees',          path: '/dashboard/fees',          icon: 'fees'     },
-      { label: 'Staff',         path: '/dashboard/staff',         icon: 'staff'    },
-      { label: 'Announcements', path: '/dashboard/announcements', icon: 'announce' },
-      { label: 'Settings',      path: '/dashboard/settings',      icon: 'settings' },
+      { label: 'Fees',              path: '/dashboard/fees',              icon: 'fees'      },
+      { label: 'Staff',             path: '/dashboard/staff',             icon: 'staff'     },
+      { label: 'Staff Attendance',  path: '/dashboard/staff-attendance',  icon: 'staff_att' },
+      { label: 'Announcements',     path: '/dashboard/announcements',     icon: 'announce'  },
+      { label: 'Settings',          path: '/dashboard/settings',          icon: 'settings'  },
     ],
   },
 ];
+
+function displayName(email?: string | null, phone?: string | null): string {
+  if (email) {
+    const prefix = email.split('@')[0];
+    return prefix.replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  if (phone) return phone;
+  return 'User';
+}
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router      = useRouter();
@@ -64,12 +75,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const user        = useAuthStore((s) => s.user);
   const loadAuth    = useAuthStore((s) => s.loadAuth);
   const logout      = useAuthStore((s) => s.logout);
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [logoError,  setLogoError]  = useState(false);
+  const [isHydrated, setIsHydrated]   = useState(false);
+  const [logoError,  setLogoError]    = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => { loadAuth(); }, [loadAuth]);
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setIsHydrated(true); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -81,96 +95,166 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (!isHydrated || !accessToken) return null;
 
   const roleLabel = user ? getRoleLabel(user.roles) : '';
+  const userName  = user ? displayName(user.email, user.phone) : '';
+
+  const sidebarContent = (
+    <div className="overflow-y-auto flex-1 flex flex-col">
+      {/* Brand — Infovion logo only */}
+      <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
+        <div className="flex items-center justify-between">
+          {!logoError ? (
+            <Image
+              src="/logo.png"
+              alt="Infovion"
+              width={100}
+              height={40}
+              style={{ objectFit: 'contain', width: 'auto', maxHeight: 36 }}
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <p className="font-bold text-sm" style={{ color: '#f7c576', letterSpacing: '0.08em' }}>
+              INFOVION
+            </p>
+          )}
+          {/* Close button — mobile */}
+          <button
+            className="lg:hidden p-1 rounded"
+            onClick={() => setSidebarOpen(false)}
+            style={{ color: '#c4956a' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div className="mt-3">
+          <span className="badge badge-violet text-[10px]">{roleLabel}</span>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav className="px-2 pt-3 pb-4 flex-1">
+        {menuGroups.map((group) => (
+          <div key={group.label}>
+            <p className="sidebar-section-label">{group.label}</p>
+            {group.items.map((item) => {
+              const active = pathname === item.path ||
+                (item.path !== '/dashboard' && pathname.startsWith(item.path));
+              const IconComp = Icons[item.icon];
+              return (
+                <div key={item.path} onClick={() => router.push(item.path)}
+                  className={`sidebar-item ${active ? 'active' : ''}`}>
+                  <span className="shrink-0" style={{ opacity: active ? 0.9 : 0.55 }}>
+                    <IconComp />
+                  </span>
+                  {item.label}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="px-4 py-4" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+            style={{ background: 'rgba(220,146,75,0.25)', border: '1px solid rgba(220,146,75,0.3)' }}>
+            {(user?.email?.[0] ?? user?.phone?.[0] ?? 'U').toUpperCase()}
+          </div>
+          <p className="text-xs truncate" style={{ color: '#9b7050' }}>{user?.email || user?.phone}</p>
+        </div>
+        <button
+          onClick={() => { logout(); localStorage.removeItem('auth'); window.location.href = '/'; }}
+          className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+          style={{ color: '#6b7280' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sign out
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
 
-      {/* ── Sidebar (stays dark) ── */}
-      <aside className="sidebar w-56 flex flex-col justify-between shrink-0 h-screen sticky top-0 z-20">
-        {/* Brand */}
-        <div className="overflow-y-auto flex-1">
-          <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
-            {/* Logo — apps/frontend/public/logo.png */}
-            <div className="mb-3">
-              {!logoError ? (
-                <Image
-                  src="/logo.png"
-                  alt="Infovion"
-                  width={110}
-                  height={56}
-                  style={{ objectFit: 'contain', width: 'auto', maxHeight: 44 }}
-                  onError={() => setLogoError(true)}
-                />
-              ) : (
-                <p className="font-bold text-sm" style={{ color: '#f7c576', letterSpacing: '0.08em' }}>
-                  INFOVION
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="min-w-0">
-                <p className="text-white text-xs font-semibold truncate leading-tight">
-                  {user?.institutionName || 'School'}
-                </p>
-                <p className="text-[10px] mt-0.5" style={{ color: '#4a2a18' }}>Powered by Infovion</p>
-              </div>
-            </div>
-            <span className="badge badge-violet text-[10px]">{roleLabel}</span>
-          </div>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-          {/* Nav */}
-          <nav className="px-2 pt-3 pb-4">
-            {menuGroups.map((group) => (
-              <div key={group.label}>
-                <p className="sidebar-section-label">{group.label}</p>
-                {group.items.map((item) => {
-                  const active = pathname === item.path ||
-                    (item.path !== '/dashboard' && pathname.startsWith(item.path));
-                  const IconComp = Icons[item.icon];
-                  return (
-                    <div key={item.path} onClick={() => router.push(item.path)}
-                      className={`sidebar-item ${active ? 'active' : ''}`}>
-                      <span className="shrink-0" style={{ opacity: active ? 0.9 : 0.55 }}>
-                        <IconComp />
-                      </span>
-                      {item.label}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 py-4" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-              style={{ background: 'rgba(124,58,237,0.3)', border: '1px solid rgba(124,58,237,0.2)' }}>
-              {(user?.email?.[0] ?? user?.phone?.[0] ?? 'U').toUpperCase()}
-            </div>
-            <p className="text-xs truncate" style={{ color: '#4b5563' }}>{user?.email || user?.phone}</p>
-          </div>
-          <button
-            onClick={() => { logout(); localStorage.removeItem('auth'); window.location.href = '/'; }}
-            className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-            style={{ color: '#6b7280' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            Sign out
-          </button>
-        </div>
+      {/* Sidebar */}
+      <aside
+        className={`
+          sidebar flex flex-col justify-between shrink-0 h-screen sticky top-0 z-40
+          w-56 transition-transform duration-200
+          lg:translate-x-0
+          ${sidebarOpen ? 'translate-x-0 fixed' : '-translate-x-full fixed lg:relative'}
+        `}
+      >
+        {sidebarContent}
       </aside>
 
-      {/* ── Light content area ── */}
-      <main className="flex-1 overflow-auto">
-        {children}
+      {/* Content */}
+      <main className="flex-1 overflow-auto flex flex-col min-h-screen">
+        {/* Top bar */}
+        <header
+          className="sticky top-0 z-20 flex items-center justify-between px-5 py-3"
+          style={{
+            background: 'var(--surface)',
+            borderBottom: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            {/* Hamburger — mobile */}
+            <button
+              className="lg:hidden p-1.5 rounded-lg"
+              style={{ color: 'var(--text-2)' }}
+              onClick={() => setSidebarOpen(true)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+            <div>
+              <p className="text-sm font-bold leading-tight" style={{ color: 'var(--text-1)' }}>
+                {user?.institutionName || 'School Portal'}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Management Dashboard</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+              style={{ background: 'var(--brand)' }}
+            >
+              {(user?.email?.[0] ?? user?.phone?.[0] ?? 'U').toUpperCase()}
+            </div>
+            <div className="hidden sm:block text-right">
+              <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--text-1)' }}>
+                {userName}
+              </p>
+              <p className="text-[10px]" style={{ color: 'var(--text-3)' }}>{roleLabel}</p>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1">
+          {children}
+        </div>
       </main>
     </div>
   );

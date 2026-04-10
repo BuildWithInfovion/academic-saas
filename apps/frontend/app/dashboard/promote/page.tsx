@@ -27,8 +27,14 @@ export default function PromotePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const assigned = units.filter((u) => u.classTeacher);
-  const unassigned = units.filter((u) => !u.classTeacher);
+  const naturalSort = (a: string, b: string) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+  const sortUnits = (arr: ClassTeacherUnit[]) =>
+    [...arr].sort((a, b) => naturalSort(unitLabel(a), unitLabel(b)));
+
+  const assigned = sortUnits(units.filter((u) => u.classTeacher));
+  const unassigned = sortUnits(units.filter((u) => !u.classTeacher));
 
   return (
     <div className="p-8 max-w-4xl">

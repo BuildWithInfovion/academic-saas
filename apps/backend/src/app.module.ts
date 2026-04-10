@@ -16,6 +16,7 @@ import { FeesModule } from './modules/fees/fees.module';
 import { ExamModule } from './modules/exam/exam.module';
 import { AnnouncementModule } from './modules/announcement/announcement.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
+import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
 import { PlatformModule } from './platform/platform.module';
 
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
@@ -43,6 +44,7 @@ import { AppService } from './app.service';
     ExamModule,
     AnnouncementModule,
     TimetableModule,
+    StaffAttendanceModule,
     PlatformModule,
   ],
   controllers: [AppController],

@@ -20,7 +20,7 @@
   /* ── Sidebar (rich dark brown) ── */
   --sidebar-bg:               #2d1a0e;
   --sidebar-border:           rgba(247, 197, 118, 0.08);
-  --sidebar-text:             #ae7040;
+  --sidebar-text:             #c4956a;
   --sidebar-item-hover-bg:    rgba(247, 197, 118, 0.07);
   --sidebar-item-active-bg:   rgba(220, 146, 75, 0.18);
   --sidebar-item-active-text: #f7c576;
@@ -154,8 +154,8 @@ body {
   box-shadow: 2px 0 6px rgba(220,146,75,0.5);
 }
 .sidebar-section-label {
-  font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: #4a2a18;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: #7a5538;
   padding: 0 10px; margin-top: 18px; margin-bottom: 3px;
 }
 

@@ -112,6 +112,14 @@ export class AcademicController {
     return this.academicService.getMyClassUnits(institutionId, userId);
   }
 
+  /** GET /academic/my-subject-units — unit+subject pairs where logged-in teacher teaches */
+  @Get('my-subject-units')
+  getMySubjectUnits(@Req() req: any) {
+    const institutionId = this.resolveInstitutionId(req);
+    const userId = String(req.user?.userId ?? '');
+    return this.academicService.getMySubjectUnits(institutionId, userId);
+  }
+
   /** PATCH /academic/units/:unitId/class-teacher — assign class teacher */
   @Patch('units/:unitId/class-teacher')
   setClassTeacher(

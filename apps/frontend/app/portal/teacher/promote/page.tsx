@@ -52,16 +52,22 @@ export default function TeacherPromotePage() {
   const [result, setResult] = useState<{ updated: number; action: string; targetUnitName?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const naturalSort = (a: string, b: string) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  const sortByLabel = <T extends { name: string; displayName: string | null; parent?: { name: string; displayName: string | null } | null }>(arr: T[]) =>
+    [...arr].sort((a, b) => naturalSort(unitLabel(a), unitLabel(b)));
+
   const loadClasses = useCallback(() => {
     Promise.all([
       apiFetch('/academic/my-class-units'),
       apiFetch('/academic/units/leaf'),
     ])
       .then(([owned, leaf]: unknown[]) => {
-        setMyClasses(Array.isArray(owned) ? (owned as MyClassUnit[]) : []);
-        setAllLeafUnits(Array.isArray(leaf) ? (leaf as LeafUnit[]) : []);
+        setMyClasses(sortByLabel(Array.isArray(owned) ? (owned as MyClassUnit[]) : []));
+        setAllLeafUnits(sortByLabel(Array.isArray(leaf) ? (leaf as LeafUnit[]) : []));
       })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { loadClasses(); }, [loadClasses]);

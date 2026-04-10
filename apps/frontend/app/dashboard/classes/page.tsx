@@ -173,12 +173,20 @@ export default function ClassesPage() {
     return acc;
   }, {});
 
-  // Sort groups — put "No Parent" last
-  const groupEntries = Object.entries(grouped).sort(([a], [b]) => {
-    if (a === 'No Parent') return 1;
-    if (b === 'No Parent') return -1;
-    return a.localeCompare(b);
-  });
+  // Natural numeric sort (Class 1, 2, 3 … 10, 11 — not 1, 10, 11, 2 …)
+  const naturalSort = (a: string, b: string) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+  // Sort groups — put "No Parent" last, others numerically
+  const groupEntries = Object.entries(grouped)
+    .sort(([a], [b]) => {
+      if (a === 'No Parent') return 1;
+      if (b === 'No Parent') return -1;
+      return naturalSort(a, b);
+    })
+    .map(([key, units]) => [key, [...units].sort((a, b) => naturalSort(
+      a.displayName || a.name, b.displayName || b.name,
+    ))] as [string, ClassUnit[]]);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">

@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { getRoleRoute } from '@/lib/auth-utils';
 
+// Portal roles where multiple assignments cause ambiguity
+const PORTAL_ROLES = ['principal', 'teacher', 'student', 'parent', 'receptionist'];
+
 export default function LoginPage() {
   const router  = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -15,6 +18,7 @@ export default function LoginPage() {
   const [email,           setEmail]           = useState('');
   const [password,        setPassword]        = useState('');
   const [loading,         setLoading]         = useState(false);
+  const [loadStep,        setLoadStep]        = useState(0); // 0=idle 1=verifying 2=authenticating 3=redirecting
   const [error,           setError]           = useState<string | null>(null);
   const [showForgot,      setShowForgot]      = useState(false);
   const [fpCode,          setFpCode]          = useState('');
@@ -27,22 +31,32 @@ export default function LoginPage() {
     if (!institutionCode.trim()) return setError('School code is required');
     if (!email.trim())           return setError('Email or phone is required');
     if (!password.trim())        return setError('Password is required');
-    setLoading(true); setError(null);
+    setLoading(true); setLoadStep(1); setError(null);
     try {
+      // Step 1 — verify institution + credentials
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/login`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ institutionCode: institutionCode.trim().toLowerCase(), email: email.trim(), password }),
       });
+      setLoadStep(2); // authenticating
       if (!res.ok) { const j = await res.json().catch(() => null); throw new Error(j?.message || 'Login failed'); }
       const data = await res.json();
       if (!data.accessToken) throw new Error('No token received from server');
+      const roles: string[] = data.user.roles ?? [];
       setAuth({
         accessToken: data.accessToken, refreshToken: data.refreshToken,
         user: { email: data.user.email, phone: data.user.phone, institutionId: data.user.institutionId,
-          institutionName: data.user.institutionName, roles: data.user.roles ?? [] },
+          institutionName: data.user.institutionName, roles },
       });
-      router.push(getRoleRoute(data.user.roles ?? []));
-    } catch (err) { setError(err instanceof Error ? err.message : 'Login failed'); }
+      setLoadStep(3); // redirecting
+      // If user has multiple portal roles, show a role-selection screen
+      const portalRoles = roles.filter((r) => PORTAL_ROLES.includes(r));
+      if (portalRoles.length > 1) {
+        router.push('/portal/select-role');
+      } else {
+        router.push(getRoleRoute(roles));
+      }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Login failed'); setLoadStep(0); }
     finally { setLoading(false); }
   };
 
@@ -345,11 +359,22 @@ export default function LoginPage() {
           <button onClick={handleLogin} disabled={loading} className="btn-primary w-full mt-5 fade-up-3"
             style={{ padding:'12px', fontSize:'14.5px', borderRadius:'10px' }}>
             {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
-                </svg>
-                Signing in…
+              <span className="flex flex-col items-center gap-1.5">
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
+                  </svg>
+                  {loadStep === 1 && 'Verifying credentials…'}
+                  {loadStep === 2 && 'Authenticating…'}
+                  {loadStep === 3 && 'Logging you in…'}
+                </span>
+                {/* Progress dots */}
+                <span className="flex gap-1">
+                  {[1,2,3].map((s) => (
+                    <span key={s} className="inline-block rounded-full transition-all duration-300"
+                      style={{ width: loadStep >= s ? 20 : 6, height: 4, background: loadStep >= s ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)' }} />
+                  ))}
+                </span>
               </span>
             ) : (
               <span className="flex items-center justify-center gap-2">
