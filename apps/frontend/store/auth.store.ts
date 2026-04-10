@@ -1,12 +1,12 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 type User = {
   email: string;
   phone?: string;
   institutionId: string;
   institutionName?: string;
-  roles: string[]; // e.g. ['super_admin', 'teacher']
+  roles: string[];
 };
 
 type AuthState = {
@@ -50,6 +50,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth',
+      // sessionStorage is tab-isolated — two different users in two tabs
+      // no longer overwrite each other's token. Survives page refresh
+      // but resets when the tab is closed (re-login required on new tab).
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,

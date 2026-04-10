@@ -116,7 +116,7 @@ export default function SelectRolePage() {
 
           <div className="px-5 pb-5">
             <button
-              onClick={() => { logout(); localStorage.removeItem('auth'); window.location.href = '/'; }}
+              onClick={() => { logout(); sessionStorage.removeItem('auth'); window.location.href = '/'; }}
               className="w-full text-xs font-medium py-2 rounded-lg transition-colors"
               style={{ color: 'var(--text-3)', background: 'transparent' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
