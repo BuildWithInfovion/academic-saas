@@ -17,5 +17,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Start
-CMD ["node", "dist/main"]
+# Start — NestJS builds to dist/src/main.js
+CMD ["node", "dist/src/main"]
