@@ -55,9 +55,16 @@ export class UsersService {
       where: { id: userId, institutionId, deletedAt: null },
     });
     if (!user) throw new NotFoundException('User not found');
+
+    // Revoke all active refresh tokens so the account cannot silently refresh
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, institutionId, isRevoked: false },
+      data: { isRevoked: true },
+    });
+
     return this.prisma.user.update({
       where: { id: userId },
-      data: { deletedAt: new Date() },
+      data: { deletedAt: new Date(), isActive: false },
     });
   }
 
