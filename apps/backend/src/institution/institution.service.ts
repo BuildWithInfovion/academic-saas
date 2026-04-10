@@ -75,6 +75,25 @@ export class InstitutionService {
     return this.prisma.institution.findMany();
   }
 
+  async findById(institutionId: string) {
+    return this.prisma.institution.findUnique({ where: { id: institutionId } });
+  }
+
+  async updateProfile(institutionId: string, dto: {
+    name?: string;
+    institutionType?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+    board?: string;
+  }) {
+    return this.prisma.institution.update({
+      where: { id: institutionId },
+      data: dto,
+    });
+  }
+
   async setCode(institutionId: string, code: string) {
     return this.prisma.institution.update({
       where: { id: institutionId },

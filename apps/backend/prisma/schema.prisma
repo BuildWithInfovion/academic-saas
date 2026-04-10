@@ -15,6 +15,11 @@ model Institution {
   institutionType String
   status          String    @default("active")
   features        Json?
+  address         String?
+  phone           String?
+  email           String?
+  website         String?
+  board           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?

@@ -16,8 +16,8 @@ type Assignments = {
   }[];
 };
 
-// Staff roles only — excludes student, parent, super_admin
-const STAFF_ROLE_CODES = ['admin', 'principal', 'teacher', 'receptionist'];
+// Staff roles only — excludes student, parent
+const STAFF_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist'];
 
 const ROLE_BADGE: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700',

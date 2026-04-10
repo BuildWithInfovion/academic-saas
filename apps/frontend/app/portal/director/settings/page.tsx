@@ -1,28 +1,554 @@
 'use client';
 
-export default function DirectorSettingsPage() {
-  return (
-    <div className="p-8 max-w-3xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Institution Settings</h1>
-      <p className="text-sm text-gray-400 mb-8">Configure institution details, academic structure, and system preferences</p>
+import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api';
 
-      <div className="space-y-4">
-        {[
-          { title: 'Institution Profile', desc: 'Name, address, logo, contact details, affiliation board' },
-          { title: 'Academic Year Management', desc: 'Create and manage academic years, set current year' },
-          { title: 'Class Structure', desc: 'Add or manage divisions, sections, and class hierarchy' },
-          { title: 'Fee Configuration', desc: 'Manage fee heads and default fee structures per class' },
-          { title: 'Subject Master', desc: 'Institution-wide subject catalogue' },
-          { title: 'Notification Settings', desc: 'SMS/email gateway configuration' },
-        ].map((item) => (
-          <div key={item.title} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
-            </div>
-            <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full">Coming soon</span>
-          </div>
+// ── Types ─────────────────────────────────────────────────────────────────────
+type Institution = {
+  id: string; name: string; code: string; institutionType: string;
+  address?: string; phone?: string; email?: string; website?: string; board?: string;
+};
+type AcademicYear = { id: string; name: string; startDate: string; endDate: string; isCurrent: boolean };
+type AcademicUnit = { id: string; name: string; displayName?: string; level: number; parentId?: string };
+type FeeHead = { id: string; name: string; isCustom: boolean };
+type Subject = { id: string; name: string };
+
+type Tab = 'profile' | 'years' | 'classes' | 'fees' | 'subjects';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'profile', label: 'Institution Profile' },
+  { id: 'years', label: 'Academic Years' },
+  { id: 'classes', label: 'Class Structure' },
+  { id: 'fees', label: 'Fee Heads' },
+  { id: 'subjects', label: 'Subject Master' },
+];
+
+const inp = 'w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white';
+
+// ── Main Component ─────────────────────────────────────────────────────────────
+export default function DirectorSettingsPage() {
+  const [tab, setTab] = useState<Tab>('profile');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 3500); };
+  const showError = (msg: string) => { setError(msg); setTimeout(() => setError(null), 5000); };
+
+  return (
+    <div className="p-8 max-w-4xl">
+      <h1 className="text-2xl font-bold text-gray-800 mb-1">Institution Settings</h1>
+      <p className="text-sm text-gray-400 mb-6">Configure institution details, academic structure, and system preferences</p>
+
+      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+
+      {/* Tab bar */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 overflow-x-auto">
+        {TABS.map((t) => (
+          <button key={t.id} onClick={() => { setTab(t.id); setError(null); setSuccess(null); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}>
+            {t.label}
+          </button>
         ))}
+      </div>
+
+      {tab === 'profile' && <ProfileTab showSuccess={showSuccess} showError={showError} />}
+      {tab === 'years' && <YearsTab showSuccess={showSuccess} showError={showError} />}
+      {tab === 'classes' && <ClassesTab showSuccess={showSuccess} showError={showError} />}
+      {tab === 'fees' && <FeeHeadsTab showSuccess={showSuccess} showError={showError} />}
+      {tab === 'subjects' && <SubjectsTab showSuccess={showSuccess} showError={showError} />}
+    </div>
+  );
+}
+
+// ── Tab: Institution Profile ──────────────────────────────────────────────────
+function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => void; showError: (m: string) => void }) {
+  const [inst, setInst] = useState<Institution | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: '', institutionType: '', address: '', phone: '', email: '', website: '', board: '' });
+
+  useEffect(() => {
+    apiFetch('/institution/me')
+      .then((data: Institution) => {
+        setInst(data);
+        setForm({
+          name: data.name ?? '',
+          institutionType: data.institutionType ?? '',
+          address: data.address ?? '',
+          phone: data.phone ?? '',
+          email: data.email ?? '',
+          website: data.website ?? '',
+          board: data.board ?? '',
+        });
+      })
+      .catch((e: any) => showError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify(form) });
+      showSuccess('Institution profile updated');
+    } catch (e: any) { showError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return <p className="text-sm text-gray-400">Loading...</p>;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          <label className="text-xs font-medium text-gray-600 block mb-1">Institution Name *</label>
+          <input className={inp} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">Type</label>
+          <select className={inp} value={form.institutionType} onChange={(e) => setForm((f) => ({ ...f, institutionType: e.target.value }))}>
+            <option value="school">School</option>
+            <option value="college">College</option>
+            <option value="coaching">Coaching</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">Affiliation Board</label>
+          <input className={inp} placeholder="e.g. CBSE, ICSE, SSC" value={form.board} onChange={(e) => setForm((f) => ({ ...f, board: e.target.value }))} />
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs font-medium text-gray-600 block mb-1">Address</label>
+          <input className={inp} placeholder="Full address" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">Phone</label>
+          <input className={inp} placeholder="Contact number" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">Email</label>
+          <input type="email" className={inp} placeholder="institution@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">Website</label>
+          <input className={inp} placeholder="https://yourschool.edu.in" value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">Login Code</label>
+          <input className={inp + ' bg-gray-50 text-gray-400'} value={inst?.code ?? ''} readOnly />
+          <p className="text-[10px] text-gray-400 mt-1">Code used by staff/students to log in. Contact platform admin to change.</p>
+        </div>
+      </div>
+      <button onClick={handleSave} disabled={saving}
+        className="mt-6 bg-black text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+        {saving ? 'Saving...' : 'Save Changes'}
+      </button>
+    </div>
+  );
+}
+
+// ── Tab: Academic Years ───────────────────────────────────────────────────────
+function YearsTab({ showSuccess, showError }: { showSuccess: (m: string) => void; showError: (m: string) => void }) {
+  const [years, setYears] = useState<AcademicYear[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: '', startDate: '', endDate: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [settingCurrent, setSettingCurrent] = useState<string | null>(null);
+
+  const load = () => apiFetch('/academic/years').then(setYears).catch((e: any) => showError(e.message)).finally(() => setLoading(false));
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async () => {
+    if (!form.name.trim() || !form.startDate || !form.endDate) return showError('All fields are required');
+    setSubmitting(true);
+    try {
+      await apiFetch('/academic/years', { method: 'POST', body: JSON.stringify(form) });
+      showSuccess('Academic year created');
+      setShowForm(false);
+      setForm({ name: '', startDate: '', endDate: '' });
+      await load();
+    } catch (e: any) { showError(e.message); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleSetCurrent = async (id: string) => {
+    setSettingCurrent(id);
+    try {
+      await apiFetch(`/academic/years/${id}/set-current`, { method: 'PATCH' });
+      showSuccess('Current year updated');
+      await load();
+    } catch (e: any) { showError(e.message); }
+    finally { setSettingCurrent(null); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button onClick={() => setShowForm(!showForm)}
+          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+          + New Academic Year
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 className="font-semibold text-gray-800 text-sm mb-4">Create Academic Year</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-1">
+              <label className="text-xs font-medium text-gray-600 block mb-1">Name *</label>
+              <input className={inp} placeholder="e.g. 2025-26" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Start Date *</label>
+              <input type="date" className={inp} value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">End Date *</label>
+              <input type="date" className={inp} value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button onClick={() => setShowForm(false)} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+            <button onClick={handleCreate} disabled={submitting} className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+              {submitting ? 'Creating...' : 'Create Year'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? <p className="p-6 text-sm text-gray-400">Loading...</p> : years.length === 0 ? (
+          <p className="p-6 text-sm text-gray-400">No academic years yet. Create one above.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Name</th>
+                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Period</th>
+                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Status</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {years.map((y) => (
+                <tr key={y.id} className="hover:bg-gray-50">
+                  <td className="px-5 py-3 font-medium text-gray-800">{y.name}</td>
+                  <td className="px-5 py-3 text-gray-500 text-xs">
+                    {new Date(y.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} —{' '}
+                    {new Date(y.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="px-5 py-3">
+                    {y.isCurrent ? (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Current</span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">Inactive</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    {!y.isCurrent && (
+                      <button onClick={() => handleSetCurrent(y.id)} disabled={settingCurrent === y.id}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50">
+                        {settingCurrent === y.id ? 'Setting...' : 'Set Current'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Class Structure ──────────────────────────────────────────────────────
+function ClassesTab({ showSuccess, showError }: { showSuccess: (m: string) => void; showError: (m: string) => void }) {
+  const [units, setUnits] = useState<AcademicUnit[]>([]);
+  const [years, setYears] = useState<AcademicYear[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: '', displayName: '', level: '1', parentId: '', academicYearId: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const load = async () => {
+    try {
+      const [u, y] = await Promise.all([apiFetch('/academic/units'), apiFetch('/academic/years')]);
+      setUnits(u);
+      setYears(y);
+      if (!form.academicYearId) {
+        const current = (y as AcademicYear[]).find((yr) => yr.isCurrent);
+        if (current) setForm((f) => ({ ...f, academicYearId: current.id }));
+      }
+    } catch (e: any) { showError(e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async () => {
+    if (!form.name.trim()) return showError('Class name is required');
+    setSubmitting(true);
+    try {
+      await apiFetch('/academic/units', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: form.name.trim(),
+          displayName: form.displayName.trim() || undefined,
+          level: parseInt(form.level),
+          parentId: form.parentId || undefined,
+          academicYearId: form.academicYearId || undefined,
+        }),
+      });
+      showSuccess('Class created');
+      setShowForm(false);
+      setForm((f) => ({ ...f, name: '', displayName: '', level: '1', parentId: '' }));
+      await load();
+    } catch (e: any) { showError(e.message); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Delete class "${name}"? This cannot be undone.`)) return;
+    setDeleting(id);
+    try {
+      await apiFetch(`/academic/units/${id}`, { method: 'DELETE' });
+      showSuccess('Class deleted');
+      await load();
+    } catch (e: any) { showError(e.message); }
+    finally { setDeleting(null); }
+  };
+
+  const rootUnits = units.filter((u) => !u.parentId);
+  const childUnits = (parentId: string) => units.filter((u) => u.parentId === parentId);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button onClick={() => setShowForm(!showForm)}
+          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+          + Add Class / Section
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 className="font-semibold text-gray-800 text-sm mb-4">Create Class or Section</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Name * (e.g. Class 10, Div A)</label>
+              <input className={inp} placeholder="Class 10" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Display Name (optional)</label>
+              <input className={inp} placeholder="10th Standard" value={form.displayName} onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Level (1 = class, 2 = section)</label>
+              <select className={inp} value={form.level} onChange={(e) => setForm((f) => ({ ...f, level: e.target.value }))}>
+                <option value="1">1 — Class / Grade</option>
+                <option value="2">2 — Section / Division</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Parent Class (for sections)</label>
+              <select className={inp} value={form.parentId} onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}>
+                <option value="">None (top-level)</option>
+                {rootUnits.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Academic Year</label>
+              <select className={inp} value={form.academicYearId} onChange={(e) => setForm((f) => ({ ...f, academicYearId: e.target.value }))}>
+                <option value="">None</option>
+                {years.map((y) => <option key={y.id} value={y.id}>{y.name}{y.isCurrent ? ' (Current)' : ''}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button onClick={() => setShowForm(false)} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+            <button onClick={handleCreate} disabled={submitting} className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+              {submitting ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? <p className="p-6 text-sm text-gray-400">Loading...</p> : units.length === 0 ? (
+          <p className="p-6 text-sm text-gray-400">No classes yet. Add one above.</p>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {rootUnits.map((unit) => (
+              <div key={unit.id}>
+                <div className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
+                  <div>
+                    <span className="font-medium text-gray-800 text-sm">{unit.displayName || unit.name}</span>
+                    {unit.displayName && unit.displayName !== unit.name && <span className="text-xs text-gray-400 ml-2">({unit.name})</span>}
+                    <span className="ml-2 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]">Level {unit.level}</span>
+                  </div>
+                  <button onClick={() => handleDelete(unit.id, unit.displayName || unit.name)}
+                    disabled={deleting === unit.id}
+                    className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50">
+                    {deleting === unit.id ? '...' : 'Delete'}
+                  </button>
+                </div>
+                {childUnits(unit.id).map((child) => (
+                  <div key={child.id} className="flex items-center justify-between px-5 py-2.5 pl-10 bg-gray-50/50 hover:bg-gray-100/50 border-t border-gray-50">
+                    <div>
+                      <span className="text-sm text-gray-700">{child.displayName || child.name}</span>
+                      <span className="ml-2 px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[10px]">Section</span>
+                    </div>
+                    <button onClick={() => handleDelete(child.id, child.displayName || child.name)}
+                      disabled={deleting === child.id}
+                      className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50">
+                      {deleting === child.id ? '...' : 'Delete'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Fee Heads ────────────────────────────────────────────────────────────
+function FeeHeadsTab({ showSuccess, showError }: { showSuccess: (m: string) => void; showError: (m: string) => void }) {
+  const [heads, setHeads] = useState<FeeHead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const load = () => apiFetch('/fees/heads').then(setHeads).catch((e: any) => showError(e.message)).finally(() => setLoading(false));
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async () => {
+    if (!newName.trim()) return showError('Fee head name is required');
+    setAdding(true);
+    try {
+      await apiFetch('/fees/heads', { method: 'POST', body: JSON.stringify({ name: newName.trim() }) });
+      showSuccess('Fee head added');
+      setNewName('');
+      await load();
+    } catch (e: any) { showError(e.message); }
+    finally { setAdding(false); }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Delete fee head "${name}"?`)) return;
+    setDeleting(id);
+    try {
+      await apiFetch(`/fees/heads/${id}`, { method: 'DELETE' });
+      showSuccess('Fee head deleted');
+      await load();
+    } catch (e: any) { showError(e.message); }
+    finally { setDeleting(null); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex gap-3">
+        <input className={inp} placeholder="e.g. Hostel Fee, Bus Fee" value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
+        <button onClick={handleAdd} disabled={adding}
+          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 shrink-0">
+          {adding ? 'Adding...' : '+ Add'}
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? <p className="p-6 text-sm text-gray-400">Loading...</p> : heads.length === 0 ? (
+          <p className="p-6 text-sm text-gray-400">No fee heads yet.</p>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {heads.map((h) => (
+              <div key={h.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-800">{h.name}</span>
+                  {!h.isCustom && <span className="px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded text-[10px]">Default</span>}
+                </div>
+                <button onClick={() => handleDelete(h.id, h.name)} disabled={deleting === h.id}
+                  className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50">
+                  {deleting === h.id ? '...' : 'Delete'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Subject Master ───────────────────────────────────────────────────────
+function SubjectsTab({ showSuccess, showError }: { showSuccess: (m: string) => void; showError: (m: string) => void }) {
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const load = () => apiFetch('/subjects').then(setSubjects).catch((e: any) => showError(e.message)).finally(() => setLoading(false));
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async () => {
+    if (!newName.trim()) return showError('Subject name is required');
+    setAdding(true);
+    try {
+      await apiFetch('/subjects', { method: 'POST', body: JSON.stringify({ name: newName.trim() }) });
+      showSuccess('Subject added');
+      setNewName('');
+      await load();
+    } catch (e: any) { showError(e.message); }
+    finally { setAdding(false); }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Delete subject "${name}"?`)) return;
+    setDeleting(id);
+    try {
+      await apiFetch(`/subjects/${id}`, { method: 'DELETE' });
+      showSuccess('Subject deleted');
+      await load();
+    } catch (e: any) { showError(e.message); }
+    finally { setDeleting(null); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex gap-3">
+        <input className={inp} placeholder="e.g. Environmental Science, Economics" value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
+        <button onClick={handleAdd} disabled={adding}
+          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 shrink-0">
+          {adding ? 'Adding...' : '+ Add'}
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? <p className="p-6 text-sm text-gray-400">Loading...</p> : subjects.length === 0 ? (
+          <p className="p-6 text-sm text-gray-400">No subjects yet.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-0 divide-y divide-gray-50">
+            {subjects.map((s) => (
+              <div key={s.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50">
+                <span className="text-sm text-gray-800">{s.name}</span>
+                <button onClick={() => handleDelete(s.id, s.name)} disabled={deleting === s.id}
+                  className="text-xs text-red-400 hover:text-red-600 font-medium disabled:opacity-50 ml-2">
+                  {deleting === s.id ? '...' : '×'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
