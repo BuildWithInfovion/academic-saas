@@ -29,7 +29,7 @@ export default function LoginPage() {
     if (!password.trim())        return setError('Password is required');
     setLoading(true); setError(null);
     try {
-      const res = await fetch('http://localhost:3000/auth/login', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/login`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ institutionCode: institutionCode.trim().toLowerCase(), email: email.trim(), password }),
       });
@@ -56,7 +56,7 @@ export default function LoginPage() {
     if (!fpIdentifier.trim()) return setFpError('Phone number or email is required');
     setFpLoading(true); setFpError(null);
     try {
-      const res = await fetch('http://localhost:3000/auth/forgot-password', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/forgot-password`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ institutionCode: fpCode.trim().toLowerCase(), identifier: fpIdentifier.trim() }),
       });

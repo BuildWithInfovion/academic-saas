@@ -21,7 +21,7 @@ export default function PlatformLoginPage() {
     setError(null);
 
     try {
-      const res = await fetch('http://localhost:3000/platform/auth/login', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/platform/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
