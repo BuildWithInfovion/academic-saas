@@ -49,8 +49,14 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function generatePassword(): string {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#';
-  return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const upper = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+  const lower = 'abcdefghjkmnpqrstuvwxyz';
+  const digits = '23456789';
+  const all = upper + lower + digits;
+  const rand = (s: string) => s[Math.floor(Math.random() * s.length)];
+  // Guarantee at least one uppercase, lowercase, digit
+  return rand(upper) + rand(lower) + rand(digits) +
+    Array.from({ length: 7 }, () => rand(all)).join('');
 }
 
 export default function StudentProfilePage() {

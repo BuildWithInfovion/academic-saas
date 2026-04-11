@@ -31,14 +31,14 @@ export default function DashboardPage() {
   useEffect(() => { loadAuth(); }, [loadAuth]);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/'); return; }
+    if (!isAuthenticated) return; // layout already handles redirect
     Promise.all([apiFetch('/students/count'), apiFetch('/academic/years')])
       .then(([s, y]) => {
-        setStats(s);
-        const years: AcademicYear[] = Array.isArray(y) ? y : y.data || [];
+        setStats(s as Stats);
+        const years: AcademicYear[] = Array.isArray(y) ? y : ((y as { data?: AcademicYear[] }).data ?? []);
         setCurrentYear(years.find((yr) => yr.isCurrent) ?? null);
       }).catch(() => {});
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) return (
     <div className="min-h-screen flex items-center justify-center">

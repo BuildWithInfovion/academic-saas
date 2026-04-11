@@ -35,7 +35,13 @@ export class UsersController {
 
   @Get()
   @Permissions('users.read')
-  findAll(@Tenant() tenant: TenantContext, @Query('role') role?: string) {
+  findAll(
+    @Tenant() tenant: TenantContext,
+    @Query('role') role?: string,
+    @Query('phone') phone?: string,
+    @Query('email') email?: string,
+  ) {
+    if (phone || email) return this.usersService.findByIdentifier(tenant.institutionId, phone, email);
     if (role) return this.usersService.findByRole(tenant.institutionId, role);
     return this.usersService.findAll(tenant.institutionId);
   }
@@ -58,9 +64,6 @@ export class UsersController {
   ) {
     if (!oldPassword || !newPassword) {
       throw new BadRequestException('oldPassword and newPassword are required');
-    }
-    if (newPassword.length < 6) {
-      throw new BadRequestException('New password must be at least 6 characters');
     }
     return this.usersService.changePassword(
       tenant.institutionId,

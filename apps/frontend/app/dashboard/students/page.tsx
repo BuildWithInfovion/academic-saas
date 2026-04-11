@@ -364,12 +364,11 @@ export default function StudentsPage() {
     setFoundUser(null);
     setLinkUserId('');
     try {
-      const users = await apiFetch('/users') as { id: string; email?: string; phone?: string; roles: { role: { code: string } }[] }[];
-      const match = users.find(
-        (u) =>
-          (u.phone && u.phone === identifier.trim()) ||
-          (u.email && u.email.toLowerCase() === identifier.trim().toLowerCase()),
-      );
+      const id = identifier.trim();
+      const isEmail = id.includes('@');
+      const param = isEmail ? `email=${encodeURIComponent(id)}` : `phone=${encodeURIComponent(id)}`;
+      const users = await apiFetch(`/users?${param}`) as { id: string; email?: string; phone?: string }[];
+      const match = Array.isArray(users) && users.length > 0 ? users[0] : null;
       if (match) {
         setFoundUser({ id: match.id, email: match.email, phone: match.phone });
         setLinkUserId(match.id);
@@ -400,9 +399,16 @@ export default function StudentsPage() {
     setLinking(true);
     setError(null);
     try {
-      // 1. Create parent user account using phone as identifier
-      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-      const tempPwd = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      // Generate a compliant temp password: uppercase + lowercase + digits (min 8)
+      const upper = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+      const lower = 'abcdefghjkmnpqrstuvwxyz';
+      const digits = '23456789';
+      const all = upper + lower + digits;
+      const rand = (s: string) => s[Math.floor(Math.random() * s.length)];
+      const tempPwd = rand(upper) + rand(lower) + rand(digits) +
+        Array.from({ length: 5 }, () => rand(all)).join('');
+
+      // 1. Create parent user with role assigned atomically
       const newUser = await apiFetch('/users', {
         method: 'POST',
         body: JSON.stringify({ phone, password: tempPwd, role: 'parent' }),
@@ -412,7 +418,7 @@ export default function StudentsPage() {
         method: 'POST',
         body: JSON.stringify({ userId: newUser.id, role: 'parent' }),
       });
-      showSuccess(`Parent account created (${phone} / ${tempPwd}) and linked`);
+      showSuccess(`Parent account created — Phone: ${phone} · Password: ${tempPwd}`);
       setLinkingStudent(null);
       await fetchStudents();
     } catch (e: any) { setError(e.message || 'Failed to create account'); } finally { setLinking(false); }
