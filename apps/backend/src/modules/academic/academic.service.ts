@@ -13,6 +13,26 @@ export class CreateAcademicYearDto {
   isCurrent?: boolean;
 }
 
+/** Natural numeric sort — "Class 2" < "Class 10", "LKG" < "UKG" < "Class 1" */
+function naturalLabel(unit: { name: string; displayName?: string | null }): string {
+  return (unit.displayName || unit.name).toLowerCase();
+}
+
+const FIXED_ORDER = ['lkg', 'ukg', 'kg', 'nursery', 'pp1', 'pp2'];
+
+function naturalSort<T extends { name: string; displayName?: string | null }>(arr: T[]): T[] {
+  return [...arr].sort((a, b) => {
+    const la = naturalLabel(a);
+    const lb = naturalLabel(b);
+    const ai = FIXED_ORDER.findIndex((k) => la.includes(k));
+    const bi = FIXED_ORDER.findIndex((k) => lb.includes(k));
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return la.localeCompare(lb, undefined, { numeric: true, sensitivity: 'base' });
+  });
+}
+
 @Injectable()
 export class AcademicService {
   constructor(private prisma: PrismaService) {}
@@ -46,7 +66,7 @@ export class AcademicService {
       if (!existing) { seen.set(key, unit); continue; }
       if (unit._count.students > existing._count.students) seen.set(key, unit);
     }
-    return Array.from(seen.values());
+    return naturalSort(Array.from(seen.values()));
   }
 
   async getLeafUnits(institutionId: string) {
@@ -84,7 +104,7 @@ export class AcademicService {
         (u._count.students > 0 ? 2 : 0) + (u.classTeacherUserId ? 1 : 0);
       if (score(unit) > score(existing)) seen.set(key, unit);
     }
-    return Array.from(seen.values());
+    return naturalSort(Array.from(seen.values()));
   }
 
   /** Root-level classes only (parentId = null) — used for admission class dropdown */
@@ -116,7 +136,7 @@ export class AcademicService {
       const existing = seen.get(key);
       if (!existing || unit._count.students > existing._count.students) seen.set(key, unit);
     }
-    return Array.from(seen.values());
+    return naturalSort(Array.from(seen.values()));
   }
 
   async getUnitById(institutionId: string, unitId: string) {
@@ -270,7 +290,7 @@ export class AcademicService {
         parent: { select: { id: true, name: true, displayName: true } },
         _count: { select: { students: true } },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { createdAt: 'asc' },
     });
 
     // Deduplicate by displayName/name — keep the record with students > teacher > latest
@@ -285,7 +305,7 @@ export class AcademicService {
       if (unitScore > existingScore) seen.set(key, unit);
     }
 
-    return Array.from(seen.values());
+    return naturalSort(Array.from(seen.values()));
   }
 
   /**
