@@ -130,8 +130,6 @@ export class AcademicController {
 
   /** PATCH /academic/units/:unitId/class-teacher — assign class teacher */
   @Patch('units/:unitId/class-teacher')
-  @UseGuards(RolesGuard)
-  @Permissions('academic.write')
   setClassTeacher(
     @Req() req: any,
     @Param('unitId') unitId: string,
@@ -147,8 +145,6 @@ export class AcademicController {
 
   /** DELETE /academic/units/:unitId/class-teacher — remove class teacher assignment */
   @Delete('units/:unitId/class-teacher')
-  @UseGuards(RolesGuard)
-  @Permissions('academic.write')
   removeClassTeacher(@Req() req: any, @Param('unitId') unitId: string) {
     const institutionId = this.resolveInstitutionId(req);
     return this.academicService.removeClassTeacher(institutionId, unitId);

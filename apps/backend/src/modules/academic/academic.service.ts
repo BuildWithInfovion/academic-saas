@@ -20,7 +20,7 @@ export class AcademicService {
   // ── Units (read) ───────────────────────────────────────────────────────────
 
   async getUnits(institutionId: string) {
-    return this.prisma.academicUnit.findMany({
+    const raw = await this.prisma.academicUnit.findMany({
       where: { institutionId, deletedAt: null },
       select: {
         id: true,
@@ -33,9 +33,20 @@ export class AcademicService {
         classTeacher: {
           select: { id: true, email: true, phone: true },
         },
+        _count: { select: { students: true } },
       },
       orderBy: { level: 'asc' },
     });
+    // Deduplicate root-level units by displayName — keep the one with students
+    const seen = new Map<string, typeof raw[0]>();
+    for (const unit of raw) {
+      if (unit.parentId !== null) { seen.set(unit.id, unit); continue; } // sections always kept as-is
+      const key = (unit.displayName || unit.name).toLowerCase().trim();
+      const existing = seen.get(key);
+      if (!existing) { seen.set(key, unit); continue; }
+      if (unit._count.students > existing._count.students) seen.set(key, unit);
+    }
+    return Array.from(seen.values());
   }
 
   async getLeafUnits(institutionId: string) {
@@ -63,7 +74,7 @@ export class AcademicService {
 
   /** Root-level classes only (parentId = null) — used for admission class dropdown */
   async getRootClasses(institutionId: string) {
-    return this.prisma.academicUnit.findMany({
+    const raw = await this.prisma.academicUnit.findMany({
       where: {
         institutionId,
         deletedAt: null,
@@ -79,9 +90,18 @@ export class AcademicService {
           select: { id: true, name: true, displayName: true },
           orderBy: { createdAt: 'asc' },
         },
+        _count: { select: { students: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
+    // Deduplicate by displayName — keep the unit with the most students
+    const seen = new Map<string, typeof raw[0]>();
+    for (const unit of raw) {
+      const key = (unit.displayName || unit.name).toLowerCase().trim();
+      const existing = seen.get(key);
+      if (!existing || unit._count.students > existing._count.students) seen.set(key, unit);
+    }
+    return Array.from(seen.values());
   }
 
   async getUnitById(institutionId: string, unitId: string) {
@@ -233,11 +253,24 @@ export class AcademicService {
           select: { id: true, email: true, phone: true },
         },
         parent: { select: { id: true, name: true, displayName: true } },
+        _count: { select: { students: true } },
       },
       orderBy: { name: 'asc' },
     });
 
-    return units;
+    // Deduplicate by displayName/name — keep the record with students > teacher > latest
+    const seen = new Map<string, typeof units[0]>();
+    for (const unit of units) {
+      const key = (unit.displayName || unit.name).toLowerCase().trim();
+      const existing = seen.get(key);
+      if (!existing) { seen.set(key, unit); continue; }
+      // Prefer: has students, then has teacher, then keep existing
+      const unitScore = (unit._count.students > 0 ? 2 : 0) + (unit.classTeacherUserId ? 1 : 0);
+      const existingScore = (existing._count.students > 0 ? 2 : 0) + (existing.classTeacherUserId ? 1 : 0);
+      if (unitScore > existingScore) seen.set(key, unit);
+    }
+
+    return Array.from(seen.values());
   }
 
   /**
