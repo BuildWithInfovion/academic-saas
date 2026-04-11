@@ -43,7 +43,11 @@ export class SubjectController {
   }
 
   @Delete('units/:unitId/:subjectId')
-  unassign(@Param('unitId') unitId: string, @Param('subjectId') subjectId: string) {
-    return this.subjectService.removeSubjectFromUnit(unitId, subjectId);
+  unassign(
+    @Request() req: any,
+    @Param('unitId') unitId: string,
+    @Param('subjectId') subjectId: string,
+  ) {
+    return this.subjectService.removeSubjectFromUnit(req.tenant?.institutionId, unitId, subjectId);
   }
 }

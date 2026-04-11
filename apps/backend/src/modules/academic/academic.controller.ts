@@ -12,6 +12,8 @@ import {
 import { AcademicService, CreateAcademicYearDto } from './academic.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 interface CreateUnitDto {
   name: string;
@@ -74,12 +76,16 @@ export class AcademicController {
   }
 
   @Post('units')
+  @UseGuards(RolesGuard)
+  @Permissions('academic.write')
   createUnit(@Req() req: any, @Body() dto: CreateUnitDto) {
     const institutionId = this.resolveInstitutionId(req);
     return this.academicService.createUnit(institutionId, dto);
   }
 
   @Patch('units/:unitId')
+  @UseGuards(RolesGuard)
+  @Permissions('academic.write')
   updateUnit(
     @Req() req: any,
     @Param('unitId') unitId: string,
@@ -90,6 +96,8 @@ export class AcademicController {
   }
 
   @Delete('units/:unitId')
+  @UseGuards(RolesGuard)
+  @Permissions('academic.write')
   deleteUnit(@Req() req: any, @Param('unitId') unitId: string) {
     const institutionId = this.resolveInstitutionId(req);
     return this.academicService.deleteUnit(institutionId, unitId);
@@ -122,6 +130,8 @@ export class AcademicController {
 
   /** PATCH /academic/units/:unitId/class-teacher — assign class teacher */
   @Patch('units/:unitId/class-teacher')
+  @UseGuards(RolesGuard)
+  @Permissions('academic.write')
   setClassTeacher(
     @Req() req: any,
     @Param('unitId') unitId: string,
@@ -137,6 +147,8 @@ export class AcademicController {
 
   /** DELETE /academic/units/:unitId/class-teacher — remove class teacher assignment */
   @Delete('units/:unitId/class-teacher')
+  @UseGuards(RolesGuard)
+  @Permissions('academic.write')
   removeClassTeacher(@Req() req: any, @Param('unitId') unitId: string) {
     const institutionId = this.resolveInstitutionId(req);
     return this.academicService.removeClassTeacher(institutionId, unitId);
@@ -158,12 +170,16 @@ export class AcademicController {
   }
 
   @Post('years')
+  @UseGuards(RolesGuard)
+  @Permissions('academic.write')
   createYear(@Req() req: any, @Body() dto: CreateAcademicYearDto) {
     const institutionId = this.resolveInstitutionId(req);
     return this.academicService.createYear(institutionId, dto);
   }
 
   @Patch('years/:id/set-current')
+  @UseGuards(RolesGuard)
+  @Permissions('academic.write')
   setCurrentYear(@Req() req: any, @Param('id') id: string) {
     const institutionId = this.resolveInstitutionId(req);
     return this.academicService.setCurrentYear(institutionId, id);

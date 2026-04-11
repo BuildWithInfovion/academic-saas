@@ -40,18 +40,18 @@ export class ExamController {
 
   // Exam subjects
   @Get(':id/subjects')
-  getSubjects(@Param('id') id: string) {
-    return this.examService.getExamSubjects(id);
+  getSubjects(@Request() req: any, @Param('id') id: string) {
+    return this.examService.getExamSubjects(req.tenant?.institutionId, id);
   }
 
   @Post(':id/subjects')
-  addSubject(@Param('id') id: string, @Body() dto: AddExamSubjectDto) {
-    return this.examService.addExamSubject(id, dto);
+  addSubject(@Request() req: any, @Param('id') id: string, @Body() dto: AddExamSubjectDto) {
+    return this.examService.addExamSubject(req.tenant?.institutionId, id, dto);
   }
 
   @Delete(':id/subjects/:subjectEntryId')
-  removeSubject(@Param('id') id: string, @Param('subjectEntryId') subjectEntryId: string) {
-    return this.examService.removeExamSubject(id, subjectEntryId);
+  removeSubject(@Request() req: any, @Param('id') id: string, @Param('subjectEntryId') subjectEntryId: string) {
+    return this.examService.removeExamSubject(req.tenant?.institutionId, id, subjectEntryId);
   }
 
   // Mark entry

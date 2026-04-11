@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface SaveSlotDto {
@@ -37,6 +37,13 @@ export class TimetableService {
   }
 
   async saveSlot(institutionId: string, academicUnitId: string, dto: SaveSlotDto) {
+    // Verify the academic unit belongs to the caller's institution before writing
+    const unit = await this.prisma.academicUnit.findFirst({
+      where: { id: academicUnitId, institutionId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!unit) throw new ForbiddenException('Academic unit not found in your institution');
+
     return this.prisma.timetableSlot.upsert({
       where: {
         academicUnitId_dayOfWeek_periodNo: {

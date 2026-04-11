@@ -1,6 +1,6 @@
 import {
   IsNotEmpty, IsOptional, IsString, IsNumber, IsBoolean,
-  IsDateString, IsIn, IsArray, ValidateNested, Min, Max,
+  IsDateString, IsArray, ValidateNested, Min, Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -33,10 +33,14 @@ export class AddExamSubjectDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(1)
+  @Max(1000)
   maxMarks?: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(1000)
   passingMarks?: number;
 
   @IsOptional()

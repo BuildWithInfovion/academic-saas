@@ -11,6 +11,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 import { AuthGuard } from '../../common/guards/auth.guard';
+import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -18,6 +19,7 @@ export class AuthController {
 
   // 🔐 LOGIN — institution code in body, no header needed
   @Post('login')
+  @UseGuards(LoginRateLimitGuard)
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto.institutionCode, dto.email, dto.password);
   }

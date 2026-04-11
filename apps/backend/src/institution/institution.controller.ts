@@ -2,6 +2,8 @@ import { Controller, Post, Body, Get, Patch, Param, Req, UseGuards } from '@nest
 import { InstitutionService } from './institution.service';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 interface CreateInstitutionDto {
   name: string;
@@ -24,16 +26,24 @@ interface UpdateInstitutionDto {
 export class InstitutionController {
   constructor(private readonly institutionService: InstitutionService) {}
 
+  // Platform-level operation — protected; direct HTTP access requires institution.write
   @Post()
+  @UseGuards(AuthGuard, TenantGuard, RolesGuard)
+  @Permissions('institution.write')
   async create(
     @Body() createInstitutionDto: CreateInstitutionDto,
   ): Promise<unknown> {
     return this.institutionService.create(createInstitutionDto);
   }
 
+  // Requires auth — no cross-tenant listing exposed to anonymous callers
   @Get()
-  async findAll() {
-    return this.institutionService.findAll();
+  @UseGuards(AuthGuard, TenantGuard, RolesGuard)
+  @Permissions('institution.read')
+  async findAll(@Req() req: any) {
+    // Scope to caller's institution only — never return all institutions
+    const institutionId = req.tenant?.institutionId ?? req.user?.institutionId;
+    return this.institutionService.findById(institutionId);
   }
 
   // GET /institution/me — returns current tenant's institution profile
@@ -54,6 +64,8 @@ export class InstitutionController {
 
   // POST /institution/:id/seed-defaults — seeds standard fee heads + subjects
   @Post(':id/seed-defaults')
+  @UseGuards(AuthGuard, TenantGuard, RolesGuard)
+  @Permissions('institution.write')
   async seedDefaults(
     @Param('id') id: string,
     @Body() body: { institutionType?: string },
@@ -61,8 +73,10 @@ export class InstitutionController {
     return this.institutionService.seedDefaults(id, body.institutionType);
   }
 
-  // PATCH /institution/:id/code — set or update the institution login code
+  // POST /institution/:id/set-code — set or update the institution login code
   @Post(':id/set-code')
+  @UseGuards(AuthGuard, TenantGuard, RolesGuard)
+  @Permissions('institution.write')
   async setCode(
     @Param('id') id: string,
     @Body() body: { code: string },

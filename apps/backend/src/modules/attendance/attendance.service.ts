@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SaveAttendanceDto } from './dto/attendance.dto';
 
@@ -9,6 +9,18 @@ export class AttendanceService {
   async save(institutionId: string, takenByUserId: string, dto: SaveAttendanceDto) {
     const date = new Date(dto.date);
     const subjectId = dto.subjectId ?? null;
+
+    // Verify all student IDs belong to this institution — prevents cross-tenant injection
+    if (dto.records.length > 0) {
+      const studentIds = dto.records.map((r) => r.studentId);
+      const validStudents = await this.prisma.student.findMany({
+        where: { id: { in: studentIds }, institutionId, deletedAt: null },
+        select: { id: true },
+      });
+      if (validStudents.length !== studentIds.length) {
+        throw new ForbiddenException('One or more student IDs do not belong to your institution');
+      }
+    }
 
     // Find or create the session (upsert can't match null in compound unique)
     let session = await this.prisma.attendanceSession.findFirst({

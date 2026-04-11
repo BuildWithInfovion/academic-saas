@@ -43,7 +43,10 @@ export class ExamService {
 
   // ── Exam Subjects ─────────────────────────────────────────────────────────
 
-  async getExamSubjects(examId: string) {
+  async getExamSubjects(institutionId: string, examId: string) {
+    // Verify exam belongs to caller's institution before returning subjects
+    const exam = await this.prisma.exam.findFirst({ where: { id: examId, institutionId } });
+    if (!exam) throw new NotFoundException('Exam not found');
     return this.prisma.examSubject.findMany({
       where: { examId },
       include: { subject: true, academicUnit: { select: { id: true, name: true, displayName: true } } },
@@ -51,7 +54,10 @@ export class ExamService {
     });
   }
 
-  async addExamSubject(examId: string, dto: AddExamSubjectDto) {
+  async addExamSubject(institutionId: string, examId: string, dto: AddExamSubjectDto) {
+    // Verify exam belongs to caller's institution before modifying
+    const exam = await this.prisma.exam.findFirst({ where: { id: examId, institutionId } });
+    if (!exam) throw new NotFoundException('Exam not found');
     return this.prisma.examSubject.upsert({
       where: { examId_academicUnitId_subjectId: { examId, academicUnitId: dto.academicUnitId, subjectId: dto.subjectId } },
       create: {
@@ -70,7 +76,9 @@ export class ExamService {
     });
   }
 
-  async removeExamSubject(examId: string, id: string) {
+  async removeExamSubject(institutionId: string, examId: string, id: string) {
+    const exam = await this.prisma.exam.findFirst({ where: { id: examId, institutionId } });
+    if (!exam) throw new NotFoundException('Exam not found');
     return this.prisma.examSubject.deleteMany({ where: { id, examId } });
   }
 

@@ -139,6 +139,7 @@ async function main() {
         'attendance.read', 'attendance.write',
         'exams.read', 'exams.write',
         'subjects.read', 'subjects.write',
+        'academic.read', 'academic.write',
         'institution.read', 'institution.write',
       ],
     },
@@ -153,6 +154,7 @@ async function main() {
         'attendance.read', 'attendance.write',
         'exams.read', 'exams.write',
         'subjects.read', 'subjects.write',
+        'academic.read', 'academic.write',
       ],
     },
     {
@@ -260,6 +262,12 @@ async function main() {
   }
 
   console.log('\n🎉 Seed complete!');
+  console.log('\n⚠️  SECURITY WARNING ─────────────────────────────────────────────');
+  console.log('   Default credentials are active. Change them immediately:');
+  console.log('   Director  → admin@infovion.in    / admin123');
+  console.log('   Operator  → operator@infovion.in / operator123');
+  console.log('   Use the dashboard to update passwords before going to production.');
+  console.log('──────────────────────────────────────────────────────────────────\n');
 }
 
 main()

@@ -143,11 +143,6 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: storedToken.id },
-      data: { isRevoked: true },
-    });
-
     const roles = this.extractRoles(user.roles);
     const permissions = this.extractPermissions(user.roles);
 
@@ -159,15 +154,35 @@ export class AuthService {
       permissions,
     };
 
+    // Sign new access token before the transaction so we don't hold a DB
+    // transaction open during the async JWT operation.
     const newAccessToken = await this.jwtService.signAsync(payload);
-    const newRefreshToken = await this.generateRefreshToken(
-      user.id,
-      user.institutionId,
-    );
+
+    // Generate raw refresh token and its hash before the transaction
+    const rawToken = crypto.randomBytes(64).toString('hex');
+    const newTokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Revoke old token and create new one atomically — no window where both are valid
+    await this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.update({
+        where: { id: storedToken.id },
+        data: { isRevoked: true },
+      });
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          institutionId: user.institutionId,
+          tokenHash: newTokenHash,
+          expiresAt,
+        },
+      });
+    });
 
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      refreshToken: rawToken,
     };
   }
 

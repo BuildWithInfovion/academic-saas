@@ -74,9 +74,9 @@ export class SubjectService {
     });
   }
 
-  async removeSubjectFromUnit(academicUnitId: string, subjectId: string) {
+  async removeSubjectFromUnit(institutionId: string, academicUnitId: string, subjectId: string) {
     const existing = await this.prisma.academicUnitSubject.findFirst({
-      where: { academicUnitId, subjectId },
+      where: { institutionId, academicUnitId, subjectId },
     });
     if (!existing) throw new NotFoundException('Assignment not found');
     return this.prisma.academicUnitSubject.delete({ where: { id: existing.id } });

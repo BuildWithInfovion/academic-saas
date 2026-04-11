@@ -99,6 +99,9 @@ export default function StudentsPage() {
   const [currentYearId, setCurrentYearId] = useState('');
   const [feeHeads, setFeeHeads] = useState<FeeHead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const PAGE_SIZE = 50;
 
   // Form
   const [form, setForm] = useState({ ...emptyForm });
@@ -147,26 +150,29 @@ export default function StudentsPage() {
     setTimeout(() => setSuccess(null), 4000);
   };
 
-  const fetchStudents = useCallback(async () => {
+  const fetchStudents = useCallback(async (p = page) => {
     try {
-      const res = await apiFetch('/students?page=1&limit=500');
+      const res = await apiFetch(`/students?page=${p}&limit=${PAGE_SIZE}`) as any;
       setStudents(res.data || res || []);
+      if (res.total !== undefined) setTotalStudents(res.total);
     } catch (err: any) {
       setError(err.message || 'Failed to load students');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     if (!isReady || !user?.institutionId) return;
     Promise.all([
-      apiFetch('/students?page=1&limit=500'),
+      apiFetch(`/students?page=${page}&limit=${PAGE_SIZE}`),
       apiFetch('/academic/units/classes'),
       apiFetch('/academic/years'),
       apiFetch('/fees/heads'),
     ]).then(([s, u, y, fh]) => {
-      setStudents((s as any).data || s || []);
+      const sr = s as any;
+      setStudents(sr.data || sr || []);
+      if (sr.total !== undefined) setTotalStudents(sr.total);
       setAcademicUnits(Array.isArray(u) ? u : []);
       const years: AcademicYear[] = Array.isArray(y) ? y : [];
       setAcademicYears(years);
@@ -174,7 +180,7 @@ export default function StudentsPage() {
       if (cur) setCurrentYearId(cur.id);
       setFeeHeads(Array.isArray(fh) ? fh : []);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [isReady, user?.institutionId]);
+  }, [isReady, user?.institutionId, page]);
 
   const resetForm = () => { setForm({ ...emptyForm }); setEditingId(null); setError(null); };
 
@@ -591,6 +597,32 @@ export default function StudentsPage() {
                 })}
             </tbody>
           </table>
+        )}
+
+        {/* Pagination */}
+        {!loading && students.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+            <span>
+              Page {page}
+              {totalStudents > 0 && ` · ${totalStudents} total students`}
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+              >
+                ← Prev
+              </button>
+              <button
+                disabled={students.length < PAGE_SIZE}
+                onClick={() => setPage((p) => p + 1)}
+                className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
