@@ -50,7 +50,7 @@ export class AcademicService {
   }
 
   async getLeafUnits(institutionId: string) {
-    return this.prisma.academicUnit.findMany({
+    const raw = await this.prisma.academicUnit.findMany({
       where: {
         institutionId,
         deletedAt: null,
@@ -67,9 +67,24 @@ export class AcademicService {
         classTeacher: {
           select: { id: true, email: true, phone: true },
         },
+        _count: { select: { students: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    // Deduplicate by displayName — keep the unit with most students
+    // (guards against duplicate units from multiple seed runs)
+    const seen = new Map<string, typeof raw[0]>();
+    for (const unit of raw) {
+      const key = (unit.displayName || unit.name).toLowerCase().trim();
+      const existing = seen.get(key);
+      if (!existing) { seen.set(key, unit); continue; }
+      // Prefer: has students, then has classTeacher, then keep existing
+      const score = (u: typeof raw[0]) =>
+        (u._count.students > 0 ? 2 : 0) + (u.classTeacherUserId ? 1 : 0);
+      if (score(unit) > score(existing)) seen.set(key, unit);
+    }
+    return Array.from(seen.values());
   }
 
   /** Root-level classes only (parentId = null) — used for admission class dropdown */

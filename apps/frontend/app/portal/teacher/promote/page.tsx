@@ -75,13 +75,11 @@ export default function TeacherPromotePage() {
   useEffect(() => {
     if (!sourceUnitId) { setStudents([]); setSelectedIds(new Set()); return; }
     setLoadingStudents(true);
-    apiFetch(`/students?page=1&limit=500`)
+    apiFetch(`/attendance/units/${sourceUnitId}/students`)
       .then((res: unknown) => {
-        const data = res as { data?: Student[] } | Student[];
-        const all: Student[] = Array.isArray(data) ? data : ((data as { data?: Student[] }).data ?? []);
-        const filtered = all.filter((s) => s.academicUnitId === sourceUnitId);
-        setStudents(filtered);
-        setSelectedIds(new Set(filtered.map((s) => s.id)));
+        const list: Student[] = Array.isArray(res) ? (res as Student[]) : [];
+        setStudents(list);
+        setSelectedIds(new Set(list.map((s) => s.id)));
       })
       .catch(() => setStudents([]))
       .finally(() => setLoadingStudents(false));
