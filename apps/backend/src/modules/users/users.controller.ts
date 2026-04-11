@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -76,6 +77,18 @@ export class UsersController {
     @Param('userId') userId: string,
   ) {
     return this.usersService.getAssignments(tenant.institutionId, userId);
+  }
+
+  /** Operator force-sets a password for any user in the institution */
+  @Patch(':userId/set-password')
+  @Permissions('users.write')
+  setPassword(
+    @Tenant() tenant: TenantContext,
+    @Param('userId') userId: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    if (!newPassword) throw new BadRequestException('newPassword is required');
+    return this.usersService.setPasswordByOperator(tenant.institutionId, userId, newPassword);
   }
 
   @Post(':userId/roles')

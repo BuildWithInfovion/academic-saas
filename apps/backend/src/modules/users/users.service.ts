@@ -111,6 +111,19 @@ export class UsersService {
     });
   }
 
+  /** Operator-level force reset — no old password required, scoped to institution */
+  async setPasswordByOperator(institutionId: string, userId: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 6)
+      throw new BadRequestException('Password must be at least 6 characters');
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, institutionId, deletedAt: null },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    const hash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: hash } });
+    return { message: 'Password updated' };
+  }
+
   async changePassword(
     institutionId: string,
     userId: string,

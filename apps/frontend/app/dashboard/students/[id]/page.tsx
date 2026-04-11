@@ -30,6 +30,9 @@ interface Student {
   tcFromPrevious?: string;
   tcPreviousInstitution?: string;
   createdAt: string;
+  academicUnit?: { id: string; displayName?: string; name?: string };
+  userAccount?: { id: string; email?: string; phone?: string; isActive: boolean } | null;
+  parentUser?: { id: string; email?: string; phone?: string; isActive: boolean } | null;
 }
 
 interface AcademicUnit { id: string; displayName?: string; name?: string; }
@@ -45,6 +48,11 @@ const STATUS_COLORS: Record<string, string> = {
   alumni: 'bg-blue-100 text-blue-700',
 };
 
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#';
+  return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
 export default function StudentProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -58,23 +66,31 @@ export default function StudentProfilePage() {
   const [form, setForm] = useState<Partial<Student>>({});
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [s, u] = await Promise.all([
-          apiFetch(`/students/${id}`),
-          apiFetch('/academic/units/leaf'),
-        ]);
-        setStudent(s as Student);
-        setUnits(Array.isArray(u) ? (u as AcademicUnit[]) : ((u as { data: AcademicUnit[] }).data || []));
-      } catch (err: unknown) {
-        setError((err as Error).message || 'Failed to load student');
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) void load();
-  }, [id]);
+  // Password reset state
+  const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  const [resetLabel, setResetLabel] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [resetDone, setResetDone] = useState<{ label: string; username: string; password: string } | null>(null);
+  const [resetting, setResetting] = useState(false);
+
+  const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 3000); };
+
+  const load = async () => {
+    try {
+      const [s, u] = await Promise.all([
+        apiFetch(`/students/${id}`),
+        apiFetch('/academic/units/leaf'),
+      ]);
+      setStudent(s as Student);
+      setUnits(Array.isArray(u) ? (u as AcademicUnit[]) : ((u as any).data || []));
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to load student');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { if (id) void load(); }, [id]);
 
   const startEdit = () => {
     if (!student) return;
@@ -106,12 +122,39 @@ export default function StudentProfilePage() {
       });
       setStudent(updated as Student);
       setEditing(false);
-      setSuccess('Student updated');
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess('Student updated');
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to update student');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openResetModal = (userId: string, label: string, username: string) => {
+    setResettingUserId(userId);
+    setResetLabel(label);
+    const generated = generatePassword();
+    setNewPwd(generated);
+    setResetDone(null);
+    // Store username for display after reset
+    (openResetModal as any)._username = username;
+  };
+
+  const handleReset = async () => {
+    if (!resettingUserId || !newPwd) return;
+    setResetting(true);
+    setError(null);
+    try {
+      await apiFetch(`/users/${resettingUserId}/set-password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ newPassword: newPwd }),
+      });
+      const username = (openResetModal as any)._username || '—';
+      setResetDone({ label: resetLabel, username, password: newPwd });
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to reset password');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -122,13 +165,13 @@ export default function StudentProfilePage() {
   if (error && !student) return <div className="p-10 text-red-500">{error}</div>;
   if (!student) return null;
 
-  const unit = units.find((u) => u.id === student.academicUnitId);
+  const unit = units.find((u) => u.id === student.academicUnitId) ?? student.academicUnit;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <button onClick={() => router.push('/dashboard/students')}
+      <button onClick={() => router.push('/dashboard/students/directory')}
         className="text-sm text-gray-500 hover:text-gray-700 mb-6 flex items-center gap-1">
-        ← Back to Students
+        ← Back to Directory
       </button>
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
@@ -137,16 +180,21 @@ export default function StudentProfilePage() {
       {/* Header */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-4">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{student.firstName} {student.lastName}</h1>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-sm text-gray-500 font-mono">{student.admissionNo}</span>
-              {student.rollNo && <span className="text-sm text-gray-500">Roll: {student.rollNo}</span>}
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[student.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                {student.status}
-              </span>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-xl font-bold text-indigo-700 shrink-0">
+              {student.firstName[0]}{student.lastName[0]}
             </div>
-            <div className="mt-1 text-sm text-gray-500">{unit?.displayName || unit?.name || 'No class assigned'}</div>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">{student.firstName} {student.lastName}</h1>
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                <span className="text-sm text-gray-500 font-mono">{student.admissionNo}</span>
+                {student.rollNo && <span className="text-sm text-gray-500">Roll: {student.rollNo}</span>}
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[student.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                  {student.status}
+                </span>
+              </div>
+              <div className="mt-1 text-sm text-gray-500">{unit?.displayName || unit?.name || 'No class assigned'}</div>
+            </div>
           </div>
           {!editing && (
             <button onClick={startEdit}
@@ -268,8 +316,144 @@ export default function StudentProfilePage() {
             <Row label="Incoming TC" value={TC_LABELS[student.tcFromPrevious ?? ''] ?? student.tcFromPrevious ?? '—'} />
             <Row label="Previous Institution" value={student.tcPreviousInstitution ?? '—'} />
           </InfoCard>
+
+          {/* Portal Access Card — spans full width */}
+          <div className="col-span-2">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Portal Access &amp; Credentials</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Parent Portal */}
+                <CredentialCard
+                  label="Parent Portal"
+                  user={student.parentUser}
+                  onReset={(userId, username) => openResetModal(userId, 'Parent Portal', username)}
+                />
+                {/* Student Portal */}
+                <CredentialCard
+                  label="Student Portal"
+                  user={student.userAccount}
+                  onReset={(userId, username) => openResetModal(userId, 'Student Portal', username)}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* ── Reset Password Modal ── */}
+      {resettingUserId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            {resetDone ? (
+              /* Success — show credentials */
+              <div>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-lg font-bold text-gray-800 text-center mb-1">Password Reset</h2>
+                <p className="text-xs text-gray-400 text-center mb-5">Share these credentials. Password will not be shown again.</p>
+                <div className="bg-gray-50 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Portal</p>
+                    <p className="text-gray-700 font-medium font-sans">{resetDone.label}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Username</p>
+                    <p className="text-gray-800 font-medium">{resetDone.username}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">New Password</p>
+                    <p className="text-gray-800 font-bold tracking-wider text-base">{resetDone.password}</p>
+                  </div>
+                </div>
+                <button onClick={() => { setResettingUserId(null); setResetDone(null); }}
+                  className="w-full bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800">
+                  Done
+                </button>
+              </div>
+            ) : (
+              /* Confirm reset */
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 mb-1">Reset Password</h2>
+                <p className="text-xs text-gray-400 mb-4">{resetLabel} — a new password will be generated and set immediately.</p>
+                {error && <p className="text-red-600 text-xs mb-3">{error}</p>}
+                <div className="mb-4">
+                  <label className="text-xs font-medium text-gray-600 block mb-1">New Password</label>
+                  <div className="flex gap-2">
+                    <input type="text"
+                      className="flex-1 border border-gray-300 rounded-lg p-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-black"
+                      value={newPwd}
+                      onChange={(e) => setNewPwd(e.target.value)}
+                    />
+                    <button type="button"
+                      onClick={() => setNewPwd(generatePassword())}
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium whitespace-nowrap">
+                      Regenerate
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => { setResettingUserId(null); setError(null); }}
+                    className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm hover:bg-gray-50">
+                    Cancel
+                  </button>
+                  <button onClick={handleReset} disabled={resetting || !newPwd}
+                    className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                    {resetting ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Portal credential card ────────────────────────────────────────────────────
+function CredentialCard({
+  label, user, onReset,
+}: {
+  label: string;
+  user?: { id: string; email?: string; phone?: string; isActive: boolean } | null;
+  onReset: (userId: string, username: string) => void;
+}) {
+  if (!user) {
+    return (
+      <div className="rounded-lg border border-dashed border-gray-200 p-4">
+        <p className="text-xs font-semibold text-gray-500 mb-2">{label}</p>
+        <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Not linked</span>
+      </div>
+    );
+  }
+  const username = user.email || user.phone || 'No username';
+  return (
+    <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-gray-700">{label}</p>
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+          {user.isActive ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+      <div className="bg-gray-50 rounded-lg p-3 space-y-2 font-mono text-xs">
+        <div>
+          <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Username</p>
+          <p className="text-gray-800 font-medium">{username}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Password</p>
+          <p className="text-gray-400 italic font-sans text-xs">Hidden — use Reset to set a new one</p>
+        </div>
+      </div>
+      <button
+        onClick={() => onReset(user.id, username)}
+        className="w-full text-xs bg-gray-800 text-white py-1.5 rounded-lg hover:bg-gray-700 font-medium"
+      >
+        Reset Password
+      </button>
     </div>
   );
 }
