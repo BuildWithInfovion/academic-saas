@@ -27,6 +27,12 @@ export class StaffAttendanceController {
     return this.svc.markOwn(this.institutionId(req), this.userId(req), body.status, body.note);
   }
 
+  /** POST /staff-attendance/clock-out — staff clocks out for today */
+  @Post('clock-out')
+  clockOut(@Req() req: any) {
+    return this.svc.clockOut(this.institutionId(req), this.userId(req));
+  }
+
   /** GET /staff-attendance/my?year=2026&month=4 — own monthly attendance */
   @Get('my')
   getMyAttendance(@Req() req: any, @Query('year') year: string, @Query('month') month: string) {

@@ -595,6 +595,7 @@ model StaffAttendance {
   date          DateTime @db.Date
   status        String   // present | absent | late | half_day
   clockIn       DateTime?
+  clockOut      DateTime?
   note          String?
   markedById    String?  // self-marked = userId; admin override = admin userId
   createdAt     DateTime @default(now())

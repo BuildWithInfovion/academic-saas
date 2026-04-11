@@ -283,6 +283,7 @@ export class StudentService {
     page: number,
     limit: number,
     search?: string,
+    unitId?: string,
   ) {
     const skip = (page - 1) * limit;
 
@@ -291,11 +292,16 @@ export class StudentService {
       deletedAt: null,
     };
 
+    if (unitId) {
+      whereCondition.academicUnitId = unitId;
+    }
+
     if (search) {
       whereCondition.OR = [
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { admissionNo: { contains: search, mode: 'insensitive' } },
+        { parentPhone: { contains: search } },
       ];
     }
 
@@ -398,10 +404,23 @@ export class StudentService {
   }
 
   async count(institutionId: string) {
-    const totalStudents = await this.prisma.student.count({
-      where: { institutionId, deletedAt: null },
+    const [totalStudents, unlinkedParents] = await Promise.all([
+      this.prisma.student.count({ where: { institutionId, deletedAt: null } }),
+      this.prisma.student.count({ where: { institutionId, deletedAt: null, status: 'active', parentUserId: null } }),
+    ]);
+    return { totalStudents, unlinkedParents };
+  }
+
+  async findUnlinkedParents(institutionId: string, limit = 100) {
+    return this.prisma.student.findMany({
+      where: { institutionId, deletedAt: null, status: 'active', parentUserId: null },
+      select: {
+        id: true, firstName: true, lastName: true, admissionNo: true,
+        parentPhone: true, academicUnit: { select: { id: true, displayName: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
     });
-    return { totalStudents };
   }
 
   // ── PORTAL LINKING ────────────────────────────────────────────────────────

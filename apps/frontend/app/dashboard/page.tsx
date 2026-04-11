@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { apiFetch } from '@/lib/api';
 
-interface Stats        { totalStudents: number; }
+interface Stats        { totalStudents: number; unlinkedParents: number; }
 interface AcademicYear { id: string; name: string; isCurrent: boolean; }
 
 export default function DashboardPage() {
@@ -150,6 +150,34 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Unlinked Parents Alert ── */}
+      {stats && stats.unlinkedParents > 0 && (
+        <div className="mb-6 fade-up-2 flex items-center justify-between px-5 py-4 rounded-xl border"
+          style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ background: '#fef3c7', color: '#92400e' }}>
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#92400e' }}>
+                {stats.unlinkedParents} student{stats.unlinkedParents !== 1 ? 's' : ''} without parent portal access
+              </p>
+              <p className="text-xs" style={{ color: '#b45309' }}>
+                Link parent accounts via Student Directory so parents can log in
+              </p>
+            </div>
+          </div>
+          <button onClick={() => router.push('/dashboard/students/directory')}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg"
+            style={{ background: '#fde68a', color: '#92400e', border: '1px solid #fcd34d' }}>
+            Go to Directory →
+          </button>
+        </div>
+      )}
 
       {/* ── Quick actions ── */}
       <div className="mb-8 fade-up-3">

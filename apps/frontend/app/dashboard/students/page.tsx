@@ -393,6 +393,31 @@ export default function StudentsPage() {
     } catch (e: any) { setError(e.message || 'Failed to link'); } finally { setLinking(false); }
   };
 
+  const handleAutoCreateAndLink = async () => {
+    if (!linkingStudent) return;
+    const phone = linkSearch.trim() || linkingStudent.parentPhone;
+    if (!phone) { setError('No phone number available to create account'); return; }
+    setLinking(true);
+    setError(null);
+    try {
+      // 1. Create parent user account using phone as identifier
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+      const tempPwd = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      const newUser = await apiFetch('/users', {
+        method: 'POST',
+        body: JSON.stringify({ phone, password: tempPwd, role: 'parent' }),
+      }) as { id: string };
+      // 2. Link to student
+      await apiFetch(`/students/${linkingStudent.id}/link-user`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: newUser.id, role: 'parent' }),
+      });
+      showSuccess(`Parent account created (${phone} / ${tempPwd}) and linked`);
+      setLinkingStudent(null);
+      await fetchStudents();
+    } catch (e: any) { setError(e.message || 'Failed to create account'); } finally { setLinking(false); }
+  };
+
   const filteredStudents = search.trim().length >= 1
     ? students.filter((s) => {
         const q = search.toLowerCase();
@@ -938,8 +963,17 @@ export default function StudentsPage() {
 
               {/* Search result */}
               {foundUser === 'not_found' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
-                  No account found with that phone/email. The parent may need to be registered first.
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700 space-y-2">
+                  <p>No account found. You can auto-create one using the phone number above.</p>
+                  {linkType === 'parent' && (
+                    <button
+                      onClick={handleAutoCreateAndLink}
+                      disabled={linking}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      {linking ? 'Creating…' : `Create Parent Account & Link`}
+                    </button>
+                  )}
                 </div>
               )}
               {foundUser && foundUser !== 'not_found' && (

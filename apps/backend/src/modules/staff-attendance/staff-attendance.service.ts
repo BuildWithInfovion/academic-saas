@@ -8,8 +8,7 @@ export class StaffAttendanceService {
   // ── Self mark ──────────────────────────────────────────────────────────────
 
   /**
-   * Staff member marks their own attendance for today.
-   * Allowed only within the institution's configured window (default 06:00–11:00).
+   * Staff member marks their own attendance for today (clock-in).
    */
   async markOwn(
     institutionId: string,
@@ -37,6 +36,29 @@ export class StaffAttendanceService {
         note,
         markedById: userId,
       },
+    });
+  }
+
+  /**
+   * Staff member clocks out for today.
+   */
+  async clockOut(institutionId: string, userId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const existing = await this.prisma.staffAttendance.findUnique({
+      where: { institutionId_userId_date: { institutionId, userId, date: today } },
+    });
+    if (!existing) {
+      throw new BadRequestException('You have not clocked in yet today');
+    }
+    if ((existing as any).clockOut) {
+      throw new BadRequestException('Already clocked out for today');
+    }
+
+    return this.prisma.staffAttendance.update({
+      where: { id: existing.id },
+      data: { clockOut: new Date() } as any,
     });
   }
 

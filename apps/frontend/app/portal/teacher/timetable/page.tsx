@@ -1,0 +1,188 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api';
+
+interface TimetableSlot {
+  id: string;
+  dayOfWeek: number;
+  periodNo: number;
+  subjectId: string | null;
+  subject: { id: string; name: string; code?: string | null } | null;
+  academicUnit: { id: string; name: string; displayName: string | null; parent?: { name: string; displayName: string | null } | null };
+}
+
+const DAYS = [
+  { no: 1, label: 'Monday' },
+  { no: 2, label: 'Tuesday' },
+  { no: 3, label: 'Wednesday' },
+  { no: 4, label: 'Thursday' },
+  { no: 5, label: 'Friday' },
+  { no: 6, label: 'Saturday' },
+];
+
+const TODAY_DAY = new Date().getDay() === 0 ? 7 : new Date().getDay(); // 1=Mon…6=Sat
+
+function unitLabel(u: { name: string; displayName: string | null; parent?: { name: string; displayName: string | null } | null }) {
+  if (u.parent) return `${u.parent.displayName || u.parent.name} › ${u.displayName || u.name}`;
+  return u.displayName || u.name;
+}
+
+export default function TeacherTimetablePage() {
+  const [slots, setSlots] = useState<TimetableSlot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeDay, setActiveDay] = useState(TODAY_DAY <= 6 ? TODAY_DAY : 1);
+  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+
+  useEffect(() => {
+    apiFetch('/timetable/my-schedule')
+      .then((s: unknown) => setSlots(Array.isArray(s) ? (s as TimetableSlot[]) : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Group by day
+  const byDay = new Map<number, TimetableSlot[]>();
+  for (const slot of slots) {
+    if (!byDay.has(slot.dayOfWeek)) byDay.set(slot.dayOfWeek, []);
+    byDay.get(slot.dayOfWeek)!.push(slot);
+  }
+  for (const [, daySlots] of byDay) {
+    daySlots.sort((a, b) => a.periodNo - b.periodNo);
+  }
+
+  const activeDays = DAYS.filter((d) => byDay.has(d.no));
+  const daySlots = byDay.get(activeDay) ?? [];
+
+  // Max periods across all days
+  const maxPeriod = slots.length > 0 ? Math.max(...slots.map((s) => s.periodNo)) : 0;
+  const periods = Array.from({ length: maxPeriod }, (_, i) => i + 1);
+
+  if (loading) {
+    return <div className="p-8 text-sm text-gray-400">Loading timetable…</div>;
+  }
+
+  if (slots.length === 0) {
+    return (
+      <div className="p-8 max-w-2xl">
+        <h1 className="text-2xl font-bold text-gray-800 mb-1">My Timetable</h1>
+        <div className="mt-8 bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+          <p className="text-sm font-medium text-amber-800">No timetable assigned yet</p>
+          <p className="text-xs text-amber-600 mt-1">
+            The operator needs to create and assign a timetable for your classes first.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 max-w-5xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">My Timetable</h1>
+          <p className="text-sm text-gray-400">Your assigned periods across all classes</p>
+        </div>
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+          {(['day', 'week'] as const).map((m) => (
+            <button key={m} onClick={() => setViewMode(m)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize ${
+                viewMode === m ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}>
+              {m === 'day' ? 'Day View' : 'Week View'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {viewMode === 'day' ? (
+        <>
+          {/* Day tabs */}
+          <div className="flex gap-2 mb-6 flex-wrap">
+            {activeDays.map((d) => (
+              <button
+                key={d.no}
+                onClick={() => setActiveDay(d.no)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                  activeDay === d.no
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                }`}
+              >
+                {d.label}
+                {d.no === TODAY_DAY && (
+                  <span className="ml-2 text-[10px] bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full font-semibold">Today</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Period cards for selected day */}
+          <div className="space-y-3">
+            {daySlots.length === 0 ? (
+              <p className="text-sm text-gray-400 p-4">No periods assigned for this day.</p>
+            ) : (
+              daySlots.map((slot) => (
+                <div key={slot.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 shrink-0">
+                    P{slot.periodNo}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-800">{slot.subject?.name ?? 'No subject'}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{unitLabel(slot.academicUnit)}</p>
+                  </div>
+                  {slot.subject?.code && (
+                    <span className="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded-full font-mono">
+                      {slot.subject.code}
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        /* Week view — grid */
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 w-16 border-b border-gray-100">Period</th>
+                {activeDays.map((d) => (
+                  <th key={d.no} className={`px-3 py-3 text-center text-xs font-semibold border-b border-gray-100 min-w-[150px] ${
+                    d.no === TODAY_DAY ? 'text-indigo-600 bg-indigo-50' : 'text-gray-600'
+                  }`}>
+                    {d.label}
+                    {d.no === TODAY_DAY && <span className="ml-1 text-[9px] bg-indigo-500 text-white px-1 rounded">Today</span>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {periods.map((p) => (
+                <tr key={p} className="border-b border-gray-50 last:border-0">
+                  <td className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50 text-center">P{p}</td>
+                  {activeDays.map((d) => {
+                    const slot = byDay.get(d.no)?.find((s) => s.periodNo === p);
+                    return (
+                      <td key={d.no} className={`px-3 py-2 border-l border-gray-50 ${d.no === TODAY_DAY ? 'bg-indigo-50/30' : ''}`}>
+                        {slot ? (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-800">{slot.subject?.name}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{unitLabel(slot.academicUnit)}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,11 +1,28 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
+import { IsInt, IsString, IsOptional, Min, Max, IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PrismaService } from '../../prisma/prisma.service';
 
-export interface SaveSlotDto {
-  dayOfWeek: number;   // 1=Mon…6=Sat
+export class SaveSlotDto {
+  @IsInt() @Min(1) @Max(6) @Type(() => Number)
+  dayOfWeek: number;
+
+  @IsInt() @Min(1) @Type(() => Number)
   periodNo: number;
+
+  @IsString() @IsOptional()
   subjectId: string | null;
+
+  @IsString() @IsOptional()
   teacherUserId: string | null;
+}
+
+export class GenerateTimetableDto {
+  @IsInt() @Min(1) @Max(15) @IsOptional() @Type(() => Number)
+  periodsPerDay?: number;
+
+  @IsArray() @IsInt({ each: true }) @IsOptional()
+  workingDays?: number[];
 }
 
 @Injectable()

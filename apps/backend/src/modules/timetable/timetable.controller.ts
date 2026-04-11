@@ -1,6 +1,5 @@
 import { Controller, Get, Put, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
-import { TimetableService } from './timetable.service';
-import type { SaveSlotDto } from './timetable.service';
+import { TimetableService, SaveSlotDto, GenerateTimetableDto } from './timetable.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 
@@ -30,7 +29,7 @@ export class TimetableController {
   generate(
     @Request() req: any,
     @Param('unitId') unitId: string,
-    @Body() body: { periodsPerDay?: number; workingDays?: number[] },
+    @Body() body: GenerateTimetableDto,
   ) {
     const periodsPerDay = body.periodsPerDay ?? 7;
     const workingDays = body.workingDays ?? [1, 2, 3, 4, 5];
@@ -41,5 +40,11 @@ export class TimetableController {
   @Get('my-schedule')
   getMySchedule(@Request() req: any) {
     return this.timetableService.getMySubjectSchedule(req.institutionId, req.user?.userId ?? '');
+  }
+
+  // GET /timetable/teacher/:teacherId — principal views any teacher's schedule
+  @Get('teacher/:teacherId')
+  getTeacherSchedule(@Request() req: any, @Param('teacherId') teacherId: string) {
+    return this.timetableService.getMySubjectSchedule(req.institutionId, teacherId);
   }
 }

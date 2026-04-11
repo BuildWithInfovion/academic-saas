@@ -221,9 +221,12 @@ export default function StaffAttendanceDashboardPage() {
         </>
       )}
 
-      {/* Leave requests */}
+      {/* Leave requests — view only for Operator/Director; approval is done by Principal */}
       {tab === 'leave' && (
         <>
+          <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+            Leave approval is managed by the Principal. This view is read-only.
+          </div>
           {loading ? <p className="text-sm" style={{ color: 'var(--text-3)' }}>Loading…</p> : (
             <div className="rounded-xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
               {leaves.length === 0 ? (
@@ -231,7 +234,7 @@ export default function StaffAttendanceDashboardPage() {
               ) : (
                 <table className="data-table">
                   <thead>
-                    <tr><th>Staff</th><th>Period</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th>Staff</th><th>Period</th><th>Reason</th><th>Status</th><th>Review Note</th></tr>
                   </thead>
                   <tbody>
                     {leaves.map((l) => (
@@ -244,29 +247,8 @@ export default function StaffAttendanceDashboardPage() {
                             {l.status}
                           </span>
                         </td>
-                        <td>
-                          {l.status === 'pending' ? (
-                            <div className="flex gap-1.5">
-                              <button
-                                onClick={() => handleLeaveReview(l.id, 'approved')}
-                                className="px-2 py-1 text-xs rounded-lg font-medium"
-                                style={{ background: '#d8f3dc', color: '#2d6a4f', border: '1px solid #95d5a4' }}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleLeaveReview(l.id, 'rejected')}
-                                className="px-2 py-1 text-xs rounded-lg font-medium"
-                                style={{ background: '#ffe8e8', color: '#9b2226', border: '1px solid #f4b8b8' }}
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                              {l.reviewNote || '—'}
-                            </span>
-                          )}
+                        <td className="text-xs" style={{ color: 'var(--text-3)' }}>
+                          {l.reviewNote || '—'}
                         </td>
                       </tr>
                     ))}

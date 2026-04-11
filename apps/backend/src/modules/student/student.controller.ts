@@ -50,6 +50,11 @@ export class StudentController {
     return this.studentService.count(tenant.institutionId);
   }
 
+  @Get('unlinked-parents')
+  findUnlinkedParents(@Tenant() tenant: TenantContext, @Query('limit') limit?: string) {
+    return this.studentService.findUnlinkedParents(tenant.institutionId, limit ? parseInt(limit) : 100);
+  }
+
   // ── ADMISSION ──────────────────────────────────────────────────────────────
 
   /**
@@ -77,8 +82,9 @@ export class StudentController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('search') search?: string,
+    @Query('unitId') unitId?: string,
   ) {
-    return this.studentService.findAll(tenant.institutionId, page, limit, search);
+    return this.studentService.findAll(tenant.institutionId, page, limit, search, unitId);
   }
 
   @Get(':id')

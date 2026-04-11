@@ -8,6 +8,7 @@ type AttendanceRecord = {
   date: string;
   status: string;
   clockIn: string | null;
+  clockOut: string | null;
   note: string | null;
 };
 
@@ -35,6 +36,7 @@ export default function StaffSelfAttendancePage() {
   const [leaves, setLeaves]   = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
+  const [clockingOut, setClockingOut] = useState(false);
   const [markStatus, setMarkStatus] = useState<'present' | 'late' | 'half_day'>('present');
   const [note, setNote]       = useState('');
   const [error, setError]     = useState<string | null>(null);
@@ -69,6 +71,18 @@ export default function StaffSelfAttendancePage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const handleClockOut = async () => {
+    setClockingOut(true); setError(null);
+    try {
+      await apiFetch('/staff-attendance/clock-out', { method: 'POST', body: JSON.stringify({}) });
+      setSuccess('Clocked out successfully');
+      await load();
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (e: any) {
+      setError(e.message || 'Failed to clock out');
+    } finally { setClockingOut(false); }
+  };
 
   const handleMark = async () => {
     setMarking(true); setError(null);
@@ -122,16 +136,28 @@ export default function StaffSelfAttendancePage() {
       <div className="rounded-xl p-5 mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
         <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-3)' }}>Today — {fmt(todayStr)}</p>
         {todayRecord ? (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className={`px-3 py-1 rounded-full text-sm font-semibold border capitalize ${STATUS_STYLE[todayRecord.status]}`}>
               {todayRecord.status.replace('_', ' ')}
             </span>
             {todayRecord.clockIn && (
               <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                Clocked in at {new Date(todayRecord.clockIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                In: {new Date(todayRecord.clockIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
-            <span className="text-xs" style={{ color: 'var(--text-3)' }}>Already marked</span>
+            {todayRecord.clockOut ? (
+              <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+                Out: {new Date(todayRecord.clockOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            ) : (
+              <button
+                onClick={handleClockOut}
+                disabled={clockingOut}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+              >
+                {clockingOut ? 'Clocking out…' : 'Clock Out'}
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -212,6 +238,7 @@ export default function StaffSelfAttendancePage() {
                   <th>Date</th>
                   <th>Status</th>
                   <th>Clock In</th>
+                  <th>Clock Out</th>
                   <th>Note</th>
                 </tr>
               </thead>
@@ -226,6 +253,9 @@ export default function StaffSelfAttendancePage() {
                     </td>
                     <td className="text-xs" style={{ color: 'var(--text-3)' }}>
                       {r.clockIn ? new Date(r.clockIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                    </td>
+                    <td className="text-xs" style={{ color: 'var(--text-3)' }}>
+                      {r.clockOut ? new Date(r.clockOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}
                     </td>
                     <td className="text-xs" style={{ color: 'var(--text-3)' }}>{r.note || '—'}</td>
                   </tr>

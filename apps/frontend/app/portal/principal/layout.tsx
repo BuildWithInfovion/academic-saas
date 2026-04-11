@@ -4,11 +4,12 @@ import { ReactNode } from 'react';
 import PortalShell from '@/components/portal-shell';
 
 const menuItems = [
-  { label: 'Overview', path: '/portal/principal' },
-  { label: 'TC Approvals', path: '/portal/principal/tc' },
-  { label: 'Announcements', path: '/portal/principal/announcements' },
-  { label: 'Attendance Reports', path: '/portal/principal/attendance' },
-  { label: 'Fee Reports', path: '/portal/principal/fees' },
+  { label: 'Overview',            path: '/portal/principal' },
+  { label: 'Timetable',           path: '/portal/principal/timetable' },
+  { label: 'Attendance Reports',  path: '/portal/principal/attendance' },
+  { label: 'Staff Attendance',    path: '/portal/principal/staff-attendance' },
+  { label: 'Fee Reports',         path: '/portal/principal/fees' },
+  { label: 'Announcements',       path: '/portal/principal/announcements' },
 ];
 
 export default function PrincipalLayout({ children }: { children: ReactNode }) {
