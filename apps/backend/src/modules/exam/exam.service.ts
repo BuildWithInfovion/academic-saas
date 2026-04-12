@@ -18,7 +18,11 @@ export class ExamService {
 
   async findAll(institutionId: string, academicYearId?: string) {
     return this.prisma.exam.findMany({
-      where: { institutionId, ...(academicYearId ? { academicYearId } : {}) },
+      where: {
+        institutionId,
+        deletedAt: null,
+        ...(academicYearId ? { academicYearId } : {}),
+      },
       include: {
         academicYear: { select: { name: true } },
         _count: { select: { subjects: true } },
@@ -42,7 +46,7 @@ export class ExamService {
 
   async updateStatus(institutionId: string, examId: string, status: string) {
     const exam = await this.prisma.exam.findFirst({
-      where: { id: examId, institutionId },
+      where: { id: examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
     return this.prisma.exam.update({ where: { id: examId }, data: { status } });
@@ -50,10 +54,23 @@ export class ExamService {
 
   async delete(institutionId: string, examId: string) {
     const exam = await this.prisma.exam.findFirst({
-      where: { id: examId, institutionId },
+      where: { id: examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
-    return this.prisma.exam.delete({ where: { id: examId } });
+
+    // Guard: refuse to delete an exam that already has student results to prevent data loss
+    const resultCount = await this.prisma.examResult.count({ where: { examId } });
+    if (resultCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete this exam — it has ${resultCount} student result(s) recorded. Archive or keep it instead.`,
+      );
+    }
+
+    // Soft-delete: mark as deleted rather than physically removing the row
+    return this.prisma.exam.update({
+      where: { id: examId },
+      data: { deletedAt: new Date() },
+    });
   }
 
   // ── Exam Subjects ─────────────────────────────────────────────────────────
@@ -61,7 +78,7 @@ export class ExamService {
   async getExamSubjects(institutionId: string, examId: string) {
     // Verify exam belongs to caller's institution before returning subjects
     const exam = await this.prisma.exam.findFirst({
-      where: { id: examId, institutionId },
+      where: { id: examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
     return this.prisma.examSubject.findMany({
@@ -84,7 +101,7 @@ export class ExamService {
   ) {
     // Verify exam belongs to caller's institution before modifying
     const exam = await this.prisma.exam.findFirst({
-      where: { id: examId, institutionId },
+      where: { id: examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
     return this.prisma.examSubject.upsert({
@@ -113,7 +130,7 @@ export class ExamService {
 
   async removeExamSubject(institutionId: string, examId: string, id: string) {
     const exam = await this.prisma.exam.findFirst({
-      where: { id: examId, institutionId },
+      where: { id: examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
     const examSubject = await this.prisma.examSubject.findFirst({
@@ -138,9 +155,9 @@ export class ExamService {
     if (!examSubject)
       throw new NotFoundException('Exam subject not found for this class');
 
-    // 2. Validate exam is active (not draft)
+    // 2. Validate exam is active (not draft) and not soft-deleted
     const exam = await this.prisma.exam.findFirst({
-      where: { id: dto.examId, institutionId },
+      where: { id: dto.examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
     if (exam.status === 'draft') {
@@ -258,7 +275,7 @@ export class ExamService {
     if (!student) throw new NotFoundException('Student not found');
 
     const exam = await this.prisma.exam.findFirst({
-      where: { id: examId, institutionId },
+      where: { id: examId, institutionId, deletedAt: null },
       include: { academicYear: { select: { name: true } } },
     });
     if (!exam) throw new NotFoundException('Exam not found');
@@ -377,7 +394,7 @@ export class ExamService {
 
     // Find active exams that have exam subjects matching those assignments
     const exams = await this.prisma.exam.findMany({
-      where: { institutionId, status: 'active' },
+      where: { institutionId, status: 'active', deletedAt: null },
       include: {
         academicYear: { select: { name: true } },
         subjects: {

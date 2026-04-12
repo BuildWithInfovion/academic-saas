@@ -23,6 +23,7 @@ export class AnnouncementService {
     return this.prisma.announcement.findMany({
       where: {
         institutionId,
+        deletedAt: null,
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
         ...extraWhere,
       },
@@ -58,7 +59,9 @@ export class AnnouncementService {
   }
 
   async findOne(institutionId: string, id: string) {
-    return this.prisma.announcement.findFirst({ where: { id, institutionId } });
+    return this.prisma.announcement.findFirst({
+      where: { id, institutionId, deletedAt: null },
+    });
   }
 
   async update(
@@ -70,6 +73,7 @@ export class AnnouncementService {
       where: {
         id,
         institutionId,
+        deletedAt: null,
       },
     });
 
@@ -102,18 +106,16 @@ export class AnnouncementService {
 
   async delete(institutionId: string, id: string) {
     const existing = await this.prisma.announcement.findFirst({
-      where: {
-        id,
-        institutionId,
-      },
+      where: { id, institutionId, deletedAt: null },
     });
 
     if (!existing) {
       throw new NotFoundException('Announcement not found');
     }
 
-    await this.prisma.announcement.delete({
+    await this.prisma.announcement.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
 
     return { deleted: true };

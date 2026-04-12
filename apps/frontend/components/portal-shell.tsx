@@ -1,12 +1,12 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, ReactElement, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
 
-type MenuItem = { label: string; path: string; icon?: () => JSX.Element };
+type MenuItem = { label: string; path: string; icon?: () => ReactElement };
 
 type PortalShellProps = {
   children: ReactNode;

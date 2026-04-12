@@ -114,10 +114,13 @@ function extractErrorMessage(body: unknown, status: number): string {
   return `Request failed (${status})`;
 }
 
-export async function apiFetch(
+export async function apiFetch<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T = any
+>(
   endpoint: string,
   options: ApiOptions = {},
-): Promise<unknown> {
+): Promise<T> {
   const { institutionId, ...rest } = options;
 
   const { accessToken, user } = useAuthStore.getState();
@@ -146,7 +149,7 @@ export async function apiFetch(
         ),
       });
       if (retryRes.ok) {
-        return readResponse(retryRes);
+        return readResponse(retryRes) as Promise<T>;
       }
       if (retryRes.status !== 401) {
         const body = await readResponse(retryRes);
@@ -164,5 +167,5 @@ export async function apiFetch(
     throw new Error(extractErrorMessage(body, res.status));
   }
 
-  return readResponse(res);
+  return readResponse(res) as Promise<T>;
 }

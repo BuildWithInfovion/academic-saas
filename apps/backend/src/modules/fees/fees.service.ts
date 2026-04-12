@@ -36,7 +36,7 @@ export class FeesService {
 
   async getFeeStructures(institutionId: string, academicUnitId: string, academicYearId: string) {
     return this.prisma.feeStructure.findMany({
-      where: { institutionId, academicUnitId, academicYearId },
+      where: { institutionId, academicUnitId, academicYearId, deletedAt: null },
       include: { feeHead: true },
       orderBy: { feeHead: { name: 'asc' } },
     });
@@ -45,7 +45,7 @@ export class FeesService {
   async upsertFeeStructure(institutionId: string, dto: CreateFeeStructureDto) {
     const installmentName = dto.installmentName ?? null;
     const existing = await this.prisma.feeStructure.findFirst({
-      where: { institutionId, academicUnitId: dto.academicUnitId, academicYearId: dto.academicYearId, feeHeadId: dto.feeHeadId, installmentName },
+      where: { institutionId, academicUnitId: dto.academicUnitId, academicYearId: dto.academicYearId, feeHeadId: dto.feeHeadId, installmentName, deletedAt: null },
     });
     if (existing) {
       return this.prisma.feeStructure.update({
@@ -67,10 +67,9 @@ export class FeesService {
   }
 
   async deleteFeeStructure(institutionId: string, id: string) {
-    // Verify the structure belongs to this institution before deleting
-    const structure = await this.prisma.feeStructure.findFirst({ where: { id, institutionId } });
+    const structure = await this.prisma.feeStructure.findFirst({ where: { id, institutionId, deletedAt: null } });
     if (!structure) throw new NotFoundException('Fee structure not found');
-    return this.prisma.feeStructure.delete({ where: { id } });
+    return this.prisma.feeStructure.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────
