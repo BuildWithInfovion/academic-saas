@@ -4,17 +4,51 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import compression from 'compression';
 
+function normalizeOriginPattern(value: string): string {
+  return value.trim().replace(/\/$/, '');
+}
+
+function matchesAllowedOrigin(origin: string, pattern: string): boolean {
+  const normalizedOrigin = normalizeOriginPattern(origin);
+  const normalizedPattern = normalizeOriginPattern(pattern);
+
+  if (!normalizedPattern) return false;
+  if (normalizedPattern === '*') return true;
+  if (!normalizedPattern.includes('*')) return normalizedOrigin === normalizedPattern;
+
+  const escaped = normalizedPattern
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*');
+
+  return new RegExp(`^${escaped}$`).test(normalizedOrigin);
+}
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const logger = new Logger('Bootstrap');
 
-  // CORS — restrict to configured origin(s)
-  const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3001')
+  // CORS — exact origins and wildcard patterns are both supported
+  const allowedOrigins = (
+    process.env.CORS_ORIGIN ??
+    'http://localhost:3001,http://localhost:3000,https://*.vercel.app'
+  )
     .split(',')
-    .map((o) => o.trim());
+    .map((o) => normalizeOriginPattern(o))
+    .filter(Boolean);
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      const allowed = allowedOrigins.some((pattern) =>
+        matchesAllowedOrigin(origin, pattern),
+      );
+
+      if (allowed) return callback(null, true);
+
+      logger.warn(`Blocked CORS origin: ${origin}`);
+      return callback(new Error(`Origin not allowed by CORS: ${origin}`), false);
+    },
     credentials: true,
   });
 
