@@ -26,4 +26,6 @@ export function getRoleLabel(roles: string[]): string {
   return 'Staff';
 }
 
-export const DASHBOARD_ROLES = ['admin']; // super_admin has its own /portal/director
+// Both admin (Operator) and super_admin (Director) can access /dashboard.
+// Director is primarily routed to /portal/director on login but can visit /dashboard as an operations view.
+export const DASHBOARD_ROLES = ['admin', 'super_admin'];

@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infovion — Academic SaaS Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#ae5525;--brand-d:#8c3919;--amber:#dc924b;--gold:#f7c576;
+  --dark:#1c0e06;--dark2:#2d1a0e;--cream:#fdf4e9;--surface:#fcfbf7;
+  --text1:#2d1a0e;--text2:#6b432f;--text3:#ae7040;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--text1);overflow-x:hidden}
+
+/* ── NAV ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 64px;display:flex;align-items:center;justify-content:space-between;background:rgba(18,8,4,0.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(247,197,118,0.08)}
+.nav-logo{display:flex;align-items:center}
+.nav-logo img,.nav-logo-fallback{height:30px;width:auto}
+.nav-logo-fallback{font-size:18px;font-weight:900;color:#f7c576;letter-spacing:0.06em}
+.nav-links{display:flex;gap:28px}
+.nav-links a{font-size:13px;font-weight:500;color:rgba(252,251,247,0.5);text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:#f7c576}
+.nav-pill{background:rgba(174,85,37,0.22);border:1px solid rgba(174,85,37,0.35);color:#dc924b;padding:8px 22px;border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.02em}
+
+/* ── HERO ── */
+#hero{min-height:100vh;background:linear-gradient(155deg,#120804 0%,#1c0e06 40%,#2d1a0e 70%,#3a1e09 100%);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;flex:1;align-items:center;padding:96px 64px 80px;gap:60px;max-width:1280px;margin:0 auto;width:100%}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(220,146,75,0.12);border:1px solid rgba(220,146,75,0.25);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:700;color:#dc924b;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:28px}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 7px rgba(74,222,128,0.8);animation:pulse 2s ease-in-out infinite}
+.hero-h1{font-size:clamp(2.6rem,4.2vw,4rem);font-weight:900;line-height:1.07;letter-spacing:-0.045em;color:#fcfbf7;margin-bottom:22px}
+.hero-h1 em{color:#f7c576;font-style:normal}
+.hero-sub{font-size:1.05rem;color:rgba(252,251,247,0.5);line-height:1.75;max-width:460px;margin-bottom:40px}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap}
+.btn-primary{background:linear-gradient(135deg,#ae5525,#8c3919);color:#fff;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 28px rgba(174,85,37,0.4);transition:transform .15s,box-shadow .15s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(174,85,37,0.55)}
+.btn-ghost{background:transparent;color:rgba(252,251,247,0.7);border:1.5px solid rgba(252,251,247,0.16);padding:14px 32px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:border-color .2s,color .2s}
+.btn-ghost:hover{border-color:rgba(247,197,118,0.35);color:#f7c576}
+.hero-stats{display:flex;gap:36px;margin-top:48px;padding-top:36px;border-top:1px solid rgba(247,197,118,0.1)}
+.hs-val{font-size:2rem;font-weight:900;color:#f7c576;letter-spacing:-0.04em}
+.hs-label{font-size:10px;color:rgba(174,112,64,0.55);text-transform:uppercase;letter-spacing:0.07em;margin-top:2px}
+
+/* mockup */
+.mockup-wrap{width:100%;max-width:460px;margin:0 auto}
+.mockup{background:rgba(252,251,247,0.05);border:1px solid rgba(247,197,118,0.12);border-radius:20px;overflow:hidden;backdrop-filter:blur(14px)}
+.mockup-bar{background:rgba(252,251,247,0.04);padding:11px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(247,197,118,0.07)}
+.mockup-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.mockup-url{background:rgba(255,255,255,0.05);border-radius:6px;flex:1;padding:5px 12px;font-size:11px;color:rgba(252,251,247,0.3)}
+.mockup-body{padding:22px}
+.m-top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.m-greeting{font-size:13px;font-weight:700;color:rgba(252,251,247,0.85)}
+.m-online{display:flex;align-items:center;gap:5px;font-size:10px;color:#4ade80;background:rgba(74,222,128,0.1);padding:3px 10px;border-radius:100px}
+.m-cards{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+.m-card{background:rgba(252,251,247,0.05);border:1px solid rgba(247,197,118,0.09);border-radius:10px;padding:11px}
+.m-card-val{font-size:1.3rem;font-weight:900;color:#f7c576}
+.m-card-lbl{font-size:9px;color:rgba(174,112,64,0.5);text-transform:uppercase;letter-spacing:0.05em;margin-top:1px}
+.m-bars{display:flex;align-items:flex-end;gap:5px;height:50px;margin-bottom:13px}
+.m-bar{border-radius:4px 4px 0 0;opacity:0.75}
+.m-list{display:flex;flex-direction:column;gap:7px}
+.m-li{display:flex;align-items:center;gap:8px;font-size:10px;color:rgba(252,251,247,0.45)}
+.m-li-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── ORBS / ARCS ── */
+.orb{position:absolute;border-radius:50%;pointer-events:none}
+.orb-tr{top:-120px;right:-120px;width:520px;height:520px;background:radial-gradient(circle,rgba(220,146,75,0.13) 0%,transparent 70%);filter:blur(60px);animation:breathe 8s ease-in-out infinite}
+.orb-bl{bottom:-100px;left:-100px;width:420px;height:420px;background:radial-gradient(circle,rgba(174,85,37,0.11) 0%,transparent 70%);filter:blur(50px);animation:breathe 11s ease-in-out infinite;animation-delay:4s}
+.arc{position:absolute;border-radius:50%;pointer-events:none}
+
+/* ── METRICS BAND ── */
+.metrics-band{background:linear-gradient(135deg,#2d1a0e,#3d200c);padding:56px 64px}
+.metrics-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:32px;text-align:center}
+.met-val{font-size:2.2rem;font-weight:900;color:#f7c576;letter-spacing:-0.04em}
+.met-lbl{font-size:11px;color:rgba(174,112,64,0.5);text-transform:uppercase;letter-spacing:0.06em;margin-top:5px}
+
+/* ── SECTION ── */
+.section{padding:96px 64px}
+.section-inner{max-width:1200px;margin:0 auto}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--brand);margin-bottom:14px}
+.eyebrow::before{content:"";display:block;width:22px;height:2px;background:var(--brand);border-radius:2px}
+.sec-h{font-size:clamp(1.9rem,3.2vw,2.8rem);font-weight:900;line-height:1.1;letter-spacing:-0.035em;color:var(--text1);margin-bottom:16px}
+.sec-sub{font-size:1.02rem;color:var(--text3);line-height:1.75;max-width:560px}
+
+/* ── PROBLEM ── */
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;margin-top:56px}
+.pain-list{display:flex;flex-direction:column;gap:16px}
+.pain-item{display:flex;gap:15px;padding:20px;background:#fff8f0;border:1px solid #eddcca;border-radius:14px;transition:box-shadow .2s}
+.pain-item:hover{box-shadow:0 8px 24px rgba(107,67,47,0.1)}
+.pain-ico{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;background:linear-gradient(135deg,rgba(174,85,37,0.12),rgba(220,146,75,0.08));border:1px solid rgba(174,85,37,0.12)}
+.pain-title{font-size:14px;font-weight:700;color:var(--text1);margin-bottom:5px}
+.pain-desc{font-size:13px;color:var(--text3);line-height:1.6}
+.solution-box{background:linear-gradient(160deg,#1c0e06,#2d1a0e,#3a1e09);border-radius:22px;padding:44px;position:relative;overflow:hidden}
+.sol-logo{margin-bottom:20px}
+.sol-logo img{height:34px;width:auto}
+.sol-logo-fallback{font-size:20px;font-weight:900;color:#f7c576;letter-spacing:0.08em}
+.sol-title{font-size:1.45rem;font-weight:800;color:#f7c576;margin-bottom:12px;line-height:1.25}
+.sol-desc{font-size:14px;color:rgba(252,251,247,0.55);line-height:1.75;margin-bottom:28px}
+.sol-checks{display:flex;flex-direction:column;gap:11px}
+.sol-check{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(252,251,247,0.8)}
+.sol-tick{width:20px;height:20px;border-radius:50%;background:rgba(45,106,79,0.28);border:1px solid rgba(45,106,79,0.45);display:grid;place-items:center;font-size:10px;color:#4ade80;flex-shrink:0}
+
+/* ── MODULES ── */
+.modules-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:52px}
+.mod-card{background:#fff;border:1px solid #eddcca;border-radius:16px;padding:28px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.mod-card:hover{transform:translateY(-4px);box-shadow:0 18px 48px rgba(107,67,47,0.13)}
+.mod-card::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0}
+.mod-card.c1::after{background:linear-gradient(90deg,#ae5525,#dc924b)}
+.mod-card.c2::after{background:linear-gradient(90deg,#0d9488,#0f766e)}
+.mod-card.c3::after{background:linear-gradient(90deg,#dc924b,#f7c576)}
+.mod-card.c4::after{background:linear-gradient(90deg,#6b432f,#ae5525)}
+.mod-card.c5::after{background:linear-gradient(90deg,#2d6a4f,#0d9488)}
+.mod-card.c6::after{background:linear-gradient(90deg,#8c3919,#c5692e)}
+.mod-ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;margin-bottom:16px}
+.mod-title{font-size:15px;font-weight:700;color:var(--text1);margin-bottom:8px}
+.mod-desc{font-size:13px;color:var(--text3);line-height:1.65}
+.mod-tag{display:inline-block;margin-top:14px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;letter-spacing:0.04em}
+
+/* ── ROLES ── */
+.roles-row{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:52px}
+.roles-row-2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:20px;max-width:67%;margin-left:auto;margin-right:auto}
+.hierarchy-arrow{display:flex;align-items:center;justify-content:center;padding:8px 0;color:var(--brand);font-size:18px;opacity:.5}
+.role-card{background:#fff;border:1px solid #eddcca;border-radius:20px;padding:32px 24px;text-align:center;transition:transform .2s,box-shadow .2s}
+.role-card:hover{transform:translateY(-4px);box-shadow:0 16px 44px rgba(107,67,47,0.12)}
+.role-av{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:28px;margin:0 auto 18px}
+.role-name{font-size:15px;font-weight:800;color:var(--text1);margin-bottom:8px}
+.role-desc{font-size:13px;color:var(--text3);line-height:1.65;margin-bottom:18px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.chip{font-size:10px;font-weight:600;padding:3px 9px;border-radius:100px;background:#fdf0e0;color:#ae5525;border:1px solid #e8d5bc}
+
+/* ── PRICING (affordable band) ── */
+#pricing .sec-h{color:#fcfbf7}
+#pricing .sec-sub{color:rgba(174,112,64,0.6)}
+#pricing .eyebrow{color:#dc924b}
+#pricing .eyebrow::before{background:#dc924b}
+.afford-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:52px}
+.afford-card{background:rgba(252,251,247,0.05);border:1px solid rgba(247,197,118,0.12);border-radius:22px;padding:36px 32px;text-align:center;transition:transform .2s}
+.afford-card:hover{transform:translateY(-4px)}
+.afford-ico{font-size:34px;margin-bottom:18px}
+.afford-title{font-size:1.1rem;font-weight:800;color:#f7c576;margin-bottom:10px}
+.afford-desc{font-size:14px;color:rgba(174,112,64,0.65);line-height:1.7}
+.afford-cta{display:inline-block;margin-top:22px;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;background:linear-gradient(135deg,#ae5525,#8c3919);color:#fff;transition:opacity .15s}
+.afford-cta:hover{opacity:.85}
+
+/* ── FUTURE SCOPE ── */
+.future-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:52px}
+.future-card{background:#fff;border:1px solid #eddcca;border-radius:16px;padding:28px;transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden}
+.future-card:hover{transform:translateY(-4px);box-shadow:0 16px 44px rgba(107,67,47,0.11)}
+.future-card::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0}
+.future-card.fc1::after{background:linear-gradient(90deg,#6d28d9,#8b5cf6)}
+.future-card.fc2::after{background:linear-gradient(90deg,#0d9488,#0f766e)}
+.future-card.fc3::after{background:linear-gradient(90deg,#dc924b,#f7c576)}
+.future-card.fc4::after{background:linear-gradient(90deg,#ae5525,#dc924b)}
+.future-card.fc5::after{background:linear-gradient(90deg,#2d6a4f,#0d9488)}
+.future-card.fc6::after{background:linear-gradient(90deg,#1d4ed8,#3b82f6)}
+.future-ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;margin-bottom:16px}
+.future-title{font-size:15px;font-weight:700;color:var(--text1);margin-bottom:8px}
+.future-desc{font-size:13px;color:var(--text3);line-height:1.65}
+.future-tag{display:inline-block;margin-top:14px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;letter-spacing:0.04em;background:#f3f0ff;color:#6d28d9;border:1px solid #ddd6fe}
+.future-tag.green{background:#d1fae5;color:#065f46;border-color:#a7f3d0}
+.future-tag.amber{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.future-tag.rust{background:#fff3e8;color:#ae5525;border-color:#ecd4bc}
+.future-tag.teal{background:#d1fae5;color:#065f46;border-color:#a7f3d0}
+.future-tag.blue{background:#dbeafe;color:#1e40af;border-color:#bfdbfe}
+
+/* ── TECH ── */
+.tech-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:52px;align-items:start}
+.tech-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--brand);margin-bottom:18px}
+.tech-list{display:flex;flex-direction:column;gap:12px}
+.tech-item{display:flex;align-items:center;gap:14px;padding:14px 18px;background:#fff;border:1px solid #eddcca;border-radius:12px;transition:box-shadow .15s}
+.tech-item:hover{box-shadow:0 6px 18px rgba(107,67,47,0.1)}
+.t-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;flex-shrink:0;white-space:nowrap}
+.t-name{font-size:14px;font-weight:700;color:var(--text1)}
+.t-role{font-size:12px;color:var(--text3);margin-top:1px}
+.sec-box{background:linear-gradient(160deg,#1c0e06,#2d1a0e);border-radius:22px;padding:36px;position:relative;overflow:hidden}
+.sec-box-title{font-size:1.1rem;font-weight:800;color:#f7c576;margin-bottom:20px}
+.sec-items{display:flex;flex-direction:column;gap:16px}
+.sec-item{display:flex;gap:12px;align-items:flex-start}
+.sec-ico{font-size:18px;flex-shrink:0;line-height:1.4}
+.sec-t{font-size:13px;font-weight:700;color:rgba(252,251,247,0.9);margin-bottom:3px}
+.sec-d{font-size:12px;color:rgba(174,112,64,0.6);line-height:1.55}
+
+/* ── CTA ── */
+#cta{min-height:80vh;background:linear-gradient(155deg,#120804 0%,#1c0e06 45%,#2d1a0e 80%,#3a1e09 100%);display:flex;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;padding:80px 40px}
+.cta-inner{max-width:700px;margin:0 auto;position:relative;z-index:2}
+.cta-logo{margin-bottom:32px}
+.cta-logo img{height:52px;width:auto}
+.cta-logo-fallback{font-size:28px;font-weight:900;color:#f7c576;letter-spacing:0.08em}
+.cta-h{font-size:clamp(2.2rem,4vw,3.4rem);font-weight:900;line-height:1.08;letter-spacing:-0.04em;color:#fcfbf7;margin-bottom:18px}
+.cta-h em{color:#f7c576;font-style:normal}
+.cta-sub{font-size:1.05rem;color:rgba(252,251,247,0.48);line-height:1.75;margin-bottom:42px}
+.cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.cta-contacts{display:flex;gap:44px;justify-content:center;margin-top:52px;padding-top:36px;border-top:1px solid rgba(247,197,118,0.1);flex-wrap:wrap}
+.cc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(174,112,64,0.45);margin-bottom:6px}
+.cc-val{font-size:14px;font-weight:600;color:rgba(252,251,247,0.75)}
+
+/* ── FOOTER ── */
+footer{background:#0e0604;padding:36px 64px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(247,197,118,0.07)}
+.foot-logo img{height:26px;width:auto;opacity:.75}
+.foot-logo-fallback{font-size:14px;font-weight:900;color:rgba(247,197,118,0.5);letter-spacing:0.08em}
+.foot-copy{font-size:12px;color:rgba(174,112,64,0.35)}
+.foot-tag{font-size:12px;color:rgba(174,112,64,0.28);font-style:italic}
+
+/* ── ANIMATIONS ── */
+@keyframes breathe{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes spinrev{from{transform:rotate(360deg)}to{transform:rotate(0deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fadeUp .8s ease both}
+.fu2{animation:fadeUp .8s .15s ease both}
+.fu3{animation:fadeUp .8s .3s ease both}
+.fu4{animation:fadeUp .8s .45s ease both}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){
+  .hero-grid,.problem-grid,.tech-grid{grid-template-columns:1fr}
+  .mockup-wrap{display:none}
+  .roles-row{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  .section{padding:64px 28px}
+  .nav{padding:14px 20px}
+  .nav-links,.nav-pill{display:none}
+  .hero-grid{padding:80px 24px 60px;grid-template-columns:1fr}
+  .modules-grid,.afford-grid,.future-grid{grid-template-columns:1fr 1fr}
+  .roles-row,.roles-row-2{grid-template-columns:1fr 1fr;max-width:100%}
+  .metrics-inner{grid-template-columns:1fr 1fr}
+  footer{flex-direction:column;gap:12px;text-align:center;padding:28px 24px}
+  .metrics-band{padding:48px 24px}
+}
+@media(max-width:520px){
+  .modules-grid,.afford-grid,.future-grid,.roles-row,.roles-row-2{grid-template-columns:1fr}
+  .hero-h1{font-size:2.4rem}
+  .roles-row-2{max-width:100%}
+}
+@media print{
+  .nav{display:none}
+  *{animation:none!important;transition:none!important}
+  section{page-break-after:always}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav class="nav">
+  <div class="nav-logo">
+    <img src="apps/frontend/public/logo.png" alt="Infovion" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <span class="nav-logo-fallback" style="display:none">INFOVION</span>
+  </div>
+  <div class="nav-links">
+    <a href="#problem">Problem</a>
+    <a href="#modules">Features</a>
+    <a href="#roles">Users</a>
+    <a href="#future">Future</a>
+    <a href="#tech">Technology</a>
+    <a href="https://buildwithinfovion.com" target="_blank">Website</a>
+    <a href="tel:+919309193613">+91 93091 93613</a>
+  </div>
+  <a href="mailto:infovion2025@gmail.com?subject=Demo%20Request%20-%20Infovion" class="nav-pill" style="text-decoration:none">Request Demo</a>
+</nav>
+
+<!-- ══════════════════════════════════════
+     HERO
+══════════════════════════════════════ -->
+<section id="hero">
+  <div class="orb orb-tr"></div>
+  <div class="orb orb-bl"></div>
+  <!-- Background arc rings -->
+  <div class="arc" style="top:50%;left:50%;width:900px;height:900px;margin:-450px 0 0 -450px;border:1px solid rgba(247,197,118,0.04);animation:spin 120s linear infinite"></div>
+  <div class="arc" style="top:50%;left:50%;width:680px;height:680px;margin:-340px 0 0 -340px;border:1px dashed rgba(220,146,75,0.06);animation:spinrev 80s linear infinite"></div>
+  <div class="arc" style="top:-80px;right:-80px;width:380px;height:380px;border:1px solid rgba(247,197,118,0.07);animation:spin 55s linear infinite"></div>
+  <div class="arc" style="top:-50px;right:-50px;width:260px;height:260px;border:1px dashed rgba(220,146,75,0.09);animation:spinrev 38s linear infinite"></div>
+
+  <div class="hero-grid">
+    <div class="fu">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        Academic SaaS Platform &nbsp;·&nbsp; India
+      </div>
+      <h1 class="hero-h1">
+        The smartest way<br>to manage your<br><em>institution.</em>
+      </h1>
+      <p class="hero-sub">
+        Infovion is a complete, cloud-based academic management platform for Indian schools and colleges — admissions, academics, fees, staff and more, unified in one powerful system.
+      </p>
+      <div class="hero-btns">
+        <a href="mailto:infovion2025@gmail.com?subject=Demo%20Request%20-%20Infovion" class="btn-primary" style="text-decoration:none;display:inline-block">Schedule a Demo</a>
+        <a href="#modules" class="btn-ghost" style="text-decoration:none;display:inline-block">Explore Features →</a>
+        <a href="https://buildwithinfovion.com" target="_blank" class="btn-ghost" style="text-decoration:none;display:inline-block">Visit Website</a>
+      </div>
+      <div class="hero-stats">
+        <div><div class="hs-val">10+</div><div class="hs-label">Core Modules</div></div>
+        <div><div class="hs-val">5+</div><div class="hs-label">Custom Roles</div></div>
+        <div><div class="hs-val">~₹50</div><div class="hs-label">Per Student/Year</div></div>
+        <div><div class="hs-val">100%</div><div class="hs-label">Cloud Native</div></div>
+      </div>
+    </div>
+
+    <!-- Dashboard mockup -->
+    <div class="mockup-wrap fu2">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot" style="background:#ff5f57"></div>
+          <div class="mockup-dot" style="background:#febc2e"></div>
+          <div class="mockup-dot" style="background:#28c840"></div>
+          <div class="mockup-url">infovion.app / dashboard</div>
+        </div>
+        <div class="mockup-body">
+          <div class="m-top-row">
+            <span class="m-greeting">Good morning, Admin 👋</span>
+            <span class="m-online"><span style="width:5px;height:5px;border-radius:50%;background:#4ade80;display:inline-block;margin-right:3px"></span>Online</span>
+          </div>
+          <div class="m-cards">
+            <div class="m-card"><div class="m-card-val">847</div><div class="m-card-lbl">Students</div></div>
+            <div class="m-card"><div class="m-card-val">2024–25</div><div class="m-card-lbl">Acad. Year</div></div>
+            <div class="m-card"><div class="m-card-val">96%</div><div class="m-card-lbl">Attendance</div></div>
+            <div class="m-card"><div class="m-card-val">₹4.2L</div><div class="m-card-lbl">Fees Due</div></div>
+          </div>
+          <div class="m-bars">
+            <div class="m-bar" style="width:22px;height:28px;background:#ae5525"></div>
+            <div class="m-bar" style="width:22px;height:38px;background:#dc924b"></div>
+            <div class="m-bar" style="width:22px;height:22px;background:#ae5525"></div>
+            <div class="m-bar" style="width:22px;height:46px;background:#f7c576"></div>
+            <div class="m-bar" style="width:22px;height:32px;background:#dc924b"></div>
+            <div class="m-bar" style="width:22px;height:50px;background:#ae5525"></div>
+            <div class="m-bar" style="width:22px;height:36px;background:#dc924b"></div>
+            <div class="m-bar" style="width:22px;height:42px;background:#f7c576"></div>
+          </div>
+          <div class="m-list">
+            <div class="m-li"><div class="m-li-dot" style="background:#4ade80"></div>Term II exams scheduled — Class 10</div>
+            <div class="m-li"><div class="m-li-dot" style="background:#f7c576"></div>14 fee payments pending review</div>
+            <div class="m-li"><div class="m-li-dot" style="background:#ae5525"></div>3 new admission inquiries today</div>
+          </div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:11px;color:rgba(174,112,64,0.3);margin-top:13px">Operator Dashboard — live preview</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ METRICS BAND ══ -->
+<div class="metrics-band">
+  <div class="metrics-inner">
+    <div><div class="met-val">Multi-Tenant</div><div class="met-lbl">Each school's data fully isolated</div></div>
+    <div><div class="met-val">Cloud-Native</div><div class="met-lbl">Access from anywhere, any device</div></div>
+    <div><div class="met-val">Custom Roles</div><div class="met-lbl">Tailored access per user type</div></div>
+    <div><div class="met-val">~₹50/seat</div><div class="met-lbl">Affordable annual per-student rate</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PROBLEM + SOLUTION
+══════════════════════════════════════ -->
+<section id="problem" class="section" style="background:var(--cream)">
+  <div class="section-inner">
+    <div class="eyebrow">The Problem</div>
+    <h2 class="sec-h">Schools are drowning<br>in manual paperwork.</h2>
+    <p class="sec-sub">Most institutions across India still juggle registers, spreadsheets, WhatsApp groups and isolated software — all at once.</p>
+    <div class="problem-grid">
+      <div class="pain-list">
+        <div class="pain-item">
+          <div class="pain-ico">📋</div>
+          <div>
+            <div class="pain-title">Fragmented Data</div>
+            <div class="pain-desc">Attendance, fees, results and admissions tracked in separate systems — no single source of truth for the institution.</div>
+          </div>
+        </div>
+        <div class="pain-item">
+          <div class="pain-ico">⏰</div>
+          <div>
+            <div class="pain-title">Time-Consuming Processes</div>
+            <div class="pain-desc">Generating report cards, fee receipts or timetables requires hours of manual effort every academic cycle.</div>
+          </div>
+        </div>
+        <div class="pain-item">
+          <div class="pain-ico">🔒</div>
+          <div>
+            <div class="pain-title">Zero Transparency for Parents</div>
+            <div class="pain-desc">Parents have no visibility into fees due, attendance or exam results without calling the school office directly.</div>
+          </div>
+        </div>
+        <div class="pain-item">
+          <div class="pain-ico">📉</div>
+          <div>
+            <div class="pain-title">Admission Leakage</div>
+            <div class="pain-desc">Inquiries come in but there is no pipeline to track, follow up or systematically convert them into enrolments.</div>
+          </div>
+        </div>
+      </div>
+      <div class="solution-box">
+        <div class="arc" style="top:-30px;right:-30px;width:180px;height:180px;border:1px solid rgba(247,197,118,0.09);animation:spin 45s linear infinite"></div>
+        <div class="sol-logo">
+          <img src="apps/frontend/public/logo.png" alt="Infovion" style="height:34px;width:auto" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+          <span class="sol-logo-fallback" style="display:none">INFOVION</span>
+        </div>
+        <div class="sol-title">One platform.<br>Every workflow.</div>
+        <div class="sol-desc">Infovion consolidates every school operation into a single, role-aware platform. From the moment a student inquires to the day they graduate — every process is tracked, automated and accessible from anywhere.</div>
+        <div class="sol-checks">
+          <div class="sol-check"><div class="sol-tick">✓</div>Centralised student, staff &amp; academic data</div>
+          <div class="sol-check"><div class="sol-tick">✓</div>Automated fee collection &amp; receipt generation</div>
+          <div class="sol-check"><div class="sol-tick">✓</div>Real-time attendance &amp; exam result tracking</div>
+          <div class="sol-check"><div class="sol-tick">✓</div>Parent portal with live updates</div>
+          <div class="sol-check"><div class="sol-tick">✓</div>Complete admission inquiry pipeline</div>
+          <div class="sol-check"><div class="sol-tick">✓</div>Timetable, subjects &amp; class management</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     MODULES
+══════════════════════════════════════ -->
+<section id="modules" class="section" style="background:var(--surface)">
+  <div class="section-inner">
+    <div class="eyebrow">Platform Modules</div>
+    <h2 class="sec-h">Everything your school needs,<br>built in from day one.</h2>
+    <p class="sec-sub">Every module is deeply integrated. Data flows automatically — no manual syncing, no siloed tools.</p>
+    <div class="modules-grid">
+
+      <div class="mod-card c1">
+        <div class="mod-ico" style="background:#fff3e8">🎓</div>
+        <div class="mod-title">Student Admissions</div>
+        <div class="mod-desc">End-to-end admission flow from inquiry capture to enrolment. Track every lead, follow up systematically and convert faster.</div>
+        <span class="mod-tag" style="background:#fff3e8;color:#ae5525;border:1px solid #ecd4bc">Students</span>
+      </div>
+
+      <div class="mod-card c2">
+        <div class="mod-ico" style="background:#d1fae5">✅</div>
+        <div class="mod-title">Attendance Management</div>
+        <div class="mod-desc">Mark daily class attendance, track absentees, generate period-wise reports and notify parents automatically.</div>
+        <span class="mod-tag" style="background:#d1fae5;color:#065f46;border:1px solid #a7f3d0">Academics</span>
+      </div>
+
+      <div class="mod-card c3">
+        <div class="mod-ico" style="background:#fef3c7">📝</div>
+        <div class="mod-title">Examinations &amp; Results</div>
+        <div class="mod-desc">Schedule exams, enter marks subject-wise, auto-calculate grades and generate printable scorecards per student.</div>
+        <span class="mod-tag" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">Academics</span>
+      </div>
+
+      <div class="mod-card c4">
+        <div class="mod-ico" style="background:#f5ede5">💰</div>
+        <div class="mod-title">Fee Management</div>
+        <div class="mod-desc">Create fee structures, record collections, issue receipts and track pending dues per student with a clean finance dashboard.</div>
+        <span class="mod-tag" style="background:#f5ede5;color:#6b432f;border:1px solid #e0cfc3">Finance</span>
+      </div>
+
+      <div class="mod-card c5">
+        <div class="mod-ico" style="background:#d1fae5">🗓️</div>
+        <div class="mod-title">Timetable &amp; Classes</div>
+        <div class="mod-desc">Define classes, sections and subjects. Build weekly timetables and publish them instantly across all portals.</div>
+        <span class="mod-tag" style="background:#d1fae5;color:#065f46;border:1px solid #a7f3d0">Academics</span>
+      </div>
+
+      <div class="mod-card c6">
+        <div class="mod-ico" style="background:#fde8dc">👨‍💼</div>
+        <div class="mod-title">Staff &amp; Role Management</div>
+        <div class="mod-desc">Create staff profiles, assign teaching roles, manage login credentials and control access permissions granularly.</div>
+        <span class="mod-tag" style="background:#fde8dc;color:#8c3919;border:1px solid #f2c9b4">Operations</span>
+      </div>
+
+      <div class="mod-card c1">
+        <div class="mod-ico" style="background:#fdf0e0">📣</div>
+        <div class="mod-title">Announcements</div>
+        <div class="mod-desc">Broadcast notices to all portals simultaneously — parents, teachers and students receive updates in real time.</div>
+        <span class="mod-tag" style="background:#fdf0e0;color:#ae5525;border:1px solid #ecd4bc">Communication</span>
+      </div>
+
+      <div class="mod-card c3">
+        <div class="mod-ico" style="background:#fff8e1">🔍</div>
+        <div class="mod-title">Student Directory</div>
+        <div class="mod-desc">Search, filter and manage the complete student database by class, section or name with instant results.</div>
+        <span class="mod-tag" style="background:#fff8e1;color:#92400e;border:1px solid #fde68a">Students</span>
+      </div>
+
+      <div class="mod-card c2">
+        <div class="mod-ico" style="background:#d1fae5">📊</div>
+        <div class="mod-title">Promote &amp; Academic Years</div>
+        <div class="mod-desc">Bulk-promote students at year-end, archive historical data and seamlessly start a fresh academic cycle.</div>
+        <span class="mod-tag" style="background:#d1fae5;color:#065f46;border:1px solid #a7f3d0">Academics</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     USER ROLES
+══════════════════════════════════════ -->
+<section id="roles" class="section" style="background:var(--cream)">
+  <div class="section-inner">
+    <div class="eyebrow">Who Uses Infovion</div>
+    <h2 class="sec-h">A role for every person<br>in your institution.</h2>
+    <p class="sec-sub">Infovion supports a complete authority hierarchy — each user gets a tailored portal with exactly the access their role requires. Beyond the core five roles, institutions can configure any number of additional custom roles (Receptionist, Librarian, HOD, Accountant and more) to match their exact structure.</p>
+
+    <!-- Row 1: 3 top roles -->
+    <div class="roles-row">
+
+      <div class="role-card" style="border-top:3px solid #ae5525">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#ae5525;margin-bottom:12px">Highest Authority</div>
+        <div class="role-av" style="background:#fdf0e0">👑</div>
+        <div class="role-name">Super Admin / Director</div>
+        <div class="role-desc">Institution owner or governing authority. Has full visibility and override control across all departments, staff and data within the institution.</div>
+        <div class="chips">
+          <span class="chip">Full Access</span><span class="chip">All Reports</span><span class="chip">Manage Admins</span><span class="chip">Settings</span>
+        </div>
+      </div>
+
+      <div class="role-card" style="border-top:3px solid #dc924b">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#dc924b;margin-bottom:12px">Operations</div>
+        <div class="role-av" style="background:#fff3e8">👨‍💼</div>
+        <div class="role-name">Admin / School Operator</div>
+        <div class="role-desc">Day-to-day operational manager. Handles admissions, fees, staff onboarding, timetable setup and all administrative workflows.</div>
+        <div class="chips">
+          <span class="chip">Admissions</span><span class="chip">Fees</span><span class="chip">Staff</span><span class="chip">Timetable</span><span class="chip">Reports</span>
+        </div>
+      </div>
+
+      <div class="role-card" style="border-top:3px solid #2d6a4f">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2d6a4f;margin-bottom:12px">Academic Head</div>
+        <div class="role-av" style="background:#d1fae5">🎓</div>
+        <div class="role-name">Principal</div>
+        <div class="role-desc">Academic leader of the institution. Monitors overall attendance, exam performance, class reports and oversees teaching staff activity.</div>
+        <div class="chips">
+          <span class="chip">Attendance</span><span class="chip">Exams</span><span class="chip">Class Reports</span><span class="chip">Announcements</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Row 2: Teacher + Parent -->
+    <div class="roles-row-2">
+
+      <div class="role-card" style="border-top:3px solid #f7c576">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#ae7040;margin-bottom:12px">Classroom</div>
+        <div class="role-av" style="background:#fef3c7">👩‍🏫</div>
+        <div class="role-name">Teacher &amp; Other Staff</div>
+        <div class="role-desc">Subject teachers, class teachers and support staff. Mark attendance, enter exam marks, view their timetable and send class-level communications. Additional staff roles (Receptionist, Librarian, Accountant) can be created as needed.</div>
+        <div class="chips">
+          <span class="chip">Attendance</span><span class="chip">Exams</span><span class="chip">Timetable</span><span class="chip">Subjects</span><span class="chip">Notices</span>
+        </div>
+      </div>
+
+      <div class="role-card" style="border-top:3px solid #6b432f">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6b432f;margin-bottom:12px">Guardian</div>
+        <div class="role-av" style="background:#fde8dc">👨‍👩‍👧</div>
+        <div class="role-name">Parent</div>
+        <div class="role-desc">Track their child's daily attendance, view exam results and report cards, check fee payment status and receive school announcements — all in real time from their own portal.</div>
+        <div class="chips">
+          <span class="chip">My Child</span><span class="chip">Fees</span><span class="chip">Results</span><span class="chip">Attendance</span><span class="chip">Notices</span>
+        </div>
+      </div>
+
+    </div>
+
+    <p style="text-align:center;font-size:13px;color:var(--text3);margin-top:28px;font-style:italic">
+      ✦ &nbsp;Custom roles (Receptionist, Librarian, Accountant, HOD etc.) can be configured per institution's requirements.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     FUTURE SCOPE
+══════════════════════════════════════ -->
+<section id="future" class="section" style="background:var(--surface)">
+  <div class="section-inner">
+    <div class="eyebrow">What's Coming Next</div>
+    <h2 class="sec-h">A platform that grows<br>with your institution.</h2>
+    <p class="sec-sub">Infovion's current feature set is just the foundation. Here's where the platform is headed — practical capabilities that will make institutions even smarter over time.</p>
+    <div class="future-grid">
+
+      <div class="future-card fc1">
+        <div class="future-ico" style="background:#f3f0ff">🤖</div>
+        <div class="future-title">AI-Powered Insights</div>
+        <div class="future-desc">Predict at-risk students based on attendance and performance patterns. Get automated recommendations for early intervention before issues escalate.</div>
+        <span class="future-tag">Coming Soon</span>
+      </div>
+
+      <div class="future-card fc2">
+        <div class="future-ico" style="background:#d1fae5">📱</div>
+        <div class="future-title">Native Mobile Apps</div>
+        <div class="future-desc">Dedicated Android and iOS apps for parents and teachers — push notifications for attendance, results and fees without opening a browser.</div>
+        <span class="future-tag green">Planned</span>
+      </div>
+
+      <div class="future-card fc3">
+        <div class="future-ico" style="background:#fef3c7">💳</div>
+        <div class="future-title">Online Fee Collection</div>
+        <div class="future-desc">Integrated UPI, net banking and card payments. Parents pay fees directly from the portal — instant reconciliation, zero manual entry.</div>
+        <span class="future-tag amber">Planned</span>
+      </div>
+
+      <div class="future-card fc4">
+        <div class="future-ico" style="background:#fff3e8">💬</div>
+        <div class="future-title">WhatsApp &amp; SMS Alerts</div>
+        <div class="future-desc">Automated WhatsApp and SMS notifications to parents for absenteeism, exam results, fee reminders and important school announcements.</div>
+        <span class="future-tag rust">Planned</span>
+      </div>
+
+      <div class="future-card fc5">
+        <div class="future-ico" style="background:#d1fae5">📚</div>
+        <div class="future-title">Learning Management (LMS)</div>
+        <div class="future-desc">Digital assignments, homework submissions, study materials and video lessons — a full academic workflow for teachers and students in one place.</div>
+        <span class="future-tag teal">Roadmap</span>
+      </div>
+
+      <div class="future-card fc6">
+        <div class="future-ico" style="background:#dbeafe">🚌</div>
+        <div class="future-title">Transport &amp; GPS Tracking</div>
+        <div class="future-desc">Real-time school bus tracking with live location sharing to parents. Route management, driver assignment and estimated arrival times.</div>
+        <span class="future-tag blue">Roadmap</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     AFFORDABLE
+══════════════════════════════════════ -->
+<section id="pricing" class="section" style="background:linear-gradient(160deg,#1c0e06,#2d1a0e,#3a1e09)">
+  <div class="section-inner">
+    <div class="eyebrow">Affordable for Every School</div>
+    <h2 class="sec-h">World-class software,<br>priced for India.</h2>
+    <p class="sec-sub">Infovion is built for Indian schools of every size — from 100-student primary schools to 2,000-student colleges. Simple, affordable and completely inclusive.</p>
+    <div class="afford-grid">
+
+      <div class="afford-card">
+        <div class="afford-ico">🏫</div>
+        <div class="afford-title">Simple Per-Student Model</div>
+        <div class="afford-desc">Pay only for the students you have. No fixed overheads, no module add-ons. Roughly <strong style="color:#f7c576">₹40–50 per student per year</strong> — a fraction of what manual processes cost in staff time and errors.</div>
+      </div>
+
+      <div class="afford-card">
+        <div class="afford-ico">📦</div>
+        <div class="afford-title">Everything Included</div>
+        <div class="afford-desc">All 10+ modules, all user portals, all future updates — in one subscription. No hidden costs, no per-module fees. The full platform, from day one.</div>
+      </div>
+
+      <div class="afford-card">
+        <div class="afford-ico">🤝</div>
+        <div class="afford-title">Let's Talk</div>
+        <div class="afford-desc">Every institution is unique. Reach out and we'll walk you through how Infovion fits your institution's size, structure and go-live needs.</div>
+        <a href="mailto:infovion2025@gmail.com?subject=Enquiry%20-%20Infovion" class="afford-cta">Get in Touch</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     TECHNOLOGY
+══════════════════════════════════════ -->
+<section id="tech" class="section" style="background:var(--surface)">
+  <div class="section-inner">
+    <div class="eyebrow">Built to Last</div>
+    <h2 class="sec-h">Enterprise-grade technology,<br>right-sized for schools.</h2>
+    <p class="sec-sub">Modern, proven stack. No legacy baggage, no vendor lock-in. Runs reliably on serverless cloud infrastructure.</p>
+    <div class="tech-grid">
+      <div>
+        <p class="tech-lbl">Technology Stack</p>
+        <div class="tech-list">
+          <div class="tech-item">
+            <span class="t-badge" style="background:#fdf0e0;color:#ae5525">Frontend</span>
+            <div><div class="t-name">Next.js 15 + TypeScript</div><div class="t-role">App Router · React Server Components · Tailwind CSS</div></div>
+          </div>
+          <div class="tech-item">
+            <span class="t-badge" style="background:#d1fae5;color:#065f46">Backend</span>
+            <div><div class="t-name">NestJS 11 + TypeScript</div><div class="t-role">REST API · Modular architecture · Validation pipes</div></div>
+          </div>
+          <div class="tech-item">
+            <span class="t-badge" style="background:#fef3c7;color:#92400e">Database</span>
+            <div><div class="t-name">PostgreSQL via Prisma ORM</div><div class="t-role">Neon serverless · Schema migrations · Type-safe queries</div></div>
+          </div>
+          <div class="tech-item">
+            <span class="t-badge" style="background:#fde8dc;color:#8c3919">Auth</span>
+            <div><div class="t-name">JWT + Passport.js</div><div class="t-role">24h access tokens · 7d refresh tokens · bcrypt (12 rounds)</div></div>
+          </div>
+          <div class="tech-item">
+            <span class="t-badge" style="background:#ede9fe;color:#6d28d9">State</span>
+            <div><div class="t-name">Zustand + localStorage</div><div class="t-role">Persisted auth state · Hydration-safe · Silent token refresh</div></div>
+          </div>
+          <div class="tech-item">
+            <span class="t-badge" style="background:#e8f5e9;color:#2e7d32">Infra</span>
+            <div><div class="t-name">pnpm Monorepo</div><div class="t-role">Shared types · Workspace packages · Fast installs</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-box">
+        <div class="arc" style="top:-24px;right:-24px;width:140px;height:140px;border:1px solid rgba(247,197,118,0.08);animation:spin 50s linear infinite"></div>
+        <div class="sec-box-title">🛡️ Built with Trust at Its Core</div>
+        <div class="sec-items">
+          <div class="sec-item">
+            <span class="sec-ico">🔐</span>
+            <div><div class="sec-t">Complete Data Isolation</div><div class="sec-d">Each institution's data is fully isolated. No school can ever access another school's records.</div></div>
+          </div>
+          <div class="sec-item">
+            <span class="sec-ico">🎭</span>
+            <div><div class="sec-t">Role-Based Access Control</div><div class="sec-d">Every user sees only what their role allows — nothing more, nothing less.</div></div>
+          </div>
+          <div class="sec-item">
+            <span class="sec-ico">☁️</span>
+            <div><div class="sec-t">Always-On Cloud Reliability</div><div class="sec-d">Hosted on enterprise-grade serverless cloud infrastructure with high availability and automatic scaling.</div></div>
+          </div>
+          <div class="sec-item">
+            <span class="sec-ico">🔒</span>
+            <div><div class="sec-t">Secure Authentication</div><div class="sec-d">Industry-standard authentication with secure token management. Sessions stay safe and uninterrupted.</div></div>
+          </div>
+          <div class="sec-item">
+            <span class="sec-ico">📋</span>
+            <div><div class="sec-t">Clean Data Governance</div><div class="sec-d">Full off-boarding support — when an institution leaves, their data is cleanly and completely removed.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     CTA
+══════════════════════════════════════ -->
+<section id="cta">
+  <div class="orb orb-tr" style="opacity:.7"></div>
+  <div class="orb orb-bl" style="opacity:.7"></div>
+  <div class="arc" style="top:50%;left:50%;width:800px;height:800px;margin:-400px 0 0 -400px;border:1px solid rgba(247,197,118,0.04);animation:spin 100s linear infinite"></div>
+  <div class="arc" style="top:50%;left:50%;width:560px;height:560px;margin:-280px 0 0 -280px;border:1px dashed rgba(220,146,75,0.06);animation:spinrev 70s linear infinite"></div>
+  <div class="cta-inner">
+    <div class="cta-logo">
+      <img src="apps/frontend/public/logo.png" alt="Infovion" style="height:52px;width:auto" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="cta-logo-fallback" style="display:none">INFOVION</span>
+    </div>
+    <h2 class="cta-h">Ready to transform<br>your <em>institution?</em></h2>
+    <p class="cta-sub">Join schools across India that are running smarter with Infovion. Schedule a live demo — we'll walk you through every module, tailored to your institution's size and needs.</p>
+    <div class="cta-btns">
+      <a href="mailto:infovion2025@gmail.com?subject=Demo%20Request%20-%20Infovion" class="btn-primary" style="font-size:16px;padding:15px 42px;text-decoration:none;display:inline-block">Schedule a Demo</a>
+      <a href="tel:+919309193613" class="btn-ghost" style="font-size:16px;padding:15px 42px;text-decoration:none;display:inline-block">Call Us</a>
+      <a href="https://buildwithinfovion.com" target="_blank" class="btn-ghost" style="font-size:16px;padding:15px 42px;text-decoration:none;display:inline-block">Visit Website</a>
+    </div>
+    <div class="cta-contacts">
+      <div><div class="cc-lbl">Email</div><div class="cc-val"><a href="mailto:infovion2025@gmail.com" style="color:inherit;text-decoration:none">infovion2025@gmail.com</a></div></div>
+      <div><div class="cc-lbl">Phone</div><div class="cc-val"><a href="tel:+919309193613" style="color:inherit;text-decoration:none">+91 93091 93613</a></div></div>
+      <div><div class="cc-lbl">Website</div><div class="cc-val"><a href="https://buildwithinfovion.com" target="_blank" style="color:inherit;text-decoration:none">buildwithinfovion.com</a></div></div>
+      <div><div class="cc-lbl">LinkedIn</div><div class="cc-val"><a href="https://www.linkedin.com/company/112026919/" target="_blank" style="color:inherit;text-decoration:none">Infovion on LinkedIn</a></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer style="flex-wrap:wrap;gap:16px">
+  <div class="foot-logo">
+    <img src="apps/frontend/public/logo.png" alt="Infovion" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <span class="foot-logo-fallback" style="display:none">INFOVION</span>
+  </div>
+  <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:center">
+    <a href="mailto:infovion2025@gmail.com" style="font-size:12px;color:rgba(174,112,64,0.45);text-decoration:none">infovion2025@gmail.com</a>
+    <a href="tel:+919309193613" style="font-size:12px;color:rgba(174,112,64,0.45);text-decoration:none">+91 93091 93613</a>
+    <a href="https://buildwithinfovion.com" target="_blank" style="font-size:12px;color:rgba(174,112,64,0.45);text-decoration:none">buildwithinfovion.com</a>
+    <a href="https://www.linkedin.com/company/112026919/" target="_blank" style="font-size:12px;color:rgba(174,112,64,0.45);text-decoration:none">LinkedIn</a>
+  </div>
+  <div class="foot-copy">© 2026 Infovion. All rights reserved.</div>
+</footer>
+
+</body>
+</html>

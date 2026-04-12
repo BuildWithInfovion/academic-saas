@@ -8,6 +8,15 @@ import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
 
 const DASHBOARD_ROLES = ['admin', 'super_admin'];
 
+// Most-specific match wins — prevents parent paths staying active on child pages
+function getActivePath(pathname: string): string | undefined {
+  const allItems = menuGroups.flatMap((g) => g.items);
+  return [...allItems]
+    .sort((a, b) => b.path.length - a.path.length)
+    .find((item) => pathname === item.path || (item.path.length > 1 && pathname.startsWith(item.path + '/')))
+    ?.path;
+}
+
 const Icons: Record<string, () => JSX.Element> = {
   overview:   () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
   admission:  () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>,
@@ -94,8 +103,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   if (!isHydrated || !accessToken) return null;
 
-  const roleLabel = user ? getRoleLabel(user.roles) : '';
-  const userName  = user ? displayName(user.email, user.phone) : '';
+  const roleLabel    = user ? getRoleLabel(user.roles) : '';
+  const userName     = user ? displayName(user.email, user.phone) : '';
+  const activeNavPath = getActivePath(pathname);
 
   const sidebarContent = (
     <div className="overflow-y-auto flex-1 flex flex-col">
@@ -138,8 +148,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div key={group.label}>
             <p className="sidebar-section-label">{group.label}</p>
             {group.items.map((item) => {
-              const active = pathname === item.path ||
-                (item.path !== '/dashboard' && pathname.startsWith(item.path));
+              const active = item.path === activeNavPath;
               const IconComp = Icons[item.icon];
               return (
                 <div key={item.path} onClick={() => router.push(item.path)}

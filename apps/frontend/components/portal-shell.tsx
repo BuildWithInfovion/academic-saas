@@ -53,6 +53,12 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   const roleLabel = user ? getRoleLabel(user.roles) : '';
   const userName  = user ? displayName(user.email, user.phone) : '';
 
+  // Most-specific match wins — prevents parent paths staying highlighted on sub-pages
+  const activeItemPath = [...menuItems]
+    .sort((a, b) => b.path.length - a.path.length)
+    .find((m) => pathname === m.path || (m.path.length > 1 && pathname.startsWith(m.path + '/')))
+    ?.path;
+
   const sidebarContent = (
     <div className="overflow-y-auto flex-1 flex flex-col">
       {/* Brand — Infovion logo only */}
@@ -92,7 +98,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
       <nav className="px-2 pt-3 pb-4 flex-1">
         <p className="sidebar-section-label">Navigation</p>
         {menuItems.map((item) => {
-          const active = pathname === item.path || (item.path.length > 1 && pathname.startsWith(item.path + '/'));
+          const active = item.path === activeItemPath;
           return (
             <div
               key={item.path}

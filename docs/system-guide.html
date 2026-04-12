@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academic SaaS — System Guide</title>
+  <style>
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3250;
+      --text1: #e8eaf0;
+      --text2: #9aa0bc;
+      --text3: #5a6180;
+      --brand: #6c8ef5;
+      --brand-dim: #3d518a;
+      --green: #4ade80;
+      --green-dim: #1a4030;
+      --yellow: #fbbf24;
+      --yellow-dim: #3d3010;
+      --red: #f87171;
+      --red-dim: #3d1818;
+      --cyan: #22d3ee;
+      --purple: #c084fc;
+      --orange: #fb923c;
+      --sidebar-w: 280px;
+      --header-h: 60px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text1);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      display: flex;
+    }
+
+    /* ─── Sidebar TOC ─── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding-bottom: 40px;
+    }
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .sidebar-logo {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .logo-mark {
+      display: inline-block;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+    .sidebar-logo h2 {
+      font-size: 13px;
+      color: var(--text2);
+      font-weight: 500;
+    }
+    .toc-section { padding: 12px 0 4px 20px; }
+    .toc-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: var(--text3);
+      text-transform: uppercase;
+    }
+    .toc-link {
+      display: block;
+      padding: 5px 20px 5px 20px;
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 13px;
+      border-left: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .toc-link:hover { color: var(--brand); border-left-color: var(--brand); background: rgba(108,142,245,0.05); }
+    .toc-link.sub { padding-left: 32px; font-size: 12px; color: var(--text3); }
+    .toc-link.sub:hover { color: var(--text2); }
+
+    /* ─── Main Content ─── */
+    #main {
+      flex: 1;
+      min-width: 0;
+      padding: 40px 48px;
+      max-width: calc(100vw - var(--sidebar-w));
+    }
+
+    /* ─── Hero ─── */
+    .hero {
+      background: linear-gradient(135deg, #1a1d27 0%, #12172a 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px;
+      margin-bottom: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(108,142,245,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: var(--brand-dim);
+      color: var(--brand);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    .hero h1 { font-size: 36px; font-weight: 800; color: var(--text1); margin-bottom: 12px; }
+    .hero h1 span { color: var(--brand); }
+    .hero p { font-size: 16px; color: var(--text2); max-width: 640px; margin-bottom: 28px; }
+    .hero-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .hero-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 14px; font-size: 13px;
+    }
+    .hero-chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* ─── Section Headers ─── */
+    .section { margin-bottom: 56px; }
+    .section-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 24px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .section h2 { font-size: 24px; font-weight: 700; color: var(--text1); }
+    .section h3 { font-size: 18px; font-weight: 600; color: var(--text1); margin: 28px 0 12px; }
+    .section h4 { font-size: 15px; font-weight: 600; color: var(--text2); margin: 20px 0 8px; }
+    .section p { color: var(--text2); margin-bottom: 12px; }
+    .section ul, .section ol { color: var(--text2); padding-left: 24px; margin-bottom: 12px; }
+    .section li { margin-bottom: 4px; }
+    .section li strong { color: var(--text1); }
+
+    /* ─── Cards ─── */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+    }
+    .card-icon { font-size: 24px; margin-bottom: 10px; }
+    .card h4 { font-size: 14px; font-weight: 600; color: var(--text1); margin-bottom: 6px; }
+    .card p { font-size: 13px; color: var(--text2); margin: 0; }
+    .card.accent-blue { border-color: var(--brand-dim); }
+    .card.accent-green { border-color: #1a4030; }
+    .card.accent-yellow { border-color: #3d3010; }
+    .card.accent-purple { border-color: #4a2060; }
+    .card.accent-red { border-color: var(--red-dim); }
+    .card.accent-cyan { border-color: #0c3040; }
+
+    /* ─── Tables ─── */
+    .table-wrap { overflow-x: auto; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: var(--surface2); }
+    th {
+      padding: 10px 16px; text-align: left; font-size: 11px;
+      font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+      color: var(--text3); border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 16px; color: var(--text2); border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    td code, th code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', 'Cascadia Code', monospace; color: var(--cyan); font-size: 12px; }
+
+    /* ─── Code Blocks ─── */
+    pre {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px; overflow-x: auto;
+      font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 13px; line-height: 1.6; color: var(--text1);
+      margin-bottom: 20px;
+    }
+    code {
+      background: var(--surface2); padding: 2px 6px;
+      border-radius: 4px; font-family: 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 13px; color: var(--cyan);
+    }
+    pre code { background: none; padding: 0; color: inherit; }
+    .kw { color: var(--purple); }
+    .fn { color: var(--brand); }
+    .str { color: var(--green); }
+    .cm { color: var(--text3); font-style: italic; }
+    .num { color: var(--orange); }
+    .type { color: var(--yellow); }
+
+    /* ─── Badges ─── */
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px; margin: 2px;
+    }
+    .badge-blue { background: var(--brand-dim); color: var(--brand); }
+    .badge-green { background: var(--green-dim); color: var(--green); }
+    .badge-red { background: var(--red-dim); color: var(--red); }
+    .badge-yellow { background: var(--yellow-dim); color: var(--yellow); }
+    .badge-purple { background: #4a2060; color: var(--purple); }
+    .badge-cyan { background: #0c3040; color: var(--cyan); }
+    .badge-gray { background: var(--surface2); color: var(--text2); }
+
+    /* ─── Callouts ─── */
+    .callout {
+      border-left: 3px solid; border-radius: 0 8px 8px 0;
+      padding: 14px 18px; margin-bottom: 16px; font-size: 14px;
+    }
+    .callout.info { border-color: var(--brand); background: rgba(108,142,245,0.08); color: var(--text2); }
+    .callout.warn { border-color: var(--yellow); background: rgba(251,191,36,0.08); color: var(--text2); }
+    .callout.danger { border-color: var(--red); background: rgba(248,113,113,0.08); color: var(--text2); }
+    .callout.success { border-color: var(--green); background: rgba(74,222,128,0.08); color: var(--text2); }
+    .callout strong { color: var(--text1); }
+
+    /* ─── Flow Diagram ─── */
+    .flow {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: 8px; margin: 16px 0;
+    }
+    .flow-box {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 16px;
+      font-size: 13px; color: var(--text1); font-weight: 500;
+      white-space: nowrap;
+    }
+    .flow-box.blue { border-color: var(--brand); color: var(--brand); }
+    .flow-box.green { border-color: var(--green); color: var(--green); }
+    .flow-box.yellow { border-color: var(--yellow); color: var(--yellow); }
+    .flow-box.red { border-color: var(--red); color: var(--red); }
+    .flow-box.purple { border-color: var(--purple); color: var(--purple); }
+    .flow-arrow { color: var(--text3); font-size: 18px; }
+
+    /* ─── Tree ─── */
+    .tree {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+      font-family: 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 12.5px; line-height: 1.9; color: var(--text2);
+      overflow-x: auto; margin-bottom: 20px;
+    }
+    .tree .dir { color: var(--brand); }
+    .tree .file { color: var(--text2); }
+    .tree .note { color: var(--text3); }
+
+    /* ─── Role Table Color ─── */
+    .role-super { color: var(--yellow); font-weight: 700; }
+    .role-admin { color: var(--brand); font-weight: 700; }
+    .role-principal { color: var(--purple); font-weight: 700; }
+    .role-teacher { color: var(--green); font-weight: 700; }
+    .role-student { color: var(--cyan); font-weight: 700; }
+    .role-parent { color: var(--orange); font-weight: 700; }
+    .role-reception { color: var(--text2); font-weight: 700; }
+
+    /* ─── Misc ─── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 900px) {
+      #sidebar { display: none; }
+      #main { padding: 24px; max-width: 100vw; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+    .api-path { color: var(--green); }
+    .api-method-get { color: var(--cyan); font-weight: 700; }
+    .api-method-post { color: var(--green); font-weight: 700; }
+    .api-method-patch { color: var(--yellow); font-weight: 700; }
+    .api-method-delete { color: var(--red); font-weight: 700; }
+    .api-row td:first-child { font-family: monospace; white-space: nowrap; }
+    .footnote { font-size: 12px; color: var(--text3); margin-top: 8px; }
+    .tag { display: inline-block; font-size: 11px; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 7px; margin: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ SIDEBAR ═══════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">INFOVION</div>
+    <h2>Academic SaaS · System Guide</h2>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Overview</div>
+    <a href="#overview" class="toc-link">Project Overview</a>
+    <a href="#tech-stack" class="toc-link">Technology Stack</a>
+    <a href="#architecture" class="toc-link">System Architecture</a>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Backend</div>
+    <a href="#backend-structure" class="toc-link">Directory Structure</a>
+    <a href="#modules" class="toc-link">Feature Modules</a>
+    <a href="#data-model" class="toc-link">Data Model</a>
+    <a href="#api-reference" class="toc-link">API Reference</a>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Frontend</div>
+    <a href="#frontend-structure" class="toc-link">Directory Structure</a>
+    <a href="#portals" class="toc-link">Role Portals</a>
+    <a href="#shared-components" class="toc-link">Shared Components</a>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Core Systems</div>
+    <a href="#auth-system" class="toc-link">Authentication</a>
+    <a href="#multitenancy" class="toc-link">Multi-Tenancy</a>
+    <a href="#rbac" class="toc-link">Roles &amp; Permissions</a>
+    <a href="#data-flow" class="toc-link">Data Flow</a>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Security</div>
+    <a href="#security" class="toc-link">Security Overview</a>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Platform Layer</div>
+    <a href="#platform" class="toc-link">Platform Console</a>
+  </div>
+
+  <div class="toc-section">
+    <div class="toc-section-label">Operations</div>
+    <a href="#key-files" class="toc-link">Critical Files</a>
+    <a href="#known-issues" class="toc-link">Known Issues</a>
+    <a href="#dev-guide" class="toc-link">Developer Guide</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════ MAIN ═══════════════════════════════════════ -->
+<main id="main">
+
+  <!-- ─── HERO ─── -->
+  <div class="hero">
+    <div class="hero-badge">System Documentation</div>
+    <h1>Academic SaaS <span>Treasure Map</span></h1>
+    <p>A complete guide to how this platform is built — architecture, modules, data models, authentication, security, and everything in between. Written for developers, students, and anyone who needs to understand or extend this system.</p>
+    <div class="hero-meta">
+      <div class="hero-chip">
+        <div class="dot" style="background:#4ade80"></div>
+        <span>Backend: NestJS 11</span>
+      </div>
+      <div class="hero-chip">
+        <div class="dot" style="background:#6c8ef5"></div>
+        <span>Frontend: Next.js 14</span>
+      </div>
+      <div class="hero-chip">
+        <div class="dot" style="background:#22d3ee"></div>
+        <span>Database: PostgreSQL (Neon)</span>
+      </div>
+      <div class="hero-chip">
+        <div class="dot" style="background:#c084fc"></div>
+        <span>ORM: Prisma 7</span>
+      </div>
+      <div class="hero-chip">
+        <div class="dot" style="background:#fbbf24"></div>
+        <span>Multi-Tenant SaaS</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 1: OVERVIEW ══════════ -->
+  <div class="section" id="overview">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a2a4a;">🎓</div>
+      <h2>Project Overview</h2>
+    </div>
+
+    <p>This is a <strong>multi-tenant academic management SaaS platform</strong> built for Infovion Technologies. It manages the full lifecycle of a school: admissions, attendance, examinations, fees, staff, and communication — across multiple schools (institutions) from a single deployment.</p>
+
+    <p>The first client is a K-12 school in India. The platform is designed to scale to colleges and other institution types.</p>
+
+    <div class="card-grid">
+      <div class="card accent-blue">
+        <div class="card-icon">🏫</div>
+        <h4>Multi-Tenant</h4>
+        <p>Multiple schools share one database and backend. Data is isolated by <code>institution_id</code> on every table.</p>
+      </div>
+      <div class="card accent-green">
+        <div class="card-icon">👥</div>
+        <h4>7 Roles</h4>
+        <p>Director, Operator, Principal, Teacher, Student, Parent, Receptionist — each with its own portal and permissions.</p>
+      </div>
+      <div class="card accent-yellow">
+        <div class="card-icon">🇮🇳</div>
+        <h4>India-Optimised</h4>
+        <p>Fields like Aadhar, caste category, board type (CBSE/ICSE/State), and Indian fee heads are built-in.</p>
+      </div>
+      <div class="card accent-purple">
+        <div class="card-icon">⚡</div>
+        <h4>Monorepo</h4>
+        <p>Backend and Frontend live in the same Git repository under <code>apps/backend</code> and <code>apps/frontend</code>.</p>
+      </div>
+    </div>
+
+    <h3>What the Platform Manages</h3>
+    <div class="card-grid">
+      <div class="card"><div class="card-icon">📋</div><h4>Admissions</h4><p>Student registration, auto admission numbers, TC validation, inquiry pipeline.</p></div>
+      <div class="card"><div class="card-icon">📅</div><h4>Attendance</h4><p>Daily student attendance per class, monthly reports, defaulter tracking. Staff attendance module too.</p></div>
+      <div class="card"><div class="card-icon">📝</div><h4>Examinations</h4><p>Exam creation, subject-wise mark entry, result computation, scorecard generation.</p></div>
+      <div class="card"><div class="card-icon">💰</div><h4>Fees</h4><p>Fee heads, class-linked structures, payment recording, balance tracking, defaulter reports.</p></div>
+      <div class="card"><div class="card-icon">👩‍🏫</div><h4>Staff</h4><p>User creation, role assignment, teacher-subject-class linking.</p></div>
+      <div class="card"><div class="card-icon">📢</div><h4>Announcements</h4><p>Role-targeted notice board with pinning and expiry.</p></div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 2: TECH STACK ══════════ -->
+  <div class="section" id="tech-stack">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a3a2a;">🛠️</div>
+      <h2>Technology Stack</h2>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <h3>Backend</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>NestJS</strong></td><td>11.0.1</td><td>Server framework (TypeScript, modular)</td></tr>
+              <tr><td><strong>Prisma ORM</strong></td><td>7.4.1</td><td>Database queries, schema, migrations</td></tr>
+              <tr><td><strong>PostgreSQL</strong></td><td>—</td><td>Main database (hosted on Neon serverless)</td></tr>
+              <tr><td><strong>Passport.js</strong></td><td>—</td><td>Authentication middleware (JWT strategy)</td></tr>
+              <tr><td><strong>bcrypt</strong></td><td>6.0.0</td><td>Password hashing</td></tr>
+              <tr><td><strong>class-validator</strong></td><td>—</td><td>DTO request body validation</td></tr>
+              <tr><td><strong>@nestjs/config</strong></td><td>—</td><td>Environment variable management</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3>Frontend</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Next.js</strong></td><td>14 (App Router)</td><td>React framework, file-based routing</td></tr>
+              <tr><td><strong>React</strong></td><td>19.2.4</td><td>UI library</td></tr>
+              <tr><td><strong>TypeScript</strong></td><td>5</td><td>Type safety across entire frontend</td></tr>
+              <tr><td><strong>Tailwind CSS</strong></td><td>3.4.19</td><td>Utility-first styling (no UI library)</td></tr>
+              <tr><td><strong>Zustand</strong></td><td>5.0.12</td><td>Global auth state management</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <strong>No component library</strong> — the entire UI is built with plain Tailwind CSS utility classes. This keeps bundle size small and gives full design control.
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 3: ARCHITECTURE ══════════ -->
+  <div class="section" id="architecture">
+    <div class="section-header">
+      <div class="section-icon" style="background:#2a1a4a;">🏗️</div>
+      <h2>System Architecture</h2>
+    </div>
+
+    <p>The system follows a classic <strong>monorepo, three-tier web architecture</strong>: Browser → Next.js Frontend → NestJS Backend → PostgreSQL Database. A separate Platform Console layer sits alongside for Infovion's internal use.</p>
+
+    <pre>
+┌─────────────────────────────────────────────────────────────────────┐
+│  <span class="cm">Browser / Mobile</span>                                                    │
+│                                                                     │
+│  ┌──────────────────────────┐    ┌──────────────────────────────┐  │
+│  │  <span class="fn">Role Portals</span> (Next.js)   │    │  <span class="fn">Platform Console</span> (Next.js) │  │
+│  │  /dashboard (Operator)   │    │  /platform/clients           │  │
+│  │  /portal/teacher         │    │  Onboard schools             │  │
+│  │  /portal/student  etc.   │    │  View revenue stats          │  │
+│  └────────────┬─────────────┘    └──────────────┬───────────────┘  │
+│               │ HTTPS                            │ HTTPS            │
+└───────────────┼──────────────────────────────────┼─────────────────┘
+                │                                  │
+                ▼                                  ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  <span class="fn">NestJS REST API</span>  (port 3000)                                      │
+│                                                                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────────┐ │
+│  │  <span class="kw">Auth Module</span>  │  │ <span class="kw">Tenant Mware</span> │  │    <span class="kw">Feature Modules</span>        │ │
+│  │  JWT + bcrypt│  │ X-Inst-ID hdr│  │  Students, Attendance,  │ │
+│  │  Refresh tkn │  │ enforced gbl │  │  Exams, Fees, Subjects  │ │
+│  └──────────────┘  └──────────────┘  └─────────────────────────┘ │
+│                                                                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────────┐ │
+│  │  <span class="kw">RBAC Guards</span>  │  │ <span class="kw">Audit Logs</span>   │  │    <span class="kw">Platform Module</span>        │ │
+│  │  RolesGuard  │  │ GlobalInter- │  │  Separate JWT, admin    │ │
+│  │  TenantGuard │  │ ceptor       │  │  onboarding, stats      │ │
+│  └──────────────┘  └──────────────┘  └─────────────────────────┘ │
+└──────────────────────────────────────┬───────────────────────────┘
+                                       │ Prisma ORM
+                                       ▼
+                        ┌──────────────────────────┐
+                        │  <span class="type">PostgreSQL (Neon)</span>          │
+                        │  Single shared database    │
+                        │  Tenant isolated by field  │
+                        └──────────────────────────┘
+    </pre>
+
+    <h3>Monorepo Layout</h3>
+    <div class="tree">
+<span class="dir">academic-saas/</span>
+├── <span class="dir">apps/</span>
+│   ├── <span class="dir">backend/</span>          <span class="note">← NestJS API (port 3000)</span>
+│   │   ├── <span class="dir">prisma/</span>       <span class="note">← schema.prisma, migrations, seed.ts</span>
+│   │   ├── <span class="dir">src/</span>          <span class="note">← all source code</span>
+│   │   └── .env          <span class="note">← DATABASE_URL, JWT_SECRET, CORS_ORIGIN, PORT</span>
+│   │
+│   └── <span class="dir">frontend/</span>         <span class="note">← Next.js app (port 3001)</span>
+│       ├── <span class="dir">app/</span>          <span class="note">← pages and layouts (App Router)</span>
+│       ├── <span class="dir">components/</span>   <span class="note">← portal-shell.tsx, shared UI</span>
+│       ├── <span class="dir">lib/</span>          <span class="note">← api.ts, auth-utils.ts, platform-api.ts</span>
+│       ├── <span class="dir">store/</span>        <span class="note">← auth.store.ts (Zustand)</span>
+│       └── .env.local    <span class="note">← NEXT_PUBLIC_API_URL=http://localhost:3000</span>
+│
+├── CONTRIBUTING.md       <span class="note">← branching strategy and PR rules</span>
+└── <span class="dir">.github/</span>             <span class="note">← PR template</span>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 4: BACKEND STRUCTURE ══════════ -->
+  <div class="section" id="backend-structure">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a3a1a;">⚙️</div>
+      <h2>Backend Directory Structure</h2>
+    </div>
+    <p>The backend is a <strong>NestJS modular application</strong>. Each feature lives in its own module with a controller, service, and DTOs. Common infrastructure (guards, filters, middleware) lives in <code>src/common/</code>.</p>
+
+    <div class="tree">
+<span class="dir">apps/backend/src/</span>
+├── main.ts               <span class="note">← Entry point: CORS, global pipes/filters, port</span>
+├── app.module.ts         <span class="note">← Root: imports all modules, applies middleware</span>
+│
+├── <span class="dir">prisma/</span>               <span class="note">← Database layer</span>
+│   ├── prisma.module.ts  <span class="note">← Global PrismaModule (no need to import elsewhere)</span>
+│   └── prisma.service.ts <span class="note">← ORM + soft-delete middleware + keep-alive</span>
+│
+├── <span class="dir">common/</span>               <span class="note">← Shared infrastructure</span>
+│   ├── <span class="dir">decorators/</span>
+│   │   ├── tenant.decorator.ts      <span class="note">← @Tenant() extracts institutionId</span>
+│   │   └── permissions.decorator.ts <span class="note">← @Permissions('students.write')</span>
+│   ├── <span class="dir">filters/</span>
+│   │   └── prisma-exception.filter.ts  <span class="note">← Maps DB errors to HTTP codes</span>
+│   ├── <span class="dir">guards/</span>
+│   │   ├── auth.guard.ts    <span class="note">← Validates JWT bearer token</span>
+│   │   ├── roles.guard.ts   <span class="note">← Checks user permissions</span>
+│   │   └── tenant.guard.ts  <span class="note">← Validates X-Institution-ID</span>
+│   ├── <span class="dir">interceptors/</span>
+│   │   └── audit-log.interceptor.ts  <span class="note">← Logs every API action globally</span>
+│   ├── <span class="dir">middleware/</span>
+│   │   └── tenant.middleware.ts  <span class="note">← Reads X-Institution-ID header early</span>
+│   └── <span class="dir">services/</span>
+│       └── audit-log.service.ts
+│
+├── <span class="dir">modules/</span>              <span class="note">← Feature modules</span>
+│   ├── auth/             <span class="note">← Login, refresh, logout, JWT strategy</span>
+│   ├── users/            <span class="note">← User CRUD, role assignment</span>
+│   ├── student/          <span class="note">← Admission, student CRUD</span>
+│   ├── roles/            <span class="note">← Role definitions</span>
+│   ├── academic/         <span class="note">← Years, classes, units hierarchy</span>
+│   ├── subject/          <span class="note">← Subjects, class-subject mapping</span>
+│   ├── attendance/       <span class="note">← Student attendance sessions + records</span>
+│   ├── exam/             <span class="note">← Exams, mark entry, results</span>
+│   ├── fees/             <span class="note">← Fee heads, structures, payments</span>
+│   ├── inquiry/          <span class="note">← Lead/inquiry pipeline</span>
+│   ├── announcement/     <span class="note">← Notice board</span>
+│   ├── timetable/        <span class="note">← Weekly period timetable</span>
+│   └── staff-attendance/ <span class="note">← Teacher/staff attendance</span>
+│
+├── <span class="dir">institution/</span>          <span class="note">← Institution management (seed-defaults)</span>
+│
+└── <span class="dir">platform/</span>             <span class="note">← Platform admin (Infovion internal)</span>
+    ├── platform.controller.ts  <span class="note">← Onboard, stats, clients</span>
+    ├── platform.guard.ts       <span class="note">← Separate platform JWT</span>
+    └── platform.service.ts     <span class="note">← Business logic</span>
+    </div>
+
+    <h3>How a Request Flows Through the Backend</h3>
+    <div class="flow">
+      <div class="flow-box blue">HTTP Request</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">TenantMiddleware<br><small style="color:var(--text3)">reads X-Institution-ID</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">AuthGuard<br><small style="color:var(--text3)">validates JWT</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">RolesGuard<br><small style="color:var(--text3)">checks permissions</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Controller</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Service</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Prisma ORM</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green">Response</div>
+    </div>
+    <div class="flow">
+      <div class="flow-box" style="opacity:0.5;width:100px"></div>
+      <div class="flow-arrow" style="opacity:0"></div>
+      <div class="flow-box red" style="margin-top:-8px">Throws 400 if header missing</div>
+      <div class="flow-arrow" style="opacity:0.4">↑</div>
+      <div class="flow-box red" style="margin-top:-8px">Throws 401 if invalid</div>
+      <div class="flow-arrow" style="opacity:0.4">↑</div>
+      <div class="flow-box red" style="margin-top:-8px">Throws 403 if unauthorized</div>
+    </div>
+    <p class="footnote">All controllers also pass through the global <strong>AuditLogInterceptor</strong> which logs every action.</p>
+  </div>
+
+
+  <!-- ══════════ SECTION 5: MODULES ══════════ -->
+  <div class="section" id="modules">
+    <div class="section-header">
+      <div class="section-icon" style="background:#2a1a1a;">📦</div>
+      <h2>Feature Modules & Responsibilities</h2>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Module</th><th>Path</th><th>What It Does</th><th>Key Models</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Auth</strong></td>
+            <td><code>modules/auth/</code></td>
+            <td>Login, JWT access token (15 min) + refresh token (7 days), logout, password reset request flow</td>
+            <td>RefreshToken, PasswordResetRequest</td>
+          </tr>
+          <tr>
+            <td><strong>Users</strong></td>
+            <td><code>modules/users/</code></td>
+            <td>Create users, list users with roles, assign/remove roles. Staff management.</td>
+            <td>User, UserRole</td>
+          </tr>
+          <tr>
+            <td><strong>Roles</strong></td>
+            <td><code>modules/roles/</code></td>
+            <td>List institution roles, create custom roles with permission arrays</td>
+            <td>Role</td>
+          </tr>
+          <tr>
+            <td><strong>Student</strong></td>
+            <td><code>modules/student/</code></td>
+            <td>Full student CRUD, auto admission number (ADM-YYYY-XXXX), auto roll number, TC validation (class 1 skip rule), soft delete</td>
+            <td>Student</td>
+          </tr>
+          <tr>
+            <td><strong>Academic</strong></td>
+            <td><code>modules/academic/</code></td>
+            <td>Academic years, class hierarchy (AcademicUnit tree). Classes can be nested (School → Grade → Section)</td>
+            <td>AcademicYear, AcademicUnit</td>
+          </tr>
+          <tr>
+            <td><strong>Subject</strong></td>
+            <td><code>modules/subject/</code></td>
+            <td>Create subjects, assign subjects to classes (with teacher). Subjects are institution-wide; assignment is per class+year.</td>
+            <td>Subject, AcademicUnitSubject</td>
+          </tr>
+          <tr>
+            <td><strong>Attendance</strong></td>
+            <td><code>modules/attendance/</code></td>
+            <td>Create attendance sessions (date+class), record each student's status (P/A/L/Leave). Monthly reports, defaulter list.</td>
+            <td>AttendanceSession, AttendanceRecord</td>
+          </tr>
+          <tr>
+            <td><strong>Exam</strong></td>
+            <td><code>modules/exam/</code></td>
+            <td>Create exams, assign subjects per class with max/passing marks, batch mark entry, result computation, ranked summary, scorecard</td>
+            <td>Exam, ExamSubject, ExamResult</td>
+          </tr>
+          <tr>
+            <td><strong>Fees</strong></td>
+            <td><code>modules/fees/</code></td>
+            <td>Define fee heads (Tuition, Transport…), link amounts to classes per year (fee structures), record payments, compute balances, list defaulters</td>
+            <td>FeeHead, FeeStructure, FeePayment</td>
+          </tr>
+          <tr>
+            <td><strong>Inquiry</strong></td>
+            <td><code>modules/inquiry/</code></td>
+            <td>Lead tracking pipeline: new → contacted → visited → enrolled/dropped. Linked to academic year and class of interest.</td>
+            <td>Inquiry</td>
+          </tr>
+          <tr>
+            <td><strong>Announcement</strong></td>
+            <td><code>modules/announcement/</code></td>
+            <td>Create announcements targeted at specific roles (e.g., teachers + parents). Pinning, expiry date.</td>
+            <td>Announcement</td>
+          </tr>
+          <tr>
+            <td><strong>Timetable</strong></td>
+            <td><code>modules/timetable/</code></td>
+            <td>Weekly period-slot grid per class. Each slot maps to (dayOfWeek, periodNo) → subject + teacher.</td>
+            <td>TimetableSlot</td>
+          </tr>
+          <tr>
+            <td><strong>Staff Attendance</strong></td>
+            <td><code>modules/staff-attendance/</code></td>
+            <td>Daily attendance and leave tracking for teaching and non-teaching staff</td>
+            <td>StaffAttendance, StaffLeaveRequest</td>
+          </tr>
+          <tr>
+            <td><strong>Institution</strong></td>
+            <td><code>institution/</code></td>
+            <td>Institution settings. <code>POST /institution/:id/seed-defaults</code> populates 10 fee heads + 22 default subjects.</td>
+            <td>Institution</td>
+          </tr>
+          <tr>
+            <td><strong>Platform</strong></td>
+            <td><code>platform/</code></td>
+            <td>Infovion-internal only. Onboard new schools, view platform stats, manage subscriptions. Uses a separate JWT and PlatformAdmin model.</td>
+            <td>PlatformAdmin, Subscription</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 6: DATA MODEL ══════════ -->
+  <div class="section" id="data-model">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a2a3a;">🗄️</div>
+      <h2>Data Model</h2>
+    </div>
+    <p>All models live in <a href="../apps/backend/prisma/schema.prisma" style="color:var(--brand)">apps/backend/prisma/schema.prisma</a>. Every tenant-scoped table has an <code>institutionId</code> field linking it to an institution.</p>
+
+    <h3>Core Entities</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Model</th><th>Key Fields</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Institution</strong></td>
+            <td><code>id, name, code, planCode, institutionType, status, features(JSON)</code></td>
+            <td>Root of all tenant data. <code>code</code> is the login code (e.g., "infovion").</td>
+          </tr>
+          <tr>
+            <td><strong>User</strong></td>
+            <td><code>id, institutionId, email, phone, passwordHash, isActive, deletedAt</code></td>
+            <td>Soft-deleted. Has many roles via <code>UserRole</code> junction. One user per email per institution.</td>
+          </tr>
+          <tr>
+            <td><strong>Role</strong></td>
+            <td><code>id, institutionId, code, label, permissions(JSON string[])</code></td>
+            <td>Permissions are strings like <code>"students.write"</code>. Seeded for all 7 roles.</td>
+          </tr>
+          <tr>
+            <td><strong>Student</strong></td>
+            <td><code>id, institutionId, admissionNo, rollNo, firstName, lastName, academicUnitId, userId, parentUserId</code></td>
+            <td>Soft-deleted. <code>userId</code> / <code>parentUserId</code> links student/parent login to their record.</td>
+          </tr>
+          <tr>
+            <td><strong>AcademicYear</strong></td>
+            <td><code>id, institutionId, name, startDate, endDate, isCurrent</code></td>
+            <td>e.g. "2025-26". Only one <code>isCurrent = true</code> at a time.</td>
+          </tr>
+          <tr>
+            <td><strong>AcademicUnit</strong></td>
+            <td><code>id, institutionId, academicYearId, name, level, parentId, classTeacherUserId</code></td>
+            <td>Hierarchical (parentId self-reference). Level 1 = school, Level 2 = class, Level 3 = section. "Leaf" nodes are actual classes.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Academic & Operational Entities</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Model</th><th>Key Fields</th><th>Unique Constraint</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Subject</strong></td>
+            <td><code>name, code, institutionId</code></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>AcademicUnitSubject</strong></td>
+            <td><code>academicUnitId, subjectId, teacherUserId, isClassTeacher</code></td>
+            <td>Teacher-Subject-Class junction</td>
+          </tr>
+          <tr>
+            <td><strong>AttendanceSession</strong></td>
+            <td><code>academicUnitId, date, subjectId, takenByUserId</code></td>
+            <td><code>(academicUnitId, date, subjectId)</code> — one session per class per subject per day</td>
+          </tr>
+          <tr>
+            <td><strong>AttendanceRecord</strong></td>
+            <td><code>sessionId, studentId, status (present|absent|late|leave), remarks</code></td>
+            <td><code>(sessionId, studentId)</code> — one record per student per session</td>
+          </tr>
+          <tr>
+            <td><strong>FeeHead</strong></td>
+            <td><code>institutionId, name, isCustom</code></td>
+            <td><code>(institutionId, name)</code></td>
+          </tr>
+          <tr>
+            <td><strong>FeeStructure</strong></td>
+            <td><code>academicUnitId, academicYearId, feeHeadId, amount, installmentName, dueDate</code></td>
+            <td><code>(academicUnitId, yearId, feeHeadId, installmentName)</code></td>
+          </tr>
+          <tr>
+            <td><strong>FeePayment</strong></td>
+            <td><code>studentId, feeHeadId, academicYearId, amount, paymentMode, receiptNo, paidOn</code></td>
+            <td><code>receiptNo</code> unique per institution</td>
+          </tr>
+          <tr>
+            <td><strong>Exam</strong></td>
+            <td><code>institutionId, academicYearId, name, startDate, endDate, status (draft|active|completed)</code></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>ExamSubject</strong></td>
+            <td><code>examId, academicUnitId, subjectId, maxMarks (100), passingMarks (35), examDate</code></td>
+            <td><code>(examId, academicUnitId, subjectId)</code></td>
+          </tr>
+          <tr>
+            <td><strong>ExamResult</strong></td>
+            <td><code>examId, studentId, subjectId, academicUnitId, marksObtained, isAbsent</code></td>
+            <td><code>(examId, studentId, subjectId)</code></td>
+          </tr>
+          <tr>
+            <td><strong>Announcement</strong></td>
+            <td><code>title, body, authorUserId, targetRoles (JSON), isPinned, expiresAt</code></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>TimetableSlot</strong></td>
+            <td><code>academicUnitId, dayOfWeek (1-6), periodNo, subjectId, teacherUserId</code></td>
+            <td><code>(academicUnitId, dayOfWeek, periodNo)</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Platform & Infrastructure Entities</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Model</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><strong>RefreshToken</strong></td><td>Stores hashed refresh tokens. Revoked on logout. Has expiry.</td></tr>
+          <tr><td><strong>AuditLog</strong></td><td>Every API action is recorded: who, what, which entity, old/new values.</td></tr>
+          <tr><td><strong>Subscription</strong></td><td>Billing info per institution: plan, max students, price, status (active/expired).</td></tr>
+          <tr><td><strong>PlatformAdmin</strong></td><td>Infovion developer login. Completely separate from institutional users.</td></tr>
+          <tr><td><strong>StaffAttendance</strong></td><td>Staff daily check-in: status, clockIn time, who marked it.</td></tr>
+          <tr><td><strong>StaffLeaveRequest</strong></td><td>Staff leave applications with approval workflow.</td></tr>
+          <tr><td><strong>PasswordResetRequest</strong></td><td>Admin-approved password reset flow (no email OTP yet).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Soft Delete</h3>
+    <p>Three models — <code>User</code>, <code>Student</code>, <code>Institution</code> — use soft delete. The <strong>PrismaService</strong> globally intercepts Prisma operations:</p>
+    <pre><span class="cm">// prisma.service.ts — what happens automatically</span>
+
+<span class="cm">// .delete() is converted to:</span>
+.<span class="fn">update</span>({ data: { deletedAt: <span class="kw">new</span> <span class="type">Date</span>() } })
+
+<span class="cm">// .findMany() / .findFirst() automatically adds:</span>
+.<span class="fn">where</span>({ ...originalWhere, deletedAt: <span class="kw">null</span> })</pre>
+    <p>This means deleted users and students disappear from all queries without any extra code in individual services.</p>
+  </div>
+
+
+  <!-- ══════════ SECTION 7: API REFERENCE ══════════ -->
+  <div class="section" id="api-reference">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a3a2a;">🔌</div>
+      <h2>API Reference</h2>
+    </div>
+    <p>The base URL is <code>http://localhost:3000</code> in development. All protected endpoints require:</p>
+    <ul>
+      <li><code>Authorization: Bearer &lt;accessToken&gt;</code> header</li>
+      <li><code>X-Institution-ID: &lt;institutionId&gt;</code> header</li>
+    </ul>
+
+    <h3>Authentication</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Body</th><th>Auth?</th><th>Description</th></tr></thead>
+        <tbody class="api-row">
+          <tr><td><span class="api-method-post">POST</span></td><td><code class="api-path">/auth/login</code></td><td><code>{ institutionCode, email, password }</code></td><td>No</td><td>Returns accessToken (15min) + refreshToken (7d) + user profile</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code class="api-path">/auth/refresh</code></td><td><code>{ refreshToken }</code></td><td>X-Inst-ID only</td><td>Returns new accessToken</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code class="api-path">/auth/logout</code></td><td>—</td><td>Yes</td><td>Revokes all refresh tokens for user</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Users & Roles</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody class="api-row">
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/users</code></td><td>List all users with their roles</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/users</code></td><td>Create user <code>{ email, phone?, password? }</code></td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/users/:userId/roles</code></td><td>Assign role to user <code>{ roleId }</code></td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/roles</code></td><td>List all roles for institution</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/roles</code></td><td>Create custom role <code>{ code, label, permissions[] }</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Students</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody class="api-row">
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/students</code></td><td>List students (filter: <code>?unitId=&limit=&offset=</code>)</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/students</code></td><td>Admit student (auto-generates admissionNo, rollNo)</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/students/:id</code></td><td>Student profile</td></tr>
+          <tr><td><span class="api-method-patch">PATCH</span></td><td><code>/students/:id</code></td><td>Update student</td></tr>
+          <tr><td><span class="api-method-delete">DELETE</span></td><td><code>/students/:id</code></td><td>Soft-delete student</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Academic Units & Years</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody class="api-row">
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/academic/years</code></td><td>List academic years</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/academic/years</code></td><td>Create academic year</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/academic/units</code></td><td>List classes/sections (tree structure)</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/academic/units</code></td><td>Create class/section</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Subjects</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody class="api-row">
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/subjects</code></td><td>List all subjects</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/subjects</code></td><td>Create subject</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/subjects/units/:unitId</code></td><td>Subjects assigned to a class</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/subjects/units/:unitId</code></td><td>Assign subject to class with teacher</td></tr>
+          <tr><td><span class="api-method-delete">DELETE</span></td><td><code>/subjects/units/:unitId/:subjectId</code></td><td>Remove subject from class</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Attendance</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody class="api-row">
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/attendance/units/:unitId/students</code></td><td>Student list for a class (for marking)</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/attendance/units/:unitId/daily?date=</code></td><td>Existing attendance for date (to pre-fill)</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/attendance</code></td><td>Save/update attendance session + all records</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/attendance/students/:id/monthly?year=&month=</code></td><td>Student's monthly attendance</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/attendance/units/:unitId/defaulters?year=&month=&threshold=</code></td><td>Students below attendance threshold %</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Examinations</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody class="api-row">
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/exams?yearId=</code></td><td>List exams for academic year</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/exams</code></td><td>Create exam</td></tr>
+          <tr><td><span class="api-method-patch">PATCH</span></td><td><code>/exams/:id/status</code></td><td>Set status: draft | active | completed</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/exams/:id/subjects</code></td><td>Exam subjects per class</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/exams/:id/subjects</code></td><td>Add subject to exam for a class</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/exams/results</code></td><td>Batch mark entry for one subject + class</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/exams/:id/results?unitId=</code></td><td>All results for a class in this exam</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/exams/:id/summary?unitId=</code></td><td>Ranked result summary for class</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/exams/:id/scorecard/:studentId</code></td><td>Full scorecard for one student</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Fees</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody class="api-row">
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/fees/heads</code></td><td>List fee heads</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/fees/heads</code></td><td>Create fee head</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/fees/structures?unitId=&yearId=</code></td><td>Fee structure for a class + year</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/fees/structures</code></td><td>Set fee amount for class+year+head</td></tr>
+          <tr><td><span class="api-method-post">POST</span></td><td><code>/fees/payments</code></td><td>Record payment for a student</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/fees/payments/student/:id</code></td><td>Payment history for student</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/fees/payments/student/:id/balance?yearId=</code></td><td>Outstanding balance</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/fees/payments/daily?date=</code></td><td>Daily collection report</td></tr>
+          <tr><td><span class="api-method-get">GET</span></td><td><code>/fees/defaulters?yearId=&unitId=</code></td><td>Students with outstanding dues</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 8: FRONTEND STRUCTURE ══════════ -->
+  <div class="section" id="frontend-structure">
+    <div class="section-header">
+      <div class="section-icon" style="background:#2a2a1a;">🖥️</div>
+      <h2>Frontend Directory Structure</h2>
+    </div>
+    <p>Uses the <strong>Next.js App Router</strong> — every folder inside <code>app/</code> is a route. Layout files wrap their children. All pages are server-compatible React components using the "use client" directive where interactivity is needed.</p>
+
+    <div class="tree">
+<span class="dir">apps/frontend/app/</span>
+├── page.tsx                     <span class="note">← Root: if logged in → role route, else login form</span>
+├── layout.tsx                   <span class="note">← Root layout (HTML shell)</span>
+│
+├── <span class="dir">dashboard/</span>               <span class="note">← Operator / Director dashboard</span>
+│   ├── layout.tsx               <span class="note">← Guard: only admin/super_admin allowed</span>
+│   ├── page.tsx                 <span class="note">← Overview stats</span>
+│   ├── <span class="dir">students/</span>            <span class="note">← Student list, admission form</span>
+│   │   ├── page.tsx
+│   │   ├── [id]/page.tsx        <span class="note">← Student detail/edit</span>
+│   │   └── directory/page.tsx
+│   ├── <span class="dir">staff/</span>               <span class="note">← Staff list + create user</span>
+│   ├── <span class="dir">attendance/</span>          <span class="note">← Attendance report view</span>
+│   ├── <span class="dir">exams/</span>               <span class="note">← Exam management</span>
+│   ├── <span class="dir">fees/</span>                <span class="note">← Fee management</span>
+│   ├── <span class="dir">subjects/</span>            <span class="note">← Subject management</span>
+│   ├── <span class="dir">classes/</span>             <span class="note">← Class/section setup</span>
+│   ├── <span class="dir">inquiries/</span>           <span class="note">← Lead pipeline</span>
+│   ├── <span class="dir">timetable/</span>           <span class="note">← Timetable editor</span>
+│   ├── <span class="dir">announcements/</span>       <span class="note">← Notice board management</span>
+│   ├── <span class="dir">staff-attendance/</span>    <span class="note">← Mark staff attendance</span>
+│   ├── <span class="dir">promote/</span>             <span class="note">← Student promotion engine</span>
+│   └── <span class="dir">settings/</span>            <span class="note">← Institution settings</span>
+│
+├── <span class="dir">portal/</span>                  <span class="note">← Role-specific portals</span>
+│   ├── select-role/page.tsx     <span class="note">← Role chooser (multi-role users)</span>
+│   ├── <span class="dir">director/</span>            <span class="note">← super_admin portal</span>
+│   ├── <span class="dir">principal/</span>           <span class="note">← principal portal</span>
+│   │   ├── page.tsx             <span class="note">← Stats + defaulter panels</span>
+│   │   ├── <span class="dir">attendance/</span>
+│   │   ├── <span class="dir">fees/</span>
+│   │   └── <span class="dir">staff/</span>
+│   ├── <span class="dir">teacher/</span>             <span class="note">← teacher portal</span>
+│   │   ├── page.tsx             <span class="note">← Class list overview</span>
+│   │   ├── <span class="dir">attendance/</span>      <span class="note">← FUNCTIONAL: mark daily attendance</span>
+│   │   ├── <span class="dir">marks/</span>           <span class="note">← FUNCTIONAL: enter exam marks</span>
+│   │   └── <span class="dir">staff-attendance/</span>
+│   ├── <span class="dir">student/</span>             <span class="note">← student portal (placeholder)</span>
+│   │   ├── <span class="dir">attendance/</span>
+│   │   ├── <span class="dir">marks/</span>
+│   │   └── <span class="dir">fees/</span>
+│   ├── <span class="dir">parent/</span>              <span class="note">← parent portal (placeholder)</span>
+│   └── <span class="dir">receptionist/</span>        <span class="note">← desk portal</span>
+│
+└── <span class="dir">platform/</span>                <span class="note">← Infovion internal console</span>
+    ├── login/page.tsx           <span class="note">← Platform admin login</span>
+    ├── dashboard/page.tsx       <span class="note">← Stats across all clients</span>
+    ├── clients/page.tsx         <span class="note">← All institutions list</span>
+    ├── clients/new/page.tsx     <span class="note">← Onboard new school</span>
+    └── clients/[id]/page.tsx    <span class="note">← Client details/subscription</span>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 9: PORTALS ══════════ -->
+  <div class="section" id="portals">
+    <div class="section-header">
+      <div class="section-icon" style="background:#2a1a3a;">🚪</div>
+      <h2>Role Portals</h2>
+    </div>
+    <p>Each role gets a completely separate portal. After login, the user is automatically routed to the correct portal based on their role. This routing logic lives in <a href="../apps/frontend/lib/auth-utils.ts" style="color:var(--brand)">lib/auth-utils.ts</a>.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Role Code</th><th>Label</th><th>Route</th><th>What They Can Do</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="role-super">super_admin</span></td>
+            <td>Director</td>
+            <td><code>/portal/director</code></td>
+            <td>Full access to all data across institution</td>
+          </tr>
+          <tr>
+            <td><span class="role-admin">admin</span></td>
+            <td>Operator</td>
+            <td><code>/dashboard</code></td>
+            <td>Day-to-day operations: students, fees, staff, reports</td>
+          </tr>
+          <tr>
+            <td><span class="role-principal">principal</span></td>
+            <td>Principal</td>
+            <td><code>/portal/principal</code></td>
+            <td>View stats, attendance defaulters, fee defaulters, staff management</td>
+          </tr>
+          <tr>
+            <td><span class="role-teacher">teacher</span></td>
+            <td>Teacher</td>
+            <td><code>/portal/teacher</code></td>
+            <td>Mark student attendance, enter exam marks for assigned classes</td>
+          </tr>
+          <tr>
+            <td><span class="role-student">student</span></td>
+            <td>Student</td>
+            <td><code>/portal/student</code></td>
+            <td>View own attendance, marks, fee status (placeholder — userId link needed)</td>
+          </tr>
+          <tr>
+            <td><span class="role-parent">parent</span></td>
+            <td>Parent</td>
+            <td><code>/portal/parent</code></td>
+            <td>View child's attendance, marks, fee status (placeholder — parentUserId link needed)</td>
+          </tr>
+          <tr>
+            <td><span class="role-reception">receptionist</span></td>
+            <td>Reception / Desk</td>
+            <td><code>/portal/receptionist</code></td>
+            <td>Front-desk operations</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <strong>Student and Parent portals show placeholder content</strong> because the <code>userId</code> and <code>parentUserId</code> fields on the Student model exist in the schema but the UI for linking them at admission is not yet built. Until linked, these portals display "record being linked by admin" notices.
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 10: SHARED COMPONENTS ══════════ -->
+  <div class="section" id="shared-components">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a2a2a;">🧩</div>
+      <h2>Shared Components &amp; Utilities</h2>
+    </div>
+
+    <h3>PortalShell — <code>components/portal-shell.tsx</code></h3>
+    <p>The single reusable layout wrapper used by <strong>every role portal</strong> (<code>/portal/teacher</code>, <code>/portal/principal</code>, etc.).</p>
+    <pre><span class="cm">// Usage in any portal layout.tsx:</span>
+<span class="kw">return</span> (
+  &lt;<span class="fn">PortalShell</span>
+    <span class="type">allowedRoles</span>={[<span class="str">'teacher'</span>]}
+    <span class="type">portalTitle</span>=<span class="str">"Teacher Portal"</span>
+    <span class="type">menuItems</span>={[
+      { label: <span class="str">'Overview'</span>, href: <span class="str">'/portal/teacher'</span>, icon: <span class="str">'🏠'</span> },
+      { label: <span class="str">'Attendance'</span>, href: <span class="str">'/portal/teacher/attendance'</span>, icon: <span class="str">'📋'</span> },
+      { label: <span class="str">'Mark Entry'</span>, href: <span class="str">'/portal/teacher/marks'</span>, icon: <span class="str">'📝'</span> },
+    ]}
+  &gt;
+    {children}
+  &lt;/<span class="fn">PortalShell</span>&gt;
+);</pre>
+    <p><strong>What PortalShell does automatically:</strong></p>
+    <ul>
+      <li>Checks if user is authenticated → redirects to <code>/</code> (login) if not</li>
+      <li>Checks if user has one of <code>allowedRoles</code> → redirects to correct portal if wrong role</li>
+      <li>Renders sidebar with logo, role badge, nav items, user email, logout button</li>
+      <li>Active nav item highlighted using <code>usePathname()</code></li>
+      <li>Fully mobile-responsive (hamburger menu on small screens)</li>
+    </ul>
+
+    <h3>API Client — <code>lib/api.ts</code></h3>
+    <p>All API calls from the frontend go through the <code>apiFetch()</code> wrapper:</p>
+    <pre><span class="cm">// Automatically adds auth headers and handles token refresh</span>
+<span class="kw">const</span> data = <span class="kw">await</span> <span class="fn">apiFetch</span>(<span class="str">'/students?unitId=abc123'</span>);
+<span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">apiFetch</span>(<span class="str">'/attendance'</span>, {
+  method: <span class="str">'POST'</span>,
+  body: { academicUnitId, date, records: [...] }
+});</pre>
+    <p><strong>What it handles:</strong></p>
+    <ul>
+      <li>Reads <code>accessToken</code> and <code>institutionId</code> from Zustand store</li>
+      <li>Adds <code>Authorization: Bearer &lt;token&gt;</code> and <code>X-Institution-ID</code> headers</li>
+      <li>On <strong>401</strong>: silently calls <code>/auth/refresh</code>, retries the original request once</li>
+      <li>If refresh also fails: calls <code>logout()</code> and redirects to login</li>
+      <li>Returns parsed JSON or throws a human-readable error string</li>
+    </ul>
+
+    <h3>Auth Store — <code>store/auth.store.ts</code></h3>
+    <p>Zustand store persisted to <strong>sessionStorage</strong> (tab-isolated). Each browser tab has its own session — logging in on Tab A does not affect Tab B.</p>
+    <pre><span class="cm">// What is stored:</span>
+{
+  accessToken: <span class="str">"eyJ..."</span>,
+  refreshToken: <span class="str">"eyJ..."</span>,
+  user: {
+    email: <span class="str">"teacher@school.in"</span>,
+    institutionId: <span class="str">"cmms6jl0k0000..."</span>,
+    roles: [<span class="str">"teacher"</span>],
+    permissions: [<span class="str">"attendance.write"</span>, <span class="str">"exams.write"</span>]
+  },
+  isAuthenticated: <span class="kw">true</span>
+}</pre>
+
+    <h3>Auth Utilities — <code>lib/auth-utils.ts</code></h3>
+    <p>Single source of truth for role-to-route mapping. Any change to portal paths must be made here.</p>
+    <pre><span class="fn">getRoleRoute</span>([<span class="str">'teacher'</span>])     <span class="cm">// → '/portal/teacher'</span>
+<span class="fn">getRoleRoute</span>([<span class="str">'super_admin'</span>])  <span class="cm">// → '/portal/director'</span>
+<span class="fn">getRoleRoute</span>([<span class="str">'admin'</span>])        <span class="cm">// → '/dashboard'</span>
+
+<span class="fn">getRoleLabel</span>([<span class="str">'principal'</span>])   <span class="cm">// → 'Principal'</span>
+
+<span class="cm">// Roles that use /dashboard (not /portal):</span>
+DASHBOARD_ROLES = [<span class="str">'super_admin'</span>, <span class="str">'admin'</span>]</pre>
+  </div>
+
+
+  <!-- ══════════ SECTION 11: AUTH SYSTEM ══════════ -->
+  <div class="section" id="auth-system">
+    <div class="section-header">
+      <div class="section-icon" style="background:#2a1a1a;">🔐</div>
+      <h2>Authentication System</h2>
+    </div>
+
+    <h3>Login Flow</h3>
+    <div class="flow">
+      <div class="flow-box blue">User submits<br>institution code<br>+ email + password</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Backend finds<br>institution by code</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Find user by email<br>in that institution</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box yellow">bcrypt.compare()<br>password check</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Extract roles<br>+ permissions</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green">Issue JWT (15min)<br>+ Refresh token (7d)</div>
+    </div>
+
+    <h3>Token Lifecycle</h3>
+    <ul>
+      <li><strong>Access Token (JWT)</strong>: 15 minutes. Signed with <code>JWT_SECRET</code> (128-char hex). Payload includes <code>sub</code> (userId), <code>institutionId</code>, <code>roles[]</code>, <code>permissions[]</code>.</li>
+      <li><strong>Refresh Token</strong>: 7 days. Stored as a <strong>hash</strong> in the database (<code>RefreshToken</code> table), not the raw token. On use, old token is revoked and a new one is issued (rotation).</li>
+      <li><strong>Logout</strong>: All refresh tokens for the user are revoked in the database.</li>
+    </ul>
+
+    <h3>Silent Token Refresh</h3>
+    <div class="flow">
+      <div class="flow-box red">API returns 401</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box yellow">apiFetch() calls<br>/auth/refresh</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">New accessToken<br>stored in Zustand</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green">Original request<br>retried once</div>
+    </div>
+    <div class="flow">
+      <div class="flow-box" style="opacity:0;width:100px"></div>
+      <div class="flow-arrow" style="opacity:0"></div>
+      <div class="flow-box red" style="font-size:12px">If refresh also fails →<br>logout() → redirect to /</div>
+    </div>
+
+    <h3>JWT Strategy — <code>src/modules/auth/jwt.strategy.ts</code></h3>
+    <p>After the JWT is decoded, the strategy performs a live database check:</p>
+    <ul>
+      <li>Finds the user by <code>sub</code> (user ID)</li>
+      <li>Verifies <code>isActive === true</code> and <code>deletedAt === null</code></li>
+      <li>If either check fails, the request is rejected with 401</li>
+      <li>This means deactivating a user in the DB immediately invalidates their JWT — no need to wait for expiry</li>
+    </ul>
+
+    <div class="callout info">
+      <strong>Environment variable requirement:</strong> <code>JWT_SECRET</code> must be set in <code>apps/backend/.env</code>. The app uses <code>configService.getOrThrow('JWT_SECRET')</code> — it will <strong>crash on startup</strong> if this variable is missing. There is no fallback value.
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 12: MULTI-TENANCY ══════════ -->
+  <div class="section" id="multitenancy">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a2a1a;">🏢</div>
+      <h2>Multi-Tenancy</h2>
+    </div>
+
+    <p>Multiple schools share one database and one backend deployment. Data isolation is handled at the <strong>application layer</strong>, not at the database level (DB-level RLS is planned for a future phase).</p>
+
+    <h3>How Isolation Works</h3>
+    <ol>
+      <li><strong>Every tenant table</strong> has an <code>institutionId</code> column.</li>
+      <li><strong>Every API call</strong> (except <code>/auth/login</code> and <code>/platform/*</code>) must include an <code>X-Institution-ID</code> header.</li>
+      <li><strong>TenantMiddleware</strong> reads this header and attaches it to the request object.</li>
+      <li><strong>Every service method</strong> includes <code>.where({ institutionId })</code> in all Prisma queries.</li>
+    </ol>
+
+    <pre><span class="cm">// Example in students.service.ts:</span>
+<span class="fn">findAll</span>(institutionId: <span class="type">string</span>) {
+  <span class="kw">return</span> <span class="kw">this</span>.prisma.student.<span class="fn">findMany</span>({
+    where: { institutionId, deletedAt: <span class="kw">null</span> } <span class="cm">// ← always scoped</span>
+  });
+}</pre>
+
+    <h3>How TenantMiddleware Works</h3>
+    <pre><span class="cm">// tenant.middleware.ts</span>
+<span class="cm">// Applied to all routes EXCEPT /auth/* and /platform/*</span>
+
+<span class="fn">use</span>(req, res, next) {
+  <span class="kw">const</span> institutionId = req.headers[<span class="str">'x-institution-id'</span>];
+  <span class="kw">if</span> (!institutionId) <span class="kw">throw new</span> <span class="fn">BadRequestException</span>(<span class="str">'X-Institution-ID header required'</span>);
+  req.tenant = { institutionId };
+  <span class="fn">next</span>();
+}</pre>
+
+    <div class="callout warn">
+      <strong>No DB-level RLS yet.</strong> A bug in application code that forgets to add <code>where: { institutionId }</code> would expose cross-tenant data. Adding PostgreSQL Row-Level Security (RLS) is listed as a P2 task.
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 13: RBAC ══════════ -->
+  <div class="section" id="rbac">
+    <div class="section-header">
+      <div class="section-icon" style="background:#2a2a1a;">🛡️</div>
+      <h2>Roles &amp; Permissions (RBAC)</h2>
+    </div>
+
+    <p>Roles and permissions are stored per institution in the database, not hardcoded. The 7 default roles are seeded by <a href="../apps/backend/prisma/seed.ts" style="color:var(--brand)">prisma/seed.ts</a>.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Role Code</th><th>Label</th><th>Key Permissions</th></tr></thead>
+        <tbody>
+          <tr><td><span class="role-super">super_admin</span></td><td>Director</td><td>All permissions</td></tr>
+          <tr><td><span class="role-admin">admin</span></td><td>Operator</td><td>All except <code>roles.write</code>, <code>institution.write</code></td></tr>
+          <tr><td><span class="role-principal">principal</span></td><td>Principal</td><td><code>students.read</code>, <code>attendance.read</code>, <code>exams.read</code>, <code>fees.read</code>, <code>subjects.read</code>, <code>users.read</code></td></tr>
+          <tr><td><span class="role-teacher">teacher</span></td><td>Teacher</td><td><code>attendance.read</code>, <code>attendance.write</code>, <code>exams.read</code>, <code>exams.write</code>, <code>subjects.read</code>, <code>students.read</code></td></tr>
+          <tr><td><span class="role-student">student</span></td><td>Student</td><td><code>attendance.read</code>, <code>exams.read</code>, <code>fees.read</code></td></tr>
+          <tr><td><span class="role-parent">parent</span></td><td>Parent</td><td><code>attendance.read</code>, <code>exams.read</code>, <code>fees.read</code></td></tr>
+          <tr><td><span class="role-reception">receptionist</span></td><td>Reception</td><td><code>students.read</code>, <code>students.write</code>, <code>inquiries.read</code>, <code>inquiries.write</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>How Guards Work Together</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Guard / Middleware</th><th>File</th><th>What It Enforces</th></tr></thead>
+        <tbody>
+          <tr><td><strong>TenantMiddleware</strong></td><td><code>common/middleware/tenant.middleware.ts</code></td><td>Requires <code>X-Institution-ID</code> header on every non-auth request</td></tr>
+          <tr><td><strong>AuthGuard</strong></td><td><code>common/guards/auth.guard.ts</code></td><td>Validates JWT bearer token, populates <code>req.user</code></td></tr>
+          <tr><td><strong>RolesGuard</strong></td><td><code>common/guards/roles.guard.ts</code></td><td>Checks <code>req.user.permissions</code> against <code>@Permissions()</code> decorator on route</td></tr>
+          <tr><td><strong>TenantGuard</strong></td><td><code>common/guards/tenant.guard.ts</code></td><td>Additional tenant validation on sensitive routes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre><span class="cm">// Example — protecting a route with a permission:</span>
+@<span class="fn">Get</span>()
+@<span class="fn">UseGuards</span>(AuthGuard, RolesGuard)
+@<span class="fn">Permissions</span>(<span class="str">'students.read'</span>)
+<span class="fn">findAll</span>(@<span class="fn">Tenant</span>() { institutionId }) {
+  <span class="kw">return</span> <span class="kw">this</span>.studentService.<span class="fn">findAll</span>(institutionId);
+}</pre>
+  </div>
+
+
+  <!-- ══════════ SECTION 14: DATA FLOW ══════════ -->
+  <div class="section" id="data-flow">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a1a3a;">🔄</div>
+      <h2>Data Flow — End to End</h2>
+    </div>
+
+    <h3>Example: Teacher Marks Attendance</h3>
+    <div class="flow" style="flex-direction:column; align-items:flex-start; gap:4px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="flow-box blue" style="width:200px">Teacher opens<br>/portal/teacher/attendance</div>
+        <span style="color:var(--text3)">→ PortalShell checks auth + role</span>
+      </div>
+      <div style="padding-left:16px; color:var(--text3); font-size:13px">↓</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="flow-box" style="width:200px">Selects class + date</div>
+        <span style="color:var(--text3)">→ apiFetch('/attendance/units/:id/daily?date=') called</span>
+      </div>
+      <div style="padding-left:16px; color:var(--text3); font-size:13px">↓</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="flow-box" style="width:200px">Pre-filled student list<br>shown (if already marked)</div>
+        <span style="color:var(--text3)">→ Teacher clicks each student status (P→A→L→Lv)</span>
+      </div>
+      <div style="padding-left:16px; color:var(--text3); font-size:13px">↓</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="flow-box yellow" style="width:200px">Clicks "Save Attendance"</div>
+        <span style="color:var(--text3)">→ apiFetch('POST /attendance', { academicUnitId, date, records: [...] })</span>
+      </div>
+      <div style="padding-left:16px; color:var(--text3); font-size:13px">↓</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="flow-box" style="width:200px">Backend creates/updates<br>AttendanceSession</div>
+        <span style="color:var(--text3)">→ Upserts AttendanceRecord per student</span>
+      </div>
+      <div style="padding-left:16px; color:var(--text3); font-size:13px">↓</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="flow-box green" style="width:200px">Success toast shown</div>
+        <span style="color:var(--text3)">→ AuditLog entry created automatically</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h3>Example: New School Onboarding (Platform Flow)</h3>
+    <div class="flow">
+      <div class="flow-box blue">Infovion admin logs<br>into /platform/login</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Platform JWT issued<br>(separate from school JWT)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Fills /platform/clients/new<br>(school name, code, plan)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box yellow">POST /platform/onboard</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Creates Institution<br>+ 7 default roles<br>+ operator user</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green">School can log in<br>with their code</div>
+    </div>
+    <p>After onboarding, the school operator should call <code>POST /institution/:id/seed-defaults</code> to populate the default fee heads and subjects.</p>
+  </div>
+
+
+  <!-- ══════════ SECTION 15: SECURITY ══════════ -->
+  <div class="section" id="security">
+    <div class="section-header">
+      <div class="section-icon" style="background:#3a1a1a;">🔒</div>
+      <h2>Security</h2>
+    </div>
+
+    <div class="callout success">
+      <strong>Security baseline is solid.</strong> JWT, bcrypt, no secrets in code, CORS via env, global error handling, soft deletes, audit trail, and sessionStorage token isolation are all in place.
+    </div>
+
+    <div class="card-grid">
+      <div class="card accent-red">
+        <div class="card-icon">🔑</div>
+        <h4>JWT_SECRET</h4>
+        <p>128-character hex string stored only in <code>apps/backend/.env</code>. The app <strong>crashes on startup</strong> if this is missing — no fallback.</p>
+      </div>
+      <div class="card accent-red">
+        <div class="card-icon">🔐</div>
+        <h4>Password Hashing</h4>
+        <p>bcrypt with salt rounds. Plaintext passwords are never stored or logged.</p>
+      </div>
+      <div class="card accent-red">
+        <div class="card-icon">🔄</div>
+        <h4>Refresh Token Rotation</h4>
+        <p>Refresh tokens are hashed in the DB. Each use issues a new token and revokes the old one. Logout revokes all tokens.</p>
+      </div>
+      <div class="card accent-red">
+        <div class="card-icon">🌐</div>
+        <h4>CORS</h4>
+        <p>Controlled by the <code>CORS_ORIGIN</code> environment variable (comma-separated list of allowed origins). Wildcard <code>origin: true</code> was removed.</p>
+      </div>
+      <div class="card accent-red">
+        <div class="card-icon">🏢</div>
+        <h4>Tenant Isolation</h4>
+        <p>Every protected request requires <code>X-Institution-ID</code> header. Every DB query scoped by <code>institutionId</code>.</p>
+      </div>
+      <div class="card accent-red">
+        <div class="card-icon">🗑️</div>
+        <h4>Soft Delete</h4>
+        <p>Users and students are never physically deleted. <code>deletedAt</code> is set instead. JwtStrategy checks <code>deletedAt: null</code> — deleted users can't authenticate.</p>
+      </div>
+      <div class="card accent-red">
+        <div class="card-icon">📝</div>
+        <h4>Audit Logging</h4>
+        <p>Global AuditLogInterceptor records every API action: who, when, what, old value, new value. Cannot be bypassed at the route level.</p>
+      </div>
+      <div class="card accent-red">
+        <div class="card-icon">✅</div>
+        <h4>Input Validation</h4>
+        <p>Global <code>ValidationPipe</code> with <code>whitelist: true</code> and <code>forbidNonWhitelisted: true</code> — unknown fields in request bodies are stripped and rejected.</p>
+      </div>
+      <div class="card accent-red">
+        <div class="card-icon">🗂️</div>
+        <h4>Tab Isolation</h4>
+        <p>Auth tokens stored in <code>sessionStorage</code> (not localStorage). Each browser tab has its own session — avoids multi-tab token collision.</p>
+      </div>
+    </div>
+
+    <h3>Known Security Gaps (Planned)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Gap</th><th>Risk</th><th>Priority</th></tr></thead>
+        <tbody>
+          <tr><td>No database-level RLS</td><td>App bug could expose cross-tenant data</td><td><span class="badge badge-yellow">P2</span></td></tr>
+          <tr><td>No rate limiting</td><td>Brute-force attacks possible on /auth/login</td><td><span class="badge badge-yellow">P1</span></td></tr>
+          <tr><td>No Sentry/error tracking</td><td>Production errors go undetected</td><td><span class="badge badge-gray">P2</span></td></tr>
+          <tr><td>No email OTP for password reset</td><td>Reset requires admin approval manually</td><td><span class="badge badge-yellow">P1</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Critical Files for Security</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Why It Matters</th></tr></thead>
+        <tbody>
+          <tr><td><code>apps/backend/.env</code></td><td><strong>Never commit this.</strong> Contains JWT_SECRET, DATABASE_URL, CORS_ORIGIN.</td></tr>
+          <tr><td><code>src/modules/auth/jwt.strategy.ts</code></td><td>JWT verification + live user validation. Change this and auth breaks everywhere.</td></tr>
+          <tr><td><code>src/modules/auth/auth.service.ts</code></td><td>Login, token issuance, refresh logic. Core of the auth system.</td></tr>
+          <tr><td><code>src/common/middleware/tenant.middleware.ts</code></td><td>Tenant isolation enforcement. Removing this breaks multi-tenancy.</td></tr>
+          <tr><td><code>src/prisma/prisma.service.ts</code></td><td>Soft-delete middleware. Removing this exposes deleted users.</td></tr>
+          <tr><td><code>src/common/filters/prisma-exception.filter.ts</code></td><td>Prevents raw DB errors from leaking to clients.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 16: PLATFORM ══════════ -->
+  <div class="section" id="platform">
+    <div class="section-header">
+      <div class="section-icon" style="background:#2a1a2a;">🌐</div>
+      <h2>Platform Console (Infovion Internal)</h2>
+    </div>
+
+    <p>The Platform layer is completely separate from the school portals. It is used exclusively by <strong>Infovion developers/admins</strong> to manage client schools.</p>
+
+    <div class="two-col">
+      <div>
+        <h3>Backend</h3>
+        <ul>
+          <li><strong>Module:</strong> <code>src/platform/</code></li>
+          <li><strong>Guard:</strong> <code>platform.guard.ts</code> — separate JWT signing key from school auth</li>
+          <li><strong>Model:</strong> <code>PlatformAdmin</code> — has no link to any Institution</li>
+          <li>Routes: <code>POST /platform/login</code>, <code>GET /platform/stats</code>, <code>GET /platform/clients</code>, <code>POST /platform/onboard</code></li>
+          <li><code>TenantMiddleware</code> is excluded for all <code>/platform/*</code> routes</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Frontend</h3>
+        <ul>
+          <li><strong>Routes:</strong> <code>/platform/login</code>, <code>/platform/dashboard</code>, <code>/platform/clients</code></li>
+          <li><strong>Store:</strong> <code>store/platform-auth.store.ts</code> — completely separate from school auth store</li>
+          <li><strong>API client:</strong> <code>lib/platform-api.ts</code> — uses platform token, not school token</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Onboarding a New School</h3>
+    <ol>
+      <li>Platform admin logs into <code>/platform/login</code></li>
+      <li>Navigates to <code>/platform/clients/new</code></li>
+      <li>Fills: school name, login code, plan, operator email + password</li>
+      <li><code>POST /platform/onboard</code> creates: Institution + 7 default roles + 1 operator user</li>
+      <li>School operator logs in with their code + email</li>
+      <li>Operator calls seed-defaults to get default fee heads + subjects</li>
+    </ol>
+  </div>
+
+
+  <!-- ══════════ SECTION 17: KEY FILES ══════════ -->
+  <div class="section" id="key-files">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a3a3a;">📂</div>
+      <h2>Critical Files Reference</h2>
+    </div>
+    <p>If you need to understand or change something specific, start with these files:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>What to Change Here</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../apps/backend/prisma/schema.prisma" style="color:var(--brand)">apps/backend/prisma/schema.prisma</a></td><td>Add/modify database tables, fields, relations</td></tr>
+          <tr><td><a href="../apps/backend/prisma/seed.ts" style="color:var(--brand)">apps/backend/prisma/seed.ts</a></td><td>Default roles, permissions, initial users, default classes</td></tr>
+          <tr><td><a href="../apps/backend/src/main.ts" style="color:var(--brand)">apps/backend/src/main.ts</a></td><td>CORS, global pipes, global filters, port</td></tr>
+          <tr><td><a href="../apps/backend/src/app.module.ts" style="color:var(--brand)">apps/backend/src/app.module.ts</a></td><td>Register new modules, middleware exclusions</td></tr>
+          <tr><td><a href="../apps/backend/src/modules/auth/jwt.strategy.ts" style="color:var(--brand)">src/modules/auth/jwt.strategy.ts</a></td><td>JWT validation, live user checks, payload shape</td></tr>
+          <tr><td><a href="../apps/backend/src/modules/auth/auth.service.ts" style="color:var(--brand)">src/modules/auth/auth.service.ts</a></td><td>Login, token issuance, refresh, logout, password reset</td></tr>
+          <tr><td><a href="../apps/backend/src/prisma/prisma.service.ts" style="color:var(--brand)">src/prisma/prisma.service.ts</a></td><td>Soft-delete middleware, connection keep-alive</td></tr>
+          <tr><td><a href="../apps/backend/src/common/middleware/tenant.middleware.ts" style="color:var(--brand)">src/common/middleware/tenant.middleware.ts</a></td><td>Tenant isolation, header enforcement</td></tr>
+          <tr><td><a href="../apps/backend/src/common/filters/prisma-exception.filter.ts" style="color:var(--brand)">src/common/filters/prisma-exception.filter.ts</a></td><td>DB error → HTTP status mapping</td></tr>
+          <tr><td><a href="../apps/frontend/lib/api.ts" style="color:var(--brand)">apps/frontend/lib/api.ts</a></td><td>Auth headers, token refresh logic, error handling for all API calls</td></tr>
+          <tr><td><a href="../apps/frontend/lib/auth-utils.ts" style="color:var(--brand)">apps/frontend/lib/auth-utils.ts</a></td><td>Role → route mapping, role labels, dashboard role list</td></tr>
+          <tr><td><a href="../apps/frontend/store/auth.store.ts" style="color:var(--brand)">apps/frontend/store/auth.store.ts</a></td><td>Auth state shape, sessionStorage persistence, logout</td></tr>
+          <tr><td><a href="../apps/frontend/components/portal-shell.tsx" style="color:var(--brand)">apps/frontend/components/portal-shell.tsx</a></td><td>Sidebar layout, auth guard, role guard for all portals</td></tr>
+          <tr><td><a href="../apps/backend/.env.example" style="color:var(--brand)">apps/backend/.env.example</a></td><td>Template for required environment variables</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ══════════ SECTION 18: KNOWN ISSUES ══════════ -->
+  <div class="section" id="known-issues">
+    <div class="section-header">
+      <div class="section-icon" style="background:#3a2a1a;">⚠️</div>
+      <h2>Known Issues &amp; Pending Work</h2>
+    </div>
+
+    <h3>Active Bugs</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Bug</th><th>Location</th><th>Impact</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>TC detection is name-based (fragile)</td>
+            <td><code>student.service.ts</code> ~lines 36-42</td>
+            <td>Class 1 TC skip rule breaks if class name doesn't match exact pattern</td>
+          </tr>
+          <tr>
+            <td>No <code>userId</code> link at admission UI</td>
+            <td><code>dashboard/students/page.tsx</code></td>
+            <td>Student/Parent portals show placeholder — no real data</td>
+          </tr>
+          <tr>
+            <td>Teacher sees all classes</td>
+            <td><code>portal/teacher/page.tsx</code></td>
+            <td>Should filter by <code>academic_unit_subjects.teacherUserId</code> — shows all leaf units instead</td>
+          </tr>
+          <tr>
+            <td>Student list hardcoded limit 200</td>
+            <td><code>dashboard/students/page.tsx</code> ~line 141</td>
+            <td>Schools with &gt;200 students will silently lose records from view</td>
+          </tr>
+          <tr>
+            <td>Fee heads/subjects empty on fresh institution</td>
+            <td>Platform onboarding flow</td>
+            <td>Must manually call <code>POST /institution/:id/seed-defaults</code> after onboarding</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Pending Features (P0 — Before First Client Handover)</h3>
+    <ul>
+      <li>Student admission demographic fields (Aadhar, caste, nationality) need to move out of "Optional" section — they are legally required in India</li>
+      <li>Operator attendance page needs full rewrite to report-only view</li>
+      <li>Exam creation: class field should be mandatory; admit card generation; teacher marks workflow</li>
+      <li>Fee management needs Indian-standard fee heads + class-linked structure rebuild</li>
+      <li>Student promotion engine (<code>POST /students/promote</code>)</li>
+      <li>Fee receipt PDF generation per payment</li>
+      <li>Report card PDF from exam scorecard</li>
+      <li>Setup wizard: auto-call seed-defaults on first login</li>
+    </ul>
+
+    <h3>Pending Features (P1 — Important)</h3>
+    <ul>
+      <li>Teacher "My Classes" — filter by teacher assignment, not all leaf units</li>
+      <li>Absent notification to parent when teacher marks absent</li>
+      <li>Pagination on all list pages</li>
+      <li>SMS/notification layer (BullMQ planned)</li>
+      <li>Razorpay payment gateway integration</li>
+      <li>Academic calendar module</li>
+      <li>Add <code>firstName</code>/<code>lastName</code> to User model (staff list currently shows email only)</li>
+    </ul>
+  </div>
+
+
+  <!-- ══════════ SECTION 19: DEVELOPER GUIDE ══════════ -->
+  <div class="section" id="dev-guide">
+    <div class="section-header">
+      <div class="section-icon" style="background:#1a2a3a;">🚀</div>
+      <h2>Developer Guide</h2>
+    </div>
+
+    <h3>Starting the Project</h3>
+    <pre><span class="cm"># Terminal 1 — Backend</span>
+<span class="kw">cd</span> apps/backend
+<span class="fn">npm</span> run start:dev    <span class="cm"># Starts on http://localhost:3000</span>
+
+<span class="cm"># Terminal 2 — Frontend</span>
+<span class="kw">cd</span> apps/frontend
+<span class="fn">npm</span> run dev          <span class="cm"># Starts on http://localhost:3001</span>
+
+<span class="cm"># First-time setup: seed database</span>
+<span class="kw">cd</span> apps/backend
+<span class="fn">npx</span> ts-node -r tsconfig-paths/register prisma/seed.ts</pre>
+
+    <h3>Required Environment Variables</h3>
+    <div class="two-col">
+      <div>
+        <h4>apps/backend/.env</h4>
+        <pre>DATABASE_URL=postgresql://...
+JWT_SECRET=&lt;128-char-hex&gt;
+CORS_ORIGIN=http://localhost:3001
+PORT=3000</pre>
+      </div>
+      <div>
+        <h4>apps/frontend/.env.local</h4>
+        <pre>NEXT_PUBLIC_API_URL=http://localhost:3000</pre>
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <strong>Never commit .env files.</strong> Copy from <code>.env.example</code> and fill in real values. The JWT_SECRET must be unique per deployment — generate with <code>openssl rand -hex 64</code>.
+    </div>
+
+    <h3>Adding a New Feature Module (Backend)</h3>
+    <ol>
+      <li>Create folder: <code>src/modules/myfeature/</code></li>
+      <li>Create <code>myfeature.module.ts</code>, <code>myfeature.controller.ts</code>, <code>myfeature.service.ts</code></li>
+      <li>All service methods must accept and use <code>institutionId</code></li>
+      <li>All Prisma queries must include <code>where: { institutionId }</code></li>
+      <li>Import <code>MyFeatureModule</code> in <code>app.module.ts</code></li>
+      <li>Add <code>@UseGuards(AuthGuard, RolesGuard)</code> and <code>@Permissions('feature.read')</code> to routes</li>
+    </ol>
+
+    <h3>Adding a New Frontend Page</h3>
+    <ol>
+      <li>Create file in the appropriate portal folder: <code>app/portal/teacher/mypage/page.tsx</code></li>
+      <li>Add <code>"use client"</code> at top if the page has any state or effects</li>
+      <li>Use <code>apiFetch()</code> from <code>lib/api.ts</code> for all API calls — never use <code>fetch()</code> directly</li>
+      <li>Add the page to the portal's <code>menuItems</code> in its <code>layout.tsx</code></li>
+      <li>PortalShell handles auth and role guards automatically</li>
+    </ol>
+
+    <h3>Database Changes</h3>
+    <ol>
+      <li>Edit <code>apps/backend/prisma/schema.prisma</code></li>
+      <li>Run <code>npx prisma migrate dev --name describe_change</code></li>
+      <li>Run <code>npx prisma generate</code></li>
+      <li>On Windows, if Prisma DLL lock occurs: <code>taskkill /F /IM node.exe</code> → <code>npx prisma generate</code> → restart servers</li>
+    </ol>
+
+    <h3>Branching Strategy</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Branch</th><th>Purpose</th><th>Rules</th></tr></thead>
+        <tbody>
+          <tr><td><code>main</code></td><td>Production</td><td>No direct push. PR only. Protected.</td></tr>
+          <tr><td><code>develop</code></td><td>Integration / Testing</td><td>Active work branch. Direct push OK for solo dev.</td></tr>
+          <tr><td><code>feature/*</code></td><td>New features</td><td>Branch from <code>develop</code>, PR back to <code>develop</code></td></tr>
+          <tr><td><code>fix/*</code></td><td>Non-urgent bug fixes</td><td>Branch from <code>develop</code>, PR back to <code>develop</code></td></tr>
+          <tr><td><code>hotfix/*</code></td><td>Urgent production fix</td><td>Branch from <code>main</code>, PR to <code>main</code> AND merge back to <code>develop</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Anchor Client (Development Testing)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Institution Login Code</td><td><code>infovion</code></td></tr>
+          <tr><td>Director email</td><td><code>admin@infovion.in</code> / <code>admin123</code></td></tr>
+          <tr><td>Operator email</td><td><code>operator@infovion.in</code> / <code>operator123</code></td></tr>
+          <tr><td>Institution DB ID</td><td><code>cmms6jl0k0000q3repb3w13hv</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <strong>All tokens are invalidated whenever JWT_SECRET changes</strong> in the <code>.env</code> file. Every logged-in user will need to log in again after a secret rotation.
+    </div>
+
+    <hr class="divider">
+    <p class="footnote">
+      Document generated for: Infovion Technologies — Academic SaaS Platform v3.0<br>
+      Last updated: April 2026 &nbsp;·&nbsp; For questions, refer to <code>CONTRIBUTING.md</code> and <code>PLATFORM_DOCS.md</code> at the repo root.
+    </p>
+  </div>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Platform Audit Report — Academic SaaS (Infovion Technologies)</title>
+<style>
+  :root {
+    --red:    #dc2626;
+    --orange: #ea580c;
+    --yellow: #d97706;
+    --blue:   #2563eb;
+    --green:  #16a34a;
+    --gray:   #6b7280;
+    --bg:     #f8fafc;
+    --card:   #ffffff;
+    --border: #e2e8f0;
+    --text:   #1e293b;
+    --muted:  #64748b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── TOP HEADER ── */
+  .header {
+    background: #0f172a;
+    color: white;
+    padding: 32px 40px;
+    border-bottom: 3px solid #dc2626;
+  }
+  .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .header .subtitle { color: #94a3b8; font-size: 13px; }
+  .header .meta { margin-top: 16px; display: flex; gap: 24px; flex-wrap: wrap; }
+  .header .meta span { color: #cbd5e1; font-size: 12px; }
+  .header .meta strong { color: white; }
+
+  /* ── LAYOUT ── */
+  .container { display: flex; min-height: calc(100vh - 120px); }
+
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: #1e293b;
+    padding: 20px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar h3 { color: #94a3b8; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 12px 20px 6px; }
+  .sidebar a {
+    display: block;
+    padding: 7px 20px;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 12.5px;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .sidebar a:hover { background: #334155; color: white; border-left-color: #dc2626; }
+
+  .main { flex: 1; padding: 32px 40px; max-width: 1100px; }
+
+  /* ── SUMMARY CARDS ── */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 36px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .stat-card .num { font-size: 32px; font-weight: 700; }
+  .stat-card .label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .stat-card.critical .num { color: var(--red); }
+  .stat-card.high .num { color: var(--orange); }
+  .stat-card.medium .num { color: var(--yellow); }
+  .stat-card.info .num { color: var(--blue); }
+
+  /* ── SECTION ── */
+  .section { margin-bottom: 48px; }
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-desc { color: var(--muted); font-size: 12.5px; margin-bottom: 18px; margin-top: 4px; }
+
+  /* ── ISSUE CARD ── */
+  .issue-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 14px;
+    padding: 16px 20px;
+  }
+  .issue-card.critical { border-left-color: var(--red); }
+  .issue-card.high     { border-left-color: var(--orange); }
+  .issue-card.medium   { border-left-color: var(--yellow); }
+  .issue-card.low      { border-left-color: var(--blue); }
+
+  .issue-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .issue-id { font-size: 10px; font-weight: 700; color: var(--muted); font-family: monospace; white-space: nowrap; padding-top: 2px; }
+  .issue-title { font-size: 14px; font-weight: 600; flex: 1; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .badge.critical { background: #fee2e2; color: var(--red); }
+  .badge.high     { background: #ffedd5; color: var(--orange); }
+  .badge.medium   { background: #fef3c7; color: var(--yellow); }
+  .badge.low      { background: #dbeafe; color: var(--blue); }
+  .badge.info     { background: #f1f5f9; color: var(--gray); }
+
+  .issue-body { font-size: 13px; color: #334155; }
+  .issue-body p { margin-bottom: 6px; }
+  .issue-body ul { padding-left: 18px; margin: 6px 0; }
+  .issue-body li { margin-bottom: 3px; }
+
+  .file-ref {
+    display: inline-block;
+    font-family: monospace;
+    font-size: 11.5px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: #475569;
+    margin: 2px 0;
+  }
+
+  .impact { font-size: 12px; margin-top: 8px; color: #64748b; font-style: italic; }
+  .impact strong { color: var(--orange); font-style: normal; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 12px 0; }
+  th { background: #f1f5f9; text-align: left; padding: 8px 12px; font-weight: 600; border-bottom: 2px solid var(--border); }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ── CALLOUT ── */
+  .callout { border-radius: 8px; padding: 14px 18px; margin: 14px 0; font-size: 13px; }
+  .callout.danger  { background: #fef2f2; border: 1px solid #fecaca; }
+  .callout.warning { background: #fffbeb; border: 1px solid #fde68a; }
+  .callout.info    { background: #eff6ff; border: 1px solid #bfdbfe; }
+
+  /* ── TOC ── */
+  .toc { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 32px; }
+  .toc h3 { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+  .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }
+  .toc a { color: var(--blue); text-decoration: none; font-size: 13px; display: block; padding: 2px 0; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* ── WORKFLOW DIAGRAM ── */
+  .flow { display: flex; gap: 0; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+  .flow-step { background: #f1f5f9; border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+  .flow-arrow { color: var(--muted); padding: 0 6px; font-size: 16px; }
+  .flow-step.missing { background: #fef2f2; border-color: #fca5a5; color: var(--red); }
+  .flow-step.broken  { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+  .flow-step.ok      { background: #f0fdf4; border-color: #86efac; color: var(--green); }
+
+  /* PRINT */
+  @media print {
+    .sidebar { display: none; }
+    .container { display: block; }
+    .main { padding: 20px; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ HEADER -->
+<div class="header">
+  <h1>Platform Audit Report — Academic SaaS</h1>
+  <div class="subtitle">Infovion Technologies &nbsp;|&nbsp; v3.0 Spec &nbsp;|&nbsp; India-Optimised K-12 Platform</div>
+  <div class="meta">
+    <span><strong>Audit Date:</strong> 11 April 2026</span>
+    <span><strong>Stack:</strong> NestJS 11 + Next.js 14 (App Router) + PostgreSQL + Prisma</span>
+    <span><strong>Roles:</strong> Director, Operator, Principal, Teacher, Student, Parent, Receptionist</span>
+    <span><strong>Status:</strong> Pre-production — Backend complete, 7 portals built</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ LAYOUT -->
+<div class="container">
+
+<!-- SIDEBAR NAV -->
+<nav class="sidebar">
+  <h3>Navigation</h3>
+  <a href="#summary">Summary Stats</a>
+  <a href="#toc">Table of Contents</a>
+
+  <h3>Security</h3>
+  <a href="#sec-rbac">S1 — Missing Role Guards</a>
+  <a href="#sec-tenancy">S2 — Multi-Tenancy Leaks</a>
+  <a href="#sec-auth">S3 — Auth Vulnerabilities</a>
+  <a href="#sec-data">S4 — Data Exposure</a>
+
+  <h3>Backend Logic</h3>
+  <a href="#be-biz">B1 — Business Logic Gaps</a>
+  <a href="#be-dto">B2 — DTO Validation Gaps</a>
+  <a href="#be-api">B3 — API Design Issues</a>
+
+  <h3>Frontend Workflows</h3>
+  <a href="#fe-workflow">F1 — Broken Workflows</a>
+  <a href="#fe-missing">F2 — Missing Pages</a>
+  <a href="#fe-stub">F3 — Placeholder / Stubs</a>
+  <a href="#fe-ux">F4 — UI/UX Issues</a>
+  <a href="#fe-validation">F5 — Frontend Validation</a>
+
+  <h3>Cross-Cutting</h3>
+  <a href="#cross-portal">P1 — Portal Coverage Gaps</a>
+  <a href="#cross-data">P2 — Data Model Gaps</a>
+  <a href="#cross-ops">P3 — Operational Gaps</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+<!-- ══════════════════════════════════════════════════════ SUMMARY -->
+<section id="summary">
+  <h2 class="section-title">Executive Summary</h2>
+  <p class="section-desc">Total issues found across security, backend logic, frontend workflows, and data model. Severity classifications follow standard QA definitions.</p>
+
+  <div class="summary-grid">
+    <div class="stat-card critical"><div class="num">14</div><div class="label">Critical Issues</div></div>
+    <div class="stat-card high"><div class="num">22</div><div class="label">High Issues</div></div>
+    <div class="stat-card medium"><div class="num">18</div><div class="label">Medium Issues</div></div>
+    <div class="stat-card info"><div class="num">11</div><div class="label">Low / Info</div></div>
+    <div class="stat-card"><div class="num" style="color:#0f172a">65</div><div class="label">Total Issues</div></div>
+    <div class="stat-card"><div class="num" style="color:#0f172a">8</div><div class="label">Missing Pages</div></div>
+    <div class="stat-card"><div class="num" style="color:#0f172a">6</div><div class="label">Broken Workflows</div></div>
+    <div class="stat-card"><div class="num" style="color:#0f172a">12</div><div class="label">Security Findings</div></div>
+  </div>
+
+  <div class="callout danger">
+    <strong>Pre-production blocker:</strong> Several Critical issues — including missing role guards on write endpoints, a plaintext password in API response, unscoped DELETE endpoints, and cross-tenant data leakage vectors — must be resolved before any client handover.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ TOC -->
+<section id="toc">
+  <div class="toc">
+    <h3>Table of Contents</h3>
+    <div class="toc-grid">
+      <a href="#sec-rbac">S1 — Missing Role-Based Access Control</a>
+      <a href="#sec-tenancy">S2 — Multi-Tenancy Data Leaks</a>
+      <a href="#sec-auth">S3 — Authentication Vulnerabilities</a>
+      <a href="#sec-data">S4 — Sensitive Data Exposure</a>
+      <a href="#be-biz">B1 — Business Logic Gaps</a>
+      <a href="#be-dto">B2 — DTO / Input Validation Gaps</a>
+      <a href="#be-api">B3 — API Design Issues</a>
+      <a href="#fe-workflow">F1 — Broken or Dead-End Workflows</a>
+      <a href="#fe-missing">F2 — Missing Pages</a>
+      <a href="#fe-stub">F3 — Placeholder / Stub Pages</a>
+      <a href="#fe-ux">F4 — UI/UX Issues</a>
+      <a href="#fe-validation">F5 — Frontend Validation Gaps</a>
+      <a href="#cross-portal">P1 — Portal Coverage Gaps</a>
+      <a href="#cross-data">P2 — Data Model Gaps</a>
+      <a href="#cross-ops">P3 — Operational / Process Gaps</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ S1: RBAC -->
+<section id="sec-rbac" class="section">
+  <h2 class="section-title"><span>🔐</span> S1 — Missing Role-Based Access Control</h2>
+  <p class="section-desc">Endpoints that lack <code>@Permissions</code> or <code>@Roles</code> decorators — any authenticated user from any role can call them. These are the most urgent findings.</p>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">S1-01</span>
+      <span class="issue-title">Attendance endpoints have NO permission guard — any logged-in user can mark any class absent</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>All attendance endpoints use <code>@UseGuards(AuthGuard, TenantGuard)</code> but are completely missing <code>RolesGuard</code> or <code>@Permissions()</code>. A student or parent can log in and mark all students in any class as absent.</p>
+      <ul>
+        <li><span class="file-ref">attendance.controller.ts — POST /attendance</span> → Should require <code>attendance.write</code> (teacher/operator only)</li>
+        <li><span class="file-ref">attendance.controller.ts — GET /attendance/notifications/parent</span> → Should require <code>parent</code> role only</li>
+        <li><span class="file-ref">attendance.controller.ts — GET /attendance/units/:unitId/defaulters</span> → Should require operator/principal</li>
+      </ul>
+      <p class="impact"><strong>Impact:</strong> Tampering with attendance records, falsified attendance reports, affects student progress and compliance.</p>
+    </div>
+  </div>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">S1-02</span>
+      <span class="issue-title">Exam endpoints have NO permission guard — any user can create exams and enter marks</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>The entire exam module controller is unguarded at the permission level. A teacher can create exams (operator-only action). A student can post marks for themselves.</p>
+      <ul>
+        <li><span class="file-ref">exam.controller.ts — POST /exams</span> → Requires operator/principal</li>
+        <li><span class="file-ref">exam.controller.ts — POST /exams/results</span> → Requires teacher (and only for their assigned subjects)</li>
+        <li><span class="file-ref">exam.controller.ts — PATCH /exams/:id/status</span> → Requires operator</li>
+        <li><span class="file-ref">exam.controller.ts — POST /exams/:id/subjects</span> → Requires operator</li>
+      </ul>
+      <p class="impact"><strong>Impact:</strong> Students can self-modify marks. Teachers can publish exams they shouldn't control. Report cards become untrustworthy.</p>
+    </div>
+  </div>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">S1-03</span>
+      <span class="issue-title">Fee endpoints have NO permission guard — any user can record payments or delete fee structures</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>The fees module has no role enforcement. Any authenticated user — including students and parents — can record a fee payment or delete a fee head.</p>
+      <ul>
+        <li><span class="file-ref">fees.controller.ts — POST /fees/payments</span> → Requires operator role</li>
+        <li><span class="file-ref">fees.controller.ts — POST /fees/heads</span> → Requires operator</li>
+        <li><span class="file-ref">fees.controller.ts — DELETE /fees/heads/:id</span> → Requires operator</li>
+        <li><span class="file-ref">fees.controller.ts — POST /fees/structures</span> → Requires operator</li>
+      </ul>
+      <p class="impact"><strong>Impact:</strong> Financial records can be fabricated or destroyed. Fee payments can be fraudulently recorded. High audit/compliance risk.</p>
+    </div>
+  </div>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">S1-04</span>
+      <span class="issue-title">Timetable module has NO role guard — any user can generate/overwrite any class's timetable</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>Both read and write timetable endpoints are only protected by TenantGuard. Any authenticated user (student, parent) can overwrite the school timetable.</p>
+      <ul>
+        <li><span class="file-ref">timetable.controller.ts — PUT /timetable/units/:unitId/slot</span></li>
+        <li><span class="file-ref">timetable.controller.ts — POST /timetable/units/:unitId/generate</span></li>
+        <li><span class="file-ref">timetable.controller.ts — GET /timetable/teacher/:teacherId</span> → Any user can view any teacher's schedule</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S1-05</span>
+      <span class="issue-title">Subject module write endpoints have no role check</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>Any authenticated user can create, delete, and assign subjects to classes.</p>
+      <ul>
+        <li><span class="file-ref">subject.controller.ts — POST /subjects</span></li>
+        <li><span class="file-ref">subject.controller.ts — DELETE /subjects/:id</span></li>
+        <li><span class="file-ref">subject.controller.ts — POST /subjects/units/:unitId</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S1-06</span>
+      <span class="issue-title">Announcement create/update/delete has no author or role verification</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>Any authenticated user can create school announcements, and any user can edit or delete any other user's announcement — there's no author ownership check.</p>
+      <ul>
+        <li><span class="file-ref">announcement.controller.ts — POST /announcements</span> → Should require operator/principal</li>
+        <li><span class="file-ref">announcement.service.ts — update()</span> → No check that req.user.id === announcement.authorUserId</li>
+        <li><span class="file-ref">announcement.service.ts — delete()</span> → Same gap — anyone can delete any announcement</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S1-07</span>
+      <span class="issue-title">Academic unit delete endpoint missing @Permissions decorator</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">academic.controller.ts — DELETE /academic/units/:unitId</span> uses <code>@UseGuards(RolesGuard)</code> but no <code>@Permissions('academic.write')</code> decorator — the RolesGuard has nothing to check against, so it passes for any role.</p>
+      <p>Same issue on <span class="file-ref">DELETE /academic/units/:unitId/class-teacher</span>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ S2: TENANCY -->
+<section id="sec-tenancy" class="section">
+  <h2 class="section-title"><span>🏢</span> S2 — Multi-Tenancy Data Leaks</h2>
+  <p class="section-desc">Queries or endpoints where institution scoping is missing or bypassable — could allow cross-school data access in a shared-schema multi-tenant system.</p>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">S2-01</span>
+      <span class="issue-title">DELETE /fees/structures/:id does NOT pass institutionId — any user can delete any institution's fee structure</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>The controller does not extract <code>institutionId</code> from the request, and the service function <code>deleteFeeStructure(id)</code> only uses the raw record ID — no tenant scoping whatsoever.</p>
+      <pre class="file-ref" style="display:block;padding:8px;white-space:pre-wrap">// fees.controller.ts
+@Delete('structures/:id')
+deleteFeeStructure(@Param('id') id: string) {         // ← no @Request() req
+  return this.feesService.deleteFeeStructure(id);     // ← no institutionId passed
+}</pre>
+      <p class="impact"><strong>Impact:</strong> Institution A can delete Institution B's fee structures if they know the UUID. Critical data loss risk in multi-tenant deployment.</p>
+    </div>
+  </div>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">S2-02</span>
+      <span class="issue-title">TenantGuard does NOT verify the institution exists or is active</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">tenant.guard.ts</span> reads the <code>X-Institution-ID</code> header and sets <code>req.tenant = { institutionId }</code> without checking that this institution actually exists in the database or is active/not suspended.</p>
+      <p>Anyone can send arbitrary UUID headers and reach protected endpoints scoped to a non-existent or suspended institution.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S2-03</span>
+      <span class="issue-title">Exam — removeExamSubject doesn't verify the subject belongs to the exam before deletion</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">exam.service.ts — removeExamSubject()</span> verifies the parent exam belongs to the institution, but then deletes the <code>ExamSubject</code> by ID alone using <code>deleteMany({ where: { id, examId } })</code> without verifying that <code>id</code> actually belongs to this institution. A user can guess another institution's exam subject ID.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S2-04</span>
+      <span class="issue-title">Timetable controller uses req.institutionId directly — bypasses TenantGuard property</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>Timetable controller accesses <code>req.institutionId</code> directly (a non-standard property) rather than using <code>req.tenant?.institutionId</code> (the property set by TenantGuard). If TenantGuard ever changes its property name, timetable data becomes unscoped.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">S2-05</span>
+      <span class="issue-title">No DB-level Row Level Security — application middleware is the only tenant boundary</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>The architecture relies entirely on application-level <code>institution_id</code> filtering. A single SQL bug in any service can expose all tenants' data. No PostgreSQL RLS policies are implemented (noted as P2 future work but worth flagging explicitly).</p>
+      <p class="impact"><strong>Impact:</strong> One missed <code>where: { institutionId }</code> in any service = full cross-tenant data dump.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ S3: AUTH -->
+<section id="sec-auth" class="section">
+  <h2 class="section-title"><span>🔑</span> S3 — Authentication Vulnerabilities</h2>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">S3-01</span>
+      <span class="issue-title">Password reset approval returns the new password in plaintext in the API response</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">auth.service.ts — approveResetRequest()</span> generates a new password and returns <code>{ newPassword: '...' }</code> in the HTTP response. This password travels in plaintext over the wire (even with HTTPS it appears in logs, proxy history, and browser DevTools).</p>
+      <p>The frontend Settings page <span class="file-ref">app/dashboard/settings/page.tsx</span> then displays this password in a modal — a user could screenshot or leave the tab open.</p>
+      <p class="impact"><strong>Fix:</strong> Return a time-limited reset token/link instead. The operator should communicate credentials via a separate channel (SMS/email).</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S3-02</span>
+      <span class="issue-title">Password reset — no rate limiting per user/IP, only "one pending at a time" check</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">auth.service.ts — requestPasswordReset()</span> only blocks if a pending request already exists. Once approved (and the pending cleared), an attacker can flood the endpoint to lock out an account or spam the approval queue.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S3-03</span>
+      <span class="issue-title">Refresh token endpoint does not validate that the token belongs to the institution in the header</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">auth.controller.ts — POST /auth/refresh</span> takes <code>institutionId</code> from the tenant (header) and <code>refreshToken</code> from the body. If a token from Institution A is presented with Institution B's header, the <code>refresh(institutionId, refreshToken)</code> call will fail to find the token — but the error message may leak whether the token exists at all.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">S3-04</span>
+      <span class="issue-title">LoginDto — password field missing @IsNotEmpty(), allows empty string login attempt</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">auth/dto/login.dto.ts</span> has <code>@IsString() @MinLength(6)</code> on password but no <code>@IsNotEmpty()</code>. An empty string fails <code>MinLength</code> but adds unnecessary noise to validation error messages instead of a clear "password is required" message.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">S3-05</span>
+      <span class="issue-title">Platform routes bypass TenantMiddleware with no platform-admin guard in place</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">tenant.middleware.ts</span> skips all tenant validation for <code>/platform</code> routes. The platform controller handles multi-institution management (create institution, list clients) but no platform-admin JWT guard is verified to be enforced on every platform endpoint.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ S4: DATA EXPOSURE -->
+<section id="sec-data" class="section">
+  <h2 class="section-title"><span>👁️</span> S4 — Sensitive Data Exposure</h2>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S4-01</span>
+      <span class="issue-title">Parent user created with phone only — no email, no password reset path via email</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">student.service.ts — confirmAdmission()</span> creates a parent user with only <code>phone</code>, no <code>email</code>. JWT payload email claim is empty. Password reset via email is impossible. Parent is permanently dependent on operator-mediated password reset.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">S4-02</span>
+      <span class="issue-title">Student admission form collects Aadhar number, Caste, Religion — no data protection notice or access controls</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>The student admission form collects PII sensitive under India's DPDP Act 2023 (Aadhar number, caste category, religion, nationality). No data access log, no field-level encryption, and any authenticated user with the student endpoint can read these fields. No UI-level data protection notice is shown to parents before submission.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">S4-03</span>
+      <span class="issue-title">Staff attendance admin-override has no audit log</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">staff-attendance.service.ts — adminMark()</span> allows operators to alter any staff member's attendance for any date. <code>markedById</code> is stored, but no entry is written to the <code>AuditLog</code> table. There's no "change history" so an operator could retroactively alter attendance records invisibly.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">S4-04</span>
+      <span class="issue-title">Password generated client-side in Director portal's staff management page</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/portal/director/staff/page.tsx</span> contains a <code>generatePassword()</code> function that generates passwords in the browser. The generated password is shown in the UI briefly. This is a pattern that can lead to weak passwords if the browser's <code>Math.random()</code> is not cryptographically secure — and it is not (<code>Math.random</code> is not CSPRNG).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ B1: BUSINESS LOGIC -->
+<section id="be-biz" class="section">
+  <h2 class="section-title"><span>⚙️</span> B1 — Business Logic Gaps</h2>
+  <p class="section-desc">Backend rules that should be enforced but aren't — leading to invalid data states.</p>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">B1-01</span>
+      <span class="issue-title">Fee payment recorded without checking fee structure exists or calculating outstanding balance</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">fees.service.ts — recordPayment()</span> verifies student and fee head exist, then directly creates a payment record. It does NOT:</p>
+      <ul>
+        <li>Check a <code>FeeStructure</code> exists for this student's class + year + fee head (can pay for fees not set up)</li>
+        <li>Check if the payment amount exceeds the outstanding balance (overpayment allowed)</li>
+        <li>Prevent duplicate payments for the same period</li>
+        <li>Validate that payment amount is in valid currency denomination</li>
+      </ul>
+      <p class="impact"><strong>Impact:</strong> Accounting discrepancies, inability to reconcile fee ledgers, financial audit failures.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">B1-02</span>
+      <span class="issue-title">Exam marks can be saved for students not belonging to the selected academic unit</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">exam.service.ts — saveResults()</span> validates that the <code>ExamSubject</code> entry (exam+unit+subject combination) exists, but does NOT verify that the student IDs in <code>dto.entries</code> actually belong to <code>dto.academicUnitId</code>. A teacher can post marks for students from other classes.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">B1-03</span>
+      <span class="issue-title">Student "holdback" promotion action returns success with no actual database change</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">student.service.ts — promote()</span>: When <code>action === 'holdback'</code>, the service returns <code>{ updated: students.length, action }</code> immediately without updating any student record. The frontend shows a success message but nothing actually happened in the database. The student remains in the same class for the correct reason, but there's no record of the holdback decision.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">B1-04</span>
+      <span class="issue-title">Attendance can be saved for any date — no validation for future dates or academic year bounds</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">attendance.service.ts — save()</span>: No date validation. Teachers can mark attendance for:</p>
+      <ul>
+        <li>Dates in the future (pre-marking attendance)</li>
+        <li>Dates before the academic year's start date</li>
+        <li>Weekends or public holidays (no holiday calendar integration)</li>
+        <li>Dates from previous years (retroactive alteration)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">B1-05</span>
+      <span class="issue-title">Staff leave request allows retroactive leave — no past-date check</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">staff-attendance.service.ts — createLeaveRequest()</span> only checks that <code>endDate >= startDate</code>. It allows creating leave requests for dates in the past, does not check for overlapping approved leaves, and has no holiday calendar awareness.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">B1-06</span>
+      <span class="issue-title">Exam marks entry throws inside a transaction map — partial data saves can occur</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">exam.service.ts — saveResults()</span>: Validation (<code>marksObtained > maxMarks</code>) is done inside the <code>dto.entries.map()</code> function passed to <code>prisma.$transaction()</code>. If the exception fires mid-map, some upserts may have already been queued. The transaction may not roll back cleanly because the exception occurs before the Promise array is returned.</p>
+      <p class="impact"><strong>Fix:</strong> Validate all entries before calling <code>$transaction()</code>.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">B1-07</span>
+      <span class="issue-title">Class 1 TC exemption check is name-based (fragile)</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">student.service.ts</span>: The check for whether a student is in Class 1 (and therefore doesn't need a TC from a previous school) matches against unit names like <code>['class_1', 'class1', 'i', '1']</code>. If a school names their Class 1 differently (e.g., "Grade 1", "Std I", "Class One"), TC validation will be incorrectly enforced.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">B1-08</span>
+      <span class="issue-title">No duplicate admission prevention — student can be re-admitted after soft delete without detection</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>Students are soft-deleted (<code>deletedAt</code> timestamp). A re-admission of the same student (same name + DOB + parent phone) will create a new record with a new admission number. The system has no deduplication check. Admission numbers will diverge from physical records.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ B2: DTO VALIDATION -->
+<section id="be-dto" class="section">
+  <h2 class="section-title"><span>📋</span> B2 — DTO / Input Validation Gaps</h2>
+  <p class="section-desc">Backend DTOs with missing validators — invalid data can be written to the database.</p>
+
+  <table>
+    <thead>
+      <tr><th>ID</th><th>File</th><th>Field</th><th>Issue</th><th>Severity</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>B2-01</td>
+        <td><span class="file-ref">inquiry.dto.ts — UpdateInquiryDto</span></td>
+        <td><code>status</code></td>
+        <td>Missing <code>@IsIn(['new','contacted','visited','enrolled','dropped'])</code> — any arbitrary string accepted as inquiry status</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>B2-02</td>
+        <td><span class="file-ref">exam.controller.ts — PATCH /:id/status</span></td>
+        <td><code>status</code> (body)</td>
+        <td>Raw string from <code>@Body('status')</code> with no <code>@IsEnum</code> validation. Any string (including 'published', 'cancelled') accepted</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>B2-03</td>
+        <td><span class="file-ref">exam.dto.ts — AddExamSubjectDto</span></td>
+        <td><code>passingMarks</code></td>
+        <td>Missing validation that <code>passingMarks &lt;= maxMarks</code> — can set passing marks higher than max marks</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>B2-04</td>
+        <td><span class="file-ref">fees.dto.ts — RecordPaymentDto</span></td>
+        <td><code>amount</code></td>
+        <td>Uses <code>@IsNumber() @Min(1)</code> but missing <code>@IsInt()</code> — fractional amounts like 99.999 accepted which may not match currency handling</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td>B2-05</td>
+        <td><span class="file-ref">create-user.dto.ts</span></td>
+        <td><code>email</code>, <code>phone</code></td>
+        <td>Both are <code>@IsOptional()</code> — user can be created with neither email nor phone. No way to contact or reset password</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>B2-06</td>
+        <td><span class="file-ref">roles/dto/create-role.dto.ts</span></td>
+        <td><code>code</code>, <code>label</code></td>
+        <td>Missing <code>@IsNotEmpty()</code> — empty string role codes/labels accepted</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td>B2-07</td>
+        <td><span class="file-ref">subject.dto.ts — AssignSubjectDto</span></td>
+        <td><code>teacherUserId</code>, <code>isClassTeacher</code></td>
+        <td>Missing <code>@IsUUID()</code> on teacherUserId and missing <code>@IsBoolean()</code> on isClassTeacher</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td>B2-08</td>
+        <td><span class="file-ref">fees.dto.ts — CreateFeeStructureDto</span></td>
+        <td><code>amount</code></td>
+        <td>Only <code>@IsPositive()</code> — no <code>@Max()</code> cap. Can set a fee of ₹99,999,999</td>
+        <td><span class="badge low">Low</span></td>
+      </tr>
+      <tr>
+        <td>B2-09</td>
+        <td><span class="file-ref">staff-attendance.controller.ts</span></td>
+        <td><code>status</code> in body</td>
+        <td>TypeScript union type <code>'present' | 'late' | 'half_day'</code> on body DTO is NOT runtime-validated — needs <code>@IsIn()</code></td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td>B2-10</td>
+        <td><span class="file-ref">student controller — findAll</span></td>
+        <td><code>limit</code> query param</td>
+        <td>No <code>@Max()</code> constraint — caller can pass <code>limit=99999</code> causing a full table scan and potential memory exhaustion</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ B3: API DESIGN -->
+<section id="be-api" class="section">
+  <h2 class="section-title"><span>🔌</span> B3 — API Design Issues</h2>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">B3-01</span>
+      <span class="issue-title">No /students/me or /students/child endpoint guards — relies on student/parent linking not yet implemented</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>The student portal pages call <span class="file-ref">GET /students/me</span> and the parent portal calls <span class="file-ref">GET /students/child</span>. These endpoints depend on a <code>userId</code> field on the Student model to link a login user to a student record — but this field is NOT YET in the Prisma schema. Both portals will always return the "not linked" state for every student and parent in the system.</p>
+      <p class="impact"><strong>Impact:</strong> Student and Parent portals are non-functional for all real users. Every student and parent login shows placeholder content only.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">B3-02</span>
+      <span class="issue-title">Attendance defaulter query makes N+1 database calls — one per student in the class</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">attendance.service.ts — getDefaulters()</span> fetches the student list, then calls <code>Promise.all(students.map(async (s) => {...}))</code> — one async database query per student. For a class of 60 students, this is 61 DB queries per request. Principals viewing attendance across 5+ classes will generate 300+ queries per page load.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">B3-03</span>
+      <span class="issue-title">Teacher sees ALL leaf academic units — not filtered to their assigned classes</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>The attendance page and marks page for teachers call <span class="file-ref">GET /academic/units/leaf</span> which returns ALL leaf units across the institution. Teachers should only see units where they are assigned in <code>academic_unit_subjects.teacherUserId</code>. A teacher at this school can mark attendance for any class.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">B3-04</span>
+      <span class="issue-title">No pagination on fee defaulters, attendance defaulters, exam results — potential large payload responses</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>Several GET endpoints return unbounded lists: <code>GET /fees/defaulters</code>, <code>GET /attendance/units/:id/defaulters</code>, <code>GET /exams/:id/results</code>, <code>GET /exams/:id/summary</code>. A large school with 2000+ students will return massive payloads on every report page load.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">B3-05</span>
+      <span class="issue-title">No soft-delete protection on fee heads — deleting a fee head with existing payments causes orphaned payment records</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">fees.controller.ts — DELETE /fees/heads/:id</span>: If a fee head is deleted but fee payments referencing it exist, the Prisma relation will either cascade-delete payment history (data loss) or throw a foreign key constraint error. Neither outcome is user-friendly and the behaviour depends on schema cascade rules not visible in the controller.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ F1: BROKEN WORKFLOWS -->
+<section id="fe-workflow" class="section">
+  <h2 class="section-title"><span>🔗</span> F1 — Broken or Dead-End Workflows</h2>
+  <p class="section-desc">User journeys that begin but cannot be completed — workflow traps from a business process perspective.</p>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">F1-01</span>
+      <span class="issue-title">Student and Parent portals are 100% placeholder — no real data visible to any user</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>The portals exist and are routed correctly, but every student and parent login sees only this banner:</p>
+      <blockquote style="background:#f1f5f9;border-left:3px solid #94a3b8;padding:8px 14px;margin:8px 0;font-style:italic;color:#64748b;">"Your student/child record is being linked by the school admin"</blockquote>
+      <p>The <code>userId</code> field does not exist in the Student schema yet. All sub-pages (Attendance, Marks, Fees) call <code>/students/me</code> or <code>/students/child</code> which always fail. The entire Student and Parent portal experience is non-functional.</p>
+      <div class="flow">
+        <div class="flow-step ok">Student logs in</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step ok">Reaches /portal/student</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step broken">Sees placeholder — cannot view attendance</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step missing">Cannot view marks — dead end</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">F1-02</span>
+      <span class="issue-title">Student admission → fee setup: no handoff — operator must separately navigate to Fees page</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>After completing student admission in <span class="file-ref">app/dashboard/students/page.tsx</span>, the operator sees a success message but no prompt or link to "Set up fees for this student". Fee structures must be configured on a separate page. In practice, operators will forget this step, resulting in students with no fee structure and incorrect balance calculations.</p>
+      <div class="flow">
+        <div class="flow-step ok">Admission form submitted</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step ok">Student created</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step broken">Success message — no "next step"</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step missing">Fee structure must be set manually (no link)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">F1-03</span>
+      <span class="issue-title">Exam creation → subject configuration: no guided flow — operator must manually switch to Configure tab</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>On <span class="file-ref">app/dashboard/exams/page.tsx</span>, an exam is created as "draft" status. To make it usable, subjects must be added per class via the Configure tab. However:</p>
+      <ul>
+        <li>After creating an exam, no guidance or auto-navigation to the Configure tab appears</li>
+        <li>Exam status change buttons (draft → active → completed) are not visible in the UI — status is displayed but cannot be changed from the frontend</li>
+        <li>Teachers cannot mark attendance for a draft exam — but there's no indication of this requirement</li>
+      </ul>
+      <div class="flow">
+        <div class="flow-step ok">Create Exam</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step broken">No guidance to add subjects</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step missing">Cannot change exam status from UI</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step missing">Teachers see "no active exam"</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">F1-04</span>
+      <span class="issue-title">Operator "Promote" page is a notice board — actual promotion happens in teacher portal with no operator visibility</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/dashboard/promote/page.tsx</span> shows only which classes have class teachers assigned. It says: "Student promotion is now handled by class teachers from their portal." But:</p>
+      <ul>
+        <li>The operator has no way to see which promotions have been done, which are pending, or which students were held back</li>
+        <li>There is no promotion approval step — teachers can promote students without operator confirmation</li>
+        <li>After promotion, no bulk report of promoted/held-back students is accessible to the operator</li>
+        <li>The operator cannot intervene or override a teacher's promotion decision</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">F1-05</span>
+      <span class="issue-title">Staff creation → class/subject assignment: no navigation link from staff list to assign their classes</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>On <span class="file-ref">app/dashboard/staff/page.tsx</span>, a new teacher is created with email, password, and role. After creation, there's no link or prompt to: assign them as class teacher, assign them to teach subjects in specific classes. The operator must manually navigate to Dashboard → Classes → select a class → assign teacher — a 4-step journey with no breadcrumbs.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F1-06</span>
+      <span class="issue-title">Marks entry: no visual confirmation of how many students were saved vs. skipped</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/portal/teacher/marks/page.tsx</span>: After saving marks, a success toast appears but no summary (e.g., "Saved for 42 students, 3 marked absent"). If the API call partially fails, the teacher has no indication of which students' marks were not saved.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F1-07</span>
+      <span class="issue-title">Director portal has no Exams module — director cannot view exam results or school performance</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>The Director portal at <span class="file-ref">app/portal/director/</span> has: Overview, Reports, Staff, Settings. The Reports page covers attendance and fee defaulters and exam list — but has no drill-down into individual exam results or class-wise performance summaries. The director cannot view any scorecard or result analysis.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F1-08</span>
+      <span class="issue-title">Staff [id] detail page exists but is never linked from the staff list</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/dashboard/staff/[id]/page.tsx</span> exists with a full staff profile view including role management and subject assignments. However, <span class="file-ref">app/dashboard/staff/page.tsx</span> (the list) has no clickable rows or "View" buttons to reach it. The detail page is an orphan — unreachable through normal UI navigation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ F2: MISSING PAGES -->
+<section id="fe-missing" class="section">
+  <h2 class="section-title"><span>📄</span> F2 — Missing Pages</h2>
+  <p class="section-desc">Pages that are logically required by the workflow but do not exist in the application.</p>
+
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Missing Page</th><th>Who Needs It</th><th>Impact</th><th>Severity</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>F2-01</td>
+        <td>Fee Receipt — printable per-payment receipt</td>
+        <td>Parent, Student, Operator</td>
+        <td>Parents have no proof of payment. Schools require printed receipts for fee book. Common school compliance requirement.</td>
+        <td><span class="badge critical">Critical</span></td>
+      </tr>
+      <tr>
+        <td>F2-02</td>
+        <td>Report Card / Progress Report PDF</td>
+        <td>Parent, Student, Principal</td>
+        <td>End-of-term report cards are a core school deliverable. The data exists (scorecard API is built) but no print/PDF page.</td>
+        <td><span class="badge critical">Critical</span></td>
+      </tr>
+      <tr>
+        <td>F2-03</td>
+        <td>Outgoing Transfer Certificate (TC) workflow</td>
+        <td>Operator, Principal</td>
+        <td>TC generation is legally required in India when a student leaves. No TC request, approval, or download page exists.</td>
+        <td><span class="badge critical">Critical</span></td>
+      </tr>
+      <tr>
+        <td>F2-04</td>
+        <td>Student Timetable view in Student Portal</td>
+        <td>Student</td>
+        <td>Students cannot see their own class timetable. No page at <code>/portal/student/timetable</code>.</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F2-05</td>
+        <td>Exam Schedule view in Student / Parent Portal</td>
+        <td>Student, Parent</td>
+        <td>Students and parents cannot see upcoming exam dates. No exam schedule page in student or parent portal.</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F2-06</td>
+        <td>Principal — Exam Results / Performance Reports page</td>
+        <td>Principal</td>
+        <td>Principal portal has no exam section. Cannot view class-wise results, toppers, or failure rates from their portal.</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F2-07</td>
+        <td>Bulk Attendance Report — Monthly/Annual downloadable</td>
+        <td>Operator, Principal</td>
+        <td>Dashboard attendance page exists but no monthly report download, no date-range filter, no export.</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F2-08</td>
+        <td>Parent management page — view/edit parent details from admin</td>
+        <td>Operator</td>
+        <td>Parent user accounts are created during admission but operators cannot browse, edit, or reset parent accounts from any dashboard page.</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F2-09</td>
+        <td>Academic Year Setup wizard / first-login onboarding</td>
+        <td>Operator (new institution)</td>
+        <td>Fresh institution has no fee heads, no subjects, no academic year. No guided setup flow. Must call <code>seed-defaults</code> API manually.</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F2-10</td>
+        <td>Receptionist — Fee collection / admission initiation</td>
+        <td>Receptionist</td>
+        <td>Receptionist portal only has Inquiries and Announcements. Cannot initiate admissions or collect fees — defeats the purpose of the desk role in many schools.</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ F3: STUBS -->
+<section id="fe-stub" class="section">
+  <h2 class="section-title"><span>🚧</span> F3 — Placeholder / Stub Pages</h2>
+  <p class="section-desc">Pages that exist in the navigation but show no functional content — visible dead ends for real users.</p>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">F3-01</span>
+      <span class="issue-title">Student Portal: all quick-action cards are purely decorative — no click handlers</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/portal/student/page.tsx</span>: The overview page shows feature preview cards (Attendance, Marks, Fees, Announcements) with no <code>onClick</code> or <code>href</code>. These do link via the sidebar navigation, but the cards themselves appear clickable without being so — confusing for students.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">F3-02</span>
+      <span class="issue-title">Parent Portal: same decorative card issue — "Coming Soon" implied but not stated</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/portal/parent/page.tsx</span>: Mirrors the student portal issue. The child record not-linked banner + decorative cards create a confusing experience where a parent logs in and sees nothing actionable. No estimated timeline or "what to do next" guidance.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F3-03</span>
+      <span class="issue-title">Receptionist portal only has 2 menu items — Inquiries and Announcements</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/portal/receptionist/layout.tsx</span>: The Receptionist role is defined but its portal is severely limited. In most schools, the reception desk handles visitor logs, fee collection, outgoing TC requests, and appointment scheduling. None of these are accessible.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F3-04</span>
+      <span class="issue-title">Director Portal "Reports" page has no export/print — data visible but not extractable</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/portal/director/reports/page.tsx</span>: Shows attendance defaulters, fee defaulters, and exam list in tables. No export button, no print layout, no PDF download. A director presenting to management has no way to extract this data from the platform.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ F4: UX ISSUES -->
+<section id="fe-ux" class="section">
+  <h2 class="section-title"><span>🎨</span> F4 — UI/UX Issues</h2>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">F4-01</span>
+      <span class="issue-title">Settings page shows the new password in a modal — security-sensitive information on screen</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/dashboard/settings/page.tsx</span>: When an operator approves a password reset, the new auto-generated password is displayed in a modal. This password remains visible until the modal is dismissed. Any bystander can see it. No "copy to clipboard" with auto-clear, no hide/reveal toggle.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">F4-02</span>
+      <span class="issue-title">Exam status cannot be changed from the frontend — backend supports draft/active/completed but no UI control</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/dashboard/exams/page.tsx</span>: Exam status is displayed as a badge but there are no buttons to transition status (draft → active → completed). The backend has <code>PATCH /exams/:id/status</code> but the frontend never calls it. Teachers will see "no active exams" even after the operator creates exams, because they're stuck in "draft".</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F4-03</span>
+      <span class="issue-title">Staff list shows only email — no name field on User model, making it hard to identify staff</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>The User model has no <code>firstName</code> / <code>lastName</code> fields. All staff pages display only email addresses. For large schools, finding "the Principal" vs "the Class 5A teacher" requires knowing their email address — highly impractical for operators and other staff.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F4-04</span>
+      <span class="issue-title">Teacher attendance marking: no visual distinction between "not yet marked" and "marked absent"</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/portal/teacher/attendance/page.tsx</span>: When loading an existing attendance session, status cycles P → A → L → Lv. But on initial load (no existing record), all students default to "Present". If a teacher accidentally saves without marking anyone — all 60 students are marked present by default with no warning.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F4-05</span>
+      <span class="issue-title">No confirmation dialog on destructive actions — deleting subjects, fee heads, academic units</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>Delete buttons across the dashboard (subjects, fee heads, class structure) execute immediately with no "Are you sure?" confirmation. A mis-click on "Delete" for a fee head with 200+ payment records associated could cause data integrity issues.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">F4-06</span>
+      <span class="issue-title">Academic year selector missing from many pages — implicit "current year" assumption with no indicator</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>Pages like attendance marking, marks entry, and fee collection implicitly use the "current" academic year. No UI indicator shows which year is active. If the academic year is not set correctly (or if there are two years in the DB), all data goes to the wrong year silently.</p>
+    </div>
+  </div>
+
+  <div class="issue-card low">
+    <div class="issue-header">
+      <span class="issue-id">F4-07</span>
+      <span class="issue-title">Hardcoded default max marks (100) and passing marks (35) in exam configuration UI</span>
+      <span class="badge low">Low</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/dashboard/exams/page.tsx</span>: Default values of 100 and 35 are hardcoded in the exam configuration form. Schools with different marking schemes (e.g., 80-mark papers, 50-mark practicals, CBSE grading) must manually override every exam subject entry.</p>
+    </div>
+  </div>
+
+  <div class="issue-card low">
+    <div class="issue-header">
+      <span class="issue-id">F4-08</span>
+      <span class="issue-title">Student directory and admission are two separate pages — confusing for operators</span>
+      <span class="badge low">Low</span>
+    </div>
+    <div class="issue-body">
+      <p>Sidebar has "Admission" (for creating new students) and "Student Directory" (for viewing/searching existing ones) as separate entries. There's no quick link from "Directory" to "New Admission". The student detail page at <span class="file-ref">students/[id]/page.tsx</span> links back to "Directory" but admission is a different page entirely.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ F5: FRONTEND VALIDATION -->
+<section id="fe-validation" class="section">
+  <h2 class="section-title"><span>✅</span> F5 — Frontend Form Validation Gaps</h2>
+
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Page</th><th>Field</th><th>Issue</th><th>Severity</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>F5-01</td>
+        <td><span class="file-ref">dashboard/students/page.tsx</span></td>
+        <td>Phone, Parent Phone</td>
+        <td>Only <code>.trim()</code> check. No regex for Indian 10-digit mobile format. Accepts "123" or "abcdef".</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F5-02</td>
+        <td><span class="file-ref">dashboard/students/page.tsx</span></td>
+        <td>Aadhar Number</td>
+        <td>Has <code>maxLength=12</code> but no validation that it is exactly 12 digits and matches Verhoeff algorithm</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F5-03</td>
+        <td><span class="file-ref">dashboard/students/page.tsx</span></td>
+        <td>Email (student/parent)</td>
+        <td>No email format validation — "notanemail" accepted without error</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F5-04</td>
+        <td><span class="file-ref">dashboard/fees/page.tsx</span></td>
+        <td>Payment Amount</td>
+        <td>No check that amount &gt; 0, no check against student's outstanding balance. Overpayment allowed silently.</td>
+        <td><span class="badge high">High</span></td>
+      </tr>
+      <tr>
+        <td>F5-05</td>
+        <td><span class="file-ref">dashboard/fees/page.tsx</span></td>
+        <td>Payment Date</td>
+        <td>No validation that payment date is not in the future</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td>F5-06</td>
+        <td><span class="file-ref">dashboard/exams/page.tsx</span></td>
+        <td>Exam Dates</td>
+        <td>No validation that startDate &lt; endDate. Can create exam ending before it begins.</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td>F5-07</td>
+        <td><span class="file-ref">dashboard/classes/page.tsx</span></td>
+        <td>Class Name</td>
+        <td>No duplicate-name prevention on the client side. Backend will reject it with a 409, but the error message may be cryptic.</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td>F5-08</td>
+        <td><span class="file-ref">portal/receptionist/page.tsx</span></td>
+        <td>Inquiry Phone</td>
+        <td>Only <code>.trim()</code> check — same phone format gap as admission form</td>
+        <td><span class="badge medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td>F5-09</td>
+        <td><span class="file-ref">dashboard/settings/page.tsx</span></td>
+        <td>New Password (change password)</td>
+        <td>Checks that <code>newPassword === confirmPassword</code> but no strength requirement communicated to user (length, complexity)</td>
+        <td><span class="badge low">Low</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ P1: PORTAL GAPS -->
+<section id="cross-portal" class="section">
+  <h2 class="section-title"><span>🚪</span> P1 — Portal Coverage Gaps</h2>
+  <p class="section-desc">Features/sections missing from specific portals that users of that role would need.</p>
+
+  <table>
+    <thead>
+      <tr><th>Portal</th><th>Gap</th><th>Severity</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Teacher</strong></td><td>No "My Students" list — teacher can't see who is in their class without switching to attendance view</td><td><span class="badge medium">Medium</span></td></tr>
+      <tr><td><strong>Teacher</strong></td><td>No homework/assignment creation module (listed as P1 work)</td><td><span class="badge medium">Medium</span></td></tr>
+      <tr><td><strong>Teacher</strong></td><td>No way to view past attendance records they submitted (read-only history)</td><td><span class="badge medium">Medium</span></td></tr>
+      <tr><td><strong>Teacher</strong></td><td>Staff Attendance page exists but relies on clock-in/clock-out — no leave request UI visible for teachers</td><td><span class="badge medium">Medium</span></td></tr>
+      <tr><td><strong>Principal</strong></td><td>No exam/marks section — cannot view exam results or performance summaries</td><td><span class="badge high">High</span></td></tr>
+      <tr><td><strong>Principal</strong></td><td>Cannot view individual student profiles or drill into a defaulter's full record</td><td><span class="badge medium">Medium</span></td></tr>
+      <tr><td><strong>Principal</strong></td><td>Cannot create announcements directly (no Create button in principal announcements page)</td><td><span class="badge medium">Medium</span></td></tr>
+      <tr><td><strong>Student</strong></td><td>Cannot view their own timetable</td><td><span class="badge high">High</span></td></tr>
+      <tr><td><strong>Student</strong></td><td>Cannot view upcoming exam schedule</td><td><span class="badge high">High</span></td></tr>
+      <tr><td><strong>Student</strong></td><td>Cannot request a fee receipt for any payment</td><td><span class="badge critical">Critical</span></td></tr>
+      <tr><td><strong>Parent</strong></td><td>No absent/late notification — backend notification endpoint exists but is not surfaced in UI</td><td><span class="badge high">High</span></td></tr>
+      <tr><td><strong>Parent</strong></td><td>Cannot view child's timetable or exam schedule</td><td><span class="badge high">High</span></td></tr>
+      <tr><td><strong>Parent</strong></td><td>No fee receipt download</td><td><span class="badge critical">Critical</span></td></tr>
+      <tr><td><strong>Director</strong></td><td>Cannot view individual class exam results — only sees exam list</td><td><span class="badge high">High</span></td></tr>
+      <tr><td><strong>Director</strong></td><td>Settings page is read-only for most fields (institution profile cannot be edited from Director portal)</td><td><span class="badge medium">Medium</span></td></tr>
+      <tr><td><strong>Receptionist</strong></td><td>Cannot initiate student admission — must ask operator</td><td><span class="badge medium">Medium</span></td></tr>
+      <tr><td><strong>Receptionist</strong></td><td>Cannot collect fees at the counter — most critical reception desk function is missing</td><td><span class="badge high">High</span></td></tr>
+      <tr><td><strong>Operator Dashboard</strong></td><td>Overview page has no key stats (total students enrolled this year, today's attendance %, fees collected today)</td><td><span class="badge medium">Medium</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ P2: DATA MODEL -->
+<section id="cross-data" class="section">
+  <h2 class="section-title"><span>🗄️</span> P2 — Data Model Gaps</h2>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">P2-01</span>
+      <span class="issue-title">Student model has no userId field — student/parent portals cannot function</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>The Prisma schema <span class="file-ref">prisma/schema.prisma</span> does not have a <code>userId</code> foreign key on the <code>Student</code> model. This means there is no way to associate a login user account with a student record. The spec §6.3 requires this field. Without it, the student and parent portals permanently show placeholder content.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">P2-02</span>
+      <span class="issue-title">User model has no firstName/lastName — all staff identified by email only</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>Every staff-related list, assignment view, and timetable displays email addresses instead of human names. This makes the platform difficult to use in practice. The schema migration needs: <code>firstName String?</code>, <code>lastName String?</code> on the <code>User</code> model.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">P2-03</span>
+      <span class="issue-title">No holiday calendar model — attendance validation and leave calculation cannot reference school holidays</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>The platform has no <code>HolidayCalendar</code> or <code>SchoolHoliday</code> table. Attendance can be marked on declared holidays, staff leave requests don't exclude holidays, and attendance percentage calculations include holiday days as "absent" — making all percentage calculations incorrect.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">P2-04</span>
+      <span class="issue-title">No TransferCertificate model — TC workflow has no persistence layer</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>Outgoing TCs (when a student leaves the school) are a legally mandated document in India. There is no <code>TransferCertificate</code> table, no TC number sequence, no TC request/approval workflow, and no issued-TC tracking. Currently, TC status is tracked only by a simple boolean flag on the student record.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">P2-05</span>
+      <span class="issue-title">No blood group field in student admission form despite being in the student model</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>The Student data model has a <code>bloodGroup</code> field (important for medical emergencies at school), but the admission form in <span class="file-ref">app/dashboard/students/page.tsx</span> does not include this field. Data mismatch between schema and UI means blood group is never captured at admission.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">P2-06</span>
+      <span class="issue-title">No composite database index on (institutionId, email) for User table — slow login queries at scale</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>Login queries filter by <code>institutionId</code> + <code>email</code>, but no composite index covers both fields together. At 1000+ users per institution, login latency will increase significantly. Schema change needed: <code>@@index([institutionId, email])</code> on <code>User</code> model.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">P2-07</span>
+      <span class="issue-title">Fee structure not linked to academic year — structures carry over year-to-year without reset</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>When a new academic year is created, fee structures from the previous year are not automatically carried over or flagged for review. An operator must manually recreate all fee structures for the new year. Conversely, if they forget, the previous year's structures show up in the new year's payment forms.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ P3: OPERATIONAL -->
+<section id="cross-ops" class="section">
+  <h2 class="section-title"><span>🛠️</span> P3 — Operational / Process Gaps</h2>
+
+  <div class="issue-card critical">
+    <div class="issue-header">
+      <span class="issue-id">P3-01</span>
+      <span class="issue-title">No first-login setup wizard — fresh institution has empty fee heads, subjects, and no academic year</span>
+      <span class="badge critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>A new institution added via the platform admin must manually: create an academic year, call <code>POST /institution/:id/seed-defaults</code> to get default fee heads and subjects, set the current academic year. None of this is guided by the UI. If an operator starts adding students before setup is complete, they'll encounter broken dropdowns and missing fee structures with no explanation.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">P3-02</span>
+      <span class="issue-title">No absent notification to parents when teacher marks student absent</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>The backend has a <code>GET /attendance/notifications/parent</code> endpoint, suggesting a notification mechanism was planned. But there is no trigger from the attendance save flow to notify parents. Parent absent notifications (commonly via SMS or in-app) are a key engagement feature for school apps — and are completely absent.</p>
+    </div>
+  </div>
+
+  <div class="issue-card high">
+    <div class="issue-header">
+      <span class="issue-id">P3-03</span>
+      <span class="issue-title">GitHub branch protection on main not configured — anyone with push access can force-push to production</span>
+      <span class="badge high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>As noted in the project memory, GitHub branch protection rules on <code>main</code> and <code>develop</code> have not been set up. Without protection, any team member can push directly to <code>main</code> (the production branch) without a PR review.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">P3-04</span>
+      <span class="issue-title">No rate limiting on any API endpoint — brute-force and DoS attacks possible</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>No Throttler/rate-limit module is configured in the NestJS app. Login endpoint (<code>POST /auth/login</code>) can be brute-forced. Attendance defaulter queries (which generate N+1 queries) can be called in rapid succession to cause database load spikes.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">P3-05</span>
+      <span class="issue-title">No error tracking / observability — production errors will be invisible</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>No Sentry, Datadog, or equivalent error tracking is configured. When a production API call fails, the error is logged to the NestJS console (if a server is watching) but there's no alerting, no aggregation, and no ability to replay errors post-hoc.</p>
+    </div>
+  </div>
+
+  <div class="issue-card medium">
+    <div class="issue-header">
+      <span class="issue-id">P3-06</span>
+      <span class="issue-title">No CI/CD pipeline — deployments are manual, no automated test gate</span>
+      <span class="badge medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>No GitHub Actions workflows exist. Every deployment is manual. No automated tests are run before a PR merge. A breaking change in the backend can reach production without any automated gate catching it.</p>
+    </div>
+  </div>
+
+  <div class="issue-card low">
+    <div class="issue-header">
+      <span class="issue-id">P3-07</span>
+      <span class="issue-title">Student demographic fields (Nationality, Religion, Caste) buried in "Optional" collapsible</span>
+      <span class="badge low">Low</span>
+    </div>
+    <div class="issue-body">
+      <p><span class="file-ref">app/dashboard/students/page.tsx</span>: Nationality, Religion, and Caste Category are inside an "Optional Details" collapsible section. Per Indian school compliance requirements (UDISE+ reporting), these are required fields — not optional. Operators will routinely skip them thinking they're optional, causing incomplete UDISE+ data.</p>
+    </div>
+  </div>
+
+  <div class="issue-card low">
+    <div class="issue-header">
+      <span class="issue-id">P3-08</span>
+      <span class="issue-title">No Razorpay or online payment integration — all fees are offline/manual entry only</span>
+      <span class="badge low">Low</span>
+    </div>
+    <div class="issue-body">
+      <p>The platform is designed for India, where online fee payment via UPI/Razorpay is increasingly expected by parents. All fee payments are currently operator-entered (cash, cheque, NEFT). Parents cannot pay fees through the parent portal. This is listed as P1 future work but is a significant competitive gap.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ PRIORITY TABLE -->
+<section id="priority" class="section">
+  <h2 class="section-title"><span>📊</span> Priority Matrix — Fix Order</h2>
+  <p class="section-desc">Recommended fix order based on severity + business impact. Critical items block client handover.</p>
+
+  <div class="callout danger">
+    <strong>Pre-Handover Blockers (Must fix before any client sees this system)</strong><br>
+    S1-01, S1-02, S1-03, S2-01, S3-01, B3-01 (userId on Student), F1-03 (exam status UI), F2-01 (fee receipt), F2-02 (report card), F2-03 (TC workflow), P2-01, P3-01 (setup wizard)
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Priority</th><th>ID</th><th>Title</th><th>Effort</th></tr>
+    </thead>
+    <tbody>
+      <tr style="background:#fef2f2"><td>🔴 P0</td><td>S1-01 to S1-07</td><td>Add @Permissions decorators to all unguarded write endpoints</td><td>Low (1 day)</td></tr>
+      <tr style="background:#fef2f2"><td>🔴 P0</td><td>S2-01</td><td>Fix DELETE /fees/structures/:id to pass institutionId</td><td>Low (30 min)</td></tr>
+      <tr style="background:#fef2f2"><td>🔴 P0</td><td>S2-02</td><td>TenantGuard: verify institution exists and is active in DB</td><td>Low (2 hr)</td></tr>
+      <tr style="background:#fef2f2"><td>🔴 P0</td><td>S3-01</td><td>Replace plaintext password in reset response with token/link</td><td>Medium (4 hr)</td></tr>
+      <tr style="background:#fef2f2"><td>🔴 P0</td><td>P2-01</td><td>Add userId to Student model — schema migration + service update</td><td>Medium (1 day)</td></tr>
+      <tr style="background:#fef2f2"><td>🔴 P0</td><td>F1-03 / F4-02</td><td>Add exam status change buttons to exams page</td><td>Low (2 hr)</td></tr>
+      <tr style="background:#fef2f2"><td>🔴 P0</td><td>P3-01</td><td>Build first-login setup wizard for new institutions</td><td>High (2-3 days)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>B1-01</td><td>Fee payment: validate against fee structure + balance check</td><td>Medium (1 day)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>B1-02</td><td>Exam marks: validate student belongs to academic unit</td><td>Low (2 hr)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>B3-02</td><td>Fix N+1 query in attendance defaulters</td><td>Medium (4 hr)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>F2-01</td><td>Build fee receipt page (print-friendly)</td><td>Medium (1 day)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>F2-02</td><td>Build report card PDF page</td><td>High (2 days)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>F2-03</td><td>TC request/approval workflow</td><td>High (2-3 days)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>P2-02</td><td>Add firstName/lastName to User model</td><td>Low (4 hr)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>B1-04</td><td>Attendance: add date validation (no future, no pre-year)</td><td>Low (2 hr)</td></tr>
+      <tr style="background:#ffedd5"><td>🟠 P1</td><td>F1-01</td><td>Student/Parent portal linking via userId</td><td>High (2 days)</td></tr>
+      <tr style="background:#fef3c7"><td>🟡 P2</td><td>B2 series</td><td>Fix all DTO validation gaps (IsEnum, IsIn, etc.)</td><td>Low (4 hr)</td></tr>
+      <tr style="background:#fef3c7"><td>🟡 P2</td><td>F5 series</td><td>Frontend form validation (phone, email, amount, dates)</td><td>Low (1 day)</td></tr>
+      <tr style="background:#fef3c7"><td>🟡 P2</td><td>F2-04 to F2-08</td><td>Student/Parent portal: timetable, exam schedule pages</td><td>Medium (2 days)</td></tr>
+      <tr style="background:#fef3c7"><td>🟡 P2</td><td>P3-04</td><td>Rate limiting (NestJS ThrottlerModule)</td><td>Low (2 hr)</td></tr>
+      <tr style="background:#fef3c7"><td>🟡 P2</td><td>P3-03</td><td>GitHub branch protection rules</td><td>Low (30 min)</td></tr>
+      <tr style="background:#eff6ff"><td>🔵 P3</td><td>P2-03</td><td>Holiday calendar model + integration</td><td>High (3 days)</td></tr>
+      <tr style="background:#eff6ff"><td>🔵 P3</td><td>P3-05</td><td>Sentry error tracking setup</td><td>Low (2 hr)</td></tr>
+      <tr style="background:#eff6ff"><td>🔵 P3</td><td>P3-06</td><td>GitHub Actions CI/CD pipeline</td><td>Medium (1-2 days)</td></tr>
+      <tr style="background:#eff6ff"><td>🔵 P3</td><td>P3-08</td><td>Razorpay integration</td><td>High (3-5 days)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ FOOTER -->
+<div style="margin-top:48px;padding:24px;background:#f1f5f9;border-radius:10px;font-size:12px;color:#64748b;line-height:1.8;">
+  <strong style="color:#1e293b;">Report generated:</strong> 11 April 2026 &nbsp;|&nbsp;
+  <strong style="color:#1e293b;">Platform:</strong> Academic SaaS v3.0 — Infovion Technologies &nbsp;|&nbsp;
+  <strong style="color:#1e293b;">Scope:</strong> Full codebase review — Backend (NestJS), Frontend (Next.js 14), Schema (Prisma/PostgreSQL) &nbsp;|&nbsp;
+  <strong style="color:#1e293b;">Coverage:</strong> All 7 portals, 15 backend modules, Prisma schema, shared components, auth/tenancy system
+  <br/><br/>
+  This document covers workflow bugs, missing features, security issues, business logic gaps, and UX dead-ends as would be found by a QA engineer and business workflow manager during pre-production testing. It does not cover infrastructure (hosting, DNS, SSL) or high-end feature development.
+</div>
+
+</main>
+</div>
+</body>
+</html>

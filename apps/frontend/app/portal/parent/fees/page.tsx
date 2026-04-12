@@ -44,8 +44,9 @@ export default function ParentFeesPage() {
         ? apiFetch(`/fees/payments/student/${selectedChildId}/balance?yearId=${currentYearId}`)
         : Promise.resolve(null),
     ])
-      .then(([payments, bal]) => {
-        setPayments(Array.isArray(payments) ? payments : []);
+      .then(([paymentsRes, bal]) => {
+        const list = Array.isArray(paymentsRes) ? paymentsRes : (paymentsRes as any)?.payments ?? [];
+        setPayments(list);
         setBalance(bal);
       })
       .catch(() => {})

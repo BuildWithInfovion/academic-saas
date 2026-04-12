@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Git & GitHub Working Guide — Academic SaaS | Infovion Technologies</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      line-height: 1.7;
+    }
+
+    /* ── COVER ── */
+    .cover {
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 60%, #1a2332 100%);
+      border-bottom: 1px solid #30363d;
+      padding: 60px 40px 50px;
+      text-align: center;
+    }
+    .cover .logo {
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #58a6ff;
+      margin-bottom: 16px;
+    }
+    .cover h1 {
+      font-size: 38px;
+      font-weight: 700;
+      color: #f0f6fc;
+      margin-bottom: 12px;
+    }
+    .cover p {
+      color: #8b949e;
+      font-size: 15px;
+      max-width: 600px;
+      margin: 0 auto 24px;
+    }
+    .cover .badges {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: #8b949e;
+    }
+    .badge.green { border-color: #238636; color: #3fb950; }
+    .badge.blue  { border-color: #1f6feb; color: #58a6ff; }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* ── TABLE OF CONTENTS ── */
+    .toc {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 28px 32px;
+      margin-bottom: 48px;
+    }
+    .toc h2 { color: #f0f6fc; font-size: 16px; margin-bottom: 18px; }
+    .toc ol { padding-left: 20px; }
+    .toc li { margin: 8px 0; }
+    .toc a { color: #58a6ff; text-decoration: none; font-size: 14px; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── SECTION ── */
+    .section { margin-bottom: 56px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #21262d;
+    }
+    .section-num {
+      background: #1f6feb;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .section h2 { font-size: 22px; color: #f0f6fc; }
+    .section h3 { font-size: 16px; color: #e6edf3; margin: 24px 0 12px; }
+    .section p  { color: #8b949e; font-size: 14px; margin-bottom: 14px; }
+
+    /* ── STEP BLOCK ── */
+    .step {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-left: 4px solid #1f6feb;
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin: 16px 0;
+    }
+    .step .step-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #58a6ff;
+      margin-bottom: 6px;
+    }
+    .step .step-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 6px;
+    }
+    .step .step-desc { color: #8b949e; font-size: 13px; }
+
+    /* ── CODE BLOCK ── */
+    .code-block {
+      background: #010409;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      margin: 14px 0;
+      overflow: hidden;
+    }
+    .code-header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .code-header .code-title {
+      font-size: 12px;
+      color: #8b949e;
+      font-family: monospace;
+    }
+    .code-header .code-tag {
+      font-size: 11px;
+      background: #1f6feb22;
+      color: #58a6ff;
+      border: 1px solid #1f6feb44;
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+    pre {
+      padding: 20px;
+      overflow-x: auto;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    .c-comment { color: #6e7681; }
+    .c-cmd     { color: #79c0ff; }
+    .c-string  { color: #a5d6ff; }
+    .c-ok      { color: #3fb950; }
+    .c-warn    { color: #d29922; }
+    .c-branch  { color: #d2a8ff; }
+    .c-flag    { color: #ffa657; }
+
+    /* ── CALLOUT ── */
+    .callout {
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    .callout.info    { background: #1f3a5c22; border: 1px solid #1f6feb55; color: #79c0ff; }
+    .callout.success { background: #1a3a2022; border: 1px solid #23863655; color: #3fb950; }
+    .callout.warn    { background: #3a2a0022; border: 1px solid #9e6a0355; color: #e3b341; }
+    .callout.danger  { background: #3a0a0a22; border: 1px solid #da363555; color: #ff7b72; }
+    .callout strong  { font-weight: 700; display: block; margin-bottom: 4px; }
+
+    /* ── TABLE ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+    th {
+      background: #21262d;
+      color: #8b949e;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 2px solid #30363d;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #21262d;
+      color: #c9d1d9;
+      vertical-align: top;
+    }
+    tr:hover td { background: #161b22; }
+    td code, th code {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #79c0ff;
+    }
+
+    /* ── BRANCH DIAGRAM ── */
+    .diagram {
+      background: #010409;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 24px;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 2.2;
+      margin: 16px 0;
+    }
+    .d-main    { color: #ffa657; font-weight: 700; }
+    .d-develop { color: #79c0ff; font-weight: 700; }
+    .d-feature { color: #3fb950; }
+    .d-hotfix  { color: #ff7b72; }
+    .d-line    { color: #30363d; }
+    .d-label   { color: #6e7681; font-size: 12px; }
+
+    /* ── INLINE CODE ── */
+    code {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #79c0ff;
+    }
+
+    /* ── RULES GRID ── */
+    .rules-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .rule-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+    }
+    .rule-card.do   { border-left: 4px solid #3fb950; }
+    .rule-card.dont { border-left: 4px solid #da3633; }
+    .rule-card .rule-head {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .rule-card.do   .rule-head { color: #3fb950; }
+    .rule-card.dont .rule-head { color: #ff7b72; }
+    .rule-card ul { padding-left: 16px; }
+    .rule-card li { margin: 4px 0; color: #c9d1d9; }
+
+    /* ── SCENARIO CARD ── */
+    .scenario {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    .scenario-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .scenario-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .scenario-icon.feat   { background: #1a3a2033; }
+    .scenario-icon.fix    { background: #3a2a0033; }
+    .scenario-icon.deploy { background: #1f3a5c33; }
+    .scenario-icon.hot    { background: #3a0a0a33; }
+    .scenario-title { font-size: 15px; font-weight: 600; color: #f0f6fc; }
+    .scenario-sub   { font-size: 12px; color: #8b949e; margin-top: 2px; }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid #21262d;
+      color: #6e7681;
+      font-size: 12px;
+    }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      .cover { background: #f6f8fa; }
+      .code-block { border: 1px solid #ccc; }
+      pre { background: #f6f8fa; color: #24292f; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ COVER ══════════════════ -->
+<div class="cover">
+  <div class="logo">Infovion Technologies — Internal Documentation</div>
+  <h1>Git & GitHub Working Guide</h1>
+  <p>Complete step-by-step guide for working on the Academic SaaS platform using Git branches, commits, and pull requests.</p>
+  <div class="badges">
+    <span class="badge green">● For Internal Use Only</span>
+    <span class="badge blue">Repo: BuildWithInfovion/academic-saas</span>
+    <span class="badge">Updated: April 2026</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════ TABLE OF CONTENTS ══════════════════ -->
+  <div class="toc">
+    <h2>📋 Table of Contents</h2>
+    <ol>
+      <li><a href="#s1">Understanding the Branch System</a></li>
+      <li><a href="#s2">One-Time Setup — First Time on a New Machine</a></li>
+      <li><a href="#s3">Your Daily Start Routine</a></li>
+      <li><a href="#s4">Working on a New Feature (Step by Step)</a></li>
+      <li><a href="#s5">Quick Fix Directly on Develop</a></li>
+      <li><a href="#s6">Releasing to Production (develop → main)</a></li>
+      <li><a href="#s7">Emergency Hotfix on Production</a></li>
+      <li><a href="#s8">All Commands Reference Card</a></li>
+      <li><a href="#s9">Commit Message Rules</a></li>
+      <li><a href="#s10">Golden Rules — Do & Don't</a></li>
+      <li><a href="#s11">What to Do Right Now</a></li>
+    </ol>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 1 ══════════════════ -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <h2>Understanding the Branch System</h2>
+    </div>
+
+    <p>Before touching any command, understand this diagram. It is the foundation of everything.</p>
+
+    <div class="diagram">
+<span class="d-main">main</span>          <span class="d-label">← PRODUCTION. What the client/world sees. NEVER touch directly.</span>
+  <span class="d-line">↑</span>
+  <span class="d-line">└─ PR only (when ready to release)</span>
+  <span class="d-line">   </span>
+<span class="d-develop">develop</span>       <span class="d-label">← YOUR DAILY WORKING BRANCH. All work happens here or below.</span>
+  <span class="d-line">↑</span>
+  <span class="d-line">├──</span> <span class="d-feature">feature/fee-management</span>       <span class="d-label">← new feature branch</span>
+  <span class="d-line">├──</span> <span class="d-feature">feature/student-demographics</span>  <span class="d-label">← another feature branch</span>
+  <span class="d-line">├──</span> <span class="d-feature">fix/attendance-500-error</span>      <span class="d-label">← bug fix branch</span>
+  <span class="d-line">└──</span> <span class="d-hotfix">hotfix/login-crash</span>            <span class="d-label">← urgent fix (branches from main)</span>
+    </div>
+
+    <h3>What each branch means</h3>
+    <table>
+      <tr>
+        <th>Branch</th>
+        <th>Purpose</th>
+        <th>Who can push directly?</th>
+        <th>How it gets updated</th>
+      </tr>
+      <tr>
+        <td><code>main</code></td>
+        <td>Production — what the client sees</td>
+        <td>Nobody</td>
+        <td>PR from <code>develop</code> only</td>
+      </tr>
+      <tr>
+        <td><code>develop</code></td>
+        <td>Integration — tested, stable work</td>
+        <td>Direct push for tiny fixes only</td>
+        <td>PR from <code>feature/*</code> or <code>fix/*</code></td>
+      </tr>
+      <tr>
+        <td><code>feature/*</code></td>
+        <td>One branch per new feature</td>
+        <td>Author — push freely</td>
+        <td>Branch from develop, PR back to develop</td>
+      </tr>
+      <tr>
+        <td><code>fix/*</code></td>
+        <td>Non-urgent bug fixes</td>
+        <td>Author — push freely</td>
+        <td>Branch from develop, PR back to develop</td>
+      </tr>
+      <tr>
+        <td><code>hotfix/*</code></td>
+        <td>Urgent production fix only</td>
+        <td>Author — push freely</td>
+        <td>Branch from <strong>main</strong>, PR to both main and develop</td>
+      </tr>
+    </table>
+
+    <div class="callout success">
+      <strong>✅ Simple rule to remember:</strong>
+      develop is your workspace. main is the final product. Never confuse the two.
+    </div>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 2 ══════════════════ -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <h2>One-Time Setup — First Time on a New Machine</h2>
+    </div>
+
+    <p>Do this only once — the first time you set up the project on any computer.</p>
+
+    <div class="step">
+      <div class="step-label">Step 2.1</div>
+      <div class="step-title">Tell Git who you are</div>
+      <div class="step-desc">Git stamps your name on every commit. Set this first.</div>
+    </div>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-title">Terminal</span>
+        <span class="code-tag">run once</span>
+      </div>
+      <pre><span class="c-comment"># Replace with your actual name and email</span>
+<span class="c-cmd">git config</span> <span class="c-flag">--global</span> user.name <span class="c-string">"Sankalp Deshpande"</span>
+<span class="c-cmd">git config</span> <span class="c-flag">--global</span> user.email <span class="c-string">"your@email.com"</span>
+
+<span class="c-comment"># Verify it saved correctly</span>
+<span class="c-cmd">git config</span> <span class="c-flag">--global</span> user.name
+<span class="c-comment"># Should print: Sankalp Deshpande</span></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-label">Step 2.2</div>
+      <div class="step-title">Clone the repository to your machine</div>
+      <div class="step-desc">This downloads the full project from GitHub to your computer.</div>
+    </div>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-title">Terminal</span>
+        <span class="code-tag">run once</span>
+      </div>
+      <pre><span class="c-comment"># Navigate to where you want the project folder</span>
+<span class="c-cmd">cd</span> C:/Users/YourName
+
+<span class="c-comment"># Clone the repo (downloads everything from GitHub)</span>
+<span class="c-cmd">git clone</span> https://github.com/BuildWithInfovion/academic-saas.git
+
+<span class="c-comment"># Go into the project folder</span>
+<span class="c-cmd">cd</span> academic-saas</pre>
+    </div>
+
+    <div class="step">
+      <div class="step-label">Step 2.3</div>
+      <div class="step-title">Get the develop branch on your machine</div>
+      <div class="step-desc">After cloning, you only have main locally. Get develop too.</div>
+    </div>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-title">Terminal</span>
+        <span class="code-tag">run once</span>
+      </div>
+      <pre><span class="c-comment"># Download all branches from GitHub</span>
+<span class="c-cmd">git fetch</span> origin
+
+<span class="c-comment"># Switch to develop and start tracking it</span>
+<span class="c-cmd">git checkout</span> develop
+
+<span class="c-comment"># Confirm you are on develop</span>
+<span class="c-cmd">git branch</span>
+<span class="c-comment"># Output should show:  * develop</span>
+<span class="c-comment">#                        main</span></pre>
+    </div>
+
+    <div class="callout info">
+      <strong>ℹ️ You only do Section 2 once per machine.</strong>
+      After this, you never clone again. Just open the folder and start working.
+    </div>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 3 ══════════════════ -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <h2>Your Daily Start Routine</h2>
+    </div>
+
+    <p>Every single day before you write one line of code, run these commands. This takes 10 seconds and prevents 90% of all problems.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-title">Daily Start Routine — Run Every Morning</span>
+        <span class="code-tag">every day</span>
+      </div>
+      <pre><span class="c-comment"># 1. Go to the project folder</span>
+<span class="c-cmd">cd</span> C:/Users/sanka/academic-saas
+
+<span class="c-comment"># 2. Switch to develop (in case you left on another branch)</span>
+<span class="c-cmd">git checkout</span> develop
+
+<span class="c-comment"># 3. Download the latest changes from GitHub to your machine</span>
+<span class="c-comment">#    (Important if your partner pushed something overnight)</span>
+<span class="c-cmd">git pull</span> origin develop
+
+<span class="c-comment"># 4. Check there are no surprises</span>
+<span class="c-cmd">git status</span>
+<span class="c-comment"># Should say: "nothing to commit, working tree clean"</span>
+
+<span class="c-comment"># ✅ You are ready to start working</span></pre>
+    </div>
+
+    <div class="callout warn">
+      <strong>⚠️ Never skip the git pull.</strong>
+      If your partner pushed changes and you didn't pull, your code will be out of date and you'll get conflicts later.
+    </div>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 4 ══════════════════ -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <h2>Working on a New Feature (Full Step by Step)</h2>
+    </div>
+
+    <p>This is the main workflow you'll use 95% of the time. Follow it for every new feature you build.</p>
+
+    <div class="scenario">
+      <div class="scenario-head">
+        <div class="scenario-icon feat">🚀</div>
+        <div>
+          <div class="scenario-title">Example: Building the Fee Management Page</div>
+          <div class="scenario-sub">Use this same pattern for any feature you build</div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-title">Complete Feature Workflow</span>
+          <span class="code-tag">step by step</span>
+        </div>
+        <pre><span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="c-comment">  PHASE 1: PREPARE</span>
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+<span class="c-comment"># Step 1: Always start from the latest develop</span>
+<span class="c-cmd">git checkout</span> develop
+<span class="c-cmd">git pull</span> origin develop
+
+<span class="c-comment"># Step 2: Create your feature branch</span>
+<span class="c-comment">#   Rule: feature/describe-what-you-are-building</span>
+<span class="c-cmd">git checkout</span> <span class="c-flag">-b</span> <span class="c-branch">feature/fee-management</span>
+
+<span class="c-comment"># Confirm you are on the new branch</span>
+<span class="c-cmd">git branch</span>
+<span class="c-comment"># Output:  * feature/fee-management</span>
+<span class="c-comment">#            develop</span>
+<span class="c-comment">#            main</span>
+
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="c-comment">  PHASE 2: CODE</span>
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+<span class="c-comment"># ... Open VS Code and write your code ...</span>
+<span class="c-comment"># ... Make changes to files ...</span>
+<span class="c-comment"># ... Test it locally ...</span>
+
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="c-comment">  PHASE 3: SAVE YOUR WORK (commit)</span>
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+<span class="c-comment"># Step 3: See what files you changed</span>
+<span class="c-cmd">git status</span>
+<span class="c-comment"># Shows modified files in red (not saved to git yet)</span>
+
+<span class="c-comment"># Step 4: Stage the files you want to save</span>
+<span class="c-comment"># Option A: Stage one specific file</span>
+<span class="c-cmd">git add</span> apps/frontend/app/dashboard/fees/page.tsx
+
+<span class="c-comment"># Option B: Stage ALL changed files at once</span>
+<span class="c-cmd">git add</span> .
+
+<span class="c-comment"># Step 5: Check staged files (now green)</span>
+<span class="c-cmd">git status</span>
+
+<span class="c-comment"># Step 6: Commit (save a snapshot with a message)</span>
+<span class="c-cmd">git commit</span> <span class="c-flag">-m</span> <span class="c-string">"feat: rebuild fee management with Indian fee heads"</span>
+
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="c-comment">  PHASE 4: PUSH TO GITHUB</span>
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+<span class="c-comment"># Step 7: Push your branch to GitHub</span>
+<span class="c-cmd">git push</span> origin <span class="c-branch">feature/fee-management</span>
+
+<span class="c-comment"># First time pushing this branch, use -u flag</span>
+<span class="c-comment"># (this links your local branch to GitHub)</span>
+<span class="c-cmd">git push</span> <span class="c-flag">-u</span> origin <span class="c-branch">feature/fee-management</span>
+
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="c-comment">  PHASE 5: MERGE INTO DEVELOP (via GitHub PR)</span>
+<span class="c-comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+<span class="c-comment"># Step 8: Go to GitHub in your browser</span>
+<span class="c-comment">#   → You'll see: "feature/fee-management had recent pushes"</span>
+<span class="c-comment">#   → Click "Compare & pull request"</span>
+<span class="c-comment">#   → Make sure: base = develop, compare = feature/fee-management</span>
+<span class="c-comment">#   → Click "Create pull request"</span>
+<span class="c-comment">#   → Click "Merge pull request"</span>
+<span class="c-comment">#   → Click "Confirm merge"</span>
+
+<span class="c-comment"># Step 9: Come back to terminal, clean up</span>
+<span class="c-cmd">git checkout</span> develop
+<span class="c-cmd">git pull</span> origin develop
+<span class="c-cmd">git branch</span> <span class="c-flag">-d</span> <span class="c-branch">feature/fee-management</span>
+<span class="c-comment"># Deletes the local branch (it's merged, no longer needed)</span>
+
+<span class="c-ok"># ✅ Done! Your feature is now in develop.</span>
+<span class="c-ok">#    main is completely untouched.</span></pre>
+      </div>
+    </div>
+
+    <h3>What happens step by step — explained simply</h3>
+    <table>
+      <tr><th>Command</th><th>What it does in plain English</th></tr>
+      <tr><td><code>git checkout -b feature/name</code></td><td>Creates a new branch and switches to it. Like creating a copy of develop to work on safely.</td></tr>
+      <tr><td><code>git status</code></td><td>Shows you which files you changed. Red = not saved yet. Green = ready to commit.</td></tr>
+      <tr><td><code>git add .</code></td><td>Marks ALL changed files as "ready to save". Like selecting files to put in an envelope.</td></tr>
+      <tr><td><code>git commit -m "message"</code></td><td>Takes a snapshot of your work with a label. Like sealing the envelope with a note.</td></tr>
+      <tr><td><code>git push origin branch-name</code></td><td>Sends your commits from your machine to GitHub. Like posting the envelope.</td></tr>
+      <tr><td><code>git branch -d branch-name</code></td><td>Deletes the branch locally after merging. Safe to do — the code is already in develop.</td></tr>
+    </table>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 5 ══════════════════ -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <h2>Quick Fix Directly on Develop</h2>
+    </div>
+
+    <p>For very small changes (a typo, a label fix, a color change) you don't need a feature branch. Commit directly to develop.</p>
+
+    <div class="scenario">
+      <div class="scenario-head">
+        <div class="scenario-icon fix">🔧</div>
+        <div>
+          <div class="scenario-title">Example: Fix a typo in the student form</div>
+          <div class="scenario-sub">Small, low-risk changes only</div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-title">Quick Fix on Develop</span></div>
+        <pre><span class="c-comment"># Step 1: Make sure you are on develop with latest code</span>
+<span class="c-cmd">git checkout</span> develop
+<span class="c-cmd">git pull</span> origin develop
+
+<span class="c-comment"># Step 2: Make your small change in VS Code</span>
+<span class="c-comment"># ... fix the typo ...</span>
+
+<span class="c-comment"># Step 3: Stage and commit</span>
+<span class="c-cmd">git add</span> .
+<span class="c-cmd">git commit</span> <span class="c-flag">-m</span> <span class="c-string">"fix: correct typo in student admission form label"</span>
+
+<span class="c-comment"># Step 4: Push directly to develop</span>
+<span class="c-cmd">git push</span> origin develop
+
+<span class="c-ok"># ✅ Done. No PR needed for tiny fixes.</span></pre>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <strong>⚠️ Use this only for truly tiny changes.</strong>
+      If you're touching logic, building a feature, or changing more than 2-3 lines — always use a feature branch (Section 4).
+    </div>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 6 ══════════════════ -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <h2>Releasing to Production (develop → main)</h2>
+    </div>
+
+    <p>When you have tested everything on develop and it's ready for the client, you release it to main.</p>
+
+    <div class="scenario">
+      <div class="scenario-head">
+        <div class="scenario-icon deploy">🚢</div>
+        <div>
+          <div class="scenario-title">Release — Moving develop to main</div>
+          <div class="scenario-sub">Do this when you're confident the code is stable</div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-title">Release Workflow</span></div>
+        <pre><span class="c-comment"># Step 1: Make sure everything is pushed to develop</span>
+<span class="c-cmd">git checkout</span> develop
+<span class="c-cmd">git status</span>
+<span class="c-comment"># Should say: nothing to commit, working tree clean</span>
+<span class="c-cmd">git push</span> origin develop
+
+<span class="c-comment"># Step 2: Go to GitHub in browser</span>
+<span class="c-comment">#   → Click "Pull requests"</span>
+<span class="c-comment">#   → Click "New pull request"</span>
+<span class="c-comment">#   → base: main  ←  compare: develop</span>
+<span class="c-comment">#   → Title: "release: v1.x - describe what's in this release"</span>
+<span class="c-comment">#   → Click "Create pull request"</span>
+<span class="c-comment">#   → Review the files changed (check nothing unexpected)</span>
+<span class="c-comment">#   → Click "Merge pull request"</span>
+<span class="c-comment">#   → Click "Confirm merge"</span>
+
+<span class="c-comment"># Step 3: Pull main locally to stay in sync</span>
+<span class="c-cmd">git checkout</span> main
+<span class="c-cmd">git pull</span> origin main
+
+<span class="c-comment"># Step 4: Tag this release (optional but good practice)</span>
+<span class="c-cmd">git tag</span> v1.0.0 <span class="c-flag">-m</span> <span class="c-string">"Release v1.0.0 — Initial platform launch"</span>
+<span class="c-cmd">git push</span> origin v1.0.0
+
+<span class="c-comment"># Step 5: Go back to develop for next work</span>
+<span class="c-cmd">git checkout</span> develop
+
+<span class="c-ok"># ✅ main is now the latest production version.</span></pre>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 7 ══════════════════ -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <h2>Emergency Hotfix on Production</h2>
+    </div>
+
+    <p>Something broke on main (production) and needs an immediate fix — you can't wait for the normal develop cycle.</p>
+
+    <div class="callout danger">
+      <strong>🚨 Only use hotfix/* when production is broken.</strong>
+      For everything else, use the normal feature branch from develop.
+    </div>
+
+    <div class="scenario">
+      <div class="scenario-head">
+        <div class="scenario-icon hot">🔥</div>
+        <div>
+          <div class="scenario-title">Emergency: Login is broken on production</div>
+          <div class="scenario-sub">Hotfix branches from main, not develop</div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-title">Hotfix Workflow</span></div>
+        <pre><span class="c-comment"># Step 1: IMPORTANT — branch from main, not develop</span>
+<span class="c-cmd">git checkout</span> main
+<span class="c-cmd">git pull</span> origin main
+<span class="c-cmd">git checkout</span> <span class="c-flag">-b</span> <span class="c-branch">hotfix/login-crash</span>
+
+<span class="c-comment"># Step 2: Fix the bug</span>
+<span class="c-comment"># ... make the fix in VS Code ...</span>
+
+<span class="c-comment"># Step 3: Commit the fix</span>
+<span class="c-cmd">git add</span> .
+<span class="c-cmd">git commit</span> <span class="c-flag">-m</span> <span class="c-string">"hotfix: fix login crash on wrong institution code"</span>
+
+<span class="c-comment"># Step 4: Push the hotfix branch</span>
+<span class="c-cmd">git push</span> origin <span class="c-branch">hotfix/login-crash</span>
+
+<span class="c-comment"># Step 5: On GitHub — create TWO pull requests</span>
+<span class="c-comment">#</span>
+<span class="c-comment">#   PR 1: hotfix/login-crash → main     (fixes production now)</span>
+<span class="c-comment">#   PR 2: hotfix/login-crash → develop  (keeps develop in sync)</span>
+<span class="c-comment">#</span>
+<span class="c-comment"># Merge BOTH PRs.</span>
+
+<span class="c-comment"># Step 6: Clean up</span>
+<span class="c-cmd">git checkout</span> develop
+<span class="c-cmd">git pull</span> origin develop
+<span class="c-cmd">git branch</span> <span class="c-flag">-d</span> <span class="c-branch">hotfix/login-crash</span>
+
+<span class="c-ok"># ✅ Production is fixed. develop is also updated.</span></pre>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 8 ══════════════════ -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <h2>All Commands Reference Card</h2>
+    </div>
+
+    <p>Bookmark this section. Every command you'll ever need, explained in plain English.</p>
+
+    <h3>🔍 Checking Status</h3>
+    <table>
+      <tr><th>Command</th><th>What it does</th></tr>
+      <tr><td><code>git status</code></td><td>Shows which files changed. Red = unsaved, Green = ready to commit.</td></tr>
+      <tr><td><code>git branch</code></td><td>Shows all local branches. The one with <code>*</code> is your current branch.</td></tr>
+      <tr><td><code>git branch -a</code></td><td>Shows ALL branches — local AND GitHub (remote).</td></tr>
+      <tr><td><code>git log --oneline</code></td><td>Shows recent commits in a short one-line format.</td></tr>
+      <tr><td><code>git log --oneline -10</code></td><td>Shows only the last 10 commits.</td></tr>
+      <tr><td><code>git diff</code></td><td>Shows exactly what lines you changed (before staging).</td></tr>
+    </table>
+
+    <h3>🔀 Switching Branches</h3>
+    <table>
+      <tr><th>Command</th><th>What it does</th></tr>
+      <tr><td><code>git checkout develop</code></td><td>Switch to the develop branch.</td></tr>
+      <tr><td><code>git checkout main</code></td><td>Switch to the main branch.</td></tr>
+      <tr><td><code>git checkout -b feature/name</code></td><td>Create a NEW branch called <code>feature/name</code> and switch to it.</td></tr>
+      <tr><td><code>git checkout -b fix/name</code></td><td>Create a NEW fix branch and switch to it.</td></tr>
+    </table>
+
+    <h3>💾 Saving Work (Stage & Commit)</h3>
+    <table>
+      <tr><th>Command</th><th>What it does</th></tr>
+      <tr><td><code>git add .</code></td><td>Stage ALL changed files — ready to commit.</td></tr>
+      <tr><td><code>git add filename.tsx</code></td><td>Stage only ONE specific file.</td></tr>
+      <tr><td><code>git add apps/frontend/</code></td><td>Stage all changes inside a folder.</td></tr>
+      <tr><td><code>git commit -m "message"</code></td><td>Save a snapshot with a descriptive message.</td></tr>
+      <tr><td><code>git commit --amend -m "new message"</code></td><td>Fix the message of your LAST commit (before pushing).</td></tr>
+    </table>
+
+    <h3>☁️ Pushing & Pulling (GitHub sync)</h3>
+    <table>
+      <tr><th>Command</th><th>What it does</th></tr>
+      <tr><td><code>git push origin develop</code></td><td>Send develop commits to GitHub.</td></tr>
+      <tr><td><code>git push origin feature/name</code></td><td>Send a feature branch to GitHub.</td></tr>
+      <tr><td><code>git push -u origin feature/name</code></td><td>Push and link local branch to GitHub (use first time).</td></tr>
+      <tr><td><code>git pull origin develop</code></td><td>Download latest develop from GitHub to your machine.</td></tr>
+      <tr><td><code>git fetch origin</code></td><td>Download branch info from GitHub without merging.</td></tr>
+    </table>
+
+    <h3>🧹 Cleaning Up</h3>
+    <table>
+      <tr><th>Command</th><th>What it does</th></tr>
+      <tr><td><code>git branch -d feature/name</code></td><td>Delete a local branch (safe — only works if merged).</td></tr>
+      <tr><td><code>git branch -D feature/name</code></td><td>Force delete a branch (even if not merged — careful!).</td></tr>
+      <tr><td><code>git stash</code></td><td>Temporarily save uncommitted changes and clean your working directory.</td></tr>
+      <tr><td><code>git stash pop</code></td><td>Bring back stashed changes.</td></tr>
+    </table>
+
+    <h3>🔗 Connecting to GitHub</h3>
+    <table>
+      <tr><th>Command</th><th>What it does</th></tr>
+      <tr><td><code>git remote -v</code></td><td>Shows which GitHub repo you're connected to.</td></tr>
+      <tr><td><code>git clone URL</code></td><td>Download a repo from GitHub for the first time.</td></tr>
+    </table>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 9 ══════════════════ -->
+  <div class="section" id="s9">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <h2>Commit Message Rules</h2>
+    </div>
+
+    <p>A good commit message tells anyone (including future you) what changed and why. Always write it in the format below.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-title">Format</span></div>
+      <pre><span class="c-string">type: short description of what you did</span>
+
+<span class="c-comment">Types available:</span>
+<span class="c-ok">feat</span>     → New feature or page
+<span class="c-ok">fix</span>      → Bug fix
+<span class="c-warn">hotfix</span>   → Urgent production fix
+<span class="c-ok">refactor</span> → Code cleanup (no new feature, no bug fix)
+<span class="c-ok">chore</span>    → Config, setup, dependency update
+<span class="c-ok">docs</span>     → Documentation only</pre>
+    </div>
+
+    <h3>Examples — Good vs Bad</h3>
+    <table>
+      <tr><th>❌ Bad (vague)</th><th>✅ Good (descriptive)</th></tr>
+      <tr><td><code>fixed stuff</code></td><td><code>fix: student list crashes when page param is missing</code></td></tr>
+      <tr><td><code>update</code></td><td><code>feat: add bulk promote/holdback for students</code></td></tr>
+      <tr><td><code>changes</code></td><td><code>refactor: move fee head seeding to institution setup wizard</code></td></tr>
+      <tr><td><code>wip</code></td><td><code>feat: receptionist portal — inquiry management page</code></td></tr>
+      <tr><td><code>asdf</code></td><td><code>hotfix: login broken when institution code has uppercase letters</code></td></tr>
+    </table>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 10 ══════════════════ -->
+  <div class="section" id="s10">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <h2>Golden Rules — Do &amp; Don't</h2>
+    </div>
+
+    <div class="rules-grid">
+      <div class="rule-card do">
+        <div class="rule-head">✅ Always Do</div>
+        <ul>
+          <li>Pull before you start working each day</li>
+          <li>Create a feature branch for every new feature</li>
+          <li>Write clear commit messages</li>
+          <li>Test locally before pushing</li>
+          <li>Merge feature branches back to develop via PR</li>
+          <li>Keep branches short-lived (1-3 days max)</li>
+          <li>Delete branches after merging</li>
+          <li>Stay on develop as your base</li>
+        </ul>
+      </div>
+      <div class="rule-card dont">
+        <div class="rule-head">❌ Never Do</div>
+        <ul>
+          <li>Push directly to main</li>
+          <li>Code on main branch</li>
+          <li>Merge feature directly to main (bypass develop)</li>
+          <li>Commit .env files or passwords</li>
+          <li>Write vague commit messages like "changes"</li>
+          <li>Leave huge PRs with 50+ files (keep PRs small)</li>
+          <li>Force push to main or develop</li>
+          <li>Skip the daily git pull</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════ SECTION 11 ══════════════════ -->
+  <div class="section" id="s11">
+    <div class="section-header">
+      <div class="section-num">11</div>
+      <h2>What to Do Right Now</h2>
+    </div>
+
+    <p>Your current state: develop has the full platform. main has the full platform (after merging PR #1). You are ready to start the next feature.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-title">Run This Right Now in Your Terminal</span>
+        <span class="code-tag">current session</span>
+      </div>
+      <pre><span class="c-comment"># Make sure you are on develop and have the latest</span>
+<span class="c-cmd">cd</span> C:/Users/sanka/academic-saas
+<span class="c-cmd">git checkout</span> develop
+<span class="c-cmd">git pull</span> origin develop
+
+<span class="c-comment"># Confirm your history looks like this:</span>
+<span class="c-cmd">git log</span> <span class="c-flag">--oneline</span>
+<span class="c-comment"># a4df431  feat: complete frontend platform (Next.js 14 + 7 role portals)</span>
+<span class="c-comment"># 6d8c126  feat: complete backend platform (NestJS + Prisma + PostgreSQL)</span>
+<span class="c-comment"># 1d771cd  refactor: security hardening, env config, code cleanup</span>
+<span class="c-comment"># 5e133fe  feat: prisma setup + institution model</span>
+<span class="c-comment"># ...</span>
+
+<span class="c-comment"># Start your next task</span>
+<span class="c-cmd">git checkout</span> <span class="c-flag">-b</span> <span class="c-branch">feature/your-next-task-name</span>
+
+<span class="c-ok"># ✅ You are now safe to code.</span>
+<span class="c-ok">#    main will not be affected no matter what you do.</span></pre>
+    </div>
+
+    <h3>Your Next Pending Tasks (in priority order)</h3>
+    <table>
+      <tr><th>Branch Name to Create</th><th>What to Build</th></tr>
+      <tr><td><code>feature/student-demographics-ui</code></td><td>Move Nationality, Religion, Caste, Aadhar to main visible section in admission form</td></tr>
+      <tr><td><code>feature/attendance-report-operator</code></td><td>Replace operator attendance page with report-only view (no marking)</td></tr>
+      <tr><td><code>feature/exam-workflow</code></td><td>Exam creation (class mandatory) + admit card + marks approval workflow</td></tr>
+      <tr><td><code>feature/fee-management-rebuild</code></td><td>Indian standard fee heads + class-linked structure + installments</td></tr>
+      <tr><td><code>feature/class-sections</code></td><td>Class sections UI (1A, 1B, 1C) + assign students to sections</td></tr>
+      <tr><td><code>feature/absent-parent-notification</code></td><td>Show notification on parent portal when child marked absent</td></tr>
+    </table>
+  </div>
+
+
+</div><!-- end container -->
+
+<!-- ══════════════════ FOOTER ══════════════════ -->
+<div class="footer">
+  <p>Infovion Technologies — Internal Documentation — Academic SaaS Platform</p>
+  <p style="margin-top:6px;">Repo: BuildWithInfovion/academic-saas &nbsp;|&nbsp; Branch Strategy: main / develop / feature/* / fix/* / hotfix/*</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audit Report — Academic SaaS Platform</title>
+  <style>
+    :root {
+      --critical: #b42318;
+      --high: #d97706;
+      --medium: #ca8a04;
+      --low: #2563eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 20px 60px; }
+    .header {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #fff;
+      padding: 28px;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    }
+    .header h1 { margin: 0 0 8px; font-size: 32px; }
+    .header p { margin: 4px 0; color: #cbd5e1; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin: 20px 0 28px;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    }
+    .stat .label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+    .stat .value { font-size: 30px; font-weight: 800; margin-top: 6px; }
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    }
+    h2 { margin: 0 0 14px; font-size: 22px; }
+    h3 { margin: 18px 0 10px; font-size: 18px; }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    .critical { background: var(--critical); }
+    .high { background: var(--high); }
+    .medium { background: var(--medium); }
+    .low { background: var(--low); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 10px;
+      vertical-align: top;
+      text-align: left;
+      font-size: 14px;
+    }
+    th { background: #f1f5f9; }
+    tr:hover td { background: #fafafa; }
+    .issue-list { display: grid; gap: 12px; }
+    .issue {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+    .issue-title { font-weight: 800; margin-bottom: 6px; }
+    .issue-meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+    .prio { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+    .grid-2 { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; }
+    ul { margin: 10px 0 0 18px; }
+    li { margin: 6px 0; }
+    .footer { color: var(--muted); font-size: 13px; padding: 4px 2px; }
+    @media (max-width: 900px) {
+      .summary, .grid-2 { grid-template-columns: 1fr; }
+      .container { padding: 16px; }
+      .header h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Audit Report — Academic SaaS Platform</h1>
+      <p>Critical production blockers and hardening items for the backend and frontend.</p>
+      <p>Prepared from the supplied audit findings.</p>
+    </div>
+
+    <div class="summary">
+      <div class="stat"><div class="label">Critical</div><div class="value" style="color: var(--critical)">7</div></div>
+      <div class="stat"><div class="label">High</div><div class="value" style="color: var(--high)">11</div></div>
+      <div class="stat"><div class="label">Medium</div><div class="value" style="color: var(--medium)">11</div></div>
+      <div class="stat"><div class="label">Low</div><div class="value" style="color: var(--low)">10</div></div>
+    </div>
+
+    <div class="section">
+      <h2>Fix Priority Order</h2>
+      <table>
+        <thead>
+          <tr><th>Priority</th><th>Item</th><th>Reason</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>C2</td><td>Remove hardcoded JWT secret fallback immediately.</td></tr>
+          <tr><td>2</td><td>C4</td><td>Protect institution management endpoints with auth and roles.</td></tr>
+          <tr><td>3</td><td>C1, C3, C5, H11</td><td>Add institution ownership checks across tenant-sensitive services.</td></tr>
+          <tr><td>4</td><td>C6</td><td>Enforce permissions on academic controller endpoints.</td></tr>
+          <tr><td>5</td><td>H1</td><td>Stop logging sensitive tokens and passwords in audit logs.</td></tr>
+          <tr><td>6</td><td>H2</td><td>Add rate limiting to authentication routes.</td></tr>
+          <tr><td>7</td><td>C7</td><td>Wrap refresh token rotation in a transaction.</td></tr>
+          <tr><td>8</td><td>M3</td><td>Add minimum/maximum constraints to numeric fields.</td></tr>
+          <tr><td>9</td><td>L7</td><td>Force password change for seeded credentials.</td></tr>
+          <tr><td>10</td><td>M9</td><td>Replace fixed student list limit with pagination.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-2">
+      <div class="section">
+        <h2>Critical Issues</h2>
+        <div class="issue-list">
+          <div class="issue"><div class="issue-title"><span class="badge critical">C1</span>Cross-tenant data destruction via Subject module</div><div class="issue-meta prio">subject.service.ts</div><div>removeSubjectFromUnit() deletes by academicUnitId + subjectId only; missing institutionId check enables cross-school deletion.</div></div>
+          <div class="issue"><div class="issue-title"><span class="badge critical">C2</span>Hardcoded fallback JWT secret</div><div class="issue-meta prio">auth.module.ts</div><div>Using <code>|| 'supersecret'</code> silently signs tokens with a guessable key if JWT_SECRET is missing.</div></div>
+          <div class="issue"><div class="issue-title"><span class="badge critical">C3</span>Timetable generator deletes without ownership check</div><div class="issue-meta prio">timetable.service.ts</div><div>generate() can wipe any academic unit’s timetable if the unit ID is guessed.</div></div>
+          <div class="issue"><div class="issue-title"><span class="badge critical">C4</span>Institution management endpoints unguarded</div><div class="issue-meta prio">institution.controller.ts</div><div>Public create/list/seed endpoints allow anyone to create institutions and modify defaults.</div></div>
+          <div class="issue"><div class="issue-title"><span class="badge critical">C5</span>Exam endpoints missing institution filter</div><div class="issue-meta prio">exam.service.ts</div><div>Exam subject reads and writes can affect another school’s exam structure.</div></div>
+          <div class="issue"><div class="issue-title"><span class="badge critical">C6</span>Academic module lacks permission guards</div><div class="issue-meta prio">academic.controller.ts</div><div>Authenticated students and parents could create, edit, or delete academic structures.</div></div>
+          <div class="issue"><div class="issue-title"><span class="badge critical">C7</span>Refresh token rotation not transactional</div><div class="issue-meta prio">auth.service.ts</div><div>Two separate writes can leave both old and new refresh tokens valid after a crash.</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>High Issues</h2>
+        <ul>
+          <li>H1 — Audit log stores raw responses, including tokens and passwords.</li>
+          <li>H2 — No rate limiting on login, refresh, or forgot-password endpoints.</li>
+          <li>H3 — Public institution listing leaks school data.</li>
+          <li>H4 — Several queries are unbounded and can cause slowdowns or OOM.</li>
+          <li>H5 — Platform guard does not independently verify token expiry.</li>
+          <li>H6 — Missing cascade delete leaves orphaned rows.</li>
+          <li>H7 — Soft-delete collides with hard unique constraints.</li>
+          <li>H8 — No CSRF protection framework.</li>
+          <li>H9 — maxMarks can be altered after results exist.</li>
+          <li>H10 — Sequential fee receipt numbers are predictable.</li>
+          <li>H11 — Attendance save lacks institution ownership validation.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="section">
+        <h2>Medium Issues</h2>
+        <ul>
+          <li>M1 — Academic unit cycle creation is possible.</li>
+          <li>M2 — Attendance date comparison uses full DateTime instead of date-only logic.</li>
+          <li>M3 — Negative values are allowed for marks and fees.</li>
+          <li>M4 — Institution code normalization is inconsistent.</li>
+          <li>M5 — Student delete can orphan financial and exam records.</li>
+          <li>M6 — Staff attendance backdating lacks traceability.</li>
+          <li>M7 — Class teacher assignment lacks institution matching.</li>
+          <li>M8 — Password minimum length is too weak.</li>
+          <li>M9 — Student list UI hardcodes limit=200.</li>
+          <li>M10 — apiFetch retry flow may create redirect loops.</li>
+          <li>M11 — Announcement body needs sanitization safeguards.</li>
+        </ul>
+      </div>
+      <div class="section">
+        <h2>Low Issues</h2>
+        <ul>
+          <li>L1 — Prisma conflict messages reveal field names.</li>
+          <li>L2 — /health is public; acceptable but should be documented.</li>
+          <li>L3 — Platform admin password policy is weak.</li>
+          <li>L4 — Audit timestamps are not UTC-normalized.</li>
+          <li>L5 — sessionStorage causes logout on new tab open.</li>
+          <li>L6 — No Content Security Policy headers are set.</li>
+          <li>L7 — Seed script contains hardcoded plaintext credentials.</li>
+          <li>L8 — Role changes lack before-state audit trail.</li>
+          <li>L9 — Inquiry module has no permission guards.</li>
+          <li>L10 — No database indexes documented for hot query columns.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Notes</h2>
+      <p>This HTML file is a self-contained report with inline styling, designed for direct browser viewing or conversion into a printable document.</p>
+      <p>It preserves the structure of the audit findings while making the priority order and issue categories easier to scan.</p>
+    </div>
+
+    <div class="footer">Generated HTML document for the Academic SaaS Platform audit report.</div>
+  </div>
+</body>
+</html>
