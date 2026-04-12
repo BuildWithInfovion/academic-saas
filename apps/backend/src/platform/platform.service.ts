@@ -342,6 +342,8 @@ export class PlatformService {
     const totalAmount = maxStudents * pricePerUser;
 
     // 4. Transaction: institution + roles + operator + subscription
+    // timeout=60s: 27 sequential ops over remote DB (roles loop + classes loop) easily
+    // exceed Prisma's 5 s default. maxWait=10s covers connection-pool wait.
     const { institution, operatorUser, subscription } =
       await this.prisma.$transaction(async (tx) => {
         const inst = await tx.institution.create({
@@ -437,7 +439,7 @@ export class PlatformService {
         }
 
         return { institution: inst, operatorUser: operator, subscription: sub };
-      });
+      }, { timeout: 60000, maxWait: 10000 });
 
     // 5. Seed defaults outside transaction
     await this.seedDefaults(institution.id, dto.institutionType);

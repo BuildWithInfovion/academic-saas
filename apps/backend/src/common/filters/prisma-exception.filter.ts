@@ -75,9 +75,6 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     let message = 'Database error';
 
     const knownErr = exception as Prisma.PrismaClientKnownRequestError;
-    // Always include code and a truncated message in the default path so
-    // unknown errors are diagnosable without needing live log access.
-    message = `Database error [${knownErr.code}]: ${String(knownErr.message).slice(0, 200)}`;
 
     switch (knownErr.code) {
       case 'P2002': {
@@ -102,6 +99,10 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       case 'P2022':
         status = HttpStatus.SERVICE_UNAVAILABLE;
         message = 'Database schema is out of date. Run the latest migrations and retry.';
+        break;
+      case 'P2028':
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        message = 'Database transaction timed out. Please try again.';
         break;
       case 'P1001':
       case 'P1002':
