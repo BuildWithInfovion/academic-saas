@@ -75,6 +75,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     let message = 'Database error';
 
     const knownErr = exception as Prisma.PrismaClientKnownRequestError;
+    // Always include code and a truncated message in the default path so
+    // unknown errors are diagnosable without needing live log access.
+    message = `Database error [${knownErr.code}]: ${String(knownErr.message).slice(0, 200)}`;
 
     switch (knownErr.code) {
       case 'P2002': {
