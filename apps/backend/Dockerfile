@@ -17,10 +17,10 @@ RUN npx prisma generate
 COPY . .
 RUN npm run build
 
-# Expose port
+# Copy and permission the startup script
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 EXPOSE 3000
 
-# Apply DB migrations before boot so deployed code and schema stay in sync
-# Resolve any migration with a checksum mismatch (caused by editing an already-applied
-# migration file), then apply all pending migrations, then start the app.
-CMD ["sh", "-c", "npx prisma migrate resolve --applied 20260410000000_add_institution_profile_fields 2>/dev/null; npx prisma migrate deploy && node dist/src/main"]
+CMD ["./start.sh"]
