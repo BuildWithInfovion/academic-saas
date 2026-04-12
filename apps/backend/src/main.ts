@@ -1,4 +1,4 @@
-import { NestFactory, HttpAdapterHost } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';

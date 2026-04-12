@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -30,6 +31,16 @@ interface AcademicUnit {
   name: string;
   displayName?: string;
   _count?: { students: number };
+}
+
+interface StudentListResponse {
+  data: Student[];
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 function initials(s: Student) {
@@ -93,6 +104,7 @@ function sortClasses(units: AcademicUnit[]): AcademicUnit[] {
 }
 
 export default function StudentDirectoryPage() {
+  const CLASS_PAGE_SIZE = 50;
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
 
@@ -111,7 +123,11 @@ export default function StudentDirectoryPage() {
   const [classStudents, setClassStudents]     = useState<Student[]>([]);
   const [classLoading, setClassLoading]       = useState(false);
   const [classSearch, setClassSearch]         = useState('');
+  const [classPage, setClassPage]             = useState(1);
+  const [classTotal, setClassTotal]           = useState(0);
+  const [classTotalPages, setClassTotalPages] = useState(1);
   const [exporting, setExporting]             = useState(false);
+  const classDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load academic units (fast — no student data)
   const loadUnits = useCallback(async () => {
@@ -127,8 +143,8 @@ export default function StudentDirectoryPage() {
         if (!seen.has(key)) { seen.add(key); deduped.push(unit); }
       }
       setAcademicUnits(sortClasses(deduped));
-    } catch (e: any) {
-      setError(e.message || 'Failed to load classes');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load classes');
     } finally {
       setUnitsLoading(false);
     }
@@ -137,25 +153,39 @@ export default function StudentDirectoryPage() {
   useEffect(() => { loadUnits(); }, [loadUnits]);
 
   // Lazy-load students when a class is selected
-  const loadClassStudents = useCallback(async (unitId: string) => {
+  const loadClassStudents = useCallback(async (
+    unitId: string,
+    page = 1,
+    search = '',
+  ) => {
     setClassLoading(true);
-    setClassStudents([]);
-    setClassSearch('');
     try {
-      const res = await apiFetch(`/students?unitId=${unitId}&limit=500`);
-      setClassStudents((res as any).data || res || []);
+      const query = new URLSearchParams({
+        unitId,
+        page: String(page),
+        limit: String(CLASS_PAGE_SIZE),
+      });
+      if (search.trim()) query.set('search', search.trim());
+
+      const res = await apiFetch(`/students?${query.toString()}`) as StudentListResponse;
+      setClassStudents(Array.isArray(res.data) ? res.data : []);
+      setClassTotal(res.meta?.total ?? 0);
+      setClassTotalPages(res.meta?.totalPages ?? 1);
     } catch {
       setClassStudents([]);
+      setClassTotal(0);
+      setClassTotalPages(1);
     } finally {
       setClassLoading(false);
     }
-  }, []);
+  }, [CLASS_PAGE_SIZE]);
 
   const handleClassSelect = (unitId: string) => {
     setSelectedClassId(unitId);
     setGlobalSearch('');
     setGlobalResults([]);
-    loadClassStudents(unitId);
+    setClassSearch('');
+    setClassPage(1);
   };
 
   // Global search — debounced, cross-class
@@ -163,13 +193,16 @@ export default function StudentDirectoryPage() {
     setGlobalSearch(q);
     setSelectedClassId('');
     setClassStudents([]);
+    setClassTotal(0);
+    setClassTotalPages(1);
+    setClassPage(1);
     if (globalDebounce.current) clearTimeout(globalDebounce.current);
     if (!q.trim()) { setGlobalResults([]); return; }
     globalDebounce.current = setTimeout(async () => {
       setGlobalLoading(true);
       try {
-        const res = await apiFetch(`/students?search=${encodeURIComponent(q.trim())}&limit=50`);
-        setGlobalResults((res as any).data || res || []);
+        const res = await apiFetch(`/students?search=${encodeURIComponent(q.trim())}&limit=50`) as StudentListResponse;
+        setGlobalResults(Array.isArray(res.data) ? res.data : []);
       } catch {
         setGlobalResults([]);
       } finally {
@@ -181,21 +214,19 @@ export default function StudentDirectoryPage() {
   const selectedUnit = academicUnits.find((u) => u.id === selectedClassId);
   const selectedClassName = selectedUnit?.displayName || selectedUnit?.name || '';
 
-  // Client-side filter within loaded class students
-  const filtered = classSearch.trim()
-    ? classStudents.filter((s) => {
-        const q = classSearch.toLowerCase();
-        return (
-          s.firstName.toLowerCase().includes(q) ||
-          s.lastName.toLowerCase().includes(q) ||
-          s.admissionNo.toLowerCase().includes(q) ||
-          (s.parentPhone || '').includes(q) ||
-          (s.phone || '').includes(q)
-        );
-      })
-    : classStudents;
-
   const isGlobalMode = globalSearch.trim().length > 0;
+
+  useEffect(() => {
+    if (!selectedClassId) return;
+    if (classDebounce.current) clearTimeout(classDebounce.current);
+    classDebounce.current = setTimeout(() => {
+      void loadClassStudents(selectedClassId, classPage, classSearch);
+    }, classSearch.trim() ? 300 : 0);
+
+    return () => {
+      if (classDebounce.current) clearTimeout(classDebounce.current);
+    };
+  }, [selectedClassId, classPage, classSearch, loadClassStudents]);
 
   const StudentRow = ({ s }: { s: Student }) => (
     <tr
@@ -248,10 +279,10 @@ export default function StudentDirectoryPage() {
           <h1 className="text-2xl font-bold text-gray-800">Student Directory</h1>
           <p className="text-sm text-gray-400 mt-0.5">Search students or select a class to browse</p>
         </div>
-        <a href="/dashboard/students"
+        <Link href="/dashboard/students"
           className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
           + New Admission
-        </a>
+        </Link>
       </div>
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
@@ -372,9 +403,12 @@ export default function StudentDirectoryPage() {
                   </svg>
                   <input
                     className="w-full border border-gray-300 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder={`Filter within ${selectedClassName}…`}
+                    placeholder={`Search within ${selectedClassName}…`}
                     value={classSearch}
-                    onChange={(e) => setClassSearch(e.target.value)}
+                    onChange={(e) => {
+                      setClassSearch(e.target.value);
+                      setClassPage(1);
+                    }}
                     autoFocus
                   />
                 </div>
@@ -395,10 +429,12 @@ export default function StudentDirectoryPage() {
               <div className="flex items-center gap-2 mb-3 text-sm text-gray-500">
                 <span className="font-medium text-gray-800">{selectedClassName}</span>
                 <span>·</span>
-                <span>{filtered.length} student{filtered.length !== 1 ? 's' : ''}</span>
+                <span>{classTotal} student{classTotal !== 1 ? 's' : ''}</span>
+                <span>·</span>
+                <span>Page {classPage} of {classTotalPages}</span>
                 {classSearch && (
                   <button onClick={() => setClassSearch('')} className="text-xs text-indigo-600 hover:underline ml-1">
-                    Clear filter
+                    Clear search
                   </button>
                 )}
               </div>
@@ -407,11 +443,11 @@ export default function StudentDirectoryPage() {
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 {classLoading ? (
                   <div className="p-10 text-center text-gray-400 text-sm">Loading students…</div>
-                ) : filtered.length === 0 ? (
+                ) : classStudents.length === 0 ? (
                   <div className="p-10 text-center text-gray-400 text-sm">
-                    {classStudents.length === 0
-                      ? `No students in ${selectedClassName} yet.`
-                      : 'No students match your filter.'}
+                    {classSearch
+                      ? 'No students match your search.'
+                      : `No students in ${selectedClassName} yet.`}
                   </div>
                 ) : (
                   <table className="w-full text-sm">
@@ -426,11 +462,37 @@ export default function StudentDirectoryPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filtered.map((s) => <StudentRow key={s.id} s={s} />)}
+                      {classStudents.map((s) => <StudentRow key={s.id} s={s} />)}
                     </tbody>
                   </table>
                 )}
               </div>
+
+              {!classLoading && classTotal > 0 && (
+                <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
+                  <span>
+                    Showing {(classPage - 1) * CLASS_PAGE_SIZE + 1}
+                    {' '}to {Math.min(classPage * CLASS_PAGE_SIZE, classTotal)}
+                    {' '}of {classTotal}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setClassPage((page) => Math.max(1, page - 1))}
+                      disabled={classPage === 1}
+                      className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setClassPage((page) => Math.min(classTotalPages, page + 1))}
+                      disabled={classPage >= classTotalPages}
+                      className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </>

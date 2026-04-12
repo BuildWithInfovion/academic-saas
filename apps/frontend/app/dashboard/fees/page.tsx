@@ -70,6 +70,7 @@ export default function FeesPage() {
 
   // ── Collect Fee ────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentPayments, setStudentPayments] = useState<FeePayment[]>([]);
   const [paymentTotal, setPaymentTotal] = useState(0);
@@ -119,12 +120,20 @@ export default function FeesPage() {
     }).catch(() => {});
   }, [user?.institutionId]);
 
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 250);
+
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
+
   // ── Collect Fee handlers ───────────────────────────────────────────────────
-  const filteredStudents = searchQuery.length >= 2
+  const filteredStudents = debouncedSearchQuery.length >= 2
     ? students.filter((s) =>
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.admissionNo.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+        `${s.firstName} ${s.lastName}`.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        s.admissionNo.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
+      ).slice(0, 12)
     : [];
 
   const selectStudent = async (s: Student) => {
@@ -312,6 +321,9 @@ export default function FeesPage() {
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setSelectedStudent(null); }}
                 />
+                {searchQuery.trim().length === 1 && !selectedStudent && (
+                  <p className="mt-2 text-xs text-gray-400">Type at least 2 characters to search.</p>
+                )}
                 {filteredStudents.length > 0 && !selectedStudent && (
                   <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
                     {filteredStudents.map((s) => (
@@ -322,6 +334,9 @@ export default function FeesPage() {
                       </button>
                     ))}
                   </div>
+                )}
+                {debouncedSearchQuery.length >= 2 && filteredStudents.length === 0 && !selectedStudent && (
+                  <p className="mt-2 text-xs text-gray-400">No matching students found.</p>
                 )}
               </div>
             </div>
