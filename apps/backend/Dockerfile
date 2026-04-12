@@ -17,9 +17,9 @@ RUN npx prisma generate
 COPY . .
 RUN npm run build
 
-# Copy and permission the startup script
+# Copy and permission the startup script; strip Windows CRLF if present
 COPY start.sh ./start.sh
-RUN chmod +x ./start.sh
+RUN sed -i 's/\r//' ./start.sh && chmod +x ./start.sh
 
 EXPOSE 3000
 
