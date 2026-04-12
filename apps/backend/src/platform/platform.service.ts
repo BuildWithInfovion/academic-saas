@@ -356,18 +356,21 @@ export class PlatformService {
           },
         });
 
-        const roles: Record<string, { id: string }> = {};
-        for (const roleDef of DEFAULT_ROLES) {
-          const role = await tx.role.create({
-            data: {
-              institutionId: inst.id,
-              code: roleDef.code,
-              label: roleDef.label,
-              permissions: roleDef.permissions,
-            },
-          });
-          roles[roleDef.code] = role;
-        }
+        await tx.role.createMany({
+          data: DEFAULT_ROLES.map((r) => ({
+            institutionId: inst.id,
+            code: r.code,
+            label: r.label,
+            permissions: r.permissions,
+          })),
+        });
+        const roleRows = await tx.role.findMany({
+          where: { institutionId: inst.id },
+          select: { id: true, code: true },
+        });
+        const roles: Record<string, { id: string }> = Object.fromEntries(
+          roleRows.map((r) => [r.code, { id: r.id }]),
+        );
 
         const operator = await tx.user.create({
           data: {
@@ -424,18 +427,16 @@ export class PlatformService {
         });
 
         if (dto.institutionType === 'school') {
-          for (const cls of SCHOOL_CLASSES) {
-            await tx.academicUnit.create({
-              data: {
-                institutionId:  inst.id,
-                academicYearId: academicYear.id,
-                name:           cls.name,
-                displayName:    cls.displayName,
-                level:          1,
-                parentId:       null,
-              },
-            });
-          }
+          await tx.academicUnit.createMany({
+            data: SCHOOL_CLASSES.map((cls) => ({
+              institutionId:  inst.id,
+              academicYearId: academicYear.id,
+              name:           cls.name,
+              displayName:    cls.displayName,
+              level:          1,
+              parentId:       null,
+            })),
+          });
         }
 
         return { institution: inst, operatorUser: operator, subscription: sub };
