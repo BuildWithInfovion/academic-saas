@@ -195,6 +195,7 @@ export default function FeesPage() {
 
   const saveStructure = async () => {
     if (!structUnit || !structForm.feeHeadId || !structForm.amount) return setError('Fill class, fee head, and amount');
+    if (parseFloat(structForm.amount) <= 0) return setError('Amount must be greater than 0');
     if (!currentYearId) return setError('No active academic year');
     setSavingStruct(true);
     setError(null);

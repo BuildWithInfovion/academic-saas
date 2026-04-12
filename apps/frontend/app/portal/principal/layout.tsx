@@ -11,6 +11,7 @@ const menuItems = [
   { label: 'Staff Attendance',    path: '/portal/principal/staff-attendance' },
   { label: 'Fee Reports',         path: '/portal/principal/fees' },
   { label: 'Announcements',       path: '/portal/principal/announcements' },
+  { label: 'Settings',            path: '/portal/principal/settings' },
 ];
 
 export default function PrincipalLayout({ children }: { children: ReactNode }) {

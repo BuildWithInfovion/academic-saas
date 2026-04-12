@@ -12,17 +12,18 @@ import { OnboardClientDto } from './dto/onboard-client.dto';
 
 const DEFAULT_ROLES = [
   {
+    // Director: read-only monitoring — can see everything, cannot modify
     code: 'super_admin',
     label: 'Director',
     permissions: [
-      'users.read', 'users.write', 'users.assignRole',
-      'roles.read', 'roles.write',
-      'students.read', 'students.write',
-      'fees.read', 'fees.write',
-      'attendance.read', 'attendance.write',
-      'exams.read', 'exams.write',
-      'subjects.read', 'subjects.write',
-      'institution.read', 'institution.write',
+      'users.read', 'roles.read',
+      'students.read',
+      'fees.read',
+      'attendance.read',
+      'exams.read',
+      'subjects.read',
+      'institution.read',
+      'academic.read',
     ],
   },
   {
@@ -41,9 +42,19 @@ const DEFAULT_ROLES = [
     ],
   },
   {
+    // Principal: full school administration — academic, fees, institution, staff
     code: 'principal',
     label: 'Principal',
-    permissions: ['students.read', 'attendance.read', 'exams.read', 'fees.read', 'users.read', 'subjects.read'],
+    permissions: [
+      'students.read',
+      'attendance.read', 'attendance.write',
+      'exams.read',
+      'fees.read', 'fees.write',
+      'users.read', 'users.write',
+      'subjects.read', 'subjects.write',
+      'academic.read', 'academic.write',
+      'institution.read', 'institution.write',
+    ],
   },
   {
     code: 'teacher',
@@ -64,6 +75,24 @@ const DEFAULT_ROLES = [
     code: 'receptionist',
     label: 'Desk / Reception',
     permissions: ['inquiry.read', 'inquiry.write', 'students.read', 'users.read'],
+  },
+  {
+    // Accountant: fee management + student viewing
+    code: 'accountant',
+    label: 'Accountant',
+    permissions: [
+      'fees.read', 'fees.write',
+      'students.read',
+      'attendance.read',
+      'institution.read',
+      'subjects.read',
+    ],
+  },
+  {
+    // Non-Teaching Staff: self attendance + announcements only
+    code: 'non_teaching_staff',
+    label: 'Non-Teaching Staff',
+    permissions: ['attendance.read'],
   },
 ];
 

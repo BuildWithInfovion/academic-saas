@@ -6,6 +6,8 @@ export const ROLE_LABELS: Record<string, string> = {
   student: 'Student',
   parent: 'Parent',
   receptionist: 'Desk / Reception',
+  accountant: 'Accountant',
+  non_teaching_staff: 'Non-Teaching Staff',
 };
 
 export function getRoleRoute(roles: string[]): string {
@@ -16,11 +18,13 @@ export function getRoleRoute(roles: string[]): string {
   if (roles.includes('student')) return '/portal/student';
   if (roles.includes('parent')) return '/portal/parent';
   if (roles.includes('receptionist')) return '/portal/receptionist';
+  if (roles.includes('accountant')) return '/portal/accountant';
+  if (roles.includes('non_teaching_staff')) return '/portal/non-teaching-staff';
   return '/'; // Unknown role → back to login
 }
 
 export function getRoleLabel(roles: string[]): string {
-  for (const role of ['super_admin', 'admin', 'principal', 'teacher', 'student', 'parent', 'receptionist']) {
+  for (const role of ['super_admin', 'admin', 'principal', 'teacher', 'student', 'parent', 'receptionist', 'accountant', 'non_teaching_staff']) {
     if (roles.includes(role)) return ROLE_LABELS[role] ?? role;
   }
   return 'Staff';

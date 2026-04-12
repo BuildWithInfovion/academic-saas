@@ -81,7 +81,7 @@ const emptyForm = {
   phone: '', email: '',
   fatherName: '', motherName: '', parentPhone: '', secondaryPhone: '',
   address: '',
-  academicUnitId: '', admissionDate: '',
+  academicUnitId: '', admissionDate: new Date().toISOString().split('T')[0],
   tcFromPrevious: '', tcPreviousInstitution: '',
   bloodGroup: '', nationality: 'Indian', religion: '', casteCategory: '', aadharNumber: '',
 };
@@ -182,7 +182,7 @@ export default function StudentsPage() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [isReady, user?.institutionId, page]);
 
-  const resetForm = () => { setForm({ ...emptyForm }); setEditingId(null); setError(null); };
+  const resetForm = () => { setForm({ ...emptyForm, admissionDate: new Date().toISOString().split('T')[0] }); setEditingId(null); setError(null); };
 
   const f = (key: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>

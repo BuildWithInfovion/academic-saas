@@ -104,6 +104,10 @@ function extractErrorMessage(body: unknown, status: number): string {
   if (body && typeof body === 'object') {
     const b = body as Record<string, unknown>;
     if (typeof b['message'] === 'string' && b['message']) return b['message'];
+    // NestJS ValidationPipe returns message as string[] — join for readable output
+    if (Array.isArray(b['message']) && b['message'].length > 0) {
+      return (b['message'] as string[]).join(', ');
+    }
     if (typeof b['error'] === 'string' && b['error']) return b['error'];
   }
   if (typeof body === 'string' && body) return body;

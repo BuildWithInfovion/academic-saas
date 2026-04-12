@@ -12,6 +12,8 @@ const PORTAL_ROLES: Record<string, string[]> = {
   student: ['student'],
   parent: ['parent'],
   receptionist: ['receptionist'],
+  accountant: ['accountant'],
+  'non-teaching-staff': ['non_teaching_staff'],
 };
 
 export default function PortalLayout({ children }: { children: ReactNode }) {
