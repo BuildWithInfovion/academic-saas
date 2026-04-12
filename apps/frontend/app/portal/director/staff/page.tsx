@@ -31,6 +31,21 @@ function generatePassword(): string {
   return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
+function validateStaffIdentity(email: string, phone: string): string | null {
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedPhone = phone.trim();
+
+  if (!trimmedEmail && !trimmedPhone) return 'Email or phone is required';
+  if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    return 'Enter a valid email address';
+  }
+  if (trimmedPhone && !/^\d{10}$/.test(trimmedPhone)) {
+    return 'Enter a valid 10-digit phone number';
+  }
+
+  return null;
+}
+
 export default function DirectorStaffPage() {
   const [staff, setStaff] = useState<StaffUser[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -84,25 +99,25 @@ export default function DirectorStaffPage() {
   };
 
   const handleCreate = async () => {
-    if (!email.trim() && !phone.trim()) return setError('Email or phone is required');
+    const validationError = validateStaffIdentity(email, phone);
+    if (validationError) return setError(validationError);
     if (!password.trim()) return setError('Password is required');
+    if (!selectedRoleId) return setError('Role is required. Please select a role for this staff member.');
     setSubmitting(true); setError(null);
     try {
       const newUser = await apiFetch('/users', {
         method: 'POST',
         body: JSON.stringify({
-          email: email.trim() || undefined,
+          email: email.trim().toLowerCase() || undefined,
           phone: phone.trim() || undefined,
           password,
         }),
       }) as StaffUser;
-      if (selectedRoleId) {
-        await apiFetch(`/users/${newUser.id}/roles`, {
-          method: 'POST',
-          body: JSON.stringify({ roleId: selectedRoleId }),
-        });
-      }
-      setCreatedCredentials({ email: email.trim() || undefined as any, phone: phone.trim() || undefined, password });
+      await apiFetch(`/users/${newUser.id}/roles`, {
+        method: 'POST',
+        body: JSON.stringify({ roleId: selectedRoleId }),
+      });
+      setCreatedCredentials({ email: email.trim().toLowerCase() || undefined as any, phone: phone.trim() || undefined, password });
       setEmail(''); setPhone(''); setPassword(''); setSelectedRoleId('');
       await loadData();
     } catch (e: any) { setError(e.message); }
@@ -427,9 +442,9 @@ export default function DirectorStaffPage() {
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Role</label>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">Role <span className="text-red-500">*</span></label>
                     <select className={inp + ' bg-white'} value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)}>
-                      <option value="">No role (assign later)</option>
+                      <option value="">Select role...</option>
                       {roles.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                     </select>
                   </div>

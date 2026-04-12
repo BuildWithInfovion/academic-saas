@@ -228,6 +228,7 @@ model User {
   staffLeaveApprovals   StaffLeaveRequest[]    @relation("StaffLeaveApprover")
 
   @@index([institutionId])
+  @@index([email])          // login lookups — auth.service queries by email
   @@map("users")
 }
 
@@ -276,6 +277,7 @@ model AuditLog {
   user           User?       @relation(fields: [userId], references: [id])
 
   @@index([institutionId])
+  @@index([userId])         // per-user audit trail queries
   @@map("audit_logs")
 }
 
@@ -464,6 +466,8 @@ model FeePayment {
   @@index([institutionId])
   @@index([studentId])
   @@index([paidOn])
+  @@index([academicYearId])             // getDefaulters groupBy filters by yearId
+  @@index([institutionId, academicYearId]) // composite for year-scoped institution queries
   @@map("fee_payments")
 }
 
@@ -528,6 +532,7 @@ model ExamSubject {
 
   @@unique([examId, academicUnitId, subjectId])
   @@index([examId])
+  @@index([academicUnitId])  // getExamCompleteness filters exam subjects by unit
   @@map("exam_subjects")
 }
 
@@ -553,6 +558,8 @@ model ExamResult {
   @@index([institutionId])
   @@index([examId])
   @@index([studentId])
+  @@index([academicUnitId])             // getExamCompleteness and getClassResultSummary groupBy
+  @@index([examId, academicUnitId])     // composite — most result queries filter on both
   @@map("exam_results")
 }
 
