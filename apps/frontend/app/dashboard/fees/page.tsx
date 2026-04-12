@@ -15,6 +15,45 @@ interface Defaulter { id: string; firstName: string; lastName: string; admission
 const MODE_OPTIONS = ['cash', 'online', 'cheque', 'dd', 'neft', 'upi'];
 const STANDARD_FEE_HEADS = ['Tuition Fee', 'Library Fee', 'Lab Fee', 'Activity Fee', 'Sports Fee', 'Exam Fee', 'Development Fee', 'Transport Fee'];
 
+function printFeeReceipt(payment: FeePayment, student: Student, institutionName: string) {
+  const date = new Date(payment.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt ${payment.receiptNo}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;color:#1e293b;margin:0;padding:0}
+  .receipt{max-width:480px;margin:32px auto;border:2px solid #1e293b;padding:0}
+  .header{background:#1e293b;color:white;padding:16px 20px;text-align:center}
+  .header h1{margin:0;font-size:18px;letter-spacing:1px}
+  .header p{margin:4px 0 0;font-size:11px;opacity:.8}
+  .receipt-no{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;font-size:12px}
+  .body{padding:20px}
+  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9}
+  .row:last-child{border:none}
+  .label{color:#64748b;font-size:12px}
+  .value{font-weight:600;text-align:right}
+  .total{background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:12px 16px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}
+  .total .amount{font-size:22px;font-weight:700;color:#16a34a}
+  .footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px;border-top:1px solid #e2e8f0}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<div class="receipt">
+  <div class="header"><h1>${institutionName}</h1><p>Fee Payment Receipt</p></div>
+  <div class="receipt-no"><span>Receipt No: <strong>${payment.receiptNo}</strong></span><span>Date: ${date}</span></div>
+  <div class="body">
+    <div class="row"><span class="label">Student Name</span><span class="value">${student.firstName} ${student.lastName}</span></div>
+    <div class="row"><span class="label">Admission No</span><span class="value">${student.admissionNo}</span></div>
+    <div class="row"><span class="label">Fee Head</span><span class="value">${payment.feeHead?.name ?? '—'}</span></div>
+    <div class="row"><span class="label">Payment Mode</span><span class="value">${payment.paymentMode?.toUpperCase()}</span></div>
+    ${payment.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${payment.remarks}</span></div>` : ''}
+    <div class="total"><span>Amount Paid</span><span class="amount">₹${payment.amount.toLocaleString('en-IN')}</span></div>
+  </div>
+  <div class="footer">This is a computer-generated receipt. No signature required.</div>
+</div>
+<script>window.onload=function(){window.print();}</script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=560,height=700');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
 export default function FeesPage() {
   const user = useAuthStore((s) => s.user);
   const [tab, setTab] = useState<'collect' | 'structure' | 'defaulters' | 'heads' | 'daily'>('collect');
@@ -102,6 +141,7 @@ export default function FeesPage() {
     if (!selectedStudent) return setError('Select a student first');
     if (!pForm.feeHeadId) return setError('Select a fee head');
     if (!pForm.amount || parseFloat(pForm.amount) <= 0) return setError('Enter a valid amount');
+    if (pForm.paidOn && pForm.paidOn > new Date().toISOString().split('T')[0]) return setError('Payment date cannot be in the future');
     setPaying(true);
     setError(null);
     try {
@@ -349,7 +389,14 @@ export default function FeesPage() {
                           <p className="text-sm font-medium text-gray-800">{p.feeHead.name}</p>
                           <p className="text-xs text-gray-500 font-mono mt-0.5">{p.receiptNo}</p>
                         </div>
-                        <span className="text-sm font-semibold text-gray-800">₹{p.amount.toLocaleString('en-IN')}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-gray-800">₹{p.amount.toLocaleString('en-IN')}</span>
+                          <button
+                            onClick={() => printFeeReceipt(p, selectedStudent!, user?.institutionName ?? 'School')}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                            Print
+                          </button>
+                        </div>
                       </div>
                       <div className="flex gap-3 mt-1">
                         <span className="text-xs text-gray-400">{new Date(p.paidOn).toLocaleDateString('en-IN')}</span>

@@ -193,6 +193,9 @@ export default function StudentsPage() {
     if (!form.fatherName.trim()) return 'Father name is required';
     if (!form.motherName.trim()) return 'Mother name is required';
     if (!form.parentPhone.trim()) return 'Parent phone is required';
+    if (!/^[6-9]\d{9}$/.test(form.parentPhone.trim())) return 'Parent phone must be a valid 10-digit Indian mobile number (starts with 6-9)';
+    if (form.phone.trim() && !/^[6-9]\d{9}$/.test(form.phone.trim())) return 'Student phone must be a valid 10-digit Indian mobile number (starts with 6-9)';
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return 'Student email is not valid';
     if (!form.address.trim()) return 'Residential address is required';
     if (!form.academicUnitId) return 'Please select a class';
     return null;
@@ -832,6 +835,15 @@ export default function StudentsPage() {
                   </p>
                 </div>
               )}
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs font-semibold text-amber-700 mb-1">Next Steps</p>
+                <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
+                  <li>Go to <strong>Fees → Fee Structures</strong> to set up the full fee plan for this student&apos;s class</li>
+                  <li>Go to <strong>Fees → Payments</strong> to record any outstanding dues</li>
+                  {!credentials.feePayment && <li>No admission fee was recorded — you can add it from the Fees page</li>}
+                </ul>
+              </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100">
               <button onClick={() => setCredentials(null)}

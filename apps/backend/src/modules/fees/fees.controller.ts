@@ -6,30 +6,36 @@ import { FeesService } from './fees.service';
 import { CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto } from './dto/fees.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 @Controller('fees')
-@UseGuards(AuthGuard, TenantGuard)
+@UseGuards(AuthGuard, TenantGuard, RolesGuard)
 export class FeesController {
   constructor(private readonly feesService: FeesService) {}
 
   // ── Fee Heads ─────────────────────────────────────────────────────────────
   @Get('heads')
+  @Permissions('fees.read')
   getFeeHeads(@Request() req: any) {
     return this.feesService.getFeeHeads(req.tenant?.institutionId);
   }
 
   @Post('heads')
+  @Permissions('fees.write')
   createFeeHead(@Request() req: any, @Body() dto: CreateFeeHeadDto) {
     return this.feesService.createFeeHead(req.tenant?.institutionId, dto);
   }
 
   @Delete('heads/:id')
+  @Permissions('fees.write')
   deleteFeeHead(@Request() req: any, @Param('id') id: string) {
     return this.feesService.deleteFeeHead(req.tenant?.institutionId, id);
   }
 
   // ── Fee Structures ────────────────────────────────────────────────────────
   @Get('structures')
+  @Permissions('fees.read')
   getFeeStructures(
     @Request() req: any,
     @Query('unitId') unitId: string,
@@ -39,27 +45,33 @@ export class FeesController {
   }
 
   @Post('structures')
+  @Permissions('fees.write')
   upsertFeeStructure(@Request() req: any, @Body() dto: CreateFeeStructureDto) {
     return this.feesService.upsertFeeStructure(req.tenant?.institutionId, dto);
   }
 
+  // FIXED: now passes institutionId for proper tenant scoping
   @Delete('structures/:id')
-  deleteFeeStructure(@Param('id') id: string) {
-    return this.feesService.deleteFeeStructure(id);
+  @Permissions('fees.write')
+  deleteFeeStructure(@Request() req: any, @Param('id') id: string) {
+    return this.feesService.deleteFeeStructure(req.tenant?.institutionId, id);
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────
   @Post('payments')
+  @Permissions('fees.write')
   recordPayment(@Request() req: any, @Body() dto: RecordPaymentDto) {
     return this.feesService.recordPayment(req.tenant?.institutionId, dto);
   }
 
   @Get('payments/student/:studentId')
+  @Permissions('fees.read')
   getStudentPayments(@Request() req: any, @Param('studentId') studentId: string) {
     return this.feesService.getStudentPayments(req.tenant?.institutionId, studentId);
   }
 
   @Get('payments/student/:studentId/balance')
+  @Permissions('fees.read')
   getBalance(
     @Request() req: any,
     @Param('studentId') studentId: string,
@@ -69,11 +81,13 @@ export class FeesController {
   }
 
   @Get('payments/daily')
+  @Permissions('fees.read')
   getDailyCollection(@Request() req: any, @Query('date') date: string) {
     return this.feesService.getDailyCollection(req.tenant?.institutionId, date);
   }
 
   @Get('defaulters')
+  @Permissions('fees.read')
   getDefaulters(
     @Request() req: any,
     @Query('yearId') yearId: string,

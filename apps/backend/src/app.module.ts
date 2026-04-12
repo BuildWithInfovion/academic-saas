@@ -22,6 +22,7 @@ import { PlatformModule } from './platform/platform.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { TenantGuard } from './common/guards/tenant.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
+import { RequestMetricsInterceptor } from './common/interceptors/request-metrics.interceptor';
 import { AuditLogService } from './common/services/audit-log.service';
 
 import { AppController } from './app.controller';
@@ -53,6 +54,10 @@ import { AppService } from './app.service';
     // PrismaService available via PrismaModule (global)
     TenantGuard, // ✅ still available for @UseGuards() on controllers
     AuditLogService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestMetricsInterceptor,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditLogInterceptor,

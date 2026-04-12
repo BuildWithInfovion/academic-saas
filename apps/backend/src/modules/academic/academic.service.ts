@@ -13,14 +13,29 @@ export class CreateAcademicYearDto {
   isCurrent?: boolean;
 }
 
+function parseDateOnly(value: string): Date | null {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatAcademicYearLabel(startYear: number, endYear: number): string {
+  return `${startYear}-${String(endYear).slice(-2)}`;
+}
+
 /** Natural numeric sort — "Class 2" < "Class 10", "LKG" < "UKG" < "Class 1" */
-function naturalLabel(unit: { name: string; displayName?: string | null }): string {
+function naturalLabel(unit: {
+  name: string;
+  displayName?: string | null;
+}): string {
   return (unit.displayName || unit.name).toLowerCase();
 }
 
 const FIXED_ORDER = ['lkg', 'ukg', 'kg', 'nursery', 'pp1', 'pp2'];
 
-function naturalSort<T extends { name: string; displayName?: string | null }>(arr: T[]): T[] {
+function naturalSort<T extends { name: string; displayName?: string | null }>(
+  arr: T[],
+): T[] {
   return [...arr].sort((a, b) => {
     const la = naturalLabel(a);
     const lb = naturalLabel(b);
@@ -29,7 +44,10 @@ function naturalSort<T extends { name: string; displayName?: string | null }>(ar
     if (ai !== -1 && bi !== -1) return ai - bi;
     if (ai !== -1) return -1;
     if (bi !== -1) return 1;
-    return la.localeCompare(lb, undefined, { numeric: true, sensitivity: 'base' });
+    return la.localeCompare(lb, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
   });
 }
 
@@ -58,12 +76,18 @@ export class AcademicService {
       orderBy: { level: 'asc' },
     });
     // Deduplicate root-level units by displayName — keep the one with students
-    const seen = new Map<string, typeof raw[0]>();
+    const seen = new Map<string, (typeof raw)[0]>();
     for (const unit of raw) {
-      if (unit.parentId !== null) { seen.set(unit.id, unit); continue; } // sections always kept as-is
+      if (unit.parentId !== null) {
+        seen.set(unit.id, unit);
+        continue;
+      } // sections always kept as-is
       const key = (unit.displayName || unit.name).toLowerCase().trim();
       const existing = seen.get(key);
-      if (!existing) { seen.set(key, unit); continue; }
+      if (!existing) {
+        seen.set(key, unit);
+        continue;
+      }
       if (unit._count.students > existing._count.students) seen.set(key, unit);
     }
     return naturalSort(Array.from(seen.values()));
@@ -94,13 +118,16 @@ export class AcademicService {
 
     // Deduplicate by displayName — keep the unit with most students
     // (guards against duplicate units from multiple seed runs)
-    const seen = new Map<string, typeof raw[0]>();
+    const seen = new Map<string, (typeof raw)[0]>();
     for (const unit of raw) {
       const key = (unit.displayName || unit.name).toLowerCase().trim();
       const existing = seen.get(key);
-      if (!existing) { seen.set(key, unit); continue; }
+      if (!existing) {
+        seen.set(key, unit);
+        continue;
+      }
       // Prefer: has students, then has classTeacher, then keep existing
-      const score = (u: typeof raw[0]) =>
+      const score = (u: (typeof raw)[0]) =>
         (u._count.students > 0 ? 2 : 0) + (u.classTeacherUserId ? 1 : 0);
       if (score(unit) > score(existing)) seen.set(key, unit);
     }
@@ -130,11 +157,12 @@ export class AcademicService {
       orderBy: { createdAt: 'asc' },
     });
     // Deduplicate by displayName — keep the unit with the most students
-    const seen = new Map<string, typeof raw[0]>();
+    const seen = new Map<string, (typeof raw)[0]>();
     for (const unit of raw) {
       const key = (unit.displayName || unit.name).toLowerCase().trim();
       const existing = seen.get(key);
-      if (!existing || unit._count.students > existing._count.students) seen.set(key, unit);
+      if (!existing || unit._count.students > existing._count.students)
+        seen.set(key, unit);
     }
     return naturalSort(Array.from(seen.values()));
   }
@@ -149,7 +177,12 @@ export class AcademicService {
         parent: { select: { id: true, name: true, displayName: true } },
         children: {
           where: { deletedAt: null },
-          select: { id: true, name: true, displayName: true, classTeacherUserId: true },
+          select: {
+            id: true,
+            name: true,
+            displayName: true,
+            classTeacherUserId: true,
+          },
         },
       },
     });
@@ -161,7 +194,13 @@ export class AcademicService {
 
   async createUnit(
     institutionId: string,
-    dto: { name: string; displayName?: string; level: number; parentId?: string; academicYearId?: string },
+    dto: {
+      name: string;
+      displayName?: string;
+      level: number;
+      parentId?: string;
+      academicYearId?: string;
+    },
   ) {
     return this.prisma.academicUnit.create({
       data: {
@@ -232,7 +271,12 @@ export class AcademicService {
 
     // Verify teacher exists and belongs to institution
     const teacher = await this.prisma.user.findFirst({
-      where: { id: teacherUserId, institutionId, deletedAt: null, isActive: true },
+      where: {
+        id: teacherUserId,
+        institutionId,
+        deletedAt: null,
+        isActive: true,
+      },
       include: { roles: { include: { role: true } } },
     });
     if (!teacher) throw new NotFoundException('Teacher user not found');
@@ -294,14 +338,20 @@ export class AcademicService {
     });
 
     // Deduplicate by displayName/name — keep the record with students > teacher > latest
-    const seen = new Map<string, typeof units[0]>();
+    const seen = new Map<string, (typeof units)[0]>();
     for (const unit of units) {
       const key = (unit.displayName || unit.name).toLowerCase().trim();
       const existing = seen.get(key);
-      if (!existing) { seen.set(key, unit); continue; }
+      if (!existing) {
+        seen.set(key, unit);
+        continue;
+      }
       // Prefer: has students, then has teacher, then keep existing
-      const unitScore = (unit._count.students > 0 ? 2 : 0) + (unit.classTeacherUserId ? 1 : 0);
-      const existingScore = (existing._count.students > 0 ? 2 : 0) + (existing.classTeacherUserId ? 1 : 0);
+      const unitScore =
+        (unit._count.students > 0 ? 2 : 0) + (unit.classTeacherUserId ? 1 : 0);
+      const existingScore =
+        (existing._count.students > 0 ? 2 : 0) +
+        (existing.classTeacherUserId ? 1 : 0);
       if (unitScore > existingScore) seen.set(key, unit);
     }
 
@@ -355,11 +405,35 @@ export class AcademicService {
   }
 
   async createYear(institutionId: string, dto: CreateAcademicYearDto) {
+    const name = dto.name.trim();
+    const startDate = parseDateOnly(dto.startDate);
+    const endDate = parseDateOnly(dto.endDate);
+
+    if (!/^\d{4}-\d{2}$/.test(name)) {
+      throw new BadRequestException('Enter a valid year value like 2026-27');
+    }
+    if (!startDate || !endDate) {
+      throw new BadRequestException('Enter valid start and end dates');
+    }
+    if (startDate >= endDate) {
+      throw new BadRequestException('End date must be after start date');
+    }
+
+    const expectedName = formatAcademicYearLabel(
+      startDate.getUTCFullYear(),
+      endDate.getUTCFullYear(),
+    );
+    if (name !== expectedName) {
+      throw new BadRequestException(
+        `Year name must match the selected dates, for example ${expectedName}`,
+      );
+    }
+
     const existing = await this.prisma.academicYear.findFirst({
-      where: { institutionId, name: dto.name },
+      where: { institutionId, name },
     });
     if (existing) {
-      throw new ConflictException(`Academic year "${dto.name}" already exists`);
+      throw new ConflictException(`Academic year "${name}" already exists`);
     }
 
     if (dto.isCurrent) {
@@ -372,9 +446,9 @@ export class AcademicService {
     return this.prisma.academicYear.create({
       data: {
         institutionId,
-        name: dto.name,
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
+        name,
+        startDate,
+        endDate,
         isCurrent: dto.isCurrent ?? false,
       },
     });

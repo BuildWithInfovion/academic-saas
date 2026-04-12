@@ -78,6 +78,7 @@ export default function InquiriesPage() {
     if (!form.firstName.trim() || !form.lastName.trim())
       return setError('First and last name are required');
     if (!form.phone.trim()) return setError('Phone is required');
+    if (!/^[6-9]\d{9}$/.test(form.phone.trim())) return setError('Phone must be a valid 10-digit Indian mobile number (starts with 6-9)');
 
     setCreating(true);
     try {

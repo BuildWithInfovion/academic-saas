@@ -25,6 +25,38 @@ const TABS: { id: Tab; label: string }[] = [
 
 const inp = 'w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white';
 
+function compareAcademicUnits(a: AcademicUnit, b: AcademicUnit): number {
+  const labelA = (a.displayName || a.name).toLowerCase();
+  const labelB = (b.displayName || b.name).toLowerCase();
+  const fixedOrder = ['lkg', 'ukg', 'kg', 'nursery', 'pp1', 'pp2'];
+  const indexA = fixedOrder.findIndex((k) => labelA.includes(k));
+  const indexB = fixedOrder.findIndex((k) => labelB.includes(k));
+
+  if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+  if (indexA !== -1) return -1;
+  if (indexB !== -1) return 1;
+
+  return labelA.localeCompare(labelB, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+function validateAcademicYearForm(form: { name: string; startDate: string; endDate: string }): string | null {
+  const name = form.name.trim();
+  if (!name || !form.startDate || !form.endDate) return 'Enter year value, start date, and end date';
+  if (!/^\d{4}-\d{2}$/.test(name)) return 'Enter a valid year value like 2026-27';
+
+  const startDate = new Date(`${form.startDate}T00:00:00`);
+  const endDate = new Date(`${form.endDate}T00:00:00`);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return 'Enter valid start and end dates';
+  }
+  if (startDate >= endDate) return 'End date must be after start date';
+
+  const expected = `${startDate.getFullYear()}-${String(endDate.getFullYear()).slice(-2)}`;
+  if (name !== expected) return `Year name must match the selected dates, for example ${expected}`;
+
+  return null;
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function DirectorSettingsPage() {
   const [tab, setTab] = useState<Tab>('profile');
@@ -161,10 +193,14 @@ function YearsTab({ showSuccess, showError }: { showSuccess: (m: string) => void
   useEffect(() => { load(); }, []);
 
   const handleCreate = async () => {
-    if (!form.name.trim() || !form.startDate || !form.endDate) return showError('All fields are required');
+    const validationError = validateAcademicYearForm(form);
+    if (validationError) return showError(validationError);
     setSubmitting(true);
     try {
-      await apiFetch('/academic/years', { method: 'POST', body: JSON.stringify(form) });
+      await apiFetch('/academic/years', {
+        method: 'POST',
+        body: JSON.stringify({ ...form, name: form.name.trim() }),
+      });
       showSuccess('Academic year created');
       setShowForm(false);
       setForm({ name: '', startDate: '', endDate: '' });
@@ -321,8 +357,9 @@ function ClassesTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
     finally { setDeleting(null); }
   };
 
-  const rootUnits = units.filter((u) => !u.parentId);
-  const childUnits = (parentId: string) => units.filter((u) => u.parentId === parentId);
+  const rootUnits = [...units.filter((u) => !u.parentId)].sort(compareAcademicUnits);
+  const childUnits = (parentId: string) =>
+    units.filter((u) => u.parentId === parentId).sort(compareAcademicUnits);
 
   return (
     <div className="space-y-4">

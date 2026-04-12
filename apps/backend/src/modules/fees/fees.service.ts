@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto } from './dto/fees.dto';
 
@@ -66,7 +66,10 @@ export class FeesService {
     });
   }
 
-  async deleteFeeStructure(id: string) {
+  async deleteFeeStructure(institutionId: string, id: string) {
+    // Verify the structure belongs to this institution before deleting
+    const structure = await this.prisma.feeStructure.findFirst({ where: { id, institutionId } });
+    if (!structure) throw new NotFoundException('Fee structure not found');
     return this.prisma.feeStructure.delete({ where: { id } });
   }
 
@@ -81,6 +84,7 @@ export class FeesService {
   async recordPayment(institutionId: string, dto: RecordPaymentDto) {
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, institutionId, deletedAt: null },
+      select: { id: true, academicUnitId: true },
     });
     if (!student) throw new NotFoundException('Student not found');
 
@@ -88,6 +92,23 @@ export class FeesService {
       where: { id: dto.feeHeadId, institutionId, deletedAt: null },
     });
     if (!feeHead) throw new NotFoundException('Fee head not found');
+
+    // B1-01: Verify a fee structure exists for this class + year + fee head
+    if (student.academicUnitId && dto.academicYearId) {
+      const structure = await this.prisma.feeStructure.findFirst({
+        where: {
+          institutionId,
+          academicUnitId: student.academicUnitId,
+          academicYearId: dto.academicYearId,
+          feeHeadId: dto.feeHeadId,
+        },
+      });
+      if (!structure) {
+        throw new BadRequestException(
+          'No fee structure found for this student\'s class, year, and fee head. Set up the fee structure first.',
+        );
+      }
+    }
 
     const receiptNo = await this.generateReceiptNo(institutionId);
 
@@ -155,38 +176,48 @@ export class FeesService {
   }
 
   async getDefaulters(institutionId: string, academicYearId: string, academicUnitId?: string) {
-    const structures = await this.prisma.feeStructure.findMany({
-      where: { institutionId, academicYearId, ...(academicUnitId ? { academicUnitId } : {}) },
-      include: { feeHead: true, academicUnit: true },
-    });
-
-    const studentWhere: any = { institutionId, deletedAt: null, status: 'active' };
-    if (academicUnitId) studentWhere.academicUnitId = academicUnitId;
-
-    const students = await this.prisma.student.findMany({
-      where: studentWhere,
-      select: { id: true, firstName: true, lastName: true, admissionNo: true, academicUnitId: true },
-    });
-
-    const results = await Promise.all(
-      students.map(async (s) => {
-        const myStructures = structures.filter((st) => st.academicUnitId === s.academicUnitId);
-        const due = myStructures.reduce((sum, st) => sum + st.amount, 0);
-        if (due === 0) return null;
-
-        const paid = await this.prisma.feePayment.aggregate({
-          where: { institutionId, studentId: s.id, academicYearId },
-          _sum: { amount: true },
-        });
-
-        const paidAmount = paid._sum.amount ?? 0;
-        const balance = due - paidAmount;
-        if (balance <= 0) return null;
-
-        return { ...s, due, paid: paidAmount, balance };
+    // Optimised: 3 parallel queries instead of 2+N (one aggregate per student)
+    const [structures, students, paidGroups] = await Promise.all([
+      this.prisma.feeStructure.findMany({
+        where: { institutionId, academicYearId, ...(academicUnitId ? { academicUnitId } : {}) },
+        select: { academicUnitId: true, amount: true },
       }),
+      this.prisma.student.findMany({
+        where: {
+          institutionId,
+          deletedAt: null,
+          status: 'active',
+          ...(academicUnitId ? { academicUnitId } : {}),
+        },
+        select: { id: true, firstName: true, lastName: true, admissionNo: true, academicUnitId: true },
+      }),
+      // Single groupBy replaces N individual aggregate() calls
+      this.prisma.feePayment.groupBy({
+        by: ['studentId'],
+        where: { institutionId, academicYearId },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    // Build lookup maps — O(1) access per student
+    const dueByUnit = new Map<string, number>();
+    for (const st of structures) {
+      dueByUnit.set(st.academicUnitId, (dueByUnit.get(st.academicUnitId) ?? 0) + st.amount);
+    }
+
+    const paidByStudent = new Map<string, number>(
+      paidGroups.map((g) => [g.studentId, g._sum.amount ?? 0]),
     );
 
-    return results.filter(Boolean);
+    return students
+      .map((s) => {
+        const due = dueByUnit.get(s.academicUnitId ?? '') ?? 0;
+        if (due === 0) return null;
+        const paidAmount = paidByStudent.get(s.id) ?? 0;
+        const balance = due - paidAmount;
+        if (balance <= 0) return null;
+        return { ...s, due, paid: paidAmount, balance };
+      })
+      .filter(Boolean);
   }
 }

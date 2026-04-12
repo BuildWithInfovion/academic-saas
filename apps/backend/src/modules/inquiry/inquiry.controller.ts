@@ -14,9 +14,11 @@ import { InquiryService } from './inquiry.service';
 import { CreateInquiryDto, UpdateInquiryDto } from './dto/inquiry.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 @Controller('inquiries')
-@UseGuards(AuthGuard, TenantGuard)
+@UseGuards(AuthGuard, TenantGuard, RolesGuard)
 export class InquiryController {
   constructor(private readonly inquiryService: InquiryService) {}
 
@@ -29,11 +31,13 @@ export class InquiryController {
   }
 
   @Post()
+  @Permissions('users.write')
   create(@Req() req: any, @Body() dto: CreateInquiryDto) {
     return this.inquiryService.create(this.getId(req), dto);
   }
 
   @Get()
+  @Permissions('users.read')
   findAll(
     @Req() req: any,
     @Query('status') status?: string,
@@ -43,11 +47,13 @@ export class InquiryController {
   }
 
   @Get(':id')
+  @Permissions('users.read')
   findOne(@Req() req: any, @Param('id') id: string) {
     return this.inquiryService.findOne(this.getId(req), id);
   }
 
   @Patch(':id')
+  @Permissions('users.write')
   update(
     @Req() req: any,
     @Param('id') id: string,
@@ -57,6 +63,7 @@ export class InquiryController {
   }
 
   @Delete(':id')
+  @Permissions('users.write')
   delete(@Req() req: any, @Param('id') id: string) {
     return this.inquiryService.delete(this.getId(req), id);
   }

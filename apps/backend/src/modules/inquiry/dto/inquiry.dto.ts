@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -65,8 +66,9 @@ export class UpdateInquiryDto {
   classInterest?: string;
 
   @IsOptional()
-  @IsString()
-  // new | contacted | visited | enrolled | dropped
+  @IsIn(['new', 'contacted', 'visited', 'enrolled', 'dropped'], {
+    message: 'status must be one of: new, contacted, visited, enrolled, dropped',
+  })
   status?: string;
 
   @IsOptional()

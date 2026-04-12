@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SaveAttendanceDto } from './dto/attendance.dto';
 
@@ -9,6 +9,13 @@ export class AttendanceService {
   async save(institutionId: string, takenByUserId: string, dto: SaveAttendanceDto) {
     const date = new Date(dto.date);
     const subjectId = dto.subjectId ?? null;
+
+    // Reject future dates — attendance cannot be pre-marked
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (date > today) {
+      throw new BadRequestException('Cannot mark attendance for a future date');
+    }
 
     // Verify all student IDs belong to this institution — prevents cross-tenant injection
     if (dto.records.length > 0) {
@@ -215,14 +222,42 @@ export class AttendanceService {
   }
 
   // Defaulter list: students below threshold % in a unit for a month
+  // Optimised: 2 queries total instead of 1+N (one per student)
   async getDefaulters(institutionId: string, academicUnitId: string, year: number, month: number, threshold = 75) {
+    const start = new Date(year, month - 1, 1);
+    const end   = new Date(year, month,     1);
+
+    // Query 1: students in this class
     const students = await this.getStudentsForUnit(institutionId, academicUnitId);
-    const results = await Promise.all(
-      students.map(async (s) => {
-        const summary = await this.getStudentMonthly(institutionId, s.id, year, month);
-        return { ...s, ...summary };
-      }),
-    );
-    return results.filter((r) => r.total > 0 && r.percentage < threshold);
+    if (students.length === 0) return [];
+
+    // Query 2: all attendance records for these students in the given month (flat, no N+1)
+    const allRecords = await this.prisma.attendanceRecord.findMany({
+      where: {
+        institutionId,
+        studentId: { in: students.map((s) => s.id) },
+        session: { date: { gte: start, lt: end } },
+      },
+      select: { studentId: true, status: true },
+    });
+
+    // Aggregate per-student in memory — O(records) not O(students × records)
+    const counts = new Map<string, { present: number; absent: number; late: number; leave: number; total: number }>();
+    for (const rec of allRecords) {
+      if (!counts.has(rec.studentId)) {
+        counts.set(rec.studentId, { present: 0, absent: 0, late: 0, leave: 0, total: 0 });
+      }
+      const c = counts.get(rec.studentId)!;
+      (c as any)[rec.status] = ((c as any)[rec.status] ?? 0) + 1;
+      c.total++;
+    }
+
+    return students
+      .map((s) => {
+        const c = counts.get(s.id) ?? { present: 0, absent: 0, late: 0, leave: 0, total: 0 };
+        const percentage = c.total > 0 ? Math.round(((c.present + c.late) / c.total) * 100) : 0;
+        return { ...s, ...c, percentage };
+      })
+      .filter((r) => r.total > 0 && r.percentage < threshold);
   }
 }

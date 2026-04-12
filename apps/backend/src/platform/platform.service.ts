@@ -37,6 +37,8 @@ const DEFAULT_ROLES = [
       'attendance.read', 'attendance.write',
       'exams.read', 'exams.write',
       'subjects.read', 'subjects.write',
+      'academic.read', 'academic.write',
+      'institution.read', 'institution.write',
     ],
   },
   {
@@ -64,6 +66,24 @@ const DEFAULT_ROLES = [
     label: 'Desk / Reception',
     permissions: ['inquiry.read', 'inquiry.write', 'students.read', 'users.read'],
   },
+];
+
+const SCHOOL_CLASSES = [
+  { name: 'lkg',      displayName: 'LKG' },
+  { name: 'ukg',      displayName: 'UKG' },
+  { name: 'kg',       displayName: 'KG' },
+  { name: 'class_1',  displayName: 'Class 1' },
+  { name: 'class_2',  displayName: 'Class 2' },
+  { name: 'class_3',  displayName: 'Class 3' },
+  { name: 'class_4',  displayName: 'Class 4' },
+  { name: 'class_5',  displayName: 'Class 5' },
+  { name: 'class_6',  displayName: 'Class 6' },
+  { name: 'class_7',  displayName: 'Class 7' },
+  { name: 'class_8',  displayName: 'Class 8' },
+  { name: 'class_9',  displayName: 'Class 9' },
+  { name: 'class_10', displayName: 'Class 10' },
+  { name: 'class_11', displayName: 'Class 11' },
+  { name: 'class_12', displayName: 'Class 12' },
 ];
 
 const DEFAULT_FEE_HEADS = [
@@ -384,6 +404,42 @@ export class PlatformService {
             notes: dto.notes,
           },
         });
+
+        // Seed academic year + classes (school only; college gets custom setup)
+        // Academic year: June–March straddle. If subscription starts Apr–May it's
+        // still the current session (e.g. Apr 2026 → "2025-26").
+        const ayStartMonth = startDate.getMonth(); // 0-indexed
+        const ayStartYear  = ayStartMonth >= 5     // >= June
+          ? startDate.getFullYear()
+          : startDate.getFullYear() - 1;
+        const ayName  = `${ayStartYear}-${String(ayStartYear + 1).slice(2)}`;
+        const ayStart = new Date(`${ayStartYear}-06-01`);
+        const ayEnd   = new Date(`${ayStartYear + 1}-03-31`);
+
+        const academicYear = await tx.academicYear.create({
+          data: {
+            institutionId: inst.id,
+            name: ayName,
+            startDate: ayStart,
+            endDate: ayEnd,
+            isCurrent: true,
+          },
+        });
+
+        if (dto.institutionType === 'school') {
+          for (const cls of SCHOOL_CLASSES) {
+            await tx.academicUnit.create({
+              data: {
+                institutionId:  inst.id,
+                academicYearId: academicYear.id,
+                name:           cls.name,
+                displayName:    cls.displayName,
+                level:          1,
+                parentId:       null,
+              },
+            });
+          }
+        }
 
         return { institution: inst, operatorUser: operator, subscription: sub };
       });

@@ -6,45 +6,63 @@ import { AttendanceService } from './attendance.service';
 import { SaveAttendanceDto } from './dto/attendance.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 @Controller('attendance')
-@UseGuards(AuthGuard, TenantGuard)
+@UseGuards(AuthGuard, TenantGuard, RolesGuard)
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
   // GET /attendance/notifications/parent — today's absent children for logged-in parent
+  // Parent has 'attendance.read' — no extra guard needed
   @Get('notifications/parent')
   getParentNotifications(@Request() req: any) {
     return this.attendanceService.getParentAbsentNotifications(
-      req.institutionId,
+      req.tenant?.institutionId ?? req.institutionId,
       req.user?.userId ?? '',
     );
   }
 
-  // GET /attendance/units/:unitId/students — list students for attendance sheet
+  // GET /attendance/units/:unitId/students — teacher/operator/principal use
   @Get('units/:unitId/students')
+  @Permissions('attendance.read')
   getStudents(@Request() req: any, @Param('unitId') unitId: string) {
-    return this.attendanceService.getStudentsForUnit(req.institutionId, unitId);
+    return this.attendanceService.getStudentsForUnit(
+      req.tenant?.institutionId ?? req.institutionId,
+      unitId,
+    );
   }
 
-  // GET /attendance/units/:unitId/daily?date=2025-06-10 — get/init attendance for a day
+  // GET /attendance/units/:unitId/daily?date=2025-06-10
   @Get('units/:unitId/daily')
+  @Permissions('attendance.read')
   getDailySheet(
     @Request() req: any,
     @Param('unitId') unitId: string,
     @Query('date') date: string,
   ) {
-    return this.attendanceService.getClassDailySummary(req.institutionId, unitId, date);
+    return this.attendanceService.getClassDailySummary(
+      req.tenant?.institutionId ?? req.institutionId,
+      unitId,
+      date,
+    );
   }
 
-  // POST /attendance — save/update attendance
+  // POST /attendance — save/update attendance (teacher + operator only)
   @Post()
+  @Permissions('attendance.write')
   save(@Request() req: any, @Body() dto: SaveAttendanceDto) {
-    return this.attendanceService.save(req.institutionId, req.user?.id ?? 'system', dto);
+    return this.attendanceService.save(
+      req.tenant?.institutionId ?? req.institutionId,
+      req.user?.id ?? req.user?.userId ?? 'system',
+      dto,
+    );
   }
 
-  // GET /attendance/students/:studentId/monthly?year=2025&month=6
+  // GET /attendance/students/:studentId/monthly
   @Get('students/:studentId/monthly')
+  @Permissions('attendance.read')
   getStudentMonthly(
     @Request() req: any,
     @Param('studentId') studentId: string,
@@ -52,15 +70,16 @@ export class AttendanceController {
     @Query('month') month: string,
   ) {
     return this.attendanceService.getStudentMonthly(
-      req.institutionId,
+      req.tenant?.institutionId ?? req.institutionId,
       studentId,
       parseInt(year),
       parseInt(month),
     );
   }
 
-  // GET /attendance/units/:unitId/defaulters?year=2025&month=6&threshold=75
+  // GET /attendance/units/:unitId/defaulters — operator/principal only
   @Get('units/:unitId/defaulters')
+  @Permissions('attendance.read')
   getDefaulters(
     @Request() req: any,
     @Param('unitId') unitId: string,
@@ -69,7 +88,7 @@ export class AttendanceController {
     @Query('threshold') threshold: string,
   ) {
     return this.attendanceService.getDefaulters(
-      req.institutionId,
+      req.tenant?.institutionId ?? req.institutionId,
       unitId,
       parseInt(year),
       parseInt(month),

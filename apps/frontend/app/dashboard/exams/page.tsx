@@ -116,6 +116,10 @@ export default function ExamsPage() {
 
   const createExam = async () => {
     if (!newExamName.trim() || !selectedYear) return;
+    if (newExamStart && newExamEnd && newExamStart >= newExamEnd) {
+      setError('Exam start date must be before the end date');
+      return;
+    }
     setCreating(true);
     setError(null);
     try {

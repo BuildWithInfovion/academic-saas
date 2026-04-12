@@ -7,6 +7,8 @@ const menuItems = [
   { label: 'Overview', path: '/portal/parent' },
   { label: 'Attendance', path: '/portal/parent/attendance' },
   { label: 'Marks', path: '/portal/parent/marks' },
+  { label: 'Timetable', path: '/portal/parent/timetable' },
+  { label: 'Exam Schedule', path: '/portal/parent/exams' },
   { label: 'Fees', path: '/portal/parent/fees' },
   { label: 'Announcements', path: '/portal/parent/announcements' },
 ];

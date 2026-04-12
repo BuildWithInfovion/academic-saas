@@ -299,10 +299,8 @@ export class AuthService {
 
   private generatePassword(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    return Array.from(
-      { length: 8 },
-      () => chars[Math.floor(Math.random() * chars.length)],
-    ).join('');
+    const bytes = crypto.randomBytes(8);
+    return Array.from(bytes, (b) => chars[b % chars.length]).join('');
   }
 
   private hashToken(token: string) {

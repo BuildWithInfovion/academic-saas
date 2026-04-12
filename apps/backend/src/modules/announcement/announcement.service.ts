@@ -8,33 +8,28 @@ export class AnnouncementService {
 
   async findAll(institutionId: string, role?: string) {
     const now = new Date();
+    const isAdmin = !role || role === 'super_admin' || role === 'admin';
 
-    const announcements = await this.prisma.announcement.findMany({
+    // For non-admins push role filter into DB so we don't load all rows then discard
+    const extraWhere = isAdmin
+      ? {}
+      : {
+          OR: [
+            { targetRoles: { array_contains: 'all' } },
+            { targetRoles: { array_contains: role } },
+          ],
+        };
+
+    return this.prisma.announcement.findMany({
       where: {
         institutionId,
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        ...extraWhere,
       },
-      include: {
-        author: {
-          select: {
-            email: true,
-          },
-        },
-      },
+      include: { author: { select: { email: true } } },
       orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+      take: 100,
     });
-
-    if (role && role !== 'superadmin' && role !== 'admin') {
-      return announcements.filter((announcement) => {
-        const targets = Array.isArray(announcement.targetRoles)
-          ? (announcement.targetRoles as string[])
-          : ['all'];
-
-        return targets.includes('all') || targets.includes(role);
-      });
-    }
-
-    return announcements;
   }
 
   async create(
@@ -60,6 +55,10 @@ export class AnnouncementService {
         },
       },
     });
+  }
+
+  async findOne(institutionId: string, id: string) {
+    return this.prisma.announcement.findFirst({ where: { id, institutionId } });
   }
 
   async update(

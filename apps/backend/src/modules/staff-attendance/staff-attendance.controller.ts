@@ -2,9 +2,11 @@ import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Req } from
 import { StaffAttendanceService } from './staff-attendance.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 @Controller('staff-attendance')
-@UseGuards(AuthGuard, TenantGuard)
+@UseGuards(AuthGuard, TenantGuard, RolesGuard)
 export class StaffAttendanceController {
   constructor(private readonly svc: StaffAttendanceService) {}
 
@@ -83,6 +85,7 @@ export class StaffAttendanceController {
 
   /** POST /staff-attendance/admin-mark — operator overrides attendance for any staff */
   @Post('admin-mark')
+  @Permissions('users.write')
   adminMark(
     @Req() req: any,
     @Body() body: { userId: string; date: string; status: string; note?: string },
@@ -95,12 +98,14 @@ export class StaffAttendanceController {
 
   /** GET /staff-attendance/leave?status=pending — all leave requests */
   @Get('leave')
+  @Permissions('users.read')
   getAllLeave(@Req() req: any, @Query('status') status: string) {
     return this.svc.getAllLeaveRequests(this.institutionId(req), status || undefined);
   }
 
   /** PATCH /staff-attendance/leave/:id/review — principal approves/rejects */
   @Patch('leave/:id/review')
+  @Permissions('users.write')
   reviewLeave(
     @Req() req: any,
     @Param('id') id: string,

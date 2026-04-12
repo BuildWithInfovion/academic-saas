@@ -561,6 +561,11 @@ export class StudentService {
     }
 
     if (action === 'holdback') {
+      // B1-03: Record the holdback decision — set status to 'held_back' so it's visible in reports
+      await this.prisma.student.updateMany({
+        where: { id: { in: studentIds }, institutionId },
+        data: { status: 'held_back' },
+      });
       return { updated: students.length, action };
     }
 
