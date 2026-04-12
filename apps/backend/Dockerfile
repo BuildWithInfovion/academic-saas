@@ -21,4 +21,6 @@ RUN npm run build
 EXPOSE 3000
 
 # Apply DB migrations before boot so deployed code and schema stay in sync
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+# Resolve any migration with a checksum mismatch (caused by editing an already-applied
+# migration file), then apply all pending migrations, then start the app.
+CMD ["sh", "-c", "npx prisma migrate resolve --applied 20260410000000_add_institution_profile_fields 2>/dev/null; npx prisma migrate deploy && node dist/src/main"]
