@@ -49,10 +49,19 @@ export default function OnboardClientPage() {
   const totalAmount =
     (parseInt(form.maxStudents) || 0) * (parseFloat(form.pricePerUser) || 0);
   const annualAmount = totalAmount;
+  const normalizedCodePreview = form.codeOverride
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
 
   const handleSubmit = async () => {
     if (!form.name.trim()) return setError('Institution name is required');
     if (!form.maxStudents || parseInt(form.maxStudents) < 1) return setError('Max students must be at least 1');
+    if (form.codeOverride.trim() && !normalizedCodePreview) {
+      return setError('Custom school code must contain at least one letter or number');
+    }
 
     setLoading(true);
     setError(null);
@@ -64,7 +73,7 @@ export default function OnboardClientPage() {
           name: form.name.trim(),
           institutionType: form.institutionType,
           planCode: form.planCode,
-          codeOverride: form.codeOverride.trim() || undefined,
+          codeOverride: normalizedCodePreview || undefined,
           maxStudents: parseInt(form.maxStudents),
           pricePerUser: parseFloat(form.pricePerUser),
           subscriptionYears: parseInt(form.subscriptionYears),
@@ -199,6 +208,11 @@ export default function OnboardClientPage() {
           <div className="col-span-2">
             <label className="text-xs text-gray-400 block mb-1">Custom School Code (optional — auto-generated from name if empty)</label>
             <input className={inp} placeholder="e.g. vedantvidya, stmary" value={form.codeOverride} onChange={set('codeOverride')} autoCapitalize="none" />
+            {form.codeOverride.trim() && (
+              <p className="text-xs text-gray-500 mt-1">
+                Normalized code: <span className="font-mono text-indigo-300">{normalizedCodePreview || 'invalid'}</span>
+              </p>
+            )}
           </div>
         </div>
       </div>

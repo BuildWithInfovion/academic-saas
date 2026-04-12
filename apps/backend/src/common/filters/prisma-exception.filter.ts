@@ -95,6 +95,11 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         status = HttpStatus.NOT_FOUND;
         message = 'Record not found';
         break;
+      case 'P2021':
+      case 'P2022':
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        message = 'Database schema is out of date. Run the latest migrations and retry.';
+        break;
       case 'P1001':
       case 'P1002':
       case 'P1008':

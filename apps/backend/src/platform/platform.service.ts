@@ -1,7 +1,6 @@
 import {
   Injectable,
   UnauthorizedException,
-  ConflictException,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -317,21 +316,17 @@ export class PlatformService {
 
   async onboardClient(dto: OnboardClientDto) {
     // 1. Generate institution code
-    const baseCode = (dto.codeOverride || dto.name)
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '')
-      .substring(0, 12);
+    const baseCode = this.buildInstitutionCode(dto.codeOverride, dto.name);
 
     let code = baseCode;
     let suffix = 2;
     while (await this.prisma.institution.findUnique({ where: { code } })) {
-      code = baseCode.substring(0, 10) + suffix;
+      code = `${baseCode.substring(0, Math.max(1, 12 - String(suffix).length))}${suffix}`;
       suffix++;
     }
 
     // 2. Operator credentials
-    const operatorEmail = dto.adminEmail?.trim() || `admin@${code}.in`;
+    const operatorEmail = dto.adminEmail || `admin@${code}.in`;
     const rawPassword = this.generatePassword();
     const passwordHash = await bcrypt.hash(rawPassword, 12);
 
@@ -451,7 +446,7 @@ export class PlatformService {
       institution,
       operatorCredentials: {
         email: operatorEmail,
-        phone: dto.adminPhone?.trim() || null,
+        phone: dto.adminPhone || null,
         password: rawPassword,
         institutionCode: code,
       },
@@ -491,5 +486,23 @@ export class PlatformService {
       { length: 10 },
       () => chars[Math.floor(Math.random() * chars.length)],
     ).join('');
+  }
+
+  private buildInstitutionCode(codeOverride: string | undefined, institutionName: string): string {
+    const source = codeOverride || institutionName;
+    const normalized = source
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/-{2,}/g, '-');
+
+    const compact = normalized.replace(/-/g, '');
+    const code = (compact || 'inst').substring(0, 12);
+
+    if (!code) {
+      throw new BadRequestException('Unable to generate a valid institution code');
+    }
+
+    return code;
   }
 }

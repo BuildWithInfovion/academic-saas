@@ -20,5 +20,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Start
-CMD ["node", "dist/src/main"]
+# Apply DB migrations before boot so deployed code and schema stay in sync
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
