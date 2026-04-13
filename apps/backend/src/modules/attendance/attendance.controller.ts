@@ -55,8 +55,9 @@ export class AttendanceController {
   save(@Request() req: any, @Body() dto: SaveAttendanceDto) {
     return this.attendanceService.save(
       req.tenant?.institutionId ?? req.institutionId,
-      req.user?.id ?? req.user?.userId ?? 'system',
+      req.user?.userId ?? req.user?.id ?? 'system',
       dto,
+      req.user?.roles ?? [],
     );
   }
 

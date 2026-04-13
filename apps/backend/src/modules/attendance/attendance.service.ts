@@ -6,7 +6,12 @@ import { SaveAttendanceDto } from './dto/attendance.dto';
 export class AttendanceService {
   constructor(private prisma: PrismaService) {}
 
-  async save(institutionId: string, takenByUserId: string, dto: SaveAttendanceDto) {
+  async save(
+    institutionId: string,
+    takenByUserId: string,
+    dto: SaveAttendanceDto,
+    callerRoles: string[] = [],
+  ) {
     const date = new Date(dto.date);
     const subjectId = dto.subjectId ?? null;
 
@@ -15,6 +20,35 @@ export class AttendanceService {
     today.setHours(23, 59, 59, 999);
     if (date > today) {
       throw new BadRequestException('Cannot mark attendance for a future date');
+    }
+
+    // C-06: Verify the academicUnitId belongs to this institution
+    const unit = await this.prisma.academicUnit.findFirst({
+      where: { id: dto.academicUnitId, institutionId, deletedAt: null },
+      select: { id: true, classTeacherUserId: true },
+    });
+    if (!unit) {
+      throw new ForbiddenException('Academic unit not found or does not belong to your institution');
+    }
+
+    // C-06: Operators, admins, principals, and receptionists may mark for any class.
+    // Teachers may only mark for classes they are assigned to.
+    const privilegedRoles = ['admin', 'principal', 'super_admin', 'receptionist'];
+    const isPrivileged = callerRoles.some((r) => privilegedRoles.includes(r));
+
+    if (!isPrivileged) {
+      const isClassTeacher = unit.classTeacherUserId === takenByUserId;
+      let isSubjectTeacher = false;
+      if (!isClassTeacher) {
+        const assignment = await this.prisma.academicUnitSubject.findFirst({
+          where: { academicUnitId: dto.academicUnitId, teacherUserId: takenByUserId },
+          select: { id: true },
+        });
+        isSubjectTeacher = !!assignment;
+      }
+      if (!isClassTeacher && !isSubjectTeacher) {
+        throw new ForbiddenException('You are not assigned to this class and cannot mark attendance for it');
+      }
     }
 
     // Verify all student IDs belong to this institution — prevents cross-tenant injection

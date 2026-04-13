@@ -11,6 +11,7 @@ import { AuditLogService } from '../services/audit-log.service';
 const SENSITIVE_KEYS = new Set([
   'accessToken', 'refreshToken', 'token', 'passwordHash',
   'password', 'newPassword', 'secret', 'tokenHash',
+  'generatedPassword', // L-09: auto-generated parent passwords must not be logged
 ]);
 
 function stripSensitive(value: unknown): unknown {

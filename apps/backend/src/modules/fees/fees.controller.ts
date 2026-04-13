@@ -67,7 +67,9 @@ export class FeesController {
   @Get('payments/student/:studentId')
   @Permissions('fees.read')
   getStudentPayments(@Request() req: any, @Param('studentId') studentId: string) {
-    return this.feesService.getStudentPayments(req.tenant?.institutionId, studentId);
+    // C-05: pass parentUserId so service can enforce ownership for parent role
+    const parentUserId = req.user?.roles?.includes('parent') ? req.user.userId : undefined;
+    return this.feesService.getStudentPayments(req.tenant?.institutionId, studentId, parentUserId);
   }
 
   @Get('payments/student/:studentId/balance')
@@ -77,7 +79,9 @@ export class FeesController {
     @Param('studentId') studentId: string,
     @Query('yearId') yearId: string,
   ) {
-    return this.feesService.getStudentBalance(req.tenant?.institutionId, studentId, yearId);
+    // C-05: pass parentUserId so service can enforce ownership for parent role
+    const parentUserId = req.user?.roles?.includes('parent') ? req.user.userId : undefined;
+    return this.feesService.getStudentBalance(req.tenant?.institutionId, studentId, yearId, parentUserId);
   }
 
   @Get('payments/daily')

@@ -144,12 +144,13 @@ export class ExamService {
   // ── Mark Entry ────────────────────────────────────────────────────────────
 
   async saveResults(institutionId: string, dto: SaveResultsDto) {
-    // 1. Validate exam subject exists for this class
+    // 1. Validate exam subject exists for this class within the same institution (M-02)
     const examSubject = await this.prisma.examSubject.findFirst({
       where: {
         examId: dto.examId,
         academicUnitId: dto.academicUnitId,
         subjectId: dto.subjectId,
+        exam: { institutionId },
       },
     });
     if (!examSubject)
@@ -160,9 +161,11 @@ export class ExamService {
       where: { id: dto.examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
-    if (exam.status === 'draft') {
+    if (exam.status !== 'active') {
       throw new BadRequestException(
-        'Cannot enter marks for a draft exam. Activate the exam first.',
+        exam.status === 'draft'
+          ? 'Cannot enter marks for a draft exam. Activate the exam first.'
+          : 'Cannot enter marks for a completed exam.',
       );
     }
 

@@ -32,16 +32,27 @@ export class StudentService {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  private async generateAdmissionNo(institutionId: string): Promise<string> {
-    const count = await this.prisma.student.count({ where: { institutionId } });
+  // C-03: Advisory lock ensures only one admission number is generated at a time per institution.
+  // The lock is scoped to the transaction — released on commit or rollback.
+  // hashtext(institutionId) + magic int 1 = "admissionNo lock for this institution"
+  private async generateAdmissionNoInTx(
+    tx: Prisma.TransactionClient,
+    institutionId: string,
+  ): Promise<string> {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${institutionId}), 1)`;
+    const count = await tx.student.count({ where: { institutionId } });
     const year = new Date().getFullYear();
     return `ADM-${year}-${String(count + 1).padStart(4, '0')}`;
   }
 
-  private async generateRollNo(academicUnitId: string): Promise<string> {
-    const count = await this.prisma.student.count({
-      where: { academicUnitId, deletedAt: null },
-    });
+  // C-04: Advisory lock per academicUnit prevents duplicate roll numbers under concurrent admissions.
+  // hashtext(academicUnitId) + magic int 3 = "rollNo lock for this unit"
+  private async generateRollNoInTx(
+    tx: Prisma.TransactionClient,
+    academicUnitId: string,
+  ): Promise<string> {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${academicUnitId}), 3)`;
+    const count = await tx.student.count({ where: { academicUnitId, deletedAt: null } });
     return String(count + 1).padStart(2, '0');
   }
 
@@ -54,8 +65,14 @@ export class StudentService {
     return pwd;
   }
 
-  private async generateReceiptNo(institutionId: string): Promise<string> {
-    const count = await this.prisma.feePayment.count({ where: { institutionId } });
+  // C-03: Receipt number generation under advisory lock — same pattern.
+  // hashtext(institutionId) + magic int 2 = "receiptNo lock for this institution"
+  private async generateReceiptNoInTx(
+    tx: Prisma.TransactionClient,
+    institutionId: string,
+  ): Promise<string> {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${institutionId}), 2)`;
+    const count = await tx.feePayment.count({ where: { institutionId } });
     const year = new Date().getFullYear();
     return `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
   }
@@ -83,11 +100,7 @@ export class StudentService {
   // ── CONFIRM ADMISSION (atomic — student + parent user + fee) ──────────────
 
   async confirmAdmission(institutionId: string, dto: ConfirmAdmissionDto) {
-    const admissionNo = await this.generateAdmissionNo(institutionId);
     const tcFromPrevious = await this.validateTc(institutionId, dto);
-    const rollNo = dto.academicUnitId
-      ? await this.generateRollNo(dto.academicUnitId)
-      : undefined;
 
     // Find parent role for auto-assignment
     const parentRole = await this.prisma.role.findFirst({
@@ -105,12 +118,13 @@ export class StudentService {
     const generatedPassword = this.generatePassword();
     const passwordHash = await bcrypt.hash(generatedPassword, 12);
 
-    // Receipt number (outside tx for simplicity, low contention)
-    const receiptNo = dto.admissionFee?.paid && dto.admissionFee.amountPaid
-      ? await this.generateReceiptNo(institutionId)
-      : null;
-
     const result = await this.prisma.$transaction(async (tx) => {
+      // C-03/C-04: All sequential numbers generated inside the transaction under advisory locks
+      const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
+      const rollNo = dto.academicUnitId
+        ? await this.generateRollNoInTx(tx, dto.academicUnitId)
+        : undefined;
+
       // 1. Create student record
       const student = await tx.student.create({
         data: {
@@ -185,9 +199,10 @@ export class StudentService {
         dto.admissionFee?.paid &&
         dto.admissionFee.amountPaid &&
         dto.admissionFee.amountPaid > 0 &&
-        dto.admissionFee.feeHeadId &&
-        receiptNo
+        dto.admissionFee.feeHeadId
       ) {
+        // C-03: generate receipt number inside the transaction under advisory lock
+        const receiptNo = await this.generateReceiptNoInTx(tx, institutionId);
         feePayment = await tx.feePayment.create({
           data: {
             institutionId,
@@ -226,13 +241,15 @@ export class StudentService {
 
   async create(institutionId: string, dto: CreateStudentDto) {
     try {
-      const admissionNo = await this.generateAdmissionNo(institutionId);
       const tcFromPrevious = await this.validateTc(institutionId, dto);
-      const rollNo = dto.academicUnitId
-        ? await this.generateRollNo(dto.academicUnitId)
-        : undefined;
 
-      return await this.prisma.student.create({
+      return await this.prisma.$transaction(async (tx) => {
+        const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
+        const rollNo = dto.academicUnitId
+          ? await this.generateRollNoInTx(tx, dto.academicUnitId)
+          : undefined;
+
+        return tx.student.create({
         data: {
           institutionId,
           admissionNo,
@@ -265,6 +282,7 @@ export class StudentService {
           status: 'active',
         },
       });
+      }); // end $transaction
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -387,6 +405,21 @@ export class StudentService {
         tcPreviousInstitution: dto.tcPreviousInstitution || null,
       }),
     };
+
+    // H-04: If parentPhone changed, also update the linked parent user's phone
+    // so their login credential stays in sync with the student record.
+    const phoneChanged =
+      dto.parentPhone !== undefined && dto.parentPhone !== student.parentPhone;
+
+    if (phoneChanged && student.parentUserId && dto.parentPhone) {
+      return this.prisma.$transaction([
+        this.prisma.student.update({ where: { id: studentId }, data }),
+        this.prisma.user.update({
+          where: { id: student.parentUserId },
+          data: { phone: dto.parentPhone },
+        }),
+      ]).then(([updatedStudent]) => updatedStudent);
+    }
 
     return this.prisma.student.update({ where: { id: studentId }, data });
   }

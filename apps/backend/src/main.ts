@@ -8,10 +8,19 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const logger = new Logger('Bootstrap');
 
-  // CORS — reflect the request origin so any frontend deployment works.
-  // Security is enforced by JWT auth, not by origin restriction.
+  // CORS — restrict to known frontend origins.
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3001')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: true,
+    origin: (requestOrigin, callback) => {
+      // Allow requests with no origin (server-to-server, curl, mobile apps)
+      if (!requestOrigin) return callback(null, true);
+      if (allowedOrigins.includes(requestOrigin)) return callback(null, true);
+      callback(new Error(`CORS: origin ${requestOrigin} not allowed`), false);
+    },
     credentials: true,
   });
 

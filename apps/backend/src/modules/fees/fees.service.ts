@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto } from './dto/fees.dto';
 
@@ -74,12 +74,6 @@ export class FeesService {
 
   // ── Payments ──────────────────────────────────────────────────────────────
 
-  private async generateReceiptNo(institutionId: string): Promise<string> {
-    const count = await this.prisma.feePayment.count({ where: { institutionId } });
-    const year = new Date().getFullYear();
-    return `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
-  }
-
   async recordPayment(institutionId: string, dto: RecordPaymentDto) {
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, institutionId, deletedAt: null },
@@ -92,7 +86,7 @@ export class FeesService {
     });
     if (!feeHead) throw new NotFoundException('Fee head not found');
 
-    // B1-01: Verify a fee structure exists for this class + year + fee head
+    // Verify a fee structure exists for this class + year + fee head
     if (student.academicUnitId && dto.academicYearId) {
       const structure = await this.prisma.feeStructure.findFirst({
         where: {
@@ -100,6 +94,7 @@ export class FeesService {
           academicUnitId: student.academicUnitId,
           academicYearId: dto.academicYearId,
           feeHeadId: dto.feeHeadId,
+          deletedAt: null,
         },
       });
       if (!structure) {
@@ -109,25 +104,43 @@ export class FeesService {
       }
     }
 
-    const receiptNo = await this.generateReceiptNo(institutionId);
+    // Generate receipt number atomically inside a transaction using an advisory lock
+    // to prevent duplicate receipt numbers under concurrent load.
+    return this.prisma.$transaction(async (tx) => {
+      // Lock is scoped to this transaction — released automatically on commit/rollback.
+      // hashtext(institutionId) + magic number 2 = "receiptNo lock for this institution"
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${institutionId}), 2)`;
+      const count = await tx.feePayment.count({ where: { institutionId } });
+      const year = new Date().getFullYear();
+      const receiptNo = `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
 
-    return this.prisma.feePayment.create({
-      data: {
-        institutionId,
-        studentId: dto.studentId,
-        feeHeadId: dto.feeHeadId,
-        academicYearId: dto.academicYearId,
-        amount: dto.amount,
-        paymentMode: dto.paymentMode,
-        receiptNo,
-        paidOn: new Date(dto.paidOn),
-        remarks: dto.remarks,
-      },
-      include: { feeHead: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
+      return tx.feePayment.create({
+        data: {
+          institutionId,
+          studentId: dto.studentId,
+          feeHeadId: dto.feeHeadId,
+          academicYearId: dto.academicYearId,
+          amount: dto.amount,
+          paymentMode: dto.paymentMode,
+          receiptNo,
+          paidOn: new Date(dto.paidOn),
+          remarks: dto.remarks,
+        },
+        include: { feeHead: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
+      });
     });
   }
 
-  async getStudentPayments(institutionId: string, studentId: string) {
+  // C-05: parentUserId — if provided, validates the student belongs to that parent before returning data.
+  async getStudentPayments(institutionId: string, studentId: string, parentUserId?: string) {
+    if (parentUserId) {
+      const student = await this.prisma.student.findFirst({
+        where: { id: studentId, institutionId, parentUserId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!student) throw new ForbiddenException('You are not authorised to view this student\'s data');
+    }
+
     const payments = await this.prisma.feePayment.findMany({
       where: { institutionId, studentId },
       include: { feeHead: true },
@@ -138,31 +151,75 @@ export class FeesService {
     return { payments, total };
   }
 
-  async getStudentBalance(institutionId: string, studentId: string, academicYearId: string) {
+  // C-05: parentUserId — same ownership check.
+  // C-01: Returns field names matching the frontend: totalDue, totalPaid, balance, breakdown.
+  // H-03: Added deletedAt: null to feeStructure query.
+  async getStudentBalance(institutionId: string, studentId: string, academicYearId: string, parentUserId?: string) {
+    if (parentUserId) {
+      const student = await this.prisma.student.findFirst({
+        where: { id: studentId, institutionId, parentUserId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!student) throw new ForbiddenException('You are not authorised to view this student\'s data');
+    }
+
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, institutionId, deletedAt: null },
       select: { academicUnitId: true },
     });
-    if (!student || !student.academicUnitId) return { due: 0, paid: 0, balance: 0, structures: [] };
+    if (!student || !student.academicUnitId) {
+      return { totalDue: 0, totalPaid: 0, balance: 0, breakdown: [] };
+    }
 
-    const structures = await this.prisma.feeStructure.findMany({
-      where: { institutionId, academicUnitId: student.academicUnitId, academicYearId },
-      include: { feeHead: true },
-    });
+    const [structures, payments] = await Promise.all([
+      this.prisma.feeStructure.findMany({
+        where: { institutionId, academicUnitId: student.academicUnitId, academicYearId, deletedAt: null },
+        include: { feeHead: true },
+      }),
+      this.prisma.feePayment.findMany({
+        where: { institutionId, studentId, academicYearId },
+        select: { feeHeadId: true, amount: true },
+      }),
+    ]);
 
-    const payments = await this.prisma.feePayment.findMany({
-      where: { institutionId, studentId, academicYearId },
-    });
+    // Aggregate per fee head for the breakdown table
+    const byHead = new Map<string, { feeHeadName: string; due: number; paid: number }>();
+    for (const s of structures) {
+      const existing = byHead.get(s.feeHeadId);
+      if (existing) {
+        existing.due += s.amount;
+      } else {
+        byHead.set(s.feeHeadId, { feeHeadName: s.feeHead.name, due: s.amount, paid: 0 });
+      }
+    }
+    for (const p of payments) {
+      const entry = byHead.get(p.feeHeadId);
+      if (entry) entry.paid += p.amount;
+    }
 
-    const due = structures.reduce((sum, s) => sum + s.amount, 0);
-    const paid = payments.reduce((sum, p) => sum + p.amount, 0);
+    const breakdown = Array.from(byHead.values()).map((b) => ({
+      feeHeadName: b.feeHeadName,
+      due: b.due,
+      paid: b.paid,
+      balance: b.due - b.paid,
+    }));
 
-    return { due, paid, balance: due - paid, structures, payments };
+    const totalDue = breakdown.reduce((s, b) => s + b.due, 0);
+    const totalPaid = breakdown.reduce((s, b) => s + b.paid, 0);
+
+    return { totalDue, totalPaid, balance: totalDue - totalPaid, breakdown };
   }
 
+  // M-10: Use IST-aware date range instead of exact timestamp match.
   async getDailyCollection(institutionId: string, date: string) {
+    // Parse date as IST midnight → UTC range to avoid timezone drift
+    const [year, month, day] = date.split('-').map(Number);
+    const istOffsetMs = 5.5 * 60 * 60 * 1000; // IST = UTC+5:30
+    const startUtc = new Date(Date.UTC(year, month - 1, day) - istOffsetMs);
+    const endUtc   = new Date(Date.UTC(year, month - 1, day + 1) - istOffsetMs);
+
     const payments = await this.prisma.feePayment.findMany({
-      where: { institutionId, paidOn: new Date(date) },
+      where: { institutionId, paidOn: { gte: startUtc, lt: endUtc } },
       include: {
         feeHead: true,
         student: { select: { firstName: true, lastName: true, admissionNo: true } },
@@ -177,8 +234,9 @@ export class FeesService {
   async getDefaulters(institutionId: string, academicYearId: string, academicUnitId?: string) {
     // Optimised: 3 parallel queries instead of 2+N (one aggregate per student)
     const [structures, students, paidGroups] = await Promise.all([
+      // H-03: Added deletedAt: null — soft-deleted fee structures must not count as due
       this.prisma.feeStructure.findMany({
-        where: { institutionId, academicYearId, ...(academicUnitId ? { academicUnitId } : {}) },
+        where: { institutionId, academicYearId, deletedAt: null, ...(academicUnitId ? { academicUnitId } : {}) },
         select: { academicUnitId: true, amount: true },
       }),
       this.prisma.student.findMany({

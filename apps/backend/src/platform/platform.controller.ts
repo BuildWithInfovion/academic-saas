@@ -13,6 +13,7 @@ import { PlatformService } from './platform.service';
 import { PlatformGuard } from './platform.guard';
 import { PlatformLoginDto } from './dto/platform-login.dto';
 import { OnboardClientDto } from './dto/onboard-client.dto';
+import { LoginRateLimitGuard } from '../common/guards/login-rate-limit.guard';
 
 @Controller('platform')
 export class PlatformController {
@@ -20,7 +21,9 @@ export class PlatformController {
 
   // ── PUBLIC ────────────────────────────────────────────────────────────────
 
+  // M-08: Rate-limit platform admin login to prevent brute-force attacks.
   @Post('auth/login')
+  @UseGuards(LoginRateLimitGuard)
   async login(@Body() dto: PlatformLoginDto) {
     return this.platformService.login(dto.email, dto.password);
   }
