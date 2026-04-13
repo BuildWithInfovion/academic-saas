@@ -28,7 +28,9 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { TenantGuard } from './common/guards/tenant.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 import { RequestMetricsInterceptor } from './common/interceptors/request-metrics.interceptor';
+import { HttpCacheInterceptor } from './common/interceptors/http-cache.interceptor';
 import { AuditLogService } from './common/services/audit-log.service';
+import { AppCacheModule } from './common/cache/app-cache.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -36,6 +38,7 @@ import { AppService } from './app.service';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    AppCacheModule,   // Global — AppCacheService injectable everywhere
     PrismaModule,
     InstitutionModule,
     StudentModule,
@@ -62,6 +65,10 @@ import { AppService } from './app.service';
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestMetricsInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpCacheInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

@@ -114,6 +114,8 @@ model Student {
   @@index([academicUnitId])
   @@index([userId])
   @@index([parentUserId])
+  @@index([institutionId, status])            // active student list queries
+  @@index([institutionId, parentUserId])      // parent notification: find children
   @@map("students")
 }
 
@@ -228,7 +230,8 @@ model User {
   staffLeaveApprovals   StaffLeaveRequest[]    @relation("StaffLeaveApprover")
 
   @@index([institutionId])
-  @@index([email])          // login lookups — auth.service queries by email
+  @@index([email])                      // login lookups — auth.service queries by email
+  @@index([institutionId, phone])       // phone-based login lookup
   @@map("users")
 }
 
@@ -294,6 +297,7 @@ model RefreshToken {
 
   @@index([userId])
   @@index([institutionId])
+  @@index([tokenHash])      // refresh token validation lookup
   @@map("refresh_tokens")
 }
 
@@ -468,8 +472,9 @@ model FeePayment {
   @@index([institutionId])
   @@index([studentId])
   @@index([paidOn])
-  @@index([academicYearId])             // getDefaulters groupBy filters by yearId
-  @@index([institutionId, academicYearId]) // composite for year-scoped institution queries
+  @@index([academicYearId])                  // getDefaulters groupBy filters by yearId
+  @@index([institutionId, academicYearId])   // composite for year-scoped institution queries
+  @@index([studentId, academicYearId])       // getStudentBalance: payments per student per year
   @@map("fee_payments")
 }
 

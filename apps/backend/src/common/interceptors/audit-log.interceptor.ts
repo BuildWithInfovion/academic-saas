@@ -39,23 +39,26 @@ export class AuditLogInterceptor implements NestInterceptor {
     const ip = request.ip;
 
     return next.handle().pipe(
-      tap(async (response) => {
-        try {
-          if (!tenant?.institutionId) return;
+      tap((response) => {
+        if (!tenant?.institutionId) return;
 
-          await this.auditLogService.log({
-            institutionId: tenant.institutionId,
-            userId: user?.userId,
-            action: `${method} ${url}`,
-            entityType: url.split('/')[1], // e.g. students, users
-            entityId: response?.id || null,
-            newValue: stripSensitive(response),
-            ipAddress: ip,
-          });
-        } catch (error) {
-          // Never break main flow due to logging failure
-          console.error('Audit log failed:', error.message);
-        }
+        // Fire-and-forget: audit log must never add latency to the API response.
+        // setImmediate defers the DB write until after the response is flushed.
+        setImmediate(() => {
+          this.auditLogService
+            .log({
+              institutionId: tenant.institutionId,
+              userId: user?.userId,
+              action: `${method} ${url}`,
+              entityType: url.split('/')[1], // e.g. students, users
+              entityId: response?.id || null,
+              newValue: stripSensitive(response),
+              ipAddress: ip,
+            })
+            .catch((error: Error) => {
+              console.error('Audit log failed:', error.message);
+            });
+        });
       }),
     );
   }

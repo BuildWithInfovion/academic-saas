@@ -16,13 +16,26 @@ export class PrismaService
 
   constructor() {
     super({
-      log: [{ emit: 'event', level: 'error' }],
+      log: [
+        { emit: 'event', level: 'error' },
+        { emit: 'event', level: 'query' },
+      ],
       errorFormat: 'minimal',
     });
   }
 
   async onModuleInit() {
     await this.connectWithRetry();
+
+    // Log queries that take more than 200 ms — surfaces missing indexes quickly.
+    this.$on('query' as never, (e: { query: string; duration: number }) => {
+      if (e.duration >= 200) {
+        this.logger.warn(
+          `[SLOW QUERY] ${e.duration}ms — ${e.query.slice(0, 200)}`,
+        );
+      }
+    });
+
     this.registerSoftDeleteMiddleware();
     this.startKeepAlive();
   }
@@ -61,20 +74,21 @@ export class PrismaService
   // ── Keep-alive ping every 4 minutes (Neon idles at 5 min) ─────────────────
 
   private startKeepAlive() {
-    this.keepAliveTimer = setInterval(async () => {
-      try {
-        await this.$queryRaw`SELECT 1`;
-      } catch {
-        this.logger.warn('Keep-alive ping failed — attempting reconnect');
-        try {
-          await this.$disconnect();
-          await this.connectWithRetry(3, 1000);
-        } catch {
-          this.logger.error('Reconnect after keep-alive failure also failed');
-        }
-      }
-    }, 4 * 60 * 1000); // 4 minutes
-    this.keepAliveTimer.unref?.(); // don't block process exit
+    this.keepAliveTimer = setInterval(
+      () =>
+        void this.$queryRaw`SELECT 1`.catch(() => {
+          this.logger.warn('Keep-alive ping failed — attempting reconnect');
+          void this.$disconnect()
+            .then(() => this.connectWithRetry(3, 1000))
+            .catch(() => {
+              this.logger.error(
+                'Reconnect after keep-alive failure also failed',
+              );
+            });
+        }),
+      4 * 60 * 1000,
+    );
+    this.keepAliveTimer.unref?.();
   }
 
   // ── Soft Delete Middleware ─────────────────────────────────────────────────
@@ -82,7 +96,10 @@ export class PrismaService
   private registerSoftDeleteMiddleware() {
     const softDeleteModels = ['Student', 'User', 'Institution'];
 
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    /* eslint-disable
+       @typescript-eslint/no-unsafe-assignment,
+       @typescript-eslint/no-unsafe-member-access,
+       @typescript-eslint/no-unsafe-return */
     this.$use(async (params, next) => {
       if (!params.model || !softDeleteModels.includes(params.model)) {
         return next(params);
@@ -114,5 +131,9 @@ export class PrismaService
 
       return next(params);
     });
+    /* eslint-enable
+       @typescript-eslint/no-unsafe-assignment,
+       @typescript-eslint/no-unsafe-member-access,
+       @typescript-eslint/no-unsafe-return */
   }
 }

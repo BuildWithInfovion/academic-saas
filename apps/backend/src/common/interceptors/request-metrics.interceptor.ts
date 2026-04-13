@@ -8,6 +8,9 @@ import {
 import type { Request, Response } from 'express';
 import { Observable, finalize } from 'rxjs';
 
+// Requests slower than this threshold are logged as WARN so they show up clearly.
+const SLOW_REQUEST_THRESHOLD_MS = 500;
+
 @Injectable()
 export class RequestMetricsInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
@@ -21,9 +24,13 @@ export class RequestMetricsInterceptor implements NestInterceptor {
     return next.handle().pipe(
       finalize(() => {
         const durationMs = Date.now() - startedAt;
-        this.logger.log(
-          `${request.method} ${request.originalUrl} ${response.statusCode} ${durationMs}ms`,
-        );
+        const msg = `${request.method} ${request.originalUrl} ${response.statusCode} ${durationMs}ms`;
+
+        if (durationMs >= SLOW_REQUEST_THRESHOLD_MS) {
+          this.logger.warn(`[SLOW] ${msg}`);
+        } else {
+          this.logger.log(msg);
+        }
       }),
     );
   }
