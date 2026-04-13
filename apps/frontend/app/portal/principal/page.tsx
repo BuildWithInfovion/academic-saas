@@ -54,14 +54,14 @@ export default function PrincipalDashboard() {
   }, []);
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-8 max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Principal Dashboard</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Principal Dashboard</h1>
         <p className="text-sm text-gray-400 mt-1">{todayDate}</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <StatCard label="Total Students" value={stats.students} sub="Active enrollments" />
         <StatCard label="Academic Year" value={currentYear?.name ?? '—'} sub="Current year" />
         <StatCard label="Classes" value={units.length} sub="Leaf units" />
@@ -69,7 +69,7 @@ export default function PrincipalDashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         {[
           { label: 'Attendance Reports', desc: 'Class-wise defaulter list', path: '/portal/principal/attendance', color: 'bg-black text-white' },
           { label: 'Fee Reports', desc: 'Outstanding dues overview', path: '/portal/principal/fees', color: 'bg-gray-800 text-white' },
@@ -87,7 +87,7 @@ export default function PrincipalDashboard() {
       </div>
 
       {/* Defaulter panels */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Attendance defaulters */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
           <div className="px-5 py-4 border-b border-gray-100">

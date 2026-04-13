@@ -50,10 +50,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth',
-      // sessionStorage is tab-isolated — two different users in two tabs
-      // no longer overwrite each other's token. Survives page refresh
-      // but resets when the tab is closed (re-login required on new tab).
-      storage: createJSONStorage(() => sessionStorage),
+      // localStorage persists across refreshes and new tabs.
+      // Each institution user logs in with their own credentials, so
+      // sharing state across tabs is acceptable for a school portal.
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,

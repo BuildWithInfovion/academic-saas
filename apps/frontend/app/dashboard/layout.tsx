@@ -174,7 +174,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <p className="text-xs truncate" style={{ color: '#9b7050' }}>{user?.email || user?.phone}</p>
         </div>
         <button
-          onClick={() => { logout(); sessionStorage.removeItem('auth'); window.location.href = '/'; }}
+          onClick={() => { logout(); localStorage.removeItem('auth'); window.location.href = '/'; }}
           className="flex items-center gap-1.5 text-xs font-medium transition-colors"
           style={{ color: '#6b7280' }}
           onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; }}

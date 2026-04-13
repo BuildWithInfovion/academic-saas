@@ -105,7 +105,7 @@ export default function ParentFeesPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-8 max-w-4xl">
       <h1 className="text-2xl font-bold text-gray-800 mb-1">Child's Fee Status</h1>
       <p className="text-sm text-gray-400 mb-6">Fee dues and payment history</p>
 
@@ -124,7 +124,7 @@ export default function ParentFeesPage() {
       ) : (
         <>
           {balance && (
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
                 <p className="text-2xl font-bold text-gray-800">₹{(balance.totalDue ?? 0).toLocaleString('en-IN')}</p>
                 <p className="text-sm text-gray-600 mt-1">Total Due</p>

@@ -130,7 +130,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
           </p>
         </div>
         <button
-          onClick={() => { logout(); sessionStorage.removeItem('auth'); window.location.href = '/'; }}
+          onClick={() => { logout(); localStorage.removeItem('auth'); window.location.href = '/'; }}
           className="flex items-center gap-1.5 text-xs font-medium transition-colors"
           style={{ color: '#ef4444' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = '#f87171')}

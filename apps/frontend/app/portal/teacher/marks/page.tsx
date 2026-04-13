@@ -124,8 +124,8 @@ export default function TeacherMarksPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Mark Entry</h1>
+    <div className="p-4 sm:p-8 max-w-4xl">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1">Mark Entry</h1>
       <p className="text-sm text-gray-500 mb-6">You can only enter marks for subjects assigned to you</p>
 
       {/* Selectors */}

@@ -68,7 +68,7 @@ export default function ParentDashboard() {
   ];
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-8 max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Parent Portal</h1>
         <p className="text-sm text-gray-400 mt-1">{user?.email || user?.phone}</p>
@@ -154,7 +154,7 @@ export default function ParentDashboard() {
       )}
 
       {/* Quick links */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {quickLinks.map((c) => (
           <button
             key={c.label}

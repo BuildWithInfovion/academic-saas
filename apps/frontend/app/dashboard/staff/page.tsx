@@ -10,7 +10,10 @@ type StaffUser = {
   roles: { role: Role }[];
 };
 
+// Codes shown in the staff list (all non-student, non-parent roles)
 const STAFF_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist'];
+// Codes available in the Add Staff dropdown — operators cannot create Director accounts
+const ASSIGNABLE_ROLE_CODES = ['admin', 'principal', 'teacher', 'receptionist'];
 
 const ROLE_BADGE: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
@@ -66,7 +69,7 @@ export default function StaffPage() {
         (u) => !u.roles.every((ur) => ['parent', 'student'].includes(ur.role.code)),
       );
       setStaff(staffUsers);
-      setRoles((rolesRes as Role[]).filter((r) => STAFF_ROLE_CODES.includes(r.code)));
+      setRoles((rolesRes as Role[]).filter((r) => ASSIGNABLE_ROLE_CODES.includes(r.code)));
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   };

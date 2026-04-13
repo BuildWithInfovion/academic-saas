@@ -118,6 +118,7 @@ export default function StudentsPage() {
   const [paymentMode, setPaymentMode] = useState('cash');
   const [feeDueDate, setFeeDueDate] = useState('');
   const [selectedFeeHeadId, setSelectedFeeHeadId] = useState('');
+  const [selectedFeeStructureId, setSelectedFeeStructureId] = useState('');
   const [confirming, setConfirming] = useState(false);
 
   // Credentials modal
@@ -190,6 +191,7 @@ export default function StudentsPage() {
 
   const validate = () => {
     if (!form.firstName.trim() || !form.lastName.trim()) return 'First and last name are required';
+    if (!form.dateOfBirth) return 'Date of Birth is required';
     if (!form.fatherName.trim()) return 'Father name is required';
     if (!form.motherName.trim()) return 'Mother name is required';
     if (!form.parentPhone.trim()) return 'Parent phone is required';
@@ -212,6 +214,7 @@ export default function StudentsPage() {
     setPaymentMode('cash');
     setFeeDueDate('');
     setSelectedFeeHeadId('');
+    setSelectedFeeStructureId('');
     if (form.academicUnitId && currentYearId) {
       setLoadingFees(true);
       try {
@@ -462,7 +465,7 @@ export default function StudentsPage() {
         </div>
 
         <p className={sec}>Admission Details</p>
-        <div className="grid grid-cols-3 gap-4 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-5">
           <div>
             <label className={lbl}>Class *{academicUnits.length === 0 && <span className="text-red-500 ml-1">(no classes)</span>}</label>
             <select className={inp} value={form.academicUnitId} onChange={f('academicUnitId')}>
@@ -498,10 +501,10 @@ export default function StudentsPage() {
         </div>
 
         <p className={sec}>Student Information</p>
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          <div><label className={lbl}>First Name *</label><input className={inp} placeholder="e.g. Priya" value={form.firstName} onChange={f('firstName')} /></div>
-          <div><label className={lbl}>Last Name *</label><input className={inp} placeholder="e.g. Sharma" value={form.lastName} onChange={f('lastName')} /></div>
-          <div><label className={lbl}>Date of Birth</label><DateSelect value={form.dateOfBirth} onChange={(v) => setForm({ ...form, dateOfBirth: v })} minYear={1990} maxYear={new Date().getFullYear() - 3} /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+          <div><label className={lbl}>First Name *</label><input className={inp} placeholder="e.g. Priya" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value.replace(/[^a-zA-Z\s]/g, '') })} /></div>
+          <div><label className={lbl}>Last Name *</label><input className={inp} placeholder="e.g. Sharma" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value.replace(/[^a-zA-Z\s]/g, '') })} /></div>
+          <div><label className={lbl}>Date of Birth *</label><DateSelect value={form.dateOfBirth} onChange={(v) => setForm({ ...form, dateOfBirth: v })} minYear={1990} maxYear={new Date().getFullYear() - 3} /></div>
           <div>
             <label className={lbl}>Gender</label>
             <select className={inp} value={form.gender} onChange={f('gender')}>
@@ -509,16 +512,16 @@ export default function StudentsPage() {
               <option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
             </select>
           </div>
-          <div><label className={lbl}>Student Phone</label><input className={inp} placeholder="Optional" value={form.phone} onChange={f('phone')} /></div>
+          <div><label className={lbl}>Student Phone</label><input className={inp} placeholder="Optional" inputMode="numeric" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} /></div>
           <div><label className={lbl}>Email</label><input className={inp} type="email" placeholder="Optional" value={form.email} onChange={f('email')} /></div>
         </div>
 
         <p className={sec}>Parent / Guardian</p>
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          <div><label className={lbl}>Father Name *</label><input className={inp} value={form.fatherName} onChange={f('fatherName')} /></div>
-          <div><label className={lbl}>Mother Name *</label><input className={inp} value={form.motherName} onChange={f('motherName')} /></div>
-          <div><label className={lbl}>Primary Contact (Parent) *</label><input className={inp} placeholder="e.g. 9876543210" value={form.parentPhone} onChange={f('parentPhone')} /></div>
-          <div><label className={lbl}>Secondary Contact</label><input className={inp} placeholder="Optional" value={form.secondaryPhone} onChange={f('secondaryPhone')} /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+          <div><label className={lbl}>Father Name *</label><input className={inp} value={form.fatherName} onChange={(e) => setForm({ ...form, fatherName: e.target.value.replace(/[^a-zA-Z\s.]/g, '') })} /></div>
+          <div><label className={lbl}>Mother Name *</label><input className={inp} value={form.motherName} onChange={(e) => setForm({ ...form, motherName: e.target.value.replace(/[^a-zA-Z\s.]/g, '') })} /></div>
+          <div><label className={lbl}>Primary Contact (Parent) *</label><input className={inp} placeholder="e.g. 9876543210" inputMode="numeric" maxLength={10} value={form.parentPhone} onChange={(e) => setForm({ ...form, parentPhone: e.target.value.replace(/\D/g, '').slice(0, 10) })} /></div>
+          <div><label className={lbl}>Secondary Contact</label><input className={inp} placeholder="Optional" inputMode="numeric" maxLength={10} value={form.secondaryPhone} onChange={(e) => setForm({ ...form, secondaryPhone: e.target.value.replace(/\D/g, '').slice(0, 10) })} /></div>
         </div>
 
         <p className={sec}>Address</p>
@@ -528,7 +531,7 @@ export default function StudentsPage() {
         </div>
 
         <p className={sec}>Demographics</p>
-        <div className="grid grid-cols-3 gap-4 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-5">
           <div>
             <label className={lbl}>Caste Category</label>
             <select className={inp} value={form.casteCategory} onChange={f('casteCategory')}>
@@ -536,9 +539,15 @@ export default function StudentsPage() {
               {['General','OBC','SC','ST','NT','SBC','VJ/DT'].map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div><label className={lbl}>Religion</label><input className={inp} placeholder="e.g. Hindu" value={form.religion} onChange={f('religion')} /></div>
+          <div>
+            <label className={lbl}>Religion</label>
+            <select className={inp} value={form.religion} onChange={f('religion')}>
+              <option value="">Select</option>
+              {['Hindu','Muslim','Christian','Sikh','Buddhist','Jain','Parsi','Other'].map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
           <div><label className={lbl}>Nationality</label><input className={inp} value={form.nationality} onChange={f('nationality')} /></div>
-          <div><label className={lbl}>Aadhar Number</label><input className={inp} placeholder="12-digit Aadhar" maxLength={12} value={form.aadharNumber} onChange={f('aadharNumber')} /></div>
+          <div><label className={lbl}>Aadhar Number</label><input className={inp} placeholder="12-digit Aadhar" inputMode="numeric" maxLength={12} value={form.aadharNumber} onChange={(e) => setForm({ ...form, aadharNumber: e.target.value.replace(/\D/g, '').slice(0, 12) })} /></div>
           <div>
             <label className={lbl}>Blood Group</label>
             <select className={inp} value={form.bloodGroup} onChange={f('bloodGroup')}>
@@ -719,25 +728,72 @@ export default function StudentsPage() {
                 {(feesPaid === 'yes' || feesPaid === 'partial') && (
                   <div className="space-y-3">
                     <div>
-                      <label className={lbl}>Fee Head (for this payment)</label>
-                      <select className={inp} value={selectedFeeHeadId} onChange={(e) => setSelectedFeeHeadId(e.target.value)}>
-                        <option value="">Select fee head...</option>
-                        {feeHeads.map((fh) => <option key={fh.id} value={fh.id}>{fh.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className={lbl}>Amount Paid (₹)</label>
-                        <input className={inp} type="number" placeholder="e.g. 5000"
-                          value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className={lbl}>Payment Mode</label>
-                        <select className={inp} value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
-                          {['cash','upi','cheque','dd','neft'].map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+                      <label className={lbl}>Select Fee Being Paid</label>
+                      {feeStructures.length > 0 ? (
+                        <div className="space-y-2 mt-1">
+                          {feeStructures.map((fs) => {
+                            const isChecked = selectedFeeStructureId === fs.id;
+                            return (
+                              <div
+                                key={fs.id}
+                                onClick={() => {
+                                  if (isChecked) {
+                                    setSelectedFeeStructureId('');
+                                    setSelectedFeeHeadId('');
+                                    setAmountPaid('');
+                                  } else {
+                                    setSelectedFeeStructureId(fs.id);
+                                    setSelectedFeeHeadId(fs.feeHeadId);
+                                    setAmountPaid(fs.amount.toString());
+                                  }
+                                }}
+                                className={`flex items-center justify-between px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
+                                  isChecked
+                                    ? 'bg-black text-white border-black'
+                                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${isChecked ? 'bg-white border-white' : 'border-gray-400'}`}>
+                                    {isChecked && (
+                                      <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
+                                        <polyline points="1.5,6 4.5,9 10.5,3" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <span className="text-sm font-medium">
+                                    {fs.feeHead.name}{fs.installmentName ? ` (${fs.installmentName})` : ''}
+                                  </span>
+                                </div>
+                                <span className={`text-sm font-semibold ${isChecked ? 'text-white' : 'text-gray-800'}`}>
+                                  ₹{fs.amount.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <select className={`${inp} mt-1`} value={selectedFeeHeadId} onChange={(e) => setSelectedFeeHeadId(e.target.value)}>
+                          <option value="">Select fee head...</option>
+                          {feeHeads.map((fh) => <option key={fh.id} value={fh.id}>{fh.name}</option>)}
                         </select>
-                      </div>
+                      )}
                     </div>
+                    {(selectedFeeHeadId || feeStructures.length === 0) && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={lbl}>Amount Paid (₹)</label>
+                          <input className={inp} type="number" placeholder="e.g. 5000"
+                            value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className={lbl}>Payment Mode</label>
+                          <select className={inp} value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
+                            {['cash','upi','cheque','dd','neft'].map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

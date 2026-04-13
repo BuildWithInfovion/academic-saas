@@ -103,12 +103,12 @@ export default function TeacherAttendancePage() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Mark Attendance</h1>
-      <p className="text-sm text-gray-500 mb-6">Daily class attendance — click a status badge to cycle P → A → L → Lv</p>
+    <div className="p-4 sm:p-8 max-w-4xl">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1">Mark Attendance</h1>
+      <p className="text-sm text-gray-500 mb-6">Daily class attendance — tap a status badge to cycle P → A → L → Lv</p>
 
       {/* Controls */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1">
           <label className="text-xs font-medium text-gray-600 block mb-1">Class</label>
           <select
@@ -136,8 +136,8 @@ export default function TeacherAttendancePage() {
       {selectedUnit && students.length > 0 && (
         <>
           {/* Summary + bulk actions */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex flex-wrap gap-2 text-sm">
               {(['present', 'absent', 'late', 'leave'] as AttendanceStatus[]).map((s) => (
                 <span key={s} className={`px-2.5 py-1 rounded-full font-medium border ${STATUS_STYLES[s]}`}>
                   {STATUS_LABELS[s]} {summary[s] ?? 0}
