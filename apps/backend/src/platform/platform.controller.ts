@@ -21,11 +21,7 @@ import { LoginRateLimitGuard } from '../common/guards/login-rate-limit.guard';
 const PLATFORM_RT_OPTIONS = {
   httpOnly: true,
   secure: true,
-  // Both frontend (app.buildwithinfovion.com) and backend (api.buildwithinfovion.com)
-  // share the same root domain, so 'lax' is safe and 'domain' makes the cookie
-  // visible to the Next.js middleware on the frontend subdomain.
-  sameSite: 'lax' as const,
-  domain: '.buildwithinfovion.com',
+  sameSite: 'none' as const,
   path: '/',
 };
 
