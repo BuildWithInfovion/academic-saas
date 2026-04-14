@@ -277,7 +277,7 @@ export class UsersService {
     // rather than leaking a raw P2002 unique-constraint violation.
     const existing = await this.prisma.userRole.findFirst({
       where: { userId, roleId, institutionId },
-      select: { id: true },
+      select: { userId: true },
     });
     if (existing) {
       throw new ConflictException('User already has this role assigned');

@@ -10,7 +10,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { PlatformService } from './platform.service';
 import { PlatformGuard } from './platform.guard';
 import { PlatformLoginDto } from './dto/platform-login.dto';
