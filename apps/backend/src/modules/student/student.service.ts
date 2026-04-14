@@ -45,26 +45,22 @@ export class StudentService {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  // C-03: Advisory lock ensures only one admission number is generated at a time per institution.
-  // The lock is scoped to the transaction — released on commit or rollback.
-  // hashtext(institutionId) + magic int 1 = "admissionNo lock for this institution"
+  // Advisory locks were removed — Neon's PgBouncer (transaction mode) does not
+  // support pg_advisory_xact_lock. Uniqueness is enforced by the DB constraint
+  // @@unique([institutionId, admissionNo]); a P2002 on collision is caught below.
   private async generateAdmissionNoInTx(
     tx: Prisma.TransactionClient,
     institutionId: string,
   ): Promise<string> {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${institutionId}), 1)`;
     const count = await tx.student.count({ where: { institutionId } });
     const year = new Date().getFullYear();
     return `ADM-${year}-${String(count + 1).padStart(4, '0')}`;
   }
 
-  // C-04: Advisory lock per academicUnit prevents duplicate roll numbers under concurrent admissions.
-  // hashtext(academicUnitId) + magic int 3 = "rollNo lock for this unit"
   private async generateRollNoInTx(
     tx: Prisma.TransactionClient,
     academicUnitId: string,
   ): Promise<string> {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${academicUnitId}), 3)`;
     const count = await tx.student.count({ where: { academicUnitId, deletedAt: null } });
     return String(count + 1).padStart(2, '0');
   }
@@ -78,13 +74,10 @@ export class StudentService {
     return pwd;
   }
 
-  // C-03: Receipt number generation under advisory lock — same pattern.
-  // hashtext(institutionId) + magic int 2 = "receiptNo lock for this institution"
   private async generateReceiptNoInTx(
     tx: Prisma.TransactionClient,
     institutionId: string,
   ): Promise<string> {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${institutionId}), 2)`;
     const count = await tx.feePayment.count({ where: { institutionId } });
     const year = new Date().getFullYear();
     return `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
