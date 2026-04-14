@@ -130,13 +130,34 @@ export class StudentService {
     const passwordHash = await bcrypt.hash(generatedPassword, 12);
 
     const result = await this.prisma.withConnectionRetry(() => this.prisma.$transaction(async (tx) => {
-      // C-03/C-04: All sequential numbers generated inside the transaction under advisory locks
       const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
       const rollNo = dto.academicUnitId
         ? await this.generateRollNoInTx(tx, dto.academicUnitId)
         : undefined;
 
-      // 1. Create student record
+      // 1. Create or reuse parent user FIRST — so we have the ID for student.create
+      let parentUser = existingParentUser;
+      let isNewParentUser = false;
+
+      if (!parentUser) {
+        parentUser = await tx.user.create({
+          data: {
+            institutionId,
+            phone: dto.parentPhone,
+            passwordHash,
+            isActive: true,
+          },
+        });
+        isNewParentUser = true;
+
+        if (parentRole) {
+          await tx.userRole.create({
+            data: { userId: parentUser.id, roleId: parentRole.id, institutionId },
+          });
+        }
+      }
+
+      // 2. Create student with parentUserId already set — no separate UPDATE needed
       const student = await tx.student.create({
         data: {
           institutionId,
@@ -153,9 +174,7 @@ export class StudentService {
           motherName: dto.motherName,
           parentPhone: dto.parentPhone,
           secondaryPhone: dto.secondaryPhone,
-          admissionDate: dto.admissionDate
-            ? new Date(dto.admissionDate)
-            : new Date(),
+          admissionDate: dto.admissionDate ? new Date(dto.admissionDate) : new Date(),
           academicUnitId: dto.academicUnitId,
           bloodGroup: dto.bloodGroup,
           nationality: dto.nationality ?? 'Indian',
@@ -163,45 +182,11 @@ export class StudentService {
           casteCategory: dto.casteCategory,
           aadharNumber: dto.aadharNumber,
           tcFromPrevious,
-          tcReceivedDate: dto.tcReceivedDate
-            ? new Date(dto.tcReceivedDate)
-            : undefined,
+          tcReceivedDate: dto.tcReceivedDate ? new Date(dto.tcReceivedDate) : undefined,
           tcPreviousInstitution: dto.tcPreviousInstitution,
           status: 'active',
+          parentUserId: parentUser.id,
         },
-      });
-
-      // 2. Create or reuse parent user account
-      let parentUser = existingParentUser;
-      let isNewParentUser = false;
-
-      if (!parentUser) {
-        parentUser = await tx.user.create({
-          data: {
-            institutionId,
-            phone: dto.parentPhone,
-            passwordHash,
-            isActive: true,
-          },
-        });
-        isNewParentUser = true;
-
-        // Assign parent role to new user
-        if (parentRole) {
-          await tx.userRole.create({
-            data: {
-              userId: parentUser.id,
-              roleId: parentRole.id,
-              institutionId,
-            },
-          });
-        }
-      }
-
-      // 3. Link parent to student
-      await tx.student.update({
-        where: { id: student.id },
-        data: { parentUserId: parentUser.id },
       });
 
       // 4. Normalise to multi-item list (handles both new array and legacy single)
