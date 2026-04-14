@@ -411,6 +411,14 @@ export class PlatformService {
     const rawPassword = this.generatePassword();
     const passwordHash = await bcrypt.hash(rawPassword, 12);
 
+    // 2b. Director credentials (optional — only if directorEmail/Phone provided)
+    const hasDirector = !!(dto.directorEmail || dto.directorPhone);
+    const directorEmail = dto.directorEmail || (hasDirector ? `director@${code}.in` : null);
+    const rawDirectorPassword = hasDirector ? this.generatePassword() : null;
+    const directorPasswordHash = rawDirectorPassword
+      ? await bcrypt.hash(rawDirectorPassword, 12)
+      : null;
+
     // 3. Subscription dates
     const startDate = dto.subscriptionStartDate
       ? new Date(dto.subscriptionStartDate)
@@ -471,6 +479,27 @@ export class PlatformService {
           },
         });
 
+        // Create Director (super_admin) if details were provided
+        let directorUser: { id: string } | null = null;
+        if (hasDirector && directorEmail && directorPasswordHash) {
+          directorUser = await tx.user.create({
+            data: {
+              institutionId: inst.id,
+              email: directorEmail,
+              phone: dto.directorPhone?.trim() || null,
+              passwordHash: directorPasswordHash,
+              isActive: true,
+            },
+          });
+          await tx.userRole.create({
+            data: {
+              userId: directorUser.id,
+              roleId: roles['super_admin'].id,
+              institutionId: inst.id,
+            },
+          });
+        }
+
         const sub = await tx.subscription.create({
           data: {
             institutionId: inst.id,
@@ -520,7 +549,7 @@ export class PlatformService {
           });
         }
 
-        return { institution: inst, operatorUser: operator, subscription: sub };
+        return { institution: inst, operatorUser: operator, directorUser, subscription: sub };
       }, { timeout: 60000, maxWait: 10000 });
 
     // 5. Seed defaults outside transaction
@@ -534,6 +563,14 @@ export class PlatformService {
         password: rawPassword,
         institutionCode: code,
       },
+      directorCredentials: hasDirector
+        ? {
+            email: directorEmail,
+            phone: dto.directorPhone || null,
+            password: rawDirectorPassword,
+            institutionCode: code,
+          }
+        : null,
       subscription,
     };
   }

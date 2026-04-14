@@ -116,19 +116,22 @@ export class TimetableService {
       }
     }
 
-    // Delete existing and re-create
-    await this.prisma.timetableSlot.deleteMany({ where: { institutionId, academicUnitId } });
-    await this.prisma.timetableSlot.createMany({
-      data: slots.map((s) => ({
-        institutionId,
-        academicUnitId,
-        dayOfWeek: s.dayOfWeek,
-        periodNo: s.periodNo,
-        subjectId: s.subjectId,
-        teacherUserId: s.teacherUserId,
-        updatedAt: new Date(),
-      })),
-    });
+    // Delete existing and re-create atomically — if createMany fails the old
+    // timetable is preserved rather than leaving the class with no schedule.
+    await this.prisma.$transaction([
+      this.prisma.timetableSlot.deleteMany({ where: { institutionId, academicUnitId } }),
+      this.prisma.timetableSlot.createMany({
+        data: slots.map((s) => ({
+          institutionId,
+          academicUnitId,
+          dayOfWeek: s.dayOfWeek,
+          periodNo: s.periodNo,
+          subjectId: s.subjectId,
+          teacherUserId: s.teacherUserId,
+          updatedAt: new Date(),
+        })),
+      }),
+    ]);
 
     return { generated: totalSlots, slots };
   }

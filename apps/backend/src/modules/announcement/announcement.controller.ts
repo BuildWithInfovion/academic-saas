@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  Query,
   UseGuards,
   Req,
   ForbiddenException,
@@ -37,15 +36,18 @@ export class AnnouncementController {
 
   private getRole(req: any): string {
     const roles: string[] = req.user?.roles ?? [];
+    // Privilege-first: if the caller holds any admin-level role, treat them as admin
+    // so a multi-role user (teacher + admin) always sees admin announcements.
+    if (roles.includes('super_admin')) return 'super_admin';
+    if (roles.includes('admin')) return 'admin';
     return roles[0] ?? 'staff';
   }
 
-  // GET — any authenticated user with attendance.read (all roles)
+  // GET — any authenticated user; role derived from verified JWT, not query param
   @Get()
-  async findAll(@Req() req: any, @Query('role') role?: string) {
+  async findAll(@Req() req: any) {
     const institutionId = this.getInstitutionId(req);
-    const userRole = role ?? this.getRole(req);
-    return this.announcementService.findAll(institutionId, userRole);
+    return this.announcementService.findAll(institutionId, this.getRole(req));
   }
 
   // POST — staff only (subjects.read excludes student + parent)
@@ -70,8 +72,15 @@ export class AnnouncementController {
     const permissions: string[] = req.user?.permissions ?? [];
 
     // Fetch the announcement to verify authorship
-    const announcement = await this.announcementService.findOne(institutionId, id);
-    if (announcement && announcement.authorUserId !== userId && !permissions.includes('subjects.write')) {
+    const announcement = await this.announcementService.findOne(
+      institutionId,
+      id,
+    );
+    if (
+      announcement &&
+      announcement.authorUserId !== userId &&
+      !permissions.includes('subjects.write')
+    ) {
       throw new ForbiddenException('You can only edit your own announcements');
     }
 
@@ -86,9 +95,18 @@ export class AnnouncementController {
     const userId = this.getUserId(req);
     const permissions: string[] = req.user?.permissions ?? [];
 
-    const announcement = await this.announcementService.findOne(institutionId, id);
-    if (announcement && announcement.authorUserId !== userId && !permissions.includes('subjects.write')) {
-      throw new ForbiddenException('You can only delete your own announcements');
+    const announcement = await this.announcementService.findOne(
+      institutionId,
+      id,
+    );
+    if (
+      announcement &&
+      announcement.authorUserId !== userId &&
+      !permissions.includes('subjects.write')
+    ) {
+      throw new ForbiddenException(
+        'You can only delete your own announcements',
+      );
     }
 
     return this.announcementService.delete(institutionId, id);

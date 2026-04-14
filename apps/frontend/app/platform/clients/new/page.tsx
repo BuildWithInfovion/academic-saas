@@ -14,6 +14,7 @@ interface Credentials {
 interface OnboardResult {
   institution: { id: string; name: string; code: string };
   operatorCredentials: Credentials;
+  directorCredentials: Credentials | null;
   subscription: { totalAmount: number; endDate: string; maxStudents: number };
 }
 
@@ -36,6 +37,8 @@ export default function OnboardClientPage() {
     adminEmail: '',
     adminPhone: '',
     adminName: '',
+    directorEmail: '',
+    directorPhone: '',
     notes: '',
   });
 
@@ -81,6 +84,8 @@ export default function OnboardClientPage() {
           adminEmail: form.adminEmail.trim() || undefined,
           adminPhone: form.adminPhone.trim() || undefined,
           adminName: form.adminName.trim() || undefined,
+          directorEmail: form.directorEmail.trim() || undefined,
+          directorPhone: form.directorPhone.trim() || undefined,
           notes: form.notes.trim() || undefined,
         }),
       });
@@ -107,9 +112,10 @@ export default function OnboardClientPage() {
             </p>
           </div>
 
+          {/* Operator credentials */}
           <div className="bg-gray-900 rounded-lg p-4 space-y-2.5">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-              Operator Login Credentials — share these securely
+              Operator Login — share securely
             </p>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">School Code</span>
@@ -133,6 +139,35 @@ export default function OnboardClientPage() {
             </div>
           </div>
 
+          {/* Director credentials (only if created) */}
+          {result.directorCredentials && (
+            <div className="bg-gray-900 rounded-lg p-4 space-y-2.5">
+              <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-3">
+                Director Login — share securely
+              </p>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">School Code</span>
+                <span className="font-mono text-indigo-300 font-bold">{result.directorCredentials.institutionCode}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Email</span>
+                <span className="text-white">{result.directorCredentials.email}</span>
+              </div>
+              {result.directorCredentials.phone && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Phone</span>
+                  <span className="text-white">{result.directorCredentials.phone}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Password</span>
+                <span className="font-mono font-bold text-amber-300 text-base tracking-widest">
+                  {result.directorCredentials.password}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="bg-gray-900 rounded-lg p-4 space-y-2 text-sm">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Subscription</p>
             <div className="flex justify-between">
@@ -152,7 +187,7 @@ export default function OnboardClientPage() {
           </div>
 
           <p className="text-xs text-gray-500">
-            The password above is shown only once. The operator must change it after first login.
+            Passwords are shown only once. Both accounts must change their password after first login.
           </p>
 
           <div className="flex gap-3">
@@ -268,6 +303,24 @@ export default function OnboardClientPage() {
           <div>
             <label className="text-xs text-gray-400 block mb-1">Operator Phone</label>
             <input className={inp} type="tel" placeholder="9876543210 (optional)" value={form.adminPhone} onChange={set('adminPhone')} />
+          </div>
+        </div>
+      </div>
+
+      {/* Director */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-300">Director Account <span className="text-gray-600 font-normal">(optional)</span></h2>
+          <p className="text-xs text-gray-500 mt-0.5">Creates a second login with the Director (super_admin) role — full read access, no data entry. Leave blank to skip.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Director Email</label>
+            <input className={inp} type="email" placeholder="director@school.com (optional)" value={form.directorEmail} onChange={set('directorEmail')} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Director Phone</label>
+            <input className={inp} type="tel" placeholder="9876543210 (optional)" value={form.directorPhone} onChange={set('directorPhone')} />
           </div>
         </div>
       </div>

@@ -11,6 +11,8 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 import { AuthGuard } from '../../common/guards/auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard';
 
 @Controller('auth')
@@ -49,15 +51,17 @@ export class AuthController {
     return this.authService.requestPasswordReset(institutionCode, identifier);
   }
 
-  // 📋 LIST PENDING RESET REQUESTS — operator only
-  @UseGuards(AuthGuard)
+  // 📋 LIST PENDING RESET REQUESTS — operator only (users.write required)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Permissions('users.write')
   @Get('password-resets')
   async getPendingResets(@Tenant() tenant: { institutionId: string }) {
     return this.authService.getPendingResetRequests(tenant.institutionId);
   }
 
-  // ✅ APPROVE RESET — operator sets new password
-  @UseGuards(AuthGuard)
+  // ✅ APPROVE RESET — operator only (users.write required)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Permissions('users.write')
   @Post('password-resets/:id/approve')
   async approveReset(
     @Tenant() tenant: { institutionId: string },
@@ -66,8 +70,9 @@ export class AuthController {
     return this.authService.approveResetRequest(tenant.institutionId, id);
   }
 
-  // ❌ REJECT RESET
-  @UseGuards(AuthGuard)
+  // ❌ REJECT RESET — operator only (users.write required)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Permissions('users.write')
   @Post('password-resets/:id/reject')
   async rejectReset(
     @Tenant() tenant: { institutionId: string },

@@ -401,6 +401,17 @@ export class StudentService {
     });
     if (!student) throw new NotFoundException('Student not found');
 
+    // If the caller is moving the student to a different class, verify that class
+    // exists in this institution. Skipping this lets an operator assign a student
+    // to an academic unit from a completely different tenant.
+    if (dto.academicUnitId !== undefined && dto.academicUnitId !== student.academicUnitId) {
+      const unit = await this.prisma.academicUnit.findFirst({
+        where: { id: dto.academicUnitId, institutionId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!unit) throw new NotFoundException('Academic unit not found in this institution');
+    }
+
     const data: Prisma.StudentUpdateInput = {
       ...(dto.firstName !== undefined && { firstName: dto.firstName }),
       ...(dto.lastName !== undefined && { lastName: dto.lastName }),
@@ -489,6 +500,8 @@ export class StudentService {
   // ── PORTAL LINKING ────────────────────────────────────────────────────────
 
   async findByUserId(institutionId: string, userId: string) {
+    // Guard: if userId is undefined/null Prisma drops the filter and returns any student.
+    if (!userId) throw new NotFoundException('No student record linked to this account');
     const student = await this.prisma.student.findFirst({
       where: { institutionId, userId, deletedAt: null },
       include: { academicUnit: true },
@@ -499,6 +512,8 @@ export class StudentService {
   }
 
   async findByParentUserId(institutionId: string, parentUserId: string) {
+    // Guard: if parentUserId is undefined/null Prisma drops the filter and returns ALL students.
+    if (!parentUserId) return [];
     return this.prisma.student.findMany({
       where: { institutionId, parentUserId, deletedAt: null },
       include: { academicUnit: true },
@@ -516,9 +531,18 @@ export class StudentService {
     });
     if (!student) throw new NotFoundException('Student not found');
 
+    // Explicitly verify the user belongs to this institution before linking.
+    // updateMany below would silently update 0 rows if the user is from a different
+    // tenant, leaving the student linked to a foreign userId.
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, institutionId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException('User not found in this institution');
+
     // Activate user if inactive
-    await this.prisma.user.updateMany({
-      where: { id: userId, institutionId },
+    await this.prisma.user.update({
+      where: { id: userId },
       data: { isActive: true },
     });
 

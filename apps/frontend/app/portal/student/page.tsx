@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 
 const QUICK_LINKS = [
   { label: 'My Attendance',   desc: 'Monthly record — present, absent, late', path: '/portal/student/attendance' },
@@ -12,7 +12,7 @@ const QUICK_LINKS = [
 
 export default function StudentDashboard() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  const user = usePortalAuthStore((s) => s.user);
 
   return (
     <div className="p-8 max-w-3xl">

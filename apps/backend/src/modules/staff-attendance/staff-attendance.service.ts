@@ -83,6 +83,13 @@ export class StaffAttendanceService {
     markedById: string,
     note?: string,
   ) {
+    // Validate target user belongs to this institution
+    const targetUser = await this.prisma.user.findFirst({
+      where: { id: targetUserId, institutionId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!targetUser) throw new NotFoundException('User not found in this institution');
+
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
 
@@ -179,28 +186,34 @@ export class StaffAttendanceService {
     });
     if (!req) throw new NotFoundException('Leave request not found or already reviewed');
 
-    const updated = await this.prisma.staffLeaveRequest.update({
-      where: { id: requestId },
-      data: { status: action, approvedById: approverId, reviewNote },
-    });
-
-    // If approved, mark those days as absent in staff attendance
+    // Build the list of days to mark absent before opening the transaction
+    const days: Date[] = [];
     if (action === 'approved') {
-      const days: Date[] = [];
       const cur = new Date(req.startDate);
       const end = new Date(req.endDate);
       while (cur <= end) {
         days.push(new Date(cur));
         cur.setDate(cur.getDate() + 1);
       }
+    }
+
+    // Approve/reject + absence records atomically — no partial state on failure
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.staffLeaveRequest.update({
+        where: { id: requestId },
+        data: { status: action, approvedById: approverId, reviewNote },
+      });
+
       for (const day of days) {
-        await this.prisma.staffAttendance.upsert({
+        await tx.staffAttendance.upsert({
           where: { institutionId_userId_date: { institutionId, userId: req.userId, date: day } },
           create: { institutionId, userId: req.userId, date: day, status: 'absent', note: `Leave: ${req.reason}`, markedById: approverId },
           update: { status: 'absent', note: `Leave: ${req.reason}` },
         });
       }
-    }
+
+      return result;
+    });
 
     return updated;
   }

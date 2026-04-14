@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { apiFetch } from '@/lib/api';
 
 interface StudentInfo {
@@ -42,7 +42,7 @@ function unitLabel(u: StudentInfo['academicUnit']): string {
 
 export default function ParentDashboard() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  const user = usePortalAuthStore((s) => s.user);
   const [notifications, setNotifications] = useState<ParentNotifications | null>(null);
 
   const loadNotifications = useCallback(() => {

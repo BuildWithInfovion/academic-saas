@@ -3,7 +3,7 @@
 import { ReactNode, ReactElement, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
 
 type MenuItem = { label: string; path: string; icon?: () => ReactElement };
@@ -28,10 +28,10 @@ function displayName(email?: string, phone?: string): string {
 export default function PortalShell({ children, allowedRoles, portalTitle, menuItems }: PortalShellProps) {
   const router      = useRouter();
   const pathname    = usePathname();
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const user        = useAuthStore((s) => s.user);
-  const loadAuth    = useAuthStore((s) => s.loadAuth);
-  const logout      = useAuthStore((s) => s.logout);
+  const accessToken = usePortalAuthStore((s) => s.accessToken);
+  const user        = usePortalAuthStore((s) => s.user);
+  const loadAuth    = usePortalAuthStore((s) => s.loadAuth);
+  const logout      = usePortalAuthStore((s) => s.logout);
   const [isHydrated, setIsHydrated] = useState(false);
   const [logoError,  setLogoError]  = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -130,7 +130,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
           </p>
         </div>
         <button
-          onClick={() => { logout(); localStorage.removeItem('auth'); window.location.href = '/'; }}
+          onClick={() => { logout(); localStorage.removeItem('auth-portal'); window.location.href = '/'; }}
           className="flex items-center gap-1.5 text-xs font-medium transition-colors"
           style={{ color: '#ef4444' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = '#f87171')}

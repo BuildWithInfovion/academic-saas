@@ -273,13 +273,18 @@ export class UsersService {
       throw new NotFoundException('Role not found');
     }
 
-    // Assign role
+    // Check for existing assignment before creating to return a friendly 409
+    // rather than leaking a raw P2002 unique-constraint violation.
+    const existing = await this.prisma.userRole.findFirst({
+      where: { userId, roleId, institutionId },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException('User already has this role assigned');
+    }
+
     return this.prisma.userRole.create({
-      data: {
-        userId,
-        roleId,
-        institutionId,
-      },
+      data: { userId, roleId, institutionId },
     });
   }
 

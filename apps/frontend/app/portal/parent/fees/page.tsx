@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 
 function printFeeReceipt(payment: Payment, child: Child, institutionName: string) {
   const date = new Date(payment.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -54,7 +54,7 @@ type Balance = {
 };
 
 export default function ParentFeesPage() {
-  const user = useAuthStore((s) => s.user);
+  const user = usePortalAuthStore((s) => s.user);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('');
   const [notLinked, setNotLinked] = useState(false);

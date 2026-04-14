@@ -19,6 +19,7 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 interface TenantContext {
   institutionId: string;
@@ -46,11 +47,13 @@ export class StudentController {
   }
 
   @Get('count')
+  @Permissions('users.read')
   count(@Tenant() tenant: TenantContext) {
     return this.studentService.count(tenant.institutionId);
   }
 
   @Get('unlinked-parents')
+  @Permissions('users.read')
   findUnlinkedParents(@Tenant() tenant: TenantContext, @Query('limit') limit?: string) {
     return this.studentService.findUnlinkedParents(tenant.institutionId, limit ? parseInt(limit) : 100);
   }
@@ -67,16 +70,19 @@ export class StudentController {
    * Returns student + parent credentials (one-time display)
    */
   @Post('confirm-admission')
+  @Permissions('users.write')
   confirmAdmission(@Tenant() tenant: TenantContext, @Body() body: ConfirmAdmissionDto) {
     return this.studentService.confirmAdmission(tenant.institutionId, body);
   }
 
   @Post()
+  @Permissions('users.write')
   create(@Tenant() tenant: TenantContext, @Body() body: CreateStudentDto) {
     return this.studentService.create(tenant.institutionId, body);
   }
 
   @Get()
+  @Permissions('users.read')
   findAll(
     @Tenant() tenant: TenantContext,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
@@ -88,11 +94,13 @@ export class StudentController {
   }
 
   @Get(':id')
+  @Permissions('users.read')
   findOne(@Tenant() tenant: TenantContext, @Param('id') id: string) {
     return this.studentService.findOne(tenant.institutionId, id);
   }
 
   @Patch(':id')
+  @Permissions('users.write')
   update(
     @Tenant() tenant: TenantContext,
     @Param('id') id: string,
@@ -102,6 +110,7 @@ export class StudentController {
   }
 
   @Delete(':id')
+  @Permissions('users.write')
   delete(@Tenant() tenant: TenantContext, @Param('id') id: string) {
     return this.studentService.delete(tenant.institutionId, id);
   }
@@ -109,6 +118,7 @@ export class StudentController {
   // ── PROMOTE ───────────────────────────────────────────────────────────────
 
   @Post('promote')
+  @Permissions('users.write')
   promote(
     @Tenant() tenant: TenantContext,
     @Req() req: any,
@@ -127,6 +137,7 @@ export class StudentController {
   // ── PORTAL LINKING ────────────────────────────────────────────────────────
 
   @Post(':id/link-user')
+  @Permissions('users.write')
   linkUser(
     @Tenant() tenant: TenantContext,
     @Param('id') id: string,
@@ -141,6 +152,7 @@ export class StudentController {
   }
 
   @Delete(':id/link-user')
+  @Permissions('users.write')
   unlinkUser(
     @Tenant() tenant: TenantContext,
     @Param('id') id: string,

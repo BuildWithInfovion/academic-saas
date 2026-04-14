@@ -53,9 +53,17 @@ export class SubjectService {
     academicUnitId: string,
     dto: AssignSubjectDto,
   ) {
-    const subject = await this.prisma.subject.findFirst({
-      where: { id: dto.subjectId, institutionId, deletedAt: null },
-    });
+    const [unit, subject] = await Promise.all([
+      this.prisma.academicUnit.findFirst({
+        where: { id: academicUnitId, institutionId, deletedAt: null },
+        select: { id: true },
+      }),
+      this.prisma.subject.findFirst({
+        where: { id: dto.subjectId, institutionId, deletedAt: null },
+        select: { id: true },
+      }),
+    ]);
+    if (!unit) throw new NotFoundException('Academic unit not found in this institution');
     if (!subject) throw new NotFoundException('Subject not found');
 
     return this.prisma.academicUnitSubject.upsert({

@@ -8,7 +8,7 @@ export class AnnouncementService {
 
   async findAll(institutionId: string, role?: string) {
     const now = new Date();
-    const isAdmin = !role || role === 'super_admin' || role === 'admin';
+    const isAdmin = role === 'super_admin' || role === 'admin';
 
     // For non-admins push role filter into DB so we don't load all rows then discard
     const extraWhere = isAdmin

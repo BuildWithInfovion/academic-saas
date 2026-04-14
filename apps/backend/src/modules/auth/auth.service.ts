@@ -2,7 +2,6 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt'; // <-- KEEP ONLY THIS ONE
 import { JwtService } from '@nestjs/jwt';
@@ -224,31 +223,32 @@ export class AuthService {
 
   async requestPasswordReset(institutionCode: string, identifier: string) {
     const institutionId = await this.resolveInstitutionCode(institutionCode);
+
+    // Always return the same success message regardless of whether the user exists.
+    // Returning a distinct error for unknown identifiers lets an attacker enumerate
+    // valid accounts by probing phone numbers / emails.
+    const CONSTANT_RESPONSE = {
+      message:
+        'If an account with these details exists, a reset request has been submitted. Your school operator will set a new password.',
+    };
+
     const user = await this.usersService.findByEmailOrPhone(
       institutionId,
       identifier,
     );
-    if (!user) {
-      throw new NotFoundException('No account found with these credentials');
-    }
+    if (!user) return CONSTANT_RESPONSE;
 
     const existing = await this.prisma.passwordResetRequest.findFirst({
       where: { institutionId, userId: user.id, status: 'pending' },
     });
-    if (existing) {
-      throw new BadRequestException(
-        'A reset request is already pending. Please contact your school operator.',
-      );
-    }
+    // Silently skip duplicate — same constant response so caller can't infer state.
+    if (existing) return CONSTANT_RESPONSE;
 
     await this.prisma.passwordResetRequest.create({
       data: { institutionId, userId: user.id },
     });
 
-    return {
-      message:
-        'Reset request submitted. The school operator will set a new password for you.',
-    };
+    return CONSTANT_RESPONSE;
   }
 
   async getPendingResetRequests(institutionId: string) {

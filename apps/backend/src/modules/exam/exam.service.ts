@@ -104,6 +104,22 @@ export class ExamService {
       where: { id: examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
+
+    // Validate that academicUnitId and subjectId both belong to this institution.
+    // Without this, a caller could cross-link units or subjects from a different tenant.
+    const [unit, subject] = await Promise.all([
+      this.prisma.academicUnit.findFirst({
+        where: { id: dto.academicUnitId, institutionId, deletedAt: null },
+        select: { id: true },
+      }),
+      this.prisma.subject.findFirst({
+        where: { id: dto.subjectId, institutionId },
+        select: { id: true },
+      }),
+    ]);
+    if (!unit) throw new NotFoundException('Academic unit not found in this institution');
+    if (!subject) throw new NotFoundException('Subject not found in this institution');
+
     return this.prisma.examSubject.upsert({
       where: {
         examId_academicUnitId_subjectId: {

@@ -1,6 +1,19 @@
 import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+/**
+ * Returns the auth store that currently holds a valid session.
+ * Portal store takes precedence when it has a token; otherwise falls back
+ * to the dashboard store. This lets apiFetch work correctly on both
+ * /dashboard and /portal routes without needing pathname context.
+ */
+function getActiveAuthState() {
+  const portal = usePortalAuthStore.getState();
+  if (portal.accessToken) return portal;
+  return useAuthStore.getState();
+}
 
 type ApiOptions = RequestInit & {
   institutionId?: string;
@@ -41,7 +54,7 @@ function buildRequestHeaders(
 }
 
 async function tryRefreshToken(institutionId: string): Promise<RefreshResult> {
-  const { refreshToken, user, setAuth } = useAuthStore.getState();
+  const { refreshToken, user, setAuth } = getActiveAuthState();
   if (!refreshToken || !user?.institutionId) return { status: 'unavailable' };
 
   if (refreshingPromise) return refreshingPromise;
@@ -60,7 +73,7 @@ async function tryRefreshToken(institutionId: string): Promise<RefreshResult> {
       // Any other failure (network error, 5xx, server restart) silently returns null
       // so the caller can throw a user-visible error without clearing the session.
       if (res.status === 401) {
-        useAuthStore.getState().logout();
+        getActiveAuthState().logout();
         if (typeof window !== 'undefined') window.location.href = '/';
         return { status: 'expired' };
       }
@@ -123,7 +136,7 @@ export async function apiFetch<
 ): Promise<T> {
   const { institutionId, ...rest } = options;
 
-  const { accessToken, user } = useAuthStore.getState();
+  const { accessToken, user } = getActiveAuthState();
   const tenantId = institutionId || user?.institutionId;
 
   if (!tenantId) {

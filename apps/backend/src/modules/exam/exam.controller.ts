@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Delete, Patch, Body, Param, Query,
-  UseGuards, Request,
+  UseGuards, Request, BadRequestException,
 } from '@nestjs/common';
 import { ExamService } from './exam.service';
 import { CreateExamDto, AddExamSubjectDto, SaveResultsDto } from './dto/exam.dto';
@@ -41,7 +41,7 @@ export class ExamController {
   updateStatus(@Request() req: any, @Param('id') id: string, @Body('status') status: string) {
     const allowed = ['draft', 'active', 'completed'];
     if (!allowed.includes(status)) {
-      throw new Error(`Invalid status. Must be one of: ${allowed.join(', ')}`);
+      throw new BadRequestException(`Invalid status. Must be one of: ${allowed.join(', ')}`);
     }
     return this.examService.updateStatus(req.tenant?.institutionId, id, status);
   }

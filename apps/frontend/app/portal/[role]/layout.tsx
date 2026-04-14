@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute } from '@/lib/auth-utils';
 
 const PORTAL_ROLES: Record<string, string[]> = {
@@ -20,7 +20,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const params = useParams();
   const role = params?.role as string;
-  const { accessToken, user } = useAuthStore();
+  const { accessToken, user } = usePortalAuthStore();
 
   useEffect(() => {
     if (!accessToken || !user) {

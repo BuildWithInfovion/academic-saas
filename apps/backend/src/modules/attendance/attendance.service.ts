@@ -51,15 +51,24 @@ export class AttendanceService {
       }
     }
 
-    // Verify all student IDs belong to this institution — prevents cross-tenant injection
+    // Verify all student IDs belong to THIS institution AND this specific academic unit.
+    // Checking only institutionId would allow a teacher assigned to Class 1A to inject
+    // attendance records for students in Class 10B by supplying their IDs.
     if (dto.records.length > 0) {
       const studentIds = dto.records.map((r) => r.studentId);
       const validStudents = await this.prisma.student.findMany({
-        where: { id: { in: studentIds }, institutionId, deletedAt: null },
+        where: {
+          id: { in: studentIds },
+          institutionId,
+          academicUnitId: dto.academicUnitId,
+          deletedAt: null,
+        },
         select: { id: true },
       });
       if (validStudents.length !== studentIds.length) {
-        throw new ForbiddenException('One or more student IDs do not belong to your institution');
+        throw new ForbiddenException(
+          'One or more student IDs do not belong to this class or institution',
+        );
       }
     }
 

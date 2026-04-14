@@ -67,14 +67,16 @@ export class StaffAttendanceController {
 
   // ── Admin / Operator / Principal / Director views ─────────────────────────
 
-  /** GET /staff-attendance/daily?date=2026-04-11 — all staff for a date */
+  /** GET /staff-attendance/daily?date=2026-04-11 — all staff for a date (admin/principal) */
   @Get('daily')
+  @Permissions('users.read')
   getDailyReport(@Req() req: any, @Query('date') date: string) {
     return this.svc.getDailyReport(this.institutionId(req), date || new Date().toISOString().split('T')[0]);
   }
 
-  /** GET /staff-attendance/monthly?year=2026&month=4 — monthly summary */
+  /** GET /staff-attendance/monthly?year=2026&month=4 — monthly summary (admin/principal) */
   @Get('monthly')
+  @Permissions('users.read')
   getMonthlyReport(@Req() req: any, @Query('year') year: string, @Query('month') month: string) {
     return this.svc.getMonthlyReport(
       this.institutionId(req),

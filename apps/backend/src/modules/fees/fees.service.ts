@@ -104,12 +104,11 @@ export class FeesService {
       }
     }
 
-    // Generate receipt number atomically inside a transaction using an advisory lock
-    // to prevent duplicate receipt numbers under concurrent load.
+    // Generate receipt number inside a transaction. Advisory locks are NOT used
+    // because Neon runs PgBouncer in transaction-pooling mode which rejects them
+    // (P2010). Uniqueness is enforced by the DB @@unique([institutionId, receiptNo])
+    // constraint; a P2002 on the rare collision is caught by the caller.
     return this.prisma.$transaction(async (tx) => {
-      // Lock is scoped to this transaction — released automatically on commit/rollback.
-      // hashtext(institutionId) + magic number 2 = "receiptNo lock for this institution"
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${institutionId}), 2)`;
       const count = await tx.feePayment.count({ where: { institutionId } });
       const year = new Date().getFullYear();
       const receiptNo = `RCP-${year}-${String(count + 1).padStart(5, '0')}`;

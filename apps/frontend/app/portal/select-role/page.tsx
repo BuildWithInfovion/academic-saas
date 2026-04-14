@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute, ROLE_LABELS } from '@/lib/auth-utils';
 
 // Portal-accessible roles only (not admin/super_admin — those go to dashboard directly)
@@ -27,10 +27,10 @@ const ROLE_DESC: Record<string, string> = {
 
 export default function SelectRolePage() {
   const router        = useRouter();
-  const user          = useAuthStore((s) => s.user);
-  const accessToken   = useAuthStore((s) => s.accessToken);
-  const loadAuth      = useAuthStore((s) => s.loadAuth);
-  const logout        = useAuthStore((s) => s.logout);
+  const user          = usePortalAuthStore((s) => s.user);
+  const accessToken   = usePortalAuthStore((s) => s.accessToken);
+  const loadAuth      = usePortalAuthStore((s) => s.loadAuth);
+  const logout        = usePortalAuthStore((s) => s.logout);
   const [hydrated, setHydrated] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
@@ -116,7 +116,7 @@ export default function SelectRolePage() {
 
           <div className="px-5 pb-5">
             <button
-              onClick={() => { logout(); sessionStorage.removeItem('auth'); window.location.href = '/'; }}
+              onClick={() => { logout(); localStorage.removeItem('auth-portal'); window.location.href = '/'; }}
               className="w-full text-xs font-medium py-2 rounded-lg transition-colors"
               style={{ color: 'var(--text-3)', background: 'transparent' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}

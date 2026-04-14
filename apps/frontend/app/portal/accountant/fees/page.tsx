@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
-import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 
 function printFeeReceipt(payment: Payment, studentName: string, admissionNo: string, institutionName: string) {
   const date = new Date(payment.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -56,7 +56,7 @@ type FeeHead = { id: string; name: string };
 type AcademicYear = { id: string; name: string; isCurrent: boolean };
 
 export default function AccountantFeesPage() {
-  const user = useAuthStore((s) => s.user);
+  const user = usePortalAuthStore((s) => s.user);
   const [search, setSearch] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);

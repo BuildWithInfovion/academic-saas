@@ -4,7 +4,11 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
+import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute } from '@/lib/auth-utils';
+
+// Roles that go to /dashboard — all others are portal roles
+const DASHBOARD_ROLES = ['admin', 'super_admin'];
 
 // Portal roles where multiple assignments cause ambiguity
 const PORTAL_ROLES = ['principal', 'teacher', 'student', 'parent', 'receptionist'];
@@ -43,11 +47,20 @@ export default function LoginPage() {
       const data = await res.json();
       if (!data.accessToken) throw new Error('No token received from server');
       const roles: string[] = data.user.roles ?? [];
-      setAuth({
+      const authPayload = {
         accessToken: data.accessToken, refreshToken: data.refreshToken,
         user: { email: data.user.email, phone: data.user.phone, institutionId: data.user.institutionId,
           institutionName: data.user.institutionName, roles },
-      });
+      };
+      // Dashboard roles (admin/super_admin) go to the dashboard store (key "auth").
+      // All other roles go to the portal store (key "auth-portal") so the two
+      // sets of credentials never overwrite each other in localStorage.
+      const isDashboardUser = roles.some((r) => DASHBOARD_ROLES.includes(r));
+      if (isDashboardUser) {
+        setAuth(authPayload);
+      } else {
+        usePortalAuthStore.getState().setAuth(authPayload);
+      }
       setLoadStep(3); // redirecting
       // If user has multiple portal roles, show a role-selection screen
       const portalRoles = roles.filter((r) => PORTAL_ROLES.includes(r));
