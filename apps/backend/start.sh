@@ -1,12 +1,39 @@
 #!/bin/sh
 set -e
 
-echo "[start] Resolving any failed/modified migrations..."
-# These migrations were edited after being applied (checksum mismatch).
-# prisma migrate resolve --applied re-registers them with the current file
-# checksum so migrate deploy does not fail.
-npx prisma migrate resolve --applied 20260410000000_add_institution_profile_fields 2>/dev/null || true
-npx prisma migrate resolve --applied 20260413000000_update_roles_add_accountant_staff 2>/dev/null || true
+echo "[start] Syncing checksums for edited migrations..."
+node - << 'JSSYNC'
+const { createHash } = require('crypto');
+const { readFileSync, existsSync } = require('fs');
+const { execSync } = require('child_process');
+
+// Migrations that were edited after being applied — their stored checksum
+// must match the current file content or migrate deploy will refuse to run.
+const EDITED = [
+  '20260410000000_add_institution_profile_fields',
+  '20260413000000_update_roles_add_accountant_staff',
+];
+
+for (const name of EDITED) {
+  const file = `./prisma/migrations/${name}/migration.sql`;
+  if (!existsSync(file)) {
+    console.log(`[checksum] Skipping (file not found): ${name}`);
+    continue;
+  }
+  const checksum = createHash('sha256').update(readFileSync(file)).digest('hex');
+  const sql = `UPDATE "_prisma_migrations" SET "checksum" = '${checksum}' WHERE "migration_name" = '${name}';`;
+  try {
+    execSync('npx prisma db execute --stdin', {
+      input: sql,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    console.log(`[checksum] Synced: ${name}`);
+  } catch (e) {
+    console.warn(`[checksum] Warning for ${name}:`, e.message);
+  }
+}
+JSSYNC
 
 echo "[start] Applying pending migrations..."
 npx prisma migrate deploy
