@@ -76,6 +76,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     const knownErr = exception as Prisma.PrismaClientKnownRequestError;
 
+    // Always expose the error code so developers can diagnose from DevTools
+    message = `Database error [${knownErr.code}]`;
+
     switch (knownErr.code) {
       case 'P2002': {
         const target = Array.isArray(knownErr.meta?.['target'])
@@ -107,6 +110,21 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       case 'P2028':
         status = HttpStatus.SERVICE_UNAVAILABLE;
         message = 'Database transaction timed out. Please try again.';
+        break;
+      case 'P2010':
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        message = 'Database query failed — please try again.';
+        break;
+      case 'P2011':
+        status = HttpStatus.BAD_REQUEST;
+        message = 'A required field is missing';
+        break;
+      case 'P2000':
+      case 'P2006':
+      case 'P2007':
+      case 'P2019':
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Invalid input value';
         break;
       case 'P1001':
       case 'P1002':

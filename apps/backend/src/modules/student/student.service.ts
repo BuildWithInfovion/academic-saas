@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
@@ -39,6 +40,7 @@ export interface ConfirmAdmissionDto extends CreateStudentDto {
 
 @Injectable()
 export class StudentService {
+  private readonly logger = new Logger(StudentService.name);
   constructor(private prisma: PrismaService) {}
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -129,110 +131,132 @@ export class StudentService {
     const generatedPassword = this.generatePassword();
     const passwordHash = await bcrypt.hash(generatedPassword, 12);
 
-    const result = await this.prisma.withConnectionRetry(() => this.prisma.$transaction(async (tx) => {
-      const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
-      const rollNo = dto.academicUnitId
-        ? await this.generateRollNoInTx(tx, dto.academicUnitId)
-        : undefined;
+    this.logger.log(`[confirmAdmission] institution=${institutionId} parentPhone=${dto.parentPhone ?? 'none'} fees=${dto.admissionFees?.length ?? 0}`);
 
-      // 1. Create or reuse parent user FIRST — so we have the ID for student.create
-      let parentUser = existingParentUser;
-      let isNewParentUser = false;
+    let result: { student: any; parentUser: any; isNewParentUser: boolean; feePayments: any[] };
+    try {
+      result = await this.prisma.withConnectionRetry(() => this.prisma.$transaction(async (tx) => {
+        this.logger.debug('[confirmAdmission] tx:start — generating admission/roll numbers');
+        const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
+        const rollNo = dto.academicUnitId
+          ? await this.generateRollNoInTx(tx, dto.academicUnitId)
+          : undefined;
+        this.logger.debug(`[confirmAdmission] tx:numbers — admissionNo=${admissionNo} rollNo=${rollNo}`);
 
-      if (!parentUser) {
-        parentUser = await tx.user.create({
+        // 1. Create or reuse parent user FIRST — so we have the ID for student.create
+        let parentUser = existingParentUser;
+        let isNewParentUser = false;
+
+        if (!parentUser) {
+          this.logger.debug('[confirmAdmission] tx:user.create — creating new parent user');
+          parentUser = await tx.user.create({
+            data: {
+              institutionId,
+              phone: dto.parentPhone,
+              passwordHash,
+              isActive: true,
+            },
+          });
+          isNewParentUser = true;
+          this.logger.debug(`[confirmAdmission] tx:user.created — userId=${parentUser.id}`);
+
+          if (parentRole) {
+            await tx.userRole.create({
+              data: { userId: parentUser.id, roleId: parentRole.id, institutionId },
+            });
+            this.logger.debug('[confirmAdmission] tx:userRole.created');
+          }
+        } else {
+          this.logger.debug(`[confirmAdmission] tx:user.reused — userId=${parentUser.id}`);
+        }
+
+        // 2. Create student with parentUserId already set — no separate UPDATE needed
+        this.logger.debug('[confirmAdmission] tx:student.create — creating student record');
+        const student = await tx.student.create({
           data: {
             institutionId,
-            phone: dto.parentPhone,
-            passwordHash,
-            isActive: true,
+            admissionNo,
+            rollNo,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+            gender: dto.gender,
+            phone: dto.phone,
+            email: dto.email,
+            address: dto.address,
+            fatherName: dto.fatherName,
+            motherName: dto.motherName,
+            parentPhone: dto.parentPhone,
+            secondaryPhone: dto.secondaryPhone,
+            admissionDate: dto.admissionDate ? new Date(dto.admissionDate) : new Date(),
+            academicUnitId: dto.academicUnitId,
+            bloodGroup: dto.bloodGroup,
+            nationality: dto.nationality ?? 'Indian',
+            religion: dto.religion,
+            casteCategory: dto.casteCategory,
+            aadharNumber: dto.aadharNumber,
+            tcFromPrevious,
+            tcReceivedDate: dto.tcReceivedDate ? new Date(dto.tcReceivedDate) : undefined,
+            tcPreviousInstitution: dto.tcPreviousInstitution,
+            status: 'active',
+            parentUserId: parentUser.id,
           },
         });
-        isNewParentUser = true;
+        this.logger.debug(`[confirmAdmission] tx:student.created — studentId=${student.id}`);
 
-        if (parentRole) {
-          await tx.userRole.create({
-            data: { userId: parentUser.id, roleId: parentRole.id, institutionId },
+        // 3. Normalise to multi-item list (handles both new array and legacy single)
+        const feeItems: AdmissionFeeItemDto[] = [];
+
+        if (dto.admissionFees && dto.admissionFees.length > 0) {
+          for (const item of dto.admissionFees) {
+            if (item.feeHeadId && item.amountPaid > 0) feeItems.push(item);
+          }
+        } else if (
+          dto.admissionFee?.paid &&
+          dto.admissionFee.amountPaid &&
+          dto.admissionFee.amountPaid > 0 &&
+          dto.admissionFee.feeHeadId
+        ) {
+          feeItems.push({
+            feeHeadId: dto.admissionFee.feeHeadId,
+            amountPaid: dto.admissionFee.amountPaid,
+            paymentMode: dto.admissionFee.paymentMode,
+            academicYearId: dto.admissionFee.academicYearId,
           });
         }
-      }
+        this.logger.debug(`[confirmAdmission] tx:fees — ${feeItems.length} fee item(s) to create`);
 
-      // 2. Create student with parentUserId already set — no separate UPDATE needed
-      const student = await tx.student.create({
-        data: {
-          institutionId,
-          admissionNo,
-          rollNo,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
-          gender: dto.gender,
-          phone: dto.phone,
-          email: dto.email,
-          address: dto.address,
-          fatherName: dto.fatherName,
-          motherName: dto.motherName,
-          parentPhone: dto.parentPhone,
-          secondaryPhone: dto.secondaryPhone,
-          admissionDate: dto.admissionDate ? new Date(dto.admissionDate) : new Date(),
-          academicUnitId: dto.academicUnitId,
-          bloodGroup: dto.bloodGroup,
-          nationality: dto.nationality ?? 'Indian',
-          religion: dto.religion,
-          casteCategory: dto.casteCategory,
-          aadharNumber: dto.aadharNumber,
-          tcFromPrevious,
-          tcReceivedDate: dto.tcReceivedDate ? new Date(dto.tcReceivedDate) : undefined,
-          tcPreviousInstitution: dto.tcPreviousInstitution,
-          status: 'active',
-          parentUserId: parentUser.id,
-        },
-      });
-
-      // 4. Normalise to multi-item list (handles both new array and legacy single)
-      const feeItems: AdmissionFeeItemDto[] = [];
-
-      if (dto.admissionFees && dto.admissionFees.length > 0) {
-        for (const item of dto.admissionFees) {
-          if (item.feeHeadId && item.amountPaid > 0) feeItems.push(item);
+        // 4. Create one FeePayment per selected fee head
+        const feePayments: Record<string, unknown>[] = [];
+        for (const item of feeItems) {
+          this.logger.debug(`[confirmAdmission] tx:feePayment.create — feeHeadId=${item.feeHeadId} amount=${item.amountPaid}`);
+          const receiptNo = await this.generateReceiptNoInTx(tx, institutionId);
+          const payment = await tx.feePayment.create({
+            data: {
+              institutionId,
+              studentId: student.id,
+              feeHeadId: item.feeHeadId,
+              academicYearId: item.academicYearId,
+              amount: item.amountPaid,
+              paymentMode: item.paymentMode ?? 'cash',
+              receiptNo,
+              paidOn: new Date(),
+              remarks: 'Admission fee payment',
+            },
+            include: { feeHead: true },
+          });
+          this.logger.debug(`[confirmAdmission] tx:feePayment.created — receiptNo=${receiptNo}`);
+          feePayments.push(payment as unknown as Record<string, unknown>);
         }
-      } else if (
-        dto.admissionFee?.paid &&
-        dto.admissionFee.amountPaid &&
-        dto.admissionFee.amountPaid > 0 &&
-        dto.admissionFee.feeHeadId
-      ) {
-        feeItems.push({
-          feeHeadId: dto.admissionFee.feeHeadId,
-          amountPaid: dto.admissionFee.amountPaid,
-          paymentMode: dto.admissionFee.paymentMode,
-          academicYearId: dto.admissionFee.academicYearId,
-        });
-      }
 
-      // 5. Create one FeePayment per selected fee head
-      const feePayments: Record<string, unknown>[] = [];
-      for (const item of feeItems) {
-        const receiptNo = await this.generateReceiptNoInTx(tx, institutionId);
-        const payment = await tx.feePayment.create({
-          data: {
-            institutionId,
-            studentId: student.id,
-            feeHeadId: item.feeHeadId,
-            academicYearId: item.academicYearId,
-            amount: item.amountPaid,
-            paymentMode: item.paymentMode ?? 'cash',
-            receiptNo,
-            paidOn: new Date(),
-            remarks: 'Admission fee payment',
-          },
-          include: { feeHead: true },
-        });
-        feePayments.push(payment as unknown as Record<string, unknown>);
-      }
-
-      return { student, parentUser, isNewParentUser, feePayments };
-    }));
+        return { student, parentUser, isNewParentUser, feePayments };
+      }));
+    } catch (err: unknown) {
+      const code = (err as any)?.code;
+      const msg = (err as any)?.message ?? String(err);
+      this.logger.error(`[confirmAdmission] FAILED — code=${code ?? 'none'} msg=${msg.slice(0, 300)}`);
+      throw err;
+    }
 
     return {
       student: result.student,
