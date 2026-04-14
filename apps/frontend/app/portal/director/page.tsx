@@ -126,8 +126,8 @@ export default function DirectorOverviewPage() {
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Detailed Reports', desc: 'Attendance, fees & exam breakdown by class', path: '/portal/director/reports', bg: 'bg-black text-white' },
-            { label: 'Institution Settings', desc: 'Configure academic structure & preferences', path: '/portal/director/settings', bg: 'bg-gray-800 text-white' },
-            { label: 'Operations View', desc: 'Read-only view of day-to-day activity', path: '/dashboard', bg: 'bg-gray-600 text-white' },
+            { label: 'Staff Directory', desc: 'View all staff accounts and roles', path: '/portal/director/staff', bg: 'bg-gray-800 text-white' },
+            { label: 'Institution Settings', desc: 'Configure academic structure & preferences', path: '/portal/director/settings', bg: 'bg-gray-600 text-white' },
           ].map((item) => (
             <button
               key={item.label}

@@ -7,8 +7,9 @@ import { useAuthStore } from '@/store/auth.store';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute } from '@/lib/auth-utils';
 
-// Roles that go to /dashboard — all others are portal roles
-const DASHBOARD_ROLES = ['admin', 'super_admin'];
+// Only 'admin' (Operator) uses the dashboard store and goes to /dashboard.
+// 'super_admin' (Director) is a portal user — goes to usePortalAuthStore → /portal/director.
+const DASHBOARD_ROLES = ['admin'];
 
 // Portal roles where multiple assignments cause ambiguity
 const PORTAL_ROLES = ['principal', 'teacher', 'student', 'parent', 'receptionist'];

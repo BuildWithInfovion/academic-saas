@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { silentRefresh } from '@/lib/api';
 import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
 
-const DASHBOARD_ROLES = ['admin', 'super_admin'];
+const DASHBOARD_ROLES = ['admin'];
 
 // Most-specific match wins — prevents parent paths staying active on child pages
 function getActivePath(pathname: string): string | undefined {
