@@ -12,7 +12,6 @@ export default function DashboardPage() {
   const router          = useRouter();
   const user            = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const loadAuth        = useAuthStore((s) => s.loadAuth);
 
   const [stats,       setStats]       = useState<Stats | null>(null);
   const [currentYear, setCurrentYear] = useState<AcademicYear | null>(null);
@@ -28,7 +27,6 @@ export default function DashboardPage() {
     return 'Good evening';
   })();
 
-  useEffect(() => { loadAuth(); }, [loadAuth]);
 
   useEffect(() => {
     if (!isAuthenticated) return; // layout already handles redirect

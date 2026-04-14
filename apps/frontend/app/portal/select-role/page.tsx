@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
+import { silentRefresh } from '@/lib/api';
 import { getRoleRoute, ROLE_LABELS } from '@/lib/auth-utils';
 
 // Portal-accessible roles only (not admin/super_admin — those go to dashboard directly)
@@ -29,26 +30,28 @@ export default function SelectRolePage() {
   const router        = useRouter();
   const user          = usePortalAuthStore((s) => s.user);
   const accessToken   = usePortalAuthStore((s) => s.accessToken);
-  const loadAuth      = usePortalAuthStore((s) => s.loadAuth);
   const logout        = usePortalAuthStore((s) => s.logout);
-  const [hydrated, setHydrated] = useState(false);
+  const [ready, setReady] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
-  useEffect(() => { loadAuth(); setHydrated(true); }, [loadAuth]);
+  useEffect(() => {
+    if (accessToken) { setReady(true); return; }
+    silentRefresh().then((ok) => {
+      if (ok) { setReady(true); }
+      else { router.replace('/'); }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (!accessToken || !user) { router.push('/'); return; }
+    if (!ready) return;
+    const currentUser = usePortalAuthStore.getState().user;
+    if (!currentUser) { router.replace('/'); return; }
+    const portalRoles = (currentUser.roles ?? []).filter((r) => PORTAL_ROLES.includes(r));
+    if (portalRoles.length <= 1) router.replace(getRoleRoute(currentUser.roles));
+  }, [ready, router]);
 
-    const portalRoles = (user.roles ?? []).filter((r) => PORTAL_ROLES.includes(r));
-
-    // If user somehow has 0 or 1 portal roles — go directly
-    if (portalRoles.length <= 1) {
-      router.replace(getRoleRoute(user.roles));
-    }
-  }, [hydrated, accessToken, user, router]);
-
-  if (!hydrated || !user) return null;
+  if (!ready || !user) return null;
 
   const portalRoles = (user.roles ?? []).filter((r) => PORTAL_ROLES.includes(r));
 
@@ -116,7 +119,13 @@ export default function SelectRolePage() {
 
           <div className="px-5 pb-5">
             <button
-              onClick={() => { logout(); localStorage.removeItem('auth-portal'); window.location.href = '/'; }}
+              onClick={() => {
+                logout();
+                void fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/logout`, {
+                  method: 'POST', credentials: 'include',
+                }).catch(() => {});
+                window.location.href = '/';
+              }}
               className="w-full text-xs font-medium py-2 rounded-lg transition-colors"
               style={{ color: 'var(--text-3)', background: 'transparent' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
