@@ -14,18 +14,24 @@ const NAV = [
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { admin, platformToken, logout } = usePlatformAuthStore();
+  const { admin, platformToken, logout, _hasHydrated } = usePlatformAuthStore();
 
   // Don't protect the login page
   const isLoginPage = pathname === '/platform/login';
 
   useEffect(() => {
+    // Wait until Zustand has rehydrated from localStorage before deciding.
+    // Without this guard, the layout redirects on every page load because
+    // platformToken is null during the first render cycle (before hydration).
+    if (!_hasHydrated) return;
     if (!isLoginPage && !platformToken) {
       router.replace('/platform/login');
     }
-  }, [isLoginPage, platformToken, router]);
+  }, [_hasHydrated, isLoginPage, platformToken, router]);
 
   if (isLoginPage) return <>{children}</>;
+  // Still reading from localStorage — render nothing to avoid flash
+  if (!_hasHydrated) return null;
   if (!platformToken) return null;
 
   const handleLogout = () => {

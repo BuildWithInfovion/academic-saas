@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute } from '@/lib/auth-utils';
@@ -21,8 +21,16 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const role = params?.role as string;
   const { accessToken, user } = usePortalAuthStore();
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Defer auth check by one tick so Zustand can rehydrate from localStorage.
+  // Without this, accessToken is null on the first render and the user gets
+  // immediately redirected to the login page on every page load/refresh.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setIsHydrated(true); }, []);
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (!accessToken || !user) {
       router.replace('/');
       return;
@@ -35,7 +43,9 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
     if (!hasRole) {
       router.replace(getRoleRoute(user.roles));
     }
-  }, [accessToken, user, role, router]);
+  }, [isHydrated, accessToken, user, role, router]);
+
+  if (!isHydrated) return null;
 
   return <>{children}</>;
 }
