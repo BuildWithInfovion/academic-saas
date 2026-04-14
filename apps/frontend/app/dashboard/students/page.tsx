@@ -114,18 +114,24 @@ export default function StudentsPage() {
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [loadingFees, setLoadingFees] = useState(false);
   const [feesPaid, setFeesPaid] = useState<'yes' | 'no' | 'partial'>('yes');
-  const [amountPaid, setAmountPaid] = useState('');
   const [paymentMode, setPaymentMode] = useState('cash');
   const [feeDueDate, setFeeDueDate] = useState('');
-  const [selectedFeeHeadId, setSelectedFeeHeadId] = useState('');
-  const [selectedFeeStructureId, setSelectedFeeStructureId] = useState('');
+
+  type FeeLineItem = {
+    feeHeadId: string;
+    name: string;
+    structureAmount: number;
+    amount: string;
+    checked: boolean;
+  };
+  const [feeItems, setFeeItems] = useState<FeeLineItem[]>([]);
   const [confirming, setConfirming] = useState(false);
 
   // Credentials modal
   const [credentials, setCredentials] = useState<{
     admissionNo: string; rollNo?: string;
     parentCredentials: { userId: string; phone?: string; isNew: boolean; generatedPassword?: string };
-    feePayment?: { receiptNo?: string; amount: number; feeHead?: { name: string } } | null;
+    feePayments?: { receiptNo?: string; amount: number; feeHead?: { name: string } }[];
   } | null>(null);
 
   // Student profile slide panel
@@ -210,21 +216,38 @@ export default function StudentsPage() {
     if (err) return setError(err);
     setShowFeeStep(true);
     setFeesPaid('yes');
-    setAmountPaid('');
     setPaymentMode('cash');
     setFeeDueDate('');
-    setSelectedFeeHeadId('');
-    setSelectedFeeStructureId('');
+    setFeeItems([]);
     if (form.academicUnitId && currentYearId) {
       setLoadingFees(true);
       try {
         const res = await apiFetch(`/fees/structures?unitId=${form.academicUnitId}&yearId=${currentYearId}`);
         const structs: FeeStructure[] = Array.isArray(res) ? res : [];
         setFeeStructures(structs);
-        // Default: find "Admission" fee head
-        const admissionHead = structs.find((s) => s.feeHead.name.toLowerCase().includes('admission'));
-        if (admissionHead) setSelectedFeeHeadId(admissionHead.feeHeadId);
-      } catch { setFeeStructures([]); } finally { setLoadingFees(false); }
+        if (structs.length > 0) {
+          const items = structs.map((s) => ({
+            feeHeadId: s.feeHeadId,
+            name: s.feeHead.name + (s.installmentName ? ` (${s.installmentName})` : ''),
+            structureAmount: s.amount,
+            amount: '',
+            checked: false,
+          }));
+          // Pre-check Admission Fee row if present
+          const admIdx = items.findIndex((i) => i.name.toLowerCase().includes('admission'));
+          if (admIdx >= 0) { items[admIdx].checked = true; items[admIdx].amount = String(items[admIdx].structureAmount); }
+          setFeeItems(items);
+        } else {
+          // No fee structure: show all fee heads unchecked
+          setFeeItems(feeHeads.map((fh) => ({
+            feeHeadId: fh.id,
+            name: fh.name,
+            structureAmount: 0,
+            amount: '',
+            checked: false,
+          })));
+        }
+      } catch { setFeeStructures([]); setFeeItems([]); } finally { setLoadingFees(false); }
     }
   };
 
@@ -249,15 +272,17 @@ export default function StudentsPage() {
         tcPreviousInstitution: form.tcPreviousInstitution.trim() || undefined,
       };
 
-      // Admission fee
-      if (selectedFeeHeadId && (feesPaid === 'yes' || feesPaid === 'partial')) {
-        payload.admissionFee = {
-          paid: true,
-          amountPaid: parseFloat(amountPaid) || 0,
-          paymentMode,
-          feeHeadId: selectedFeeHeadId,
-          academicYearId: currentYearId || undefined,
-        };
+      // Multi-fee: collect all checked items with a valid amount
+      if (feesPaid === 'yes' || feesPaid === 'partial') {
+        const paidItems = feeItems.filter((i) => i.checked && parseFloat(i.amount) > 0);
+        if (paidItems.length > 0) {
+          payload.admissionFees = paidItems.map((i) => ({
+            feeHeadId: i.feeHeadId,
+            amountPaid: parseFloat(i.amount),
+            paymentMode,
+            academicYearId: currentYearId || undefined,
+          }));
+        }
       } else if (feesPaid === 'no') {
         payload.admissionFee = { paid: false, dueDate: feeDueDate || undefined };
       }
@@ -728,70 +753,62 @@ export default function StudentsPage() {
                 {(feesPaid === 'yes' || feesPaid === 'partial') && (
                   <div className="space-y-3">
                     <div>
-                      <label className={lbl}>Select Fee Being Paid</label>
-                      {feeStructures.length > 0 ? (
-                        <div className="space-y-2 mt-1">
-                          {feeStructures.map((fs) => {
-                            const isChecked = selectedFeeStructureId === fs.id;
-                            return (
-                              <div
-                                key={fs.id}
-                                onClick={() => {
-                                  if (isChecked) {
-                                    setSelectedFeeStructureId('');
-                                    setSelectedFeeHeadId('');
-                                    setAmountPaid('');
-                                  } else {
-                                    setSelectedFeeStructureId(fs.id);
-                                    setSelectedFeeHeadId(fs.feeHeadId);
-                                    setAmountPaid(fs.amount.toString());
-                                  }
-                                }}
-                                className={`flex items-center justify-between px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
-                                  isChecked
-                                    ? 'bg-black text-white border-black'
-                                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${isChecked ? 'bg-white border-white' : 'border-gray-400'}`}>
-                                    {isChecked && (
-                                      <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
-                                        <polyline points="1.5,6 4.5,9 10.5,3" />
-                                      </svg>
-                                    )}
-                                  </div>
-                                  <span className="text-sm font-medium">
-                                    {fs.feeHead.name}{fs.installmentName ? ` (${fs.installmentName})` : ''}
-                                  </span>
+                      <label className={lbl}>Select Fees Being Paid</label>
+                      <div className="space-y-2 mt-1">
+                        {feeItems.map((item, idx) => (
+                          <div key={item.feeHeadId} className={`rounded-lg border transition-colors ${item.checked ? 'border-gray-800 bg-gray-50' : 'border-gray-200 bg-white'}`}>
+                            {/* Checkbox row */}
+                            <div
+                              className="flex items-center justify-between px-4 py-3 cursor-pointer"
+                              onClick={() => setFeeItems((prev) => prev.map((it, i) =>
+                                i === idx
+                                  ? { ...it, checked: !it.checked, amount: !it.checked && it.structureAmount ? String(it.structureAmount) : it.amount }
+                                  : it
+                              ))}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${item.checked ? 'bg-gray-900 border-gray-900' : 'border-gray-300'}`}>
+                                  {item.checked && (
+                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
+                                      <polyline points="1.5,6 4.5,9 10.5,3" />
+                                    </svg>
+                                  )}
                                 </div>
-                                <span className={`text-sm font-semibold ${isChecked ? 'text-white' : 'text-gray-800'}`}>
-                                  ₹{fs.amount.toLocaleString('en-IN')}
-                                </span>
+                                <span className="text-sm font-medium text-gray-800">{item.name}</span>
                               </div>
-                            );
-                          })}
+                              {item.structureAmount > 0 && (
+                                <span className="text-sm text-gray-500">₹{item.structureAmount.toLocaleString('en-IN')}</span>
+                              )}
+                            </div>
+                            {/* Amount input — only when checked */}
+                            {item.checked && (
+                              <div className="px-4 pb-3">
+                                <input
+                                  type="number"
+                                  className={inp}
+                                  placeholder="Amount paid (₹)"
+                                  value={item.amount}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => setFeeItems((prev) => prev.map((it, i) => i === idx ? { ...it, amount: e.target.value } : it))}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {feeItems.some((i) => i.checked) && (
+                        <div className="mt-2 flex justify-between text-sm font-semibold text-gray-700 px-1">
+                          <span>Total collecting now</span>
+                          <span>₹{feeItems.filter((i) => i.checked).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0).toLocaleString('en-IN')}</span>
                         </div>
-                      ) : (
-                        <select className={`${inp} mt-1`} value={selectedFeeHeadId} onChange={(e) => setSelectedFeeHeadId(e.target.value)}>
-                          <option value="">Select fee head...</option>
-                          {feeHeads.map((fh) => <option key={fh.id} value={fh.id}>{fh.name}</option>)}
-                        </select>
                       )}
                     </div>
-                    {(selectedFeeHeadId || feeStructures.length === 0) && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className={lbl}>Amount Paid (₹)</label>
-                          <input className={inp} type="number" placeholder="e.g. 5000"
-                            value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} />
-                        </div>
-                        <div>
-                          <label className={lbl}>Payment Mode</label>
-                          <select className={inp} value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
-                            {['cash','upi','cheque','dd','neft'].map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-                          </select>
-                        </div>
+                    {feeItems.some((i) => i.checked) && (
+                      <div>
+                        <label className={lbl}>Payment Mode (for all selected)</label>
+                        <select className={inp} value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
+                          {['cash','upi','cheque','dd','neft'].map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+                        </select>
                       </div>
                     )}
                   </div>
@@ -883,12 +900,21 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {credentials.feePayment && (
+              {credentials.feePayments && credentials.feePayments.length > 0 && (
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-gray-600 mb-1">Fee Payment Recorded</p>
-                  <p className="text-sm text-gray-700">
-                    ₹{(credentials.feePayment as any).amount?.toLocaleString('en-IN')} — {(credentials.feePayment as any).feeHead?.name}
-                  </p>
+                  <p className="text-xs font-semibold text-gray-600 mb-2">Fee Payments Recorded</p>
+                  <div className="space-y-1.5">
+                    {credentials.feePayments.map((fp, i) => (
+                      <div key={i} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{fp.feeHead?.name ?? 'Fee'}</span>
+                        <span className="font-semibold text-gray-800">₹{fp.amount?.toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-sm font-bold pt-1 border-t border-gray-200 mt-1">
+                      <span>Total collected</span>
+                      <span>₹{credentials.feePayments.reduce((s, fp) => s + (fp.amount || 0), 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -897,7 +923,7 @@ export default function StudentsPage() {
                 <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
                   <li>Go to <strong>Fees → Fee Structures</strong> to set up the full fee plan for this student&apos;s class</li>
                   <li>Go to <strong>Fees → Payments</strong> to record any outstanding dues</li>
-                  {!credentials.feePayment && <li>No admission fee was recorded — you can add it from the Fees page</li>}
+                  {(!credentials.feePayments || credentials.feePayments.length === 0) && <li>No admission fee was recorded — you can add it from the Fees page</li>}
                 </ul>
               </div>
             </div>

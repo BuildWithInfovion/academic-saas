@@ -16,13 +16,24 @@ const CLASS_1_UNIT_NAMES = ['class_1', 'class1', 'i', '1'];
 export interface AdmissionFeeDto {
   paid: boolean;
   amountPaid?: number;
-  paymentMode?: string;   // cash | upi | cheque | dd | neft
-  dueDate?: string;       // ISO date — when not paying now
+  paymentMode?: string;
+  dueDate?: string;
   feeHeadId?: string;
   academicYearId?: string;
 }
 
+// One entry per selected fee head
+export interface AdmissionFeeItemDto {
+  feeHeadId: string;
+  amountPaid: number;
+  paymentMode?: string;   // cash | upi | cheque | dd | neft
+  academicYearId?: string;
+}
+
 export interface ConfirmAdmissionDto extends CreateStudentDto {
+  /** New multi-fee format — preferred */
+  admissionFees?: AdmissionFeeItemDto[];
+  /** Legacy single-fee format — still supported */
   admissionFee?: AdmissionFeeDto;
 }
 
@@ -193,33 +204,49 @@ export class StudentService {
         data: { parentUserId: parentUser.id },
       });
 
-      // 4. Record admission fee payment if paid now
-      let feePayment: Record<string, unknown> | null = null;
-      if (
+      // 4. Normalise to multi-item list (handles both new array and legacy single)
+      const feeItems: AdmissionFeeItemDto[] = [];
+
+      if (dto.admissionFees && dto.admissionFees.length > 0) {
+        for (const item of dto.admissionFees) {
+          if (item.feeHeadId && item.amountPaid > 0) feeItems.push(item);
+        }
+      } else if (
         dto.admissionFee?.paid &&
         dto.admissionFee.amountPaid &&
         dto.admissionFee.amountPaid > 0 &&
         dto.admissionFee.feeHeadId
       ) {
-        // C-03: generate receipt number inside the transaction under advisory lock
+        feeItems.push({
+          feeHeadId: dto.admissionFee.feeHeadId,
+          amountPaid: dto.admissionFee.amountPaid,
+          paymentMode: dto.admissionFee.paymentMode,
+          academicYearId: dto.admissionFee.academicYearId,
+        });
+      }
+
+      // 5. Create one FeePayment per selected fee head
+      const feePayments: Record<string, unknown>[] = [];
+      for (const item of feeItems) {
         const receiptNo = await this.generateReceiptNoInTx(tx, institutionId);
-        feePayment = await tx.feePayment.create({
+        const payment = await tx.feePayment.create({
           data: {
             institutionId,
             studentId: student.id,
-            feeHeadId: dto.admissionFee.feeHeadId,
-            academicYearId: dto.admissionFee.academicYearId,
-            amount: dto.admissionFee.amountPaid,
-            paymentMode: dto.admissionFee.paymentMode ?? 'cash',
+            feeHeadId: item.feeHeadId,
+            academicYearId: item.academicYearId,
+            amount: item.amountPaid,
+            paymentMode: item.paymentMode ?? 'cash',
             receiptNo,
             paidOn: new Date(),
             remarks: 'Admission fee payment',
           },
           include: { feeHead: true },
         });
+        feePayments.push(payment as unknown as Record<string, unknown>);
       }
 
-      return { student, parentUser, isNewParentUser, feePayment };
+      return { student, parentUser, isNewParentUser, feePayments };
     });
 
     return {
@@ -230,10 +257,11 @@ export class StudentService {
         userId: result.parentUser.id,
         phone: result.parentUser.phone,
         isNew: result.isNewParentUser,
-        // Only show generated password for newly-created users
         generatedPassword: result.isNewParentUser ? generatedPassword : null,
       },
-      feePayment: result.feePayment,
+      feePayments: result.feePayments,
+      // legacy compat
+      feePayment: result.feePayments[0] ?? null,
     };
   }
 
