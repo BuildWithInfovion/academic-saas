@@ -4,6 +4,7 @@ import { ReactNode, ReactElement, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
+import { silentRefresh } from '@/lib/api';
 import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
 
 type MenuItem = { label: string; path: string; icon?: () => ReactElement };
@@ -30,25 +31,34 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   const pathname    = usePathname();
   const accessToken = usePortalAuthStore((s) => s.accessToken);
   const user        = usePortalAuthStore((s) => s.user);
-  const loadAuth    = usePortalAuthStore((s) => s.loadAuth);
   const logout      = usePortalAuthStore((s) => s.logout);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [ready,      setReady]      = useState(false);
   const [logoError,  setLogoError]  = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => { loadAuth(); setIsHydrated(true); }, [loadAuth]);
-
+  // On mount: restore session from httpOnly cookie if token not in memory.
   useEffect(() => {
-    if (!isHydrated) return;
-    if (!accessToken || !user) { router.push('/'); return; }
-    const hasRole = user.roles.some((r) => allowedRoles.includes(r));
-    if (!hasRole) router.push(getRoleRoute(user.roles));
-  }, [accessToken, user, isHydrated, allowedRoles, router]);
+    if (accessToken) { setReady(true); return; }
+    silentRefresh().then((ok) => {
+      if (ok) { setReady(true); }
+      else { router.replace('/'); }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // After session is ready, enforce role access.
+  useEffect(() => {
+    if (!ready) return;
+    const currentUser = usePortalAuthStore.getState().user;
+    if (!currentUser) { router.replace('/'); return; }
+    const hasRole = currentUser.roles.some((r) => allowedRoles.includes(r));
+    if (!hasRole) router.replace(getRoleRoute(currentUser.roles));
+  }, [ready, allowedRoles, router]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
-  if (!isHydrated || !accessToken) return null;
+  if (!ready || !accessToken) return null;
 
   const roleLabel = user ? getRoleLabel(user.roles) : '';
   const userName  = user ? displayName(user.email, user.phone) : '';
@@ -130,7 +140,14 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
           </p>
         </div>
         <button
-          onClick={() => { logout(); localStorage.removeItem('auth-portal'); window.location.href = '/'; }}
+          onClick={() => {
+            logout();
+            void fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/logout`, {
+              method: 'POST', credentials: 'include',
+              headers: { 'Authorization': `Bearer ${usePortalAuthStore.getState().accessToken ?? ''}` },
+            }).catch(() => {});
+            window.location.href = '/';
+          }}
           className="flex items-center gap-1.5 text-xs font-medium transition-colors"
           style={{ color: '#ef4444' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = '#f87171')}
