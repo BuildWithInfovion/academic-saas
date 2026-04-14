@@ -35,13 +35,13 @@ export class StudentController {
 
   @Get('me')
   getMyProfile(@Tenant() tenant: TenantContext, @Req() req: any) {
-    const userId = req.user?.sub;
+    const userId = req.user?.userId;
     return this.studentService.findByUserId(tenant.institutionId, userId);
   }
 
   @Get('child')
   getMyChild(@Tenant() tenant: TenantContext, @Req() req: any) {
-    const userId = req.user?.sub;
+    const userId = req.user?.userId;
     return this.studentService.findByParentUserId(tenant.institutionId, userId);
   }
 
