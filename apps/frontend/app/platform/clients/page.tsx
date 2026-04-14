@@ -43,13 +43,17 @@ function SubBadge({ sub }: { sub?: Client['subscription'] }) {
 export default function PlatformClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'no-sub'>('all');
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await platformFetch('/platform/clients');
       setClients(res as Client[]);
+    } catch (e: any) {
+      setError(e.message ?? 'Failed to load clients');
     } finally {
       setLoading(false);
     }
@@ -96,6 +100,10 @@ export default function PlatformClientsPage() {
           </button>
         ))}
       </div>
+
+      {error && (
+        <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 text-red-400 text-sm">{error}</div>
+      )}
 
       {/* Table */}
       <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">

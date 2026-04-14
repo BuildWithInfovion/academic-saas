@@ -46,6 +46,8 @@ export default function ClientDetailPage() {
   const router = useRouter();
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Subscription edit state
   const [editSub, setEditSub] = useState(false);
@@ -64,6 +66,7 @@ export default function ClientDetailPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await platformFetch(`/platform/clients/${id}`);
       const c = res as Client;
@@ -77,10 +80,24 @@ export default function ClientDetailPage() {
           notes: c.subscription.notes ?? '',
         });
       }
+    } catch (e: any) {
+      setLoadError(e.message ?? 'Failed to load client');
     } finally {
       setLoading(false);
     }
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!confirm(`Permanently soft-delete "${client?.name}"? This cannot be undone from the UI.`)) return;
+    setDeleting(true);
+    try {
+      await platformFetch(`/platform/clients/${id}`, { method: 'DELETE' });
+      router.push('/platform/clients');
+    } catch (e: any) {
+      alert(e.message);
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -127,6 +144,12 @@ export default function ClientDetailPage() {
   const inp = 'w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500';
 
   if (loading) return <div className="p-8 text-gray-500 text-sm">Loading...</div>;
+  if (loadError) return (
+    <div className="p-8">
+      <button onClick={() => router.push('/platform/clients')} className="text-xs text-gray-500 hover:text-gray-300 mb-4 block">← Back to Clients</button>
+      <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 text-red-400 text-sm">{loadError}</div>
+    </div>
+  );
   if (!client) return <div className="p-8 text-gray-500 text-sm">Client not found</div>;
 
   const days = client.subscription ? daysLeft(client.subscription.endDate) : null;
@@ -178,6 +201,13 @@ export default function ClientDetailPage() {
               Deactivate
             </button>
           )}
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="px-3 py-1.5 text-xs bg-red-900/40 border border-red-700 text-red-400 rounded-lg hover:bg-red-900/70 disabled:opacity-50"
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
         </div>
       </div>
 

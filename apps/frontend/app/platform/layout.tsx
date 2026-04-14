@@ -8,6 +8,7 @@ import { usePlatformAuthStore } from '@/store/platform-auth.store';
 const NAV = [
   { label: 'Dashboard', path: '/platform/dashboard', icon: '◈' },
   { label: 'Clients', path: '/platform/clients', icon: '◉' },
+  { label: 'Profile', path: '/platform/profile', icon: '◎' },
 ];
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
@@ -68,11 +69,12 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-800">
-          <p className="text-xs text-gray-500 truncate mb-2">{admin?.email}</p>
+        <div className="p-4 border-t border-gray-800 space-y-1">
+          <p className="text-xs font-medium text-gray-300 truncate">{admin?.name}</p>
+          <p className="text-xs text-gray-600 truncate">{admin?.email}</p>
           <button
             onClick={handleLogout}
-            className="w-full text-xs text-gray-400 hover:text-red-400 transition-colors text-left"
+            className="w-full text-xs text-gray-500 hover:text-red-400 transition-colors text-left pt-1"
           >
             Sign out
           </button>

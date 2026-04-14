@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -141,6 +142,10 @@ export class PlatformService {
     private readonly config: ConfigService,
   ) {}
 
+  // Hard limit: only MAX_PLATFORM_ADMINS active accounts may ever exist.
+  // The portal is an internal dev tool; two seats cover all real use cases.
+  private static readonly MAX_PLATFORM_ADMINS = 2;
+
   // ── AUTH ──────────────────────────────────────────────────────────────────
 
   async login(email: string, password: string) {
@@ -155,6 +160,17 @@ export class PlatformService {
     const valid = await bcrypt.compare(password, admin.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
+    // Enforce max-seat policy: count ALL active admins. If somehow > limit,
+    // block login so access is self-healing without a DB migration.
+    const activeCount = await this.prisma.platformAdmin.count({
+      where: { isActive: true },
+    });
+    if (activeCount > PlatformService.MAX_PLATFORM_ADMINS) {
+      throw new ForbiddenException(
+        `Access restricted to ${PlatformService.MAX_PLATFORM_ADMINS} accounts. Contact the system owner.`,
+      );
+    }
+
     const payload = {
       sub: admin.id,
       type: 'platform_admin',
@@ -167,10 +183,46 @@ export class PlatformService {
       expiresIn: '24h',
     });
 
+    // Non-blocking: track last login time for profile display.
+    this.prisma.platformAdmin
+      .update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } })
+      .catch(() => {/* ignore, not critical */});
+
     return {
       accessToken: token,
       admin: { id: admin.id, email: admin.email, name: admin.name },
     };
+  }
+
+  async getMe(adminId: string) {
+    const admin = await this.prisma.platformAdmin.findUnique({
+      where: { id: adminId },
+      select: { id: true, email: true, name: true, lastLoginAt: true, createdAt: true },
+    });
+    if (!admin) throw new UnauthorizedException('Admin not found');
+    return admin;
+  }
+
+  async changePassword(adminId: string, currentPassword: string, newPassword: string) {
+    const admin = await this.prisma.platformAdmin.findUnique({
+      where: { id: adminId },
+    });
+    if (!admin || !admin.isActive) throw new UnauthorizedException('Account not found');
+
+    const valid = await bcrypt.compare(currentPassword, admin.passwordHash);
+    if (!valid) throw new BadRequestException('Current password is incorrect');
+
+    // Prevent reuse of the same password
+    const same = await bcrypt.compare(newPassword, admin.passwordHash);
+    if (same) throw new BadRequestException('New password must differ from current password');
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.platformAdmin.update({
+      where: { id: adminId },
+      data: { passwordHash },
+    });
+
+    return { message: 'Password updated successfully' };
   }
 
   // ── STATS ─────────────────────────────────────────────────────────────────

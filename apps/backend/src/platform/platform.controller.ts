@@ -13,6 +13,7 @@ import { PlatformService } from './platform.service';
 import { PlatformGuard } from './platform.guard';
 import { PlatformLoginDto } from './dto/platform-login.dto';
 import { OnboardClientDto } from './dto/onboard-client.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginRateLimitGuard } from '../common/guards/login-rate-limit.guard';
 
 @Controller('platform')
@@ -29,6 +30,22 @@ export class PlatformController {
   }
 
   // ── PROTECTED (PlatformGuard) ─────────────────────────────────────────────
+
+  @UseGuards(PlatformGuard)
+  @Get('auth/me')
+  async getMe(@Req() req: any) {
+    return this.platformService.getMe(req.platformAdmin.sub);
+  }
+
+  @UseGuards(PlatformGuard, LoginRateLimitGuard)
+  @Post('auth/change-password')
+  async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
+    return this.platformService.changePassword(
+      req.platformAdmin.sub,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+  }
 
   @UseGuards(PlatformGuard)
   @Get('stats')

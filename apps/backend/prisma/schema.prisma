@@ -590,13 +590,14 @@ model PasswordResetRequest {
 // ── PLATFORM (DEVELOPER) LAYER ────────────────────────────────────────────────
 
 model PlatformAdmin {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   name         String
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("platform_admins")
 }

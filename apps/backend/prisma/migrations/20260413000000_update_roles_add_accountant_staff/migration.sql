@@ -12,15 +12,13 @@ SET "permissions" = '["students.read","attendance.read","attendance.write","exam
 WHERE "code" = 'principal';
 
 -- ── 3. Accountant role — add to every institution that doesn't have it ────────
-INSERT INTO "roles" ("id", "institutionId", "code", "label", "permissions", "createdAt", "updatedAt")
+INSERT INTO "roles" ("id", "institutionId", "code", "label", "permissions")
 SELECT
   encode(sha256((inst.id || 'accountant')::bytea), 'hex'),
   inst.id,
   'accountant',
   'Accountant',
-  '["fees.read","fees.write","students.read","attendance.read","institution.read","subjects.read"]'::jsonb,
-  NOW(),
-  NOW()
+  '["fees.read","fees.write","students.read","attendance.read","institution.read","subjects.read"]'::jsonb
 FROM "institutions" inst
 WHERE inst."deletedAt" IS NULL
   AND NOT EXISTS (
@@ -29,15 +27,13 @@ WHERE inst."deletedAt" IS NULL
   );
 
 -- ── 4. Non-Teaching Staff role — add to every institution that doesn't have it ─
-INSERT INTO "roles" ("id", "institutionId", "code", "label", "permissions", "createdAt", "updatedAt")
+INSERT INTO "roles" ("id", "institutionId", "code", "label", "permissions")
 SELECT
   encode(sha256((inst.id || 'non_teaching_staff')::bytea), 'hex'),
   inst.id,
   'non_teaching_staff',
   'Non-Teaching Staff',
-  '["attendance.read"]'::jsonb,
-  NOW(),
-  NOW()
+  '["attendance.read"]'::jsonb
 FROM "institutions" inst
 WHERE inst."deletedAt" IS NULL
   AND NOT EXISTS (

@@ -42,6 +42,7 @@ export default function PlatformDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -49,17 +50,17 @@ export default function PlatformDashboardPage() {
       platformFetch('/platform/clients'),
     ]).then(([s, c]) => {
       setStats(s as Stats);
-      setClients((c as Client[]).slice(0, 5)); // latest 5
-    }).finally(() => setLoading(false));
+      setClients((c as Client[]).slice(0, 5));
+    }).catch((e: any) => setError(e.message ?? 'Failed to load dashboard'))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="text-gray-500 text-sm">Loading dashboard...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-8 text-gray-500 text-sm">Loading dashboard...</div>;
+  if (error) return (
+    <div className="p-8">
+      <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 text-red-400 text-sm">{error}</div>
+    </div>
+  );
 
   const statCards = [
     { label: 'Total Clients', value: stats?.total ?? 0, color: 'text-white', bg: 'bg-gray-800' },
