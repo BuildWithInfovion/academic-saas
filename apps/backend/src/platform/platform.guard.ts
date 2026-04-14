@@ -17,12 +17,16 @@ export class PlatformGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
     const auth = req.headers['authorization'] as string | undefined;
+    const cookies = req.cookies as Record<string, string> | undefined;
+    const cookieToken = cookies?.platform_rt;
 
-    if (!auth?.startsWith('Bearer ')) {
+    const token = auth?.startsWith('Bearer ')
+      ? auth.slice(7)
+      : cookieToken;
+
+    if (!token) {
       throw new UnauthorizedException('Missing platform token');
     }
-
-    const token = auth.slice(7);
     try {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.config.get<string>('JWT_SECRET'),

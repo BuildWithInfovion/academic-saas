@@ -5,8 +5,11 @@ import {
   Param,
   Post,
   Req,
+  Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
@@ -15,6 +18,13 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard';
 
+const RT_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none' as const,
+  path: '/',
+};
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -22,23 +32,54 @@ export class AuthController {
   // 🔐 LOGIN — institution code in body, no header needed
   @Post('login')
   @UseGuards(LoginRateLimitGuard)
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.institutionCode, dto.email, dto.password);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(
+      dto.institutionCode,
+      dto.email,
+      dto.password,
+    );
+    res.cookie('auth_rt', result.refreshToken, {
+      ...RT_COOKIE_OPTIONS,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    // Strip refreshToken from the response body — it travels only via httpOnly cookie
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { refreshToken: _refreshToken, ...safeResult } = result;
+    return safeResult;
   }
 
-  // 🔄 REFRESH TOKEN
+  // 🔄 REFRESH TOKEN — no tenant header needed; token hash identifies the session
   @Post('refresh')
   async refresh(
-    @Tenant() tenant: { institutionId: string },
-    @Body('refreshToken') refreshToken: string,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+    @Body('refreshToken') bodyToken?: string,
   ) {
-    return this.authService.refresh(tenant.institutionId, refreshToken);
+    const reqCookies = req.cookies as Record<string, string> | undefined;
+    const refreshToken = bodyToken ?? reqCookies?.auth_rt;
+    if (!refreshToken) throw new UnauthorizedException('No refresh token');
+
+    const result = await this.authService.refreshByToken(refreshToken);
+
+    res.cookie('auth_rt', result.refreshToken, {
+      ...RT_COOKIE_OPTIONS,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return { accessToken: result.accessToken, user: result.user };
   }
 
   // 🚪 LOGOUT
   @UseGuards(AuthGuard)
   @Post('logout')
-  async logout(@Tenant() tenant: { institutionId: string }, @Req() req: any) {
+  async logout(
+    @Tenant() tenant: { institutionId: string },
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.clearCookie('auth_rt', RT_COOKIE_OPTIONS);
     return this.authService.logout(req.user.userId, tenant.institutionId);
   }
 

@@ -4,6 +4,7 @@ import { ReactNode, ReactElement, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
+import { silentRefresh } from '@/lib/api';
 import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
 
 const DASHBOARD_ROLES = ['admin', 'super_admin'];
@@ -82,26 +83,38 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname    = usePathname();
   const accessToken = useAuthStore((s) => s.accessToken);
   const user        = useAuthStore((s) => s.user);
-  const loadAuth    = useAuthStore((s) => s.loadAuth);
   const logout      = useAuthStore((s) => s.logout);
-  const [isHydrated, setIsHydrated]   = useState(false);
-  const [logoError,  setLogoError]    = useState(false);
+  const [ready,      setReady]      = useState(false);
+  const [logoError,  setLogoError]  = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => { loadAuth(); }, [loadAuth]);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setIsHydrated(true); }, []);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  // On mount: if token is already in memory (same-tab navigation), proceed.
+  // Otherwise attempt a silent refresh via the httpOnly auth_rt cookie.
+  // Middleware already redirects to / when the cookie is absent, so failure
+  // here is an edge case (cookie valid but server unreachable).
+  useEffect(() => {
+    if (accessToken) { setReady(true); return; }
+    silentRefresh().then((ok) => {
+      if (ok) {
+        setReady(true);
+      } else {
+        router.replace('/');
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
   useEffect(() => {
-    if (!isHydrated) return;
-    if (!accessToken || !user) { router.push('/'); return; }
-    const hasDashboardRole = user.roles.some((r) => DASHBOARD_ROLES.includes(r));
-    if (!hasDashboardRole) router.push(getRoleRoute(user.roles));
-  }, [accessToken, user, isHydrated, router]);
+    if (!ready) return;
+    const currentUser = useAuthStore.getState().user;
+    if (!currentUser) return;
+    const hasDashboardRole = currentUser.roles.some((r) => DASHBOARD_ROLES.includes(r));
+    if (!hasDashboardRole) router.push(getRoleRoute(currentUser.roles));
+  }, [ready, router]);
 
-  if (!isHydrated || !accessToken) return null;
+  if (!ready || !accessToken) return null;
 
   const roleLabel    = user ? getRoleLabel(user.roles) : '';
   const userName     = user ? displayName(user.email, user.phone) : '';
@@ -174,7 +187,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <p className="text-xs truncate" style={{ color: '#9b7050' }}>{user?.email || user?.phone}</p>
         </div>
         <button
-          onClick={() => { logout(); localStorage.removeItem('auth'); window.location.href = '/'; }}
+          onClick={() => {
+            logout();
+            void fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/logout`, {
+              method: 'POST', credentials: 'include',
+              headers: { 'Authorization': `Bearer ${useAuthStore.getState().accessToken ?? ''}` },
+            });
+            window.location.href = '/';
+          }}
           className="flex items-center gap-1.5 text-xs font-medium transition-colors"
           style={{ color: '#6b7280' }}
           onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; }}

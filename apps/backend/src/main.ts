@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -25,6 +26,7 @@ async function bootstrap(): Promise<void> {
   });
 
   app.use(compression());
+  app.use(cookieParser());
 
   // Global validation
   app.useGlobalPipes(

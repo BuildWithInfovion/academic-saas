@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { usePlatformAuthStore } from '@/store/platform-auth.store';
+import { silentPlatformRefresh } from '@/lib/platform-api';
 
 const NAV = [
   { label: 'Dashboard', path: '/platform/dashboard', icon: '◈' },
@@ -14,28 +15,38 @@ const NAV = [
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { admin, platformToken, logout, _hasHydrated } = usePlatformAuthStore();
+  const { admin, logout } = usePlatformAuthStore();
+  const [ready, setReady] = useState(false);
 
   // Don't protect the login page
   const isLoginPage = pathname === '/platform/login';
 
+  // On mount: if admin is already in memory (same-tab navigation), proceed.
+  // Otherwise attempt a silent session restore via the httpOnly platform_rt cookie.
+  // Next.js middleware already redirects to /platform/login when the cookie is absent,
+  // so failure here is an edge case (cookie expired between middleware check and mount).
   useEffect(() => {
-    // Wait until Zustand has rehydrated from localStorage before deciding.
-    // Without this guard, the layout redirects on every page load because
-    // platformToken is null during the first render cycle (before hydration).
-    if (!_hasHydrated) return;
-    if (!isLoginPage && !platformToken) {
-      router.replace('/platform/login');
-    }
-  }, [_hasHydrated, isLoginPage, platformToken, router]);
+    if (isLoginPage) { setReady(true); return; }
+    if (admin) { setReady(true); return; }
+    silentPlatformRefresh().then((ok) => {
+      if (ok) {
+        setReady(true);
+      } else {
+        router.replace('/platform/login');
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isLoginPage) return <>{children}</>;
-  // Still reading from localStorage — render nothing to avoid flash
-  if (!_hasHydrated) return null;
-  if (!platformToken) return null;
+  if (!ready || !admin) return null;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     logout();
+    await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/platform/auth/logout`,
+      { method: 'POST', credentials: 'include' },
+    ).catch(() => {});
     router.push('/platform/login');
   };
 
@@ -79,7 +90,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           <p className="text-xs font-medium text-gray-300 truncate">{admin?.name}</p>
           <p className="text-xs text-gray-600 truncate">{admin?.email}</p>
           <button
-            onClick={handleLogout}
+            onClick={() => void handleLogout()}
             className="w-full text-xs text-gray-500 hover:text-red-400 transition-colors text-left pt-1"
           >
             Sign out

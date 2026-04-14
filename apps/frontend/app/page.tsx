@@ -39,7 +39,9 @@ export default function LoginPage() {
     try {
       // Step 1 — verify institution + credentials
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ institutionCode: institutionCode.trim().toLowerCase(), email: email.trim(), password }),
       });
       setLoadStep(2); // authenticating
@@ -47,14 +49,15 @@ export default function LoginPage() {
       const data = await res.json();
       if (!data.accessToken) throw new Error('No token received from server');
       const roles: string[] = data.user.roles ?? [];
+      // refreshToken is now set as an httpOnly cookie by the backend.
+      // The frontend only stores the short-lived accessToken in-memory.
       const authPayload = {
-        accessToken: data.accessToken, refreshToken: data.refreshToken,
+        accessToken: data.accessToken,
         user: { email: data.user.email, phone: data.user.phone, institutionId: data.user.institutionId,
           institutionName: data.user.institutionName, roles },
       };
-      // Dashboard roles (admin/super_admin) go to the dashboard store (key "auth").
-      // All other roles go to the portal store (key "auth-portal") so the two
-      // sets of credentials never overwrite each other in localStorage.
+      // Dashboard roles (admin/super_admin) go to the dashboard store.
+      // All other roles go to the portal store so the two sessions never clash.
       const isDashboardUser = roles.some((r) => DASHBOARD_ROLES.includes(r));
       if (isDashboardUser) {
         setAuth(authPayload);

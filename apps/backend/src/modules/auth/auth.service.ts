@@ -107,14 +107,27 @@ export class AuthService {
     };
   }
 
+  /** @deprecated use refreshByToken — institutionId no longer required */
   async refresh(institutionId: string, refreshToken: string) {
-    const tokenHash = this.hashToken(refreshToken);
+    return this.refreshByToken(refreshToken, institutionId);
+  }
+
+  /**
+   * Refresh by token hash alone — the token uniquely identifies the session,
+   * so the caller does not need to know the institutionId up-front. This
+   * enables the httpOnly-cookie flow where the browser cannot read the cookie.
+   *
+   * @param token   Raw refresh token (from cookie or body)
+   * @param institutionId  Optional — if provided, added as extra safety check
+   */
+  async refreshByToken(token: string, institutionId?: string) {
+    const tokenHash = this.hashToken(token);
 
     const storedToken = await this.prisma.refreshToken.findFirst({
       where: {
         tokenHash,
-        institutionId,
         isRevoked: false,
+        ...(institutionId ? { institutionId } : {}),
       },
     });
 
@@ -125,7 +138,7 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({
       where: {
         id: storedToken.userId,
-        institutionId,
+        institutionId: storedToken.institutionId,
         deletedAt: null,
         isActive: true,
       },
@@ -182,6 +195,15 @@ export class AuthService {
     return {
       accessToken: newAccessToken,
       refreshToken: rawToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        institutionId: user.institutionId,
+        institutionName: null as string | null,
+        roles,
+        permissions,
+      },
     };
   }
 

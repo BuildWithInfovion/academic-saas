@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 
 type User = {
   email: string;
@@ -9,59 +8,25 @@ type User = {
   roles: string[];
 };
 
-type AuthState = {
+type PortalAuthState = {
   accessToken: string | null;
-  refreshToken: string | null;
   user: User | null;
   isAuthenticated: boolean;
-
-  setAuth: (data: {
-    accessToken: string;
-    refreshToken: string;
-    user: User;
-  }) => void;
-
-  loadAuth: () => void;
+  setAuth: (data: { accessToken: string; user: User }) => void;
   logout: () => void;
 };
 
 /**
  * Portal auth store — used exclusively by portal users (parent, student, teacher, etc.).
- * Stored under a separate localStorage key ("auth-portal") so operator credentials
- * stored in "auth" are never overwritten by a portal login.
+ * Separate from the dashboard store so operator and portal credentials never clash.
+ * No localStorage persistence — the httpOnly refresh-token cookie keeps sessions alive.
  */
-export const usePortalAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      accessToken: null,
-      refreshToken: null,
-      user: null,
-      isAuthenticated: false,
-
-      setAuth: ({ accessToken, refreshToken, user }) => {
-        set({ accessToken, refreshToken, user, isAuthenticated: true });
-      },
-
-      loadAuth: () => {
-        const state = get();
-        if (state.accessToken && state.user) {
-          set({ isAuthenticated: true });
-        }
-      },
-
-      logout: () => {
-        set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false });
-      },
-    }),
-    {
-      name: 'auth-portal',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-      }),
-    },
-  ),
-);
+export const usePortalAuthStore = create<PortalAuthState>()((set) => ({
+  accessToken: null,
+  user: null,
+  isAuthenticated: false,
+  setAuth: ({ accessToken, user }) =>
+    set({ accessToken, user, isAuthenticated: true }),
+  logout: () =>
+    set({ accessToken: null, user: null, isAuthenticated: false }),
+}));

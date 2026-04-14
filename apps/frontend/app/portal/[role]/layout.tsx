@@ -3,6 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
+import { silentRefresh } from '@/lib/api';
 import { getRoleRoute } from '@/lib/auth-utils';
 
 const PORTAL_ROLES: Record<string, string[]> = {
@@ -20,32 +21,40 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const params = useParams();
   const role = params?.role as string;
-  const { accessToken, user } = usePortalAuthStore();
-  const [isHydrated, setIsHydrated] = useState(false);
+  const { accessToken } = usePortalAuthStore();
+  const [ready, setReady] = useState(false);
 
-  // Defer auth check by one tick so Zustand can rehydrate from localStorage.
-  // Without this, accessToken is null on the first render and the user gets
-  // immediately redirected to the login page on every page load/refresh.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setIsHydrated(true); }, []);
+  // On mount: if token is already in memory (same-tab navigation), proceed.
+  // Otherwise attempt a silent refresh via the httpOnly auth_rt cookie.
+  // Middleware already redirects to / when the cookie is absent, so failure
+  // here is an edge case (cookie expired after middleware check).
+  useEffect(() => {
+    if (accessToken) { setReady(true); return; }
+    silentRefresh().then((ok) => {
+      if (ok) {
+        setReady(true);
+      } else {
+        router.replace('/');
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (!isHydrated) return;
-    if (!accessToken || !user) {
-      router.replace('/');
-      return;
-    }
+    if (!ready) return;
+    const currentUser = usePortalAuthStore.getState().user;
+    if (!currentUser) return;
 
     const allowedRoles = PORTAL_ROLES[role];
     if (!allowedRoles) return;
 
-    const hasRole = user.roles.some((r: string) => allowedRoles.includes(r));
+    const hasRole = currentUser.roles.some((r: string) => allowedRoles.includes(r));
     if (!hasRole) {
-      router.replace(getRoleRoute(user.roles));
+      router.replace(getRoleRoute(currentUser.roles));
     }
-  }, [isHydrated, accessToken, user, role, router]);
+  }, [ready, role, router]);
 
-  if (!isHydrated) return null;
+  if (!ready || !accessToken) return null;
 
   return <>{children}</>;
 }

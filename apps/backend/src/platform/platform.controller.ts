@@ -7,14 +7,23 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { PlatformService } from './platform.service';
 import { PlatformGuard } from './platform.guard';
 import { PlatformLoginDto } from './dto/platform-login.dto';
 import { OnboardClientDto } from './dto/onboard-client.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginRateLimitGuard } from '../common/guards/login-rate-limit.guard';
+
+const PLATFORM_RT_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none' as const,
+  path: '/',
+};
 
 @Controller('platform')
 export class PlatformController {
@@ -25,8 +34,18 @@ export class PlatformController {
   // M-08: Rate-limit platform admin login to prevent brute-force attacks.
   @Post('auth/login')
   @UseGuards(LoginRateLimitGuard)
-  async login(@Body() dto: PlatformLoginDto) {
-    return this.platformService.login(dto.email, dto.password);
+  async login(
+    @Body() dto: PlatformLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.platformService.login(dto.email, dto.password);
+    // Set the token as an httpOnly cookie for Next.js middleware protection.
+    // Also returned in the body so the frontend can store it in-memory.
+    res.cookie('platform_rt', result.accessToken, {
+      ...PLATFORM_RT_OPTIONS,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    return result;
   }
 
   // ── PROTECTED (PlatformGuard) ─────────────────────────────────────────────
@@ -35,6 +54,13 @@ export class PlatformController {
   @Get('auth/me')
   async getMe(@Req() req: any) {
     return this.platformService.getMe(req.platformAdmin.sub);
+  }
+
+  @UseGuards(PlatformGuard)
+  @Post('auth/logout')
+  async logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('platform_rt', PLATFORM_RT_OPTIONS);
+    return { message: 'Logged out' };
   }
 
   @UseGuards(PlatformGuard, LoginRateLimitGuard)

@@ -3,6 +3,9 @@ import { usePortalAuthStore } from '@/store/portal-auth.store';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+// Roles that use the dashboard store
+const DASHBOARD_ROLES = ['admin', 'super_admin'];
+
 /**
  * Returns the auth store that currently holds a valid session.
  * Portal store takes precedence when it has a token; otherwise falls back
@@ -53,9 +56,13 @@ function buildRequestHeaders(
   return merged;
 }
 
-async function tryRefreshToken(institutionId: string): Promise<RefreshResult> {
-  const { refreshToken, user, setAuth } = getActiveAuthState();
-  if (!refreshToken || !user?.institutionId) return { status: 'unavailable' };
+/**
+ * Silently refresh the access token using the httpOnly auth_rt cookie.
+ * No body token needed — the browser sends the cookie automatically.
+ * Used inside apiFetch on 401, and exported for layout-level session restore.
+ */
+async function tryRefreshToken(): Promise<RefreshResult> {
+  const { user, setAuth } = getActiveAuthState();
 
   if (refreshingPromise) return refreshingPromise;
 
@@ -63,30 +70,27 @@ async function tryRefreshToken(institutionId: string): Promise<RefreshResult> {
     try {
       const res = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Institution-ID': institutionId,
-        },
-        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
-      // Only treat a definitive 401 from the refresh endpoint as expired session.
-      // Any other failure (network error, 5xx, server restart) silently returns null
-      // so the caller can throw a user-visible error without clearing the session.
+      // A definitive 401 from the refresh endpoint means the cookie is invalid/expired.
+      // Any other failure (network, 5xx) is transient — don't clear the session.
       if (res.status === 401) {
         getActiveAuthState().logout();
         if (typeof window !== 'undefined') window.location.href = '/';
         return { status: 'expired' };
       }
-      if (!res.ok) return { status: 'unavailable' }; // transient error — don't logout
-      const data = await res.json();
+      if (!res.ok) return { status: 'unavailable' };
+      const data = (await res.json()) as {
+        accessToken: string;
+        user?: { roles?: string[] } & Record<string, unknown>;
+      };
       setAuth({
         accessToken: data.accessToken,
-        refreshToken: data.refreshToken ?? refreshToken,
-        user: data.user ?? user,
+        user: (data.user as Parameters<typeof setAuth>[0]['user']) ?? user!,
       });
-      return { status: 'success', accessToken: data.accessToken as string };
+      return { status: 'success', accessToken: data.accessToken };
     } catch {
-      // Network error (server down/restarting) — don't logout
       return { status: 'unavailable' };
     } finally {
       refreshingPromise = null;
@@ -94,6 +98,44 @@ async function tryRefreshToken(institutionId: string): Promise<RefreshResult> {
   })();
 
   return refreshingPromise;
+}
+
+/**
+ * Restore the in-memory session on page load by calling the refresh endpoint.
+ * The httpOnly auth_rt cookie is sent automatically — no institutionId needed.
+ * Returns true if the session was successfully restored.
+ */
+export async function silentRefresh(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as {
+      accessToken: string;
+      user: { roles?: string[] } & Record<string, unknown>;
+    };
+    if (!data.user) return false;
+
+    const roles: string[] = data.user.roles ?? [];
+    const isDashboard = roles.some((r) => DASHBOARD_ROLES.includes(r));
+    const user = data.user as Parameters<
+      ReturnType<typeof useAuthStore.getState>['setAuth']
+    >[0]['user'];
+
+    if (isDashboard) {
+      useAuthStore.getState().setAuth({ accessToken: data.accessToken, user });
+    } else {
+      usePortalAuthStore
+        .getState()
+        .setAuth({ accessToken: data.accessToken, user });
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -137,7 +179,7 @@ export async function apiFetch<
   const { institutionId, ...rest } = options;
 
   const { accessToken, user } = getActiveAuthState();
-  const tenantId = institutionId || user?.institutionId;
+  const tenantId = institutionId ?? user?.institutionId;
 
   if (!tenantId) {
     throw new Error('Not authenticated. Please log in again.');
@@ -145,15 +187,17 @@ export async function apiFetch<
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     ...rest,
+    credentials: 'include',
     headers: buildRequestHeaders(rest.headers, tenantId, accessToken, rest.body),
   });
 
   // On 401: attempt one silent token refresh, then retry
   if (res.status === 401) {
-    const refreshResult = await tryRefreshToken(tenantId);
+    const refreshResult = await tryRefreshToken();
     if (refreshResult.status === 'success') {
       const retryRes = await fetch(`${BASE_URL}${endpoint}`, {
         ...rest,
+        credentials: 'include',
         headers: buildRequestHeaders(
           rest.headers,
           tenantId,
