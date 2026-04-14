@@ -297,7 +297,9 @@ export default function StudentsPage() {
       await fetchStudents();
       setCredentials(result);
     } catch (e: any) {
-      setError(e.message || 'Admission failed');
+      const msg: string = e.message || 'Admission failed';
+      const isWakeUp = msg.toLowerCase().includes('waking up') || msg.toLowerCase().includes('unavailable');
+      setError(isWakeUp ? 'Database is waking up — please wait 5 seconds and try again.' : msg);
     } finally {
       setConfirming(false);
     }

@@ -71,24 +71,72 @@ export class PrismaService
     }
   }
 
-  // ── Keep-alive ping every 4 minutes (Neon idles at 5 min) ─────────────────
+  // ── Keep-alive ping every 3.5 min (Neon free tier suspends at 5 min) ────────
+  // Reconnect with enough retries to survive Neon's cold-start (~5-10 s).
+
+  private reconnecting = false;
 
   private startKeepAlive() {
     this.keepAliveTimer = setInterval(
       () =>
         void this.$queryRaw`SELECT 1`.catch(() => {
-          this.logger.warn('Keep-alive ping failed — attempting reconnect');
+          if (this.reconnecting) return;
+          this.reconnecting = true;
+          this.logger.warn('Keep-alive ping failed — reconnecting to Neon…');
           void this.$disconnect()
-            .then(() => this.connectWithRetry(3, 1000))
             .catch(() => {
+              /* ignore disconnect errors */
+            })
+            .then(() => this.connectWithRetry(10, 2000))
+            .then(() => {
+              this.reconnecting = false;
+              this.logger.log('Reconnected after keep-alive failure');
+            })
+            .catch((err: unknown) => {
+              this.reconnecting = false;
               this.logger.error(
                 'Reconnect after keep-alive failure also failed',
+                err instanceof Error ? err.message : String(err),
               );
             });
         }),
-      4 * 60 * 1000,
+      3.5 * 60 * 1000,
     );
     this.keepAliveTimer.unref?.();
+  }
+
+  /**
+   * Retry a block up to `maxAttempts` times on Prisma connection-pool errors.
+   * Neon cold-start surfaces as P2024 on the first request after auto-suspend.
+   */
+  async withConnectionRetry<T>(
+    fn: () => Promise<T>,
+    maxAttempts = 3,
+    delayMs = 3000,
+  ): Promise<T> {
+    const CONNECTION_CODES = new Set([
+      'P1001',
+      'P1002',
+      'P1008',
+      'P1017',
+      'P2024',
+    ]);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (err: unknown) {
+        const code = (err as { code?: string })?.code;
+        if (attempt < maxAttempts && code && CONNECTION_CODES.has(code)) {
+          this.logger.warn(
+            `Connection error (${code}) on attempt ${attempt}/${maxAttempts} — retrying in ${delayMs}ms`,
+          );
+          await new Promise((r) => setTimeout(r, delayMs));
+        } else {
+          throw err;
+        }
+      }
+    }
+    throw new Error('unreachable');
   }
 
   // ── Soft Delete Middleware ─────────────────────────────────────────────────

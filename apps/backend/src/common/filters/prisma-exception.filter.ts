@@ -100,6 +100,10 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         status = HttpStatus.SERVICE_UNAVAILABLE;
         message = 'Database schema is out of date. Run the latest migrations and retry.';
         break;
+      case 'P2024':
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        message = 'Database is waking up — please wait a few seconds and try again.';
+        break;
       case 'P2028':
         status = HttpStatus.SERVICE_UNAVAILABLE;
         message = 'Database transaction timed out. Please try again.';
@@ -108,9 +112,8 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       case 'P1002':
       case 'P1008':
       case 'P1017':
-        // Connection-related codes
         status = HttpStatus.SERVICE_UNAVAILABLE;
-        message = 'Database temporarily unavailable. Please try again.';
+        message = 'Database is waking up — please wait a few seconds and try again.';
         break;
     }
 

@@ -129,7 +129,7 @@ export class StudentService {
     const generatedPassword = this.generatePassword();
     const passwordHash = await bcrypt.hash(generatedPassword, 12);
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.withConnectionRetry(() => this.prisma.$transaction(async (tx) => {
       // C-03/C-04: All sequential numbers generated inside the transaction under advisory locks
       const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
       const rollNo = dto.academicUnitId
@@ -247,7 +247,7 @@ export class StudentService {
       }
 
       return { student, parentUser, isNewParentUser, feePayments };
-    });
+    }));
 
     return {
       student: result.student,
