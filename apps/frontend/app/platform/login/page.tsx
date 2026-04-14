@@ -14,6 +14,7 @@ export default function PlatformLoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
+    if (loading) return;
     if (!email.trim()) return setError('Email is required');
     if (!password.trim()) return setError('Password is required');
 
