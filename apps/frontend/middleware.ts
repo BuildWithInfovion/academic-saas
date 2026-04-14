@@ -1,26 +1,44 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 /**
- * The auth_rt / platform_rt cookies are set by the Railway backend
- * (academic-saas-production.up.railway.app) and are therefore stored under
- * that domain in the browser. The Next.js Edge middleware runs on the Vercel
- * domain (app.buildwithinfovion.com) and cannot read cookies that belong to a
- * different domain — so cookie-based route guards here would redirect every
- * logged-in user back to the login page.
+ * Server-side route protection via httpOnly cookies.
  *
- * Route protection is handled entirely client-side: each layout calls
- * silentRefresh() / silentPlatformRefresh() on mount, which hits the backend
- * with credentials:include (the browser sends the backend-domain cookie
- * automatically), and redirects to the login page if the session is invalid.
+ * Both frontend (app.buildwithinfovion.com) and backend (api.buildwithinfovion.com)
+ * share the root domain. Cookies are set with Domain=.buildwithinfovion.com so they
+ * are visible here in the Next.js Edge middleware.
  *
- * This middleware is kept as a pass-through so it can be extended later
- * (e.g. i18n, A/B headers) without touching the auth layouts.
+ * auth_rt      — school/portal users (7-day refresh token)
+ * platform_rt  — platform admin (24-hour access token used as session cookie)
  */
-export function middleware() {
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith('/platform') && pathname !== '/platform/login') {
+    if (!request.cookies.get('platform_rt')) {
+      return NextResponse.redirect(new URL('/platform/login', request.url));
+    }
+  }
+
+  if (pathname.startsWith('/dashboard')) {
+    if (!request.cookies.get('auth_rt')) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
+  if (pathname.startsWith('/portal') && !pathname.startsWith('/portal/select-role')) {
+    if (!request.cookies.get('auth_rt')) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  // Only run on routes that need eventual protection — currently a no-op
-  matcher: ['/platform/((?!login).*)', '/dashboard/:path*', '/portal/((?!select-role).*)'],
+  matcher: [
+    '/platform/((?!login).*)',
+    '/dashboard/:path*',
+    '/portal/((?!select-role).*)',
+  ],
 };
