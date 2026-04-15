@@ -702,15 +702,24 @@ model TransferCertificate {
   academicYearName  String?
 
   // TC fields
-  conductGrade    String    @default("Good")   // Good | Satisfactory | Poor
+  conductGrade    String    @default("Good")   // Excellent | Good | Satisfactory | Poor
   reason          String?                      // why the student is leaving
   tcNumber        String?                      // set on issue: TC-2024-0001
+
+  // Academic snapshot (government TC fields §8-12)
+  subjectsStudied   String?   // comma-separated subjects at time of request
+  lastExamName      String?   // e.g. "Annual Examination (2024-25)"
+  lastExamResult    String?   // "Pass" | "Fail" | "N/A"
+  promotionEligible String?   // "Yes" | "No" | "N/A"
+
+  // Fee snapshot — government TC field §12: "month up to which fees paid"
+  feesPaidUpToMonth String?   // e.g. "March 2025" | "N/A"
 
   // Attendance snapshot (current academic year at request time)
   workingDays     Int?
   presentDays     Int?
 
-  // Fee dues status at request time
+  // Fee dues status at request time (used for workflow check; not on TC document)
   hasDues         Boolean   @default(false)
   duesRemark      String?
 

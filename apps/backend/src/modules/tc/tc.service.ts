@@ -94,7 +94,75 @@ export class TcService {
       });
     }
 
-    // 5. Fee dues check
+    // 5. Subjects studied (snapshot of this class's subject list)
+    let subjectsStudied: string | null = null;
+    if (student.academicUnitId) {
+      const unitSubjects = await this.prisma.academicUnitSubject.findMany({
+        where: { academicUnitId: student.academicUnitId },
+        include: { subject: { select: { name: true } } },
+        orderBy: { subject: { name: 'asc' } },
+      });
+      if (unitSubjects.length > 0) {
+        subjectsStudied = unitSubjects.map((us) => us.subject.name).join(', ');
+      }
+    }
+
+    // 6. Last completed exam + pass/fail result
+    let lastExamName: string | null = null;
+    let lastExamResult: string | null = null;
+    let promotionEligible: string | null = null;
+    if (student.academicUnitId) {
+      const lastExam = await this.prisma.exam.findFirst({
+        where: {
+          institutionId,
+          ...(currentYear ? { academicYearId: currentYear.id } : {}),
+          status: { not: 'draft' },
+          results: { some: { studentId, academicUnitId: student.academicUnitId } },
+        },
+        include: {
+          subjects: { where: { academicUnitId: student.academicUnitId } },
+          results: { where: { studentId, academicUnitId: student.academicUnitId } },
+        },
+        orderBy: [{ endDate: 'desc' }, { createdAt: 'desc' }],
+      });
+
+      if (lastExam && lastExam.results.length > 0) {
+        lastExamName = currentYear
+          ? `${lastExam.name} (${currentYear.name})`
+          : lastExam.name;
+
+        const passingMap = new Map(
+          lastExam.subjects.map((s) => [s.subjectId, s.passingMarks]),
+        );
+        const allPassed = lastExam.results.every((r) => {
+          if (r.isAbsent) return false;
+          if (r.marksObtained === null || r.marksObtained === undefined) return false;
+          return r.marksObtained >= (passingMap.get(r.subjectId) ?? 35);
+        });
+        lastExamResult   = allPassed ? 'Pass' : 'Fail';
+        promotionEligible = allPassed ? 'Yes'  : 'No';
+      } else {
+        lastExamResult   = 'N/A';
+        promotionEligible = 'N/A';
+      }
+    }
+
+    // 7. Fees paid up to month — government TC field
+    //    We show the month of the most recent payment, or "N/A" if no payments exist.
+    let feesPaidUpToMonth: string | null = 'N/A';
+    const lastPayment = await this.prisma.feePayment.findFirst({
+      where: { institutionId, studentId },
+      orderBy: { paidOn: 'desc' },
+      select: { paidOn: true },
+    });
+    if (lastPayment) {
+      feesPaidUpToMonth = new Date(lastPayment.paidOn).toLocaleDateString('en-IN', {
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+
+    // 8. Fee dues check (workflow flag — not printed on TC)
     let hasDues = false;
     let duesRemark: string | null = null;
     if (student.academicUnitId && currentYear) {
@@ -121,7 +189,7 @@ export class TcService {
       }
     }
 
-    // 6. Create TC request with student snapshot
+    // 9. Create TC request with full student snapshot
     const classLastStudied =
       student.academicUnit?.displayName || student.academicUnit?.name || 'N/A';
 
@@ -130,7 +198,7 @@ export class TcService {
         institutionId,
         studentId,
         status: 'pending_approval',
-        // Student snapshot — captured now; independent of future record changes
+        // Student snapshot — immutable; independent of future record changes
         studentName: `${student.firstName} ${student.lastName}`,
         admissionNo: student.admissionNo,
         dateOfBirth: student.dateOfBirth,
@@ -144,12 +212,20 @@ export class TcService {
         classLastStudied,
         admissionDate: student.admissionDate,
         academicYearName: currentYear?.name ?? null,
+        // Academic snapshot (government TC §8-12)
+        subjectsStudied,
+        lastExamName,
+        lastExamResult,
+        promotionEligible,
+        // Fee snapshot
+        feesPaidUpToMonth,
         // TC fields
         conductGrade: dto.conductGrade ?? 'Good',
         reason: dto.reason ?? null,
-        // Snapshots
+        // Attendance snapshot
         workingDays,
         presentDays,
+        // Dues check (workflow)
         hasDues,
         duesRemark,
         requestedByUserId,

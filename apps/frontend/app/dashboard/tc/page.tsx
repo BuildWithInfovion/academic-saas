@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 
@@ -23,6 +23,13 @@ interface TC {
   classLastStudied: string;
   admissionDate?: string;
   academicYearName?: string;
+  // Academic snapshot
+  subjectsStudied?: string;
+  lastExamName?: string;
+  lastExamResult?: string;
+  promotionEligible?: string;
+  // Fee snapshot
+  feesPaidUpToMonth?: string;
   conductGrade: string;
   reason?: string;
   tcNumber?: string;
@@ -73,100 +80,124 @@ const TAB_LABELS: Record<string, string> = {
   rejected: 'Rejected', issued: 'Issued',
 };
 
-// ── TC Document (print-ready) ─────────────────────────────────────────────────
+// ── TC Document — Government-approved format ─────────────────────────────────
 
 function TcDocument({ tc }: { tc: TC }) {
   const institution = tc.institution;
+
+  // Short date: "15 April 2020"
   const fmt = (d?: string | null) =>
-    d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
-  const pct = tc.workingDays
-    ? Math.round(((tc.presentDays ?? 0) / tc.workingDays) * 100)
-    : null;
+    d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+
+  // Field 6: "DD/MM/YYYY  (DD Month YYYY)" — figures & words
+  const dobFiguresAndWords = (d?: string | null) => {
+    if (!d) return '—';
+    const date = new Date(d);
+    const dd   = String(date.getDate()).padStart(2, '0');
+    const mm   = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const words = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    return `${dd}/${mm}/${yyyy}   (${words})`;
+  };
+
+  // Field 5: admission date + class (best approximation — class at admission not separately tracked)
+  const admissionWithClass = tc.admissionDate
+    ? `${fmt(tc.admissionDate)} — ${tc.classLastStudied}`
+    : '—';
+
+  // Fields 12-13: attendance
+  const attendanceLine =
+    tc.workingDays != null ? String(tc.workingDays) : '—';
+  const presentLine =
+    tc.presentDays != null ? String(tc.presentDays) : '—';
+
+  // Fields 8: exam + result
+  const examLine = tc.lastExamName
+    ? `${tc.lastExamName} — ${tc.lastExamResult ?? 'N/A'}`
+    : '—';
+
+  const rows: [string, string, string][] = [
+    ['1.',  'Name of Pupil',                                             tc.studentName],
+    ['2.',  "Mother's Name",                                             tc.motherName    ?? '—'],
+    ['3.',  "Father's / Guardian's Name",                               tc.fatherName    ?? '—'],
+    ['4.',  'Nationality',                                               tc.nationality   ?? '—'],
+    ['5.',  'Date of first admission in the school with class',          admissionWithClass],
+    ['6.',  'Date of Birth (in figures & words)',                        dobFiguresAndWords(tc.dateOfBirth)],
+    ['7.',  'Class in which the pupil last studied',                     tc.classLastStudied],
+    ['8.',  'School/Board Annual Examination last taken with result',    examLine],
+    ['9.',  'Subjects Studied',                                          tc.subjectsStudied ?? '—'],
+    ['10.', 'Whether qualified for promotion to higher class',           tc.promotionEligible ?? '—'],
+    ['11.', 'Month up to which the student has paid fees',               tc.feesPaidUpToMonth ?? '—'],
+    ['12.', 'Total No. of working days in the session',                  attendanceLine],
+    ['13.', 'Total No. of working days present',                         presentLine],
+    ['14.', 'General conduct',                                           tc.conductGrade],
+    ['15.', 'Date of application for certificate',                       fmt(tc.requestedAt)],
+    ['16.', 'Date of issue of certificate',                              fmt(tc.issuedAt)],
+    ['17.', 'Reasons for leaving the school',                            tc.reason ?? '—'],
+  ];
 
   return (
     <div
       id="tc-print-area"
       className="bg-white text-gray-900"
-      style={{ fontFamily: 'Georgia, serif', fontSize: 13, lineHeight: 1.6 }}
+      style={{ fontFamily: 'Georgia, serif', fontSize: 13, lineHeight: 1.7 }}
     >
-      {/* Letterhead */}
-      <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
-        <p className="text-xl font-bold uppercase tracking-wide">{institution?.name ?? '—'}</p>
+      {/* School letterhead */}
+      <div className="text-center border-b-2 border-gray-800 pb-4 mb-5">
+        <p className="text-2xl font-bold uppercase tracking-wide">{institution?.name ?? '—'}</p>
         {institution?.board && (
-          <p className="text-sm text-gray-600">Affiliated to {institution.board}</p>
+          <p className="text-sm text-gray-600 mt-0.5">Affiliated to {institution.board}</p>
         )}
-        {institution?.address && <p className="text-xs text-gray-500 mt-0.5">{institution.address}</p>}
+        {institution?.address && (
+          <p className="text-xs text-gray-500 mt-0.5">{institution.address}</p>
+        )}
         <div className="flex justify-center gap-6 text-xs text-gray-500 mt-1">
           {institution?.phone && <span>Ph: {institution.phone}</span>}
           {institution?.email && <span>Email: {institution.email}</span>}
         </div>
       </div>
 
-      {/* Title */}
+      {/* Certificate title */}
       <h1
-        className="text-center text-base font-bold uppercase tracking-widest underline mb-6"
-        style={{ letterSpacing: '0.15em' }}
+        className="text-center font-bold uppercase mb-5"
+        style={{ fontSize: 15, letterSpacing: '0.18em', textDecoration: 'underline' }}
       >
         Transfer Certificate
       </h1>
 
-      {/* TC Number + Date row */}
-      <div className="flex justify-between text-sm mb-5">
-        <span><strong>TC No:</strong> {tc.tcNumber ?? '—'}</span>
-        <span><strong>Date of Issue:</strong> {fmt(tc.issuedAt)}</span>
+      {/* TC No + Admission No header row */}
+      <div className="flex justify-between text-sm mb-4 font-medium">
+        <span>TC No: &nbsp;<span className="font-bold">{tc.tcNumber ?? '____________'}</span></span>
+        <span>Admission No: &nbsp;<span className="font-bold">{tc.admissionNo}</span></span>
       </div>
 
-      {/* Fields table */}
-      <table className="w-full text-sm border-collapse mb-6">
+      {/* Numbered fields — government format */}
+      <table className="w-full text-sm border-collapse mb-8" style={{ borderTop: '1px solid #d1d5db' }}>
         <tbody>
-          {[
-            ['1.', 'Name of Student',                tc.studentName],
-            ['2.', "Father's Name",                  tc.fatherName ?? '—'],
-            ['3.', "Mother's Name",                  tc.motherName ?? '—'],
-            ['4.', 'Admission Number',               tc.admissionNo],
-            ['5.', 'Date of Birth (as per records)', fmt(tc.dateOfBirth)],
-            ['6.', 'Gender',                         tc.gender ?? '—'],
-            ['7.', 'Nationality',                    tc.nationality ?? '—'],
-            ['8.', 'Religion',                       tc.religion ?? '—'],
-            ['9.', 'Caste Category',                 tc.casteCategory ?? '—'],
-            ['10.', 'Blood Group',                   tc.bloodGroup ?? '—'],
-            ['11.', 'Date of Admission',             fmt(tc.admissionDate)],
-            ['12.', 'Class Last Studied',            tc.classLastStudied],
-            ['13.', 'Academic Year',                 tc.academicYearName ?? '—'],
-            [
-              '14.',
-              'Attendance (Working Days / Present Days)',
-              tc.workingDays != null
-                ? `${tc.presentDays ?? 0} / ${tc.workingDays} days (${pct ?? 0}%)`
-                : '—',
-            ],
-            ['15.', 'Conduct and Character',         tc.conductGrade],
-            ['16.', 'Reason for Leaving',            tc.reason ?? '—'],
-            ['17.', 'Fee Dues',                      tc.hasDues ? `Dues pending — ${tc.duesRemark ?? ''}` : 'All dues cleared'],
-          ].map(([no, label, value]) => (
-            <tr key={no} className="border-b border-gray-200">
-              <td className="py-1.5 pr-2 text-gray-500 w-8 align-top">{no}</td>
-              <td className="py-1.5 pr-4 font-medium w-64 align-top">{label}</td>
-              <td className="py-1.5 align-top">{value}</td>
+          {rows.map(([no, label, value]) => (
+            <tr key={no} style={{ borderBottom: '1px solid #e5e7eb' }}>
+              <td className="py-2 pr-2 align-top text-gray-500" style={{ width: 28, whiteSpace: 'nowrap' }}>{no}</td>
+              <td className="py-2 pr-6 align-top font-medium text-gray-700" style={{ width: 290 }}>{label}</td>
+              <td className="py-2 align-top text-gray-900">: &nbsp;{value}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Signature section */}
-      <div className="flex justify-between mt-10 pt-4">
-        <div className="text-center text-xs text-gray-500">
-          <div className="border-t border-gray-400 w-36 mb-1" />
-          Class Teacher / Principal
+      {/* Signature lines */}
+      <div className="flex justify-between mt-12 pt-2">
+        <div className="text-center text-xs text-gray-600">
+          <div style={{ borderTop: '1px solid #6b7280', width: 160, marginBottom: 4 }} />
+          Signature of Class Teacher
         </div>
-        <div className="text-center text-xs text-gray-500">
-          <div className="border-t border-gray-400 w-36 mb-1" />
-          School Seal &amp; Signature
+        <div className="text-center text-xs text-gray-600">
+          <div style={{ borderTop: '1px solid #6b7280', width: 200, marginBottom: 4 }} />
+          Principal / Manager — Sign &amp; Seal
         </div>
       </div>
 
-      <p className="text-[10px] text-gray-400 text-center mt-8">
-        This certificate is issued on the request of the parent / guardian. — {institution?.name}
+      <p style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', marginTop: 28 }}>
+        Certified that the above information is correct as per the school records. — {institution?.name}
       </p>
     </div>
   );
