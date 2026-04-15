@@ -10,7 +10,6 @@ const PORTAL_ROLES: Record<string, string[]> = {
   director: ['super_admin'],
   principal: ['principal'],
   teacher: ['teacher'],
-  student: ['student'],
   parent: ['parent'],
   receptionist: ['receptionist'],
   accountant: ['accountant'],

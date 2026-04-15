@@ -501,18 +501,6 @@ export class StudentService {
 
   // ── PORTAL LINKING ────────────────────────────────────────────────────────
 
-  async findByUserId(institutionId: string, userId: string) {
-    // Guard: if userId is undefined/null Prisma drops the filter and returns any student.
-    if (!userId) throw new NotFoundException('No student record linked to this account');
-    const student = await this.prisma.student.findFirst({
-      where: { institutionId, userId, deletedAt: null },
-      include: { academicUnit: true },
-    });
-    if (!student)
-      throw new NotFoundException('No student record linked to this account');
-    return student;
-  }
-
   async findByParentUserId(institutionId: string, parentUserId: string) {
     // Guard: if parentUserId is undefined/null Prisma drops the filter and returns ALL students.
     if (!parentUserId) return [];

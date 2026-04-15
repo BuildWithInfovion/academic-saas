@@ -34,12 +34,6 @@ export class StudentController {
 
   // ── PORTAL ENDPOINTS (before :id routes) ──────────────────────────────────
 
-  @Get('me')
-  getMyProfile(@Tenant() tenant: TenantContext, @Req() req: any) {
-    const userId = req.user?.userId;
-    return this.studentService.findByUserId(tenant.institutionId, userId);
-  }
-
   @Get('child')
   getMyChild(@Tenant() tenant: TenantContext, @Req() req: any) {
     const userId = req.user?.userId;
