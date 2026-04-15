@@ -45,6 +45,7 @@ model Institution {
   subscription           Subscription?
   staffAttendance        StaffAttendance[]
   staffLeaveRequests     StaffLeaveRequest[]
+  transferCertificates   TransferCertificate[]
 
   @@map("institutions")
 }
@@ -108,6 +109,7 @@ model Student {
   attendanceRecords     AttendanceRecord[]
   feePayments           FeePayment[]
   examResults           ExamResult[]
+  transferCertificates  TransferCertificate[]
 
   @@unique([institutionId, admissionNo])
   @@index([institutionId])
@@ -669,4 +671,69 @@ model Subscription {
   institution       Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
+}
+
+// ── TRANSFER CERTIFICATES ─────────────────────────────────────────────────────
+
+model TransferCertificate {
+  id              String    @id @default(cuid())
+  institutionId   String
+  studentId       String
+
+  // Status flow: pending_approval → approved → issued
+  //                              → rejected
+  status          String    @default("pending_approval")
+
+  // Immutable snapshot of student data captured at request time.
+  // Stored here so the TC document remains accurate even if the student
+  // record is later edited or deleted.
+  studentName       String
+  admissionNo       String
+  dateOfBirth       DateTime?
+  gender            String?
+  fatherName        String?
+  motherName        String?
+  nationality       String?
+  religion          String?
+  casteCategory     String?
+  bloodGroup        String?
+  classLastStudied  String
+  admissionDate     DateTime?
+  academicYearName  String?
+
+  // TC fields
+  conductGrade    String    @default("Good")   // Good | Satisfactory | Poor
+  reason          String?                      // why the student is leaving
+  tcNumber        String?                      // set on issue: TC-2024-0001
+
+  // Attendance snapshot (current academic year at request time)
+  workingDays     Int?
+  presentDays     Int?
+
+  // Fee dues status at request time
+  hasDues         Boolean   @default(false)
+  duesRemark      String?
+
+  // Workflow actors
+  requestedByUserId   String
+  approvedByUserId    String?
+  rejectedByUserId    String?
+  rejectionRemark     String?
+
+  requestedAt     DateTime  @default(now())
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  issuedAt        DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student         Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, tcNumber])   // tcNumber is null until issued; unique across institution
+  @@index([institutionId])
+  @@index([studentId])
+  @@index([institutionId, status])
+  @@map("transfer_certificates")
 }

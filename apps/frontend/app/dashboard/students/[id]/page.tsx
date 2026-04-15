@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 
 interface Student {
@@ -36,6 +37,19 @@ interface Student {
 }
 
 interface AcademicUnit { id: string; displayName?: string; name?: string; }
+
+interface TcRequest {
+  id: string;
+  status: string;
+  tcNumber?: string;
+  conductGrade: string;
+  reason?: string;
+  hasDues: boolean;
+  duesRemark?: string;
+  rejectionRemark?: string;
+  requestedAt: string;
+  issuedAt?: string;
+}
 
 const TC_LABELS: Record<string, string> = {
   not_applicable: 'Not Applicable', pending: 'Pending', received: 'Received', waived: 'Waived',
@@ -72,6 +86,14 @@ export default function StudentProfilePage() {
   const [form, setForm] = useState<Partial<Student>>({});
   const [saving, setSaving] = useState(false);
 
+  // TC state
+  const [tc, setTc]                     = useState<TcRequest | null>(null);
+  const [tcLoading, setTcLoading]       = useState(false);
+  const [showTcModal, setShowTcModal]   = useState(false);
+  const [tcForm, setTcForm]             = useState({ reason: '', conductGrade: 'Good' });
+  const [tcBusy, setTcBusy]             = useState(false);
+  const [tcError, setTcError]           = useState<string | null>(null);
+
   // Password reset state
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
   const [resetLabel, setResetLabel] = useState('');
@@ -81,6 +103,20 @@ export default function StudentProfilePage() {
 
   const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 3000); };
 
+  const loadTc = async (studentId: string) => {
+    setTcLoading(true);
+    try {
+      const data = await apiFetch(`/tc?studentId=${studentId}`) as TcRequest[];
+      // Show the most recent non-rejected TC (pending, approved, or issued)
+      const active = data.find((t) => ['pending_approval', 'approved', 'issued'].includes(t.status));
+      setTc(active ?? data[0] ?? null);
+    } catch {
+      // Non-fatal — TC section just shows nothing
+    } finally {
+      setTcLoading(false);
+    }
+  };
+
   const load = async () => {
     try {
       const [s, u] = await Promise.all([
@@ -89,6 +125,7 @@ export default function StudentProfilePage() {
       ]);
       setStudent(s as Student);
       setUnits(Array.isArray(u) ? (u as AcademicUnit[]) : ((u as any).data || []));
+      void loadTc(id);
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to load student');
     } finally {
@@ -97,6 +134,25 @@ export default function StudentProfilePage() {
   };
 
   useEffect(() => { if (id) void load(); }, [id]);
+
+  const handleTcRequest = async () => {
+    setTcBusy(true);
+    setTcError(null);
+    try {
+      await apiFetch('/tc', {
+        method: 'POST',
+        body: JSON.stringify({ studentId: id, ...tcForm }),
+      });
+      setShowTcModal(false);
+      setTcForm({ reason: '', conductGrade: 'Good' });
+      showSuccess('TC request submitted — awaiting approval');
+      void loadTc(id);
+    } catch (err: unknown) {
+      setTcError((err as Error).message || 'Failed to submit TC request');
+    } finally {
+      setTcBusy(false);
+    }
+  };
 
   const startEdit = () => {
     if (!student) return;
@@ -321,6 +377,55 @@ export default function StudentProfilePage() {
           <InfoCard title="Transfer Certificate">
             <Row label="Incoming TC" value={TC_LABELS[student.tcFromPrevious ?? ''] ?? student.tcFromPrevious ?? '—'} />
             <Row label="Previous Institution" value={student.tcPreviousInstitution ?? '—'} />
+
+            {/* ── Outgoing TC section ── */}
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Outgoing TC</p>
+              {tcLoading ? (
+                <p className="text-xs text-gray-400">Loading…</p>
+              ) : tc ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      tc.status === 'issued'           ? 'bg-green-100 text-green-700' :
+                      tc.status === 'approved'         ? 'bg-blue-100 text-blue-700'  :
+                      tc.status === 'pending_approval' ? 'bg-amber-100 text-amber-700':
+                                                         'bg-red-100 text-red-700'
+                    }`}>
+                      {tc.status === 'pending_approval' ? 'Pending Approval' :
+                       tc.status === 'approved'         ? 'Approved'         :
+                       tc.status === 'issued'           ? 'Issued'           : 'Rejected'}
+                    </span>
+                    {tc.tcNumber && (
+                      <span className="text-xs font-mono text-gray-500">{tc.tcNumber}</span>
+                    )}
+                  </div>
+                  {tc.rejectionRemark && (
+                    <p className="text-xs text-red-500">Reason: {tc.rejectionRemark}</p>
+                  )}
+                  {tc.hasDues && (
+                    <p className="text-xs text-amber-600">{tc.duesRemark}</p>
+                  )}
+                  <Link
+                    href="/dashboard/tc"
+                    className="text-xs text-gray-500 underline hover:text-gray-800"
+                  >
+                    Manage in TC registry →
+                  </Link>
+                </div>
+              ) : student.status === 'active' ? (
+                <button
+                  onClick={() => { setShowTcModal(true); setTcError(null); }}
+                  className="mt-1 text-xs bg-gray-900 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 font-medium"
+                >
+                  Request Transfer Certificate
+                </button>
+              ) : (
+                <p className="text-xs text-gray-400">
+                  {student.status === 'transferred' ? 'Student already transferred.' : 'TC not applicable.'}
+                </p>
+              )}
+            </div>
           </InfoCard>
 
           {/* Portal Access Card — spans full width */}
@@ -341,6 +446,64 @@ export default function StudentProfilePage() {
                   onReset={(userId, username) => openResetModal(userId, 'Student Portal', username)}
                 />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Request TC Modal ── */}
+      {showTcModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-base font-bold text-gray-900 mb-1">Request Transfer Certificate</h2>
+            <p className="text-xs text-gray-500 mb-4">
+              Submits a TC request for <strong>{student.firstName} {student.lastName}</strong>.
+              An approver (principal / operator) must approve before the TC can be issued.
+            </p>
+
+            {tcError && (
+              <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-2.5 text-red-600 text-xs">{tcError}</div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className={lbl}>Conduct &amp; Character</label>
+                <select
+                  className={inp}
+                  value={tcForm.conductGrade}
+                  onChange={(e) => setTcForm({ ...tcForm, conductGrade: e.target.value })}
+                >
+                  {['Excellent', 'Good', 'Satisfactory', 'Poor'].map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Reason for Leaving (optional)</label>
+                <textarea
+                  className={inp}
+                  rows={2}
+                  placeholder="e.g. Family relocation, admission to another school…"
+                  value={tcForm.reason}
+                  onChange={(e) => setTcForm({ ...tcForm, reason: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setShowTcModal(false)}
+                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTcRequest}
+                disabled={tcBusy}
+                className="flex-1 bg-black text-white py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+              >
+                {tcBusy ? 'Submitting…' : 'Submit Request'}
+              </button>
             </div>
           </div>
         </div>

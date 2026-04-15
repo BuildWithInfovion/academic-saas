@@ -34,6 +34,7 @@ const Icons: Record<string, () => ReactElement> = {
   announce:   () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>,
   settings:   () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>,
   staff_att:  () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>,
+  tc:         () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/><polyline points="16 17 18 19 22 15"/></svg>,
 };
 
 const menuGroups = [
@@ -44,7 +45,8 @@ const menuGroups = [
       { label: 'Admission',         path: '/dashboard/students',           icon: 'admission'  },
       { label: 'Student Directory', path: '/dashboard/students/directory', icon: 'directory'  },
       { label: 'Inquiries',         path: '/dashboard/inquiries',          icon: 'inquiries'  },
-      { label: 'Promote',           path: '/dashboard/promote',            icon: 'promote'    },
+      { label: 'Promote',              path: '/dashboard/promote',            icon: 'promote'    },
+      { label: 'Transfer Certificates', path: '/dashboard/tc',               icon: 'tc'         },
     ],
   },
   {

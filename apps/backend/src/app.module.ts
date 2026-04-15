@@ -22,6 +22,7 @@ import { ExamModule } from './modules/exam/exam.module';
 import { AnnouncementModule } from './modules/announcement/announcement.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
+import { TcModule } from './modules/tc/tc.module';
 import { PlatformModule } from './platform/platform.module';
 
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
@@ -53,6 +54,7 @@ import { AppController } from './app.controller';
     AnnouncementModule,
     TimetableModule,
     StaffAttendanceModule,
+    TcModule,
     PlatformModule,
   ],
   controllers: [AppController],
