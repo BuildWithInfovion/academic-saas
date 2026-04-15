@@ -11,7 +11,10 @@ export class TenantMiddleware implements NestMiddleware {
 
     // ✅ Skip auth routes and platform routes (platform has its own auth)
     const url = req.url || req.path;
-    const isAuthRoute = url.startsWith('/auth/login') || url.startsWith('/auth/forgot-password');
+    const isAuthRoute =
+      url.startsWith('/auth/login') ||
+      url.startsWith('/auth/refresh') ||
+      url.startsWith('/auth/forgot-password');
     const isPlatformRoute = url.startsWith('/platform');
     if (isAuthRoute || isPlatformRoute) {
       return next();
