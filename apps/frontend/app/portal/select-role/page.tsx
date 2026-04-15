@@ -5,25 +5,26 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { silentRefresh } from '@/lib/api';
-import { getRoleRoute, ROLE_LABELS } from '@/lib/auth-utils';
-
-// Portal-accessible roles only (not admin/super_admin — those go to dashboard directly)
-const PORTAL_ROLES = ['principal', 'teacher', 'student', 'parent', 'receptionist'];
+import { getRoleRoute, ROLE_LABELS, PORTAL_ROLES } from '@/lib/auth-utils';
 
 const ROLE_ICONS: Record<string, string> = {
-  principal:    '🏛️',
-  teacher:      '📚',
-  student:      '🎒',
-  parent:       '👨‍👩‍👧',
-  receptionist: '🖥️',
+  principal:          '🏛️',
+  teacher:            '📚',
+  student:            '🎒',
+  parent:             '👨‍👩‍👧',
+  receptionist:       '🖥️',
+  accountant:         '💰',
+  non_teaching_staff: '🏢',
 };
 
 const ROLE_DESC: Record<string, string> = {
-  principal:    'Manage staff, attendance & fees overview',
-  teacher:      'Mark attendance, enter marks, manage classes',
-  student:      'View attendance, marks & fee status',
-  parent:       'Track your child\'s attendance, marks & fees',
-  receptionist: 'Handle admissions, inquiries & desk tasks',
+  principal:          'Manage staff, attendance & fees overview',
+  teacher:            'Mark attendance, enter marks, manage classes',
+  student:            'View attendance, marks & fee status',
+  parent:             'Track your child\'s attendance, marks & fees',
+  receptionist:       'Handle admissions, inquiries & desk tasks',
+  accountant:         'Manage fee collection & financial records',
+  non_teaching_staff: 'View announcements & mark your attendance',
 };
 
 export default function SelectRolePage() {

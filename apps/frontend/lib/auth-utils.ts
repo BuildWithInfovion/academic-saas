@@ -33,3 +33,15 @@ export function getRoleLabel(roles: string[]): string {
 // Both admin (Operator) and super_admin (Director) can access /dashboard.
 // Director is primarily routed to /portal/director on login but can visit /dashboard as an operations view.
 export const DASHBOARD_ROLES = ['admin', 'super_admin'];
+
+// All roles that land in a portal (not dashboard). Used to detect multi-role users
+// who need to pick a portal on login. Must stay in sync with getRoleRoute() above.
+export const PORTAL_ROLES = [
+  'principal',
+  'teacher',
+  'student',
+  'parent',
+  'receptionist',
+  'accountant',
+  'non_teaching_staff',
+] as const;
