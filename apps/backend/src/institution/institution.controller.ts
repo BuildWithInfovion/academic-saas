@@ -56,7 +56,8 @@ export class InstitutionController {
 
   // PATCH /institution/me — update current tenant's institution profile
   @Patch('me')
-  @UseGuards(AuthGuard, TenantGuard)
+  @UseGuards(AuthGuard, TenantGuard, RolesGuard)
+  @Permissions('institution.write')
   async updateMe(@Req() req: any, @Body() dto: UpdateInstitutionDto) {
     const institutionId = req.tenant?.institutionId ?? req.user?.institutionId;
     return this.institutionService.updateProfile(institutionId, dto);

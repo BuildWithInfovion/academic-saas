@@ -33,7 +33,6 @@ import { AuditLogService } from './common/services/audit-log.service';
 import { AppCacheModule } from './common/cache/app-cache.module';
 
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -58,7 +57,6 @@ import { AppService } from './app.service';
   ],
   controllers: [AppController],
   providers: [
-    AppService,
     // PrismaService available via PrismaModule (global)
     TenantGuard, // ✅ still available for @UseGuards() on controllers
     AuditLogService,

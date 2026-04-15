@@ -11,9 +11,9 @@ type StaffUser = {
 };
 
 // Codes shown in the staff list (all non-student, non-parent roles)
-const STAFF_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist'];
+const STAFF_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist', 'non_teaching_staff'];
 // Codes available in the Add Staff dropdown — operators cannot create Director accounts
-const ASSIGNABLE_ROLE_CODES = ['admin', 'principal', 'teacher', 'receptionist'];
+const ASSIGNABLE_ROLE_CODES = ['admin', 'principal', 'teacher', 'receptionist', 'non_teaching_staff'];
 
 const ROLE_BADGE: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
@@ -21,6 +21,7 @@ const ROLE_BADGE: Record<string, string> = {
   principal: 'bg-indigo-100 text-indigo-700',
   teacher: 'bg-green-100 text-green-700',
   receptionist: 'bg-pink-100 text-pink-700',
+  non_teaching_staff: 'bg-orange-100 text-orange-700',
 };
 
 function generatePassword(): string {

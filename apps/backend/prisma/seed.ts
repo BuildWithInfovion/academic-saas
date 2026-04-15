@@ -182,6 +182,11 @@ async function main() {
       label: 'Desk / Reception',
       permissions: ['inquiry.read', 'inquiry.write', 'students.read', 'users.read'],
     },
+    {
+      code: 'non_teaching_staff',
+      label: 'Non-Teaching Staff',
+      permissions: ['attendance.read'],
+    },
   ];
 
   for (const roleDef of roleDefinitions) {
