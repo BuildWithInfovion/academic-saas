@@ -31,6 +31,10 @@ type RefreshResult =
 // Track in-flight refresh to avoid concurrent refresh storms
 let refreshingPromise: Promise<RefreshResult> | null = null;
 
+// Singleton guard for silentRefresh — prevents concurrent calls from racing
+// (both would send the same auth_rt cookie; the first revokes it, the second gets 401)
+let silentRefreshPromise: Promise<'ok' | 'expired' | 'error'> | null = null;
+
 function buildRequestHeaders(
   headers: HeadersInit | undefined,
   tenantId: string,
@@ -72,6 +76,7 @@ async function tryRefreshToken(): Promise<RefreshResult> {
       const res = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
+        body: '{}',
         headers: { 'Content-Type': 'application/json' },
       });
       // A definitive 401 from the refresh endpoint means the cookie is invalid/expired.
@@ -104,39 +109,71 @@ async function tryRefreshToken(): Promise<RefreshResult> {
 /**
  * Restore the in-memory session on page load by calling the refresh endpoint.
  * The httpOnly auth_rt cookie is sent automatically — no institutionId needed.
- * Returns true if the session was successfully restored.
+ *
+ * Returns:
+ *   'ok'      — session restored successfully
+ *   'expired' — server confirmed the token is invalid/expired (→ redirect to login)
+ *   'error'   — transient failure (network, CORS, 5xx) — do NOT redirect; just retry
+ *
+ * Protected by a singleton promise so that concurrent callers (e.g. two layouts
+ * mounting simultaneously in React StrictMode) share one in-flight request instead
+ * of each sending an independent refresh — which would cause the first to revoke
+ * the token and the second to receive a 401.
  */
-export async function silentRefresh(): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (!res.ok) return false;
-    const data = (await res.json()) as {
-      accessToken: string;
-      user: { roles?: string[] } & Record<string, unknown>;
-    };
-    if (!data.user) return false;
+export async function silentRefresh(): Promise<'ok' | 'expired' | 'error'> {
+  // If a refresh is already in flight, piggyback on it
+  if (silentRefreshPromise) return silentRefreshPromise;
 
-    const roles: string[] = data.user.roles ?? [];
-    const isDashboard = roles.some((r) => DASHBOARD_ROLES.includes(r));
-    const user = data.user as Parameters<
-      ReturnType<typeof useAuthStore.getState>['setAuth']
-    >[0]['user'];
+  silentRefreshPromise = (async (): Promise<'ok' | 'expired' | 'error'> => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        // Send an explicit empty JSON body so body-parser never tries to
+        // parse a zero-byte stream as JSON (avoids potential 400 on strict servers)
+        body: '{}',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-    if (isDashboard) {
-      useAuthStore.getState().setAuth({ accessToken: data.accessToken, user });
-    } else {
-      usePortalAuthStore
-        .getState()
-        .setAuth({ accessToken: data.accessToken, user });
+      // 401 = server definitively rejected the token (expired, revoked, or missing)
+      if (res.status === 401) return 'expired';
+      // Any other non-OK response is a server/infra issue — treat as transient
+      if (!res.ok) {
+        console.warn('[silentRefresh] refresh failed with status', res.status);
+        return 'error';
+      }
+
+      const data = (await res.json()) as {
+        accessToken: string;
+        user: { roles?: string[] } & Record<string, unknown>;
+      };
+      if (!data.user) return 'error';
+
+      const roles: string[] = data.user.roles ?? [];
+      const isDashboard = roles.some((r) => DASHBOARD_ROLES.includes(r));
+      const user = data.user as Parameters<
+        ReturnType<typeof useAuthStore.getState>['setAuth']
+      >[0]['user'];
+
+      if (isDashboard) {
+        useAuthStore.getState().setAuth({ accessToken: data.accessToken, user });
+      } else {
+        usePortalAuthStore
+          .getState()
+          .setAuth({ accessToken: data.accessToken, user });
+      }
+      return 'ok';
+    } catch (err) {
+      // Network error, CORS block, timeout — log for debugging, but don't kick the user out
+      console.warn('[silentRefresh] network/CORS error during refresh:', err);
+      return 'error';
+    } finally {
+      // Clear so the next deliberate call (e.g. after a retry) starts fresh
+      silentRefreshPromise = null;
     }
-    return true;
-  } catch {
-    return false;
-  }
+  })();
+
+  return silentRefreshPromise;
 }
 
 /**

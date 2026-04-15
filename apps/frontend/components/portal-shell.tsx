@@ -33,15 +33,19 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   const user        = usePortalAuthStore((s) => s.user);
   const logout      = usePortalAuthStore((s) => s.logout);
   const [ready,      setReady]      = useState(false);
+  const [connError,  setConnError]  = useState(false);
   const [logoError,  setLogoError]  = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // On mount: restore session from httpOnly cookie if token not in memory.
   useEffect(() => {
     if (accessToken) { setReady(true); return; }
-    silentRefresh().then((ok) => {
-      if (ok) { setReady(true); }
-      else { router.replace('/'); }
+    silentRefresh().then((status) => {
+      if (status === 'ok') { setReady(true); }
+      else if (status === 'expired') { router.replace('/'); }
+      // 'error' = transient network/server issue — show a retry prompt rather
+      // than a blank page or a forced logout.
+      else { setConnError(true); }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -57,6 +61,22 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
 
   // Close sidebar on route change (mobile)
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
+
+  if (connError) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+      <div className="text-center space-y-3">
+        <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>Unable to connect to the server.</p>
+        <p className="text-xs" style={{ color: 'var(--text-3)' }}>Check your connection and try again.</p>
+        <button
+          onClick={() => { setConnError(false); window.location.reload(); }}
+          className="mt-2 px-4 py-2 rounded-lg text-xs font-semibold text-white"
+          style={{ background: 'var(--brand)' }}
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
 
   if (!ready || !accessToken) return null;
 

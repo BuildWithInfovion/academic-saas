@@ -36,9 +36,10 @@ export default function SelectRolePage() {
 
   useEffect(() => {
     if (accessToken) { setReady(true); return; }
-    silentRefresh().then((ok) => {
-      if (ok) { setReady(true); }
-      else { router.replace('/'); }
+    silentRefresh().then((status) => {
+      if (status === 'ok') { setReady(true); }
+      else if (status === 'expired') { router.replace('/'); }
+      // 'error' = transient — stay on page; user can retry.
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

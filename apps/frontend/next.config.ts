@@ -3,6 +3,14 @@ import type { NextConfig } from "next";
 const API_HOST = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 const nextConfig: NextConfig = {
+  // React StrictMode intentionally double-invokes effects in development to
+  // surface side-effects. Our session-restore logic uses token rotation
+  // (one refresh revokes the old token), so two concurrent calls would leave
+  // the second caller with a revoked token → forced logout. The singleton
+  // guard in silentRefresh() is the primary fix, but disabling StrictMode
+  // removes the double-invoke trigger entirely.
+  reactStrictMode: false,
+
   typescript: {
     ignoreBuildErrors: true,
   },
