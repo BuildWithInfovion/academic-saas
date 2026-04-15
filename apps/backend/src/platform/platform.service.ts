@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -603,9 +604,11 @@ export class PlatformService {
 
   private generatePassword(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    // Use crypto.randomBytes for cryptographically secure randomness.
+    // Math.random() is not CSPRNG and its output can be predicted.
     return Array.from(
-      { length: 10 },
-      () => chars[Math.floor(Math.random() * chars.length)],
+      crypto.randomBytes(10),
+      (byte) => chars[byte % chars.length],
     ).join('');
   }
 

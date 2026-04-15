@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 
@@ -67,11 +68,12 @@ export class StudentService {
 
   private generatePassword(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let pwd = '';
-    for (let i = 0; i < 8; i++) {
-      pwd += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return pwd;
+    // Use crypto.randomBytes for cryptographically secure randomness.
+    // Math.random() is not CSPRNG and its output can be predicted.
+    return Array.from(
+      crypto.randomBytes(8),
+      (byte) => chars[byte % chars.length],
+    ).join('');
   }
 
   private async generateReceiptNoInTx(

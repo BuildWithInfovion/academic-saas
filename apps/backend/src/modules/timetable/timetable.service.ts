@@ -36,12 +36,15 @@ export class TimetableService {
       orderBy: [{ dayOfWeek: 'asc' }, { periodNo: 'asc' }],
     });
 
-    // Fetch teacher labels separately (no relation on timetable_slots)
+    // Fetch teacher labels separately (no relation on timetable_slots).
+    // institutionId MUST be included so a slot that somehow references a teacher
+    // from another tenant (e.g. via a previously stored bad value) never leaks
+    // cross-tenant user data.
     const teacherIds = [...new Set(slots.map((s) => s.teacherUserId).filter(Boolean))] as string[];
     const teachers =
       teacherIds.length > 0
         ? await this.prisma.user.findMany({
-            where: { id: { in: teacherIds } },
+            where: { id: { in: teacherIds }, institutionId },
             select: { id: true, email: true, phone: true },
           })
         : [];
@@ -60,6 +63,17 @@ export class TimetableService {
       select: { id: true },
     });
     if (!unit) throw new ForbiddenException('Academic unit not found in your institution');
+
+    // Verify the teacher (if provided) belongs to the same institution.
+    // Without this check an attacker could assign a user ID from another tenant,
+    // then read that user's email/phone back via getForUnit().
+    if (dto.teacherUserId) {
+      const teacher = await this.prisma.user.findFirst({
+        where: { id: dto.teacherUserId, institutionId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!teacher) throw new ForbiddenException('Teacher not found in your institution');
+    }
 
     return this.prisma.timetableSlot.upsert({
       where: {
