@@ -1,20 +1,45 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 /**
- * Temporary pass-through while api.buildwithinfovion.com SSL is being provisioned.
+ * Server-side route protection via httpOnly cookies.
  *
- * Once SSL is ready and NEXT_PUBLIC_API_URL is switched to api.buildwithinfovion.com,
- * restore cookie-based route protection here:
- *   - sameSite: 'lax', domain: '.buildwithinfovion.com' in backend cookie options
- *   - cookie checks for auth_rt / platform_rt in this middleware
+ * Both frontend (app.buildwithinfovion.com) and backend (api.buildwithinfovion.com)
+ * share the root domain. Cookies are set with Domain=.buildwithinfovion.com so the
+ * browser includes them on requests to ALL *.buildwithinfovion.com subdomains —
+ * which means this Edge middleware can read them here on the Vercel domain.
  *
- * Route protection is currently handled client-side by silentRefresh() /
- * silentPlatformRefresh() in each layout.
+ * auth_rt      — school/portal users (7-day refresh token)
+ * platform_rt  — platform admin (24-hour access token used as session cookie)
  */
-export function middleware() {
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith('/platform') && pathname !== '/platform/login') {
+    if (!request.cookies.get('platform_rt')) {
+      return NextResponse.redirect(new URL('/platform/login', request.url));
+    }
+  }
+
+  if (pathname.startsWith('/dashboard')) {
+    if (!request.cookies.get('auth_rt')) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
+  if (pathname.startsWith('/portal') && !pathname.startsWith('/portal/select-role')) {
+    if (!request.cookies.get('auth_rt')) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/platform/((?!login).*)', '/dashboard/:path*', '/portal/((?!select-role).*)'],
+  matcher: [
+    '/platform/((?!login).*)',
+    '/dashboard/:path*',
+    '/portal/((?!select-role).*)',
+  ],
 };

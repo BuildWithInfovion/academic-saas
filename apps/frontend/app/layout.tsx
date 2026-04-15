@@ -18,6 +18,13 @@ export const metadata: Metadata = {
   },
   description: "Academic ERP Platform — students, fees, attendance, exams.",
   robots: { index: false, follow: false }, // private SaaS — keep out of search engines
+  icons: {
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+    ],
+    apple: "/logo.png",
+    shortcut: "/logo.png",
+  },
 };
 
 export const viewport: Viewport = {

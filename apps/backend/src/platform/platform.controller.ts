@@ -21,7 +21,8 @@ import { LoginRateLimitGuard } from '../common/guards/login-rate-limit.guard';
 const PLATFORM_RT_OPTIONS = {
   httpOnly: true,
   secure: true,
-  sameSite: 'none' as const,
+  sameSite: 'lax' as const,
+  domain: '.buildwithinfovion.com',
   path: '/',
 };
 

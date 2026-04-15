@@ -21,7 +21,11 @@ import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard'
 const RT_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: true,
-  sameSite: 'none' as const,
+  // Same root domain as the frontend — SameSite=Lax is stricter and more secure.
+  // Domain=.buildwithinfovion.com makes the cookie visible to all subdomains,
+  // so Next.js middleware on app.buildwithinfovion.com can read it server-side.
+  sameSite: 'lax' as const,
+  domain: '.buildwithinfovion.com',
   path: '/',
 };
 
