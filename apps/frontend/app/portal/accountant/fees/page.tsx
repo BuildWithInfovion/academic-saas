@@ -4,46 +4,87 @@ import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 
-function printFeeReceipt(payment: Payment, studentName: string, admissionNo: string, institutionName: string) {
+type Institution = { name: string; board?: string; address?: string; phone?: string; email?: string };
+
+function printFeeReceipt(
+  payment: Payment,
+  studentName: string,
+  admissionNo: string,
+  studentClass: string,
+  institution: Institution,
+) {
   const date = new Date(payment.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-  const html = `<!DOCTYPE html><html><head><title>Fee Receipt ${payment.receiptNo}</title>
+  const payModeLabel: Record<string, string> = {
+    cash: 'Cash', upi: 'UPI', cheque: 'Cheque',
+    bank_transfer: 'Bank Transfer', dd: 'Demand Draft',
+  };
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${payment.receiptNo}</title>
 <style>
-  body{font-family:Arial,sans-serif;font-size:13px;color:#1e293b;margin:0;padding:0}
-  .receipt{max-width:480px;margin:32px auto;border:2px solid #1e293b;padding:0}
-  .header{background:#1e293b;color:white;padding:16px 20px;text-align:center}
-  .header h1{margin:0;font-size:18px;letter-spacing:1px}
-  .header p{margin:4px 0 0;font-size:11px;opacity:.8}
-  .receipt-no{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;font-size:12px}
-  .body{padding:20px}
-  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:30px}
+  .receipt{max-width:520px;margin:0 auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+  .letterhead{background:#0f172a;color:#fff;padding:20px 24px;text-align:center}
+  .letterhead h1{font-size:17px;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
+  .letterhead .sub{font-size:11px;opacity:.65;line-height:1.5}
+  .receipt-header{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
+  .receipt-header .rno{font-size:13px;font-weight:700;color:#0f172a}
+  .receipt-header .rdate{font-size:12px;color:#64748b}
+  .section{padding:18px 24px}
+  .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f1f5f9}
   .row:last-child{border:none}
   .label{color:#64748b;font-size:12px}
-  .value{font-weight:600;text-align:right}
-  .total{background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:12px 16px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}
-  .total .amount{font-size:22px;font-weight:700;color:#16a34a}
-  .footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px;border-top:1px solid #e2e8f0}
-  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  .value{font-weight:600;font-size:12px;text-align:right;max-width:60%}
+  .amount-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:8px;padding:14px 18px;margin:0 24px 20px;display:flex;justify-content:space-between;align-items:center}
+  .amount-box .lbl{font-size:12px;color:#166534;font-weight:600}
+  .amount-box .amt{font-size:26px;font-weight:800;color:#15803d}
+  .footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px 20px;border-top:1px solid #f1f5f9;line-height:1.6}
+  @media print{body{background:#fff;padding:0}.receipt{box-shadow:none;border-radius:0;border:1px solid #ccc};-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </style></head><body>
 <div class="receipt">
-  <div class="header"><h1>${institutionName}</h1><p>Fee Payment Receipt</p></div>
-  <div class="receipt-no"><span>Receipt No: <strong>${payment.receiptNo}</strong></span><span>Date: ${date}</span></div>
-  <div class="body">
+  <div class="letterhead">
+    <h1>${institution.name}</h1>
+    <div class="sub">
+      ${institution.board ? `${institution.board}<br>` : ''}
+      ${institution.address ? `${institution.address}<br>` : ''}
+      ${[institution.phone ? `Ph: ${institution.phone}` : '', institution.email ? `Email: ${institution.email}` : ''].filter(Boolean).join('  ·  ')}
+    </div>
+  </div>
+  <div class="receipt-header">
+    <span class="rno">Receipt No: ${payment.receiptNo}</span>
+    <span class="rdate">${date}</span>
+  </div>
+  <div class="section">
+    <div class="section-title">Student Details</div>
     <div class="row"><span class="label">Student Name</span><span class="value">${studentName}</span></div>
     <div class="row"><span class="label">Admission No</span><span class="value">${admissionNo}</span></div>
-    <div class="row"><span class="label">Fee Head</span><span class="value">${payment.feeHead?.name ?? '—'}</span></div>
-    <div class="row"><span class="label">Payment Mode</span><span class="value">${payment.paymentMode?.toUpperCase()}</span></div>
-    ${payment.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${payment.remarks}</span></div>` : ''}
-    <div class="total"><span>Amount Paid</span><span class="amount">₹${payment.amount.toLocaleString('en-IN')}</span></div>
+    <div class="row"><span class="label">Class / Section</span><span class="value">${studentClass || '—'}</span></div>
   </div>
-  <div class="footer">This is a computer-generated receipt. No signature required.</div>
+  <div class="section" style="padding-top:0">
+    <div class="section-title">Payment Details</div>
+    <div class="row"><span class="label">Fee Head</span><span class="value">${payment.feeHead?.name ?? '—'}</span></div>
+    <div class="row"><span class="label">Payment Mode</span><span class="value">${payModeLabel[payment.paymentMode] ?? payment.paymentMode?.toUpperCase()}</span></div>
+    ${payment.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${payment.remarks}</span></div>` : ''}
+  </div>
+  <div class="amount-box">
+    <span class="lbl">Amount Paid</span>
+    <span class="amt">₹${payment.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+  </div>
+  <div class="footer">
+    This is a computer-generated receipt and does not require a signature.<br>
+    Issued by ${institution.name}
+  </div>
 </div>
 <script>window.onload=function(){window.print();}</script>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=560,height=700');
+  const w = window.open('', '_blank', 'width=600,height=800');
   if (w) { w.document.write(html); w.document.close(); }
 }
 
-type Student = { id: string; firstName: string; lastName: string; admissionNo: string };
+type Student = {
+  id: string; firstName: string; lastName: string; admissionNo: string;
+  academicUnit?: { displayName?: string; name?: string };
+};
 type Payment = {
   id: string; receiptNo: string; amount: number; paymentMode: string;
   paidOn: string; remarks?: string; feeHead: { name: string };
@@ -60,6 +101,7 @@ export default function AccountantFeesPage() {
   const [search, setSearch] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [institution, setInstitution] = useState<Institution>({ name: user?.institutionName ?? 'School' });
   const [payments, setPayments] = useState<Payment[]>([]);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [feeHeads, setFeeHeads] = useState<FeeHead[]>([]);
@@ -76,13 +118,18 @@ export default function AccountantFeesPage() {
   const [paying, setPaying] = useState(false);
 
   useEffect(() => {
-    Promise.all([apiFetch('/fees/heads'), apiFetch('/academic/years')])
-      .then(([heads, yrs]) => {
+    Promise.all([
+      apiFetch('/fees/heads'),
+      apiFetch('/academic/years'),
+      apiFetch('/academic/institution'),
+    ])
+      .then(([heads, yrs, inst]) => {
         setFeeHeads(Array.isArray(heads) ? heads : []);
         const yearList = Array.isArray(yrs) ? yrs : [];
         setYears(yearList);
         const cur = yearList.find((y: AcademicYear) => y.isCurrent) ?? yearList[0];
         if (cur) setCurrentYearId(cur.id);
+        if (inst) setInstitution(inst as Institution);
       })
       .catch(() => {});
   }, []);
@@ -333,7 +380,13 @@ export default function AccountantFeesPage() {
                           <td className="text-right font-semibold">₹{p.amount.toLocaleString('en-IN')}</td>
                           <td className="text-right">
                             <button
-                              onClick={() => selectedStudent && printFeeReceipt(p, `${selectedStudent.firstName} ${selectedStudent.lastName}`, selectedStudent.admissionNo, user?.institutionName ?? 'School')}
+                              onClick={() => selectedStudent && printFeeReceipt(
+                                p,
+                                `${selectedStudent.firstName} ${selectedStudent.lastName}`,
+                                selectedStudent.admissionNo,
+                                selectedStudent.academicUnit?.displayName || selectedStudent.academicUnit?.name || '',
+                                institution,
+                              )}
                               className="text-xs font-medium hover:underline"
                               style={{ color: 'var(--brand)' }}
                             >

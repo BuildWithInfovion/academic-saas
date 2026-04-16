@@ -513,6 +513,8 @@ model Exam {
   startDate       DateTime? @db.Date
   endDate         DateTime? @db.Date
   status          String    @default("draft")
+  examCenter      String?   // e.g. "Main Block — Room 101"
+  reportingTime   String?   // e.g. "30 minutes before exam"
   deletedAt       DateTime?
   createdAt       DateTime  @default(now())
 
@@ -534,6 +536,7 @@ model ExamSubject {
   maxMarks        Float    @default(100)
   passingMarks    Float    @default(35)
   examDate        DateTime? @db.Date
+  examTime        String?   // e.g. "10:00 AM – 12:00 PM"
   createdAt       DateTime @default(now())
 
   exam            Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)

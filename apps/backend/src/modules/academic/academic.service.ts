@@ -395,6 +395,15 @@ export class AcademicService {
     });
   }
 
+  // ── Institution profile ────────────────────────────────────────────────────
+
+  async getInstitution(institutionId: string) {
+    return this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { name: true, code: true, board: true, address: true, phone: true, email: true },
+    });
+  }
+
   // ── Academic Years ──────────────────────────────────────────────────────────
 
   async getYears(institutionId: string) {

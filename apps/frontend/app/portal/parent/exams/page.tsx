@@ -26,11 +26,202 @@ type ScorecardEntry = {
   isPassed: boolean;
 };
 
+type Institution = { name: string; code?: string; board?: string; address?: string; phone?: string; email?: string };
+
 type Scorecard = {
-  student: { firstName: string; lastName: string };
-  entries: ScorecardEntry[];
-  summary: { total: number; maxTotal: number; percentage: number; rank: number };
+  student: { firstName: string; lastName: string; admissionNo: string; rollNo?: string; academicUnit?: { name: string; displayName?: string } };
+  exam: { id: string; name: string; academicYear: string };
+  institution?: Institution;
+  rows: { subject: string; maxMarks: number; marksObtained: number | string; passed: boolean | null; isAbsent?: boolean; remarks?: string }[];
+  totalMax: number;
+  totalObtained: number;
+  percentage: number;
+  grade: string;
+  rank: number;
+  totalStudents: number;
 };
+
+type AdmitCardSubject = {
+  subjectName: string;
+  examDate?: string;
+  examTime?: string;
+  maxMarks: number;
+  passingMarks: number;
+};
+
+type AdmitCard = {
+  student: { firstName: string; lastName: string; admissionNo: string; rollNo?: string; dateOfBirth?: string; gender?: string; academicUnit?: { name: string; displayName?: string } };
+  exam: { id: string; name: string; academicYear: string; startDate?: string; endDate?: string; examCenter?: string; reportingTime?: string };
+  institution?: Institution;
+  subjects: AdmitCardSubject[];
+};
+
+// ── Print: Report Card ────────────────────────────────────────────────────────
+
+function printReportCard(sc: Scorecard) {
+  const inst = sc.institution;
+  const studentName = `${sc.student.firstName} ${sc.student.lastName}`;
+  const className = sc.student.academicUnit?.displayName || sc.student.academicUnit?.name || '—';
+  const fmtDate = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+
+  const gradeColor = (g: string) =>
+    ({ 'A+': '#15803d', A: '#166534', B: '#1d4ed8', C: '#92400e', D: '#c2410c', F: '#b91c1c' })[g] ?? '#334155';
+
+  const rows = sc.rows.map((r) => `
+    <tr>
+      <td>${r.subject}</td>
+      <td class="c">${r.maxMarks}</td>
+      <td class="c">${r.isAbsent ?? false ? '<span style="color:#94a3b8">Absent</span>' : (r.marksObtained ?? '—')}</td>
+      <td class="c">${r.isAbsent ?? false ? '—' : r.maxMarks > 0 ? ((Number(r.marksObtained) / r.maxMarks) * 100).toFixed(0) + '%' : '—'}</td>
+      <td class="c" style="font-weight:700;color:${gradeColor(String(r.passed === null ? 'F' : r.passed ? 'B' : 'F'))}">${r.isAbsent ?? false ? '—' : r.passed ? 'Pass' : 'Fail'}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html><head><title>Report Card — ${studentName}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:28px}
+  .card{max-width:680px;margin:0 auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden}
+  .letterhead{background:#0f172a;color:#fff;padding:18px 24px;text-align:center}
+  .letterhead h1{font-size:17px;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
+  .letterhead .sub{font-size:11px;opacity:.65;line-height:1.5}
+  .title-bar{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;text-align:center;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#0f172a}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #e2e8f0}
+  .info-cell{padding:10px 20px;border-right:1px solid #e2e8f0;font-size:12px}
+  .info-cell:nth-child(even){border-right:none}
+  .info-label{color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+  .info-value{font-weight:600;color:#0f172a}
+  table{width:100%;border-collapse:collapse;margin:0}
+  th{background:#f8fafc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;padding:8px 12px;border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0}
+  td{padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#334155}
+  td.c{text-align:center}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid #e2e8f0}
+  .sum-cell{padding:14px 12px;text-align:center;border-right:1px solid #e2e8f0}
+  .sum-cell:last-child{border-right:none}
+  .sum-num{font-size:22px;font-weight:800;color:#0f172a}
+  .sum-lbl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+  .footer{text-align:center;font-size:10px;color:#94a3b8;padding:10px;border-top:1px solid #f1f5f9}
+  .sig{display:flex;justify-content:space-between;padding:16px 32px 8px;font-size:11px;color:#64748b}
+  .sig-line{border-top:1px solid #94a3b8;width:140px;margin-bottom:4px}
+  @media print{body{background:#fff;padding:0}.card{border-radius:0;box-shadow:none};-webkit-print-color-adjust:exact;print-color-adjust:exact}
+</style></head><body>
+<div class="card">
+  <div class="letterhead">
+    <h1>${inst?.name ?? '—'}</h1>
+    <div class="sub">${[inst?.board, inst?.address].filter(Boolean).join(' · ')}</div>
+  </div>
+  <div class="title-bar">Progress Report Card — ${sc.exam.academicYear}</div>
+  <div class="info-grid">
+    <div class="info-cell"><div class="info-label">Student Name</div><div class="info-value">${studentName}</div></div>
+    <div class="info-cell"><div class="info-label">Admission No</div><div class="info-value">${sc.student.admissionNo}</div></div>
+    <div class="info-cell"><div class="info-label">Class / Section</div><div class="info-value">${className}</div></div>
+    <div class="info-cell"><div class="info-label">Examination</div><div class="info-value">${sc.exam.name}</div></div>
+  </div>
+  <table>
+    <thead><tr><th style="text-align:left">Subject</th><th class="c">Max Marks</th><th class="c">Marks Obtained</th><th class="c">Percentage</th><th class="c">Result</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="summary">
+    <div class="sum-cell"><div class="sum-num">${sc.totalObtained} / ${sc.totalMax}</div><div class="sum-lbl">Total Marks</div></div>
+    <div class="sum-cell"><div class="sum-num">${sc.percentage.toFixed(1)}%</div><div class="sum-lbl">Percentage</div></div>
+    <div class="sum-cell"><div class="sum-num" style="color:${gradeColor(sc.grade)}">${sc.grade}</div><div class="sum-lbl">Grade</div></div>
+    <div class="sum-cell"><div class="sum-num">#${sc.rank} / ${sc.totalStudents}</div><div class="sum-lbl">Class Rank</div></div>
+  </div>
+  <div class="sig">
+    <div><div class="sig-line"></div>Class Teacher</div>
+    <div style="text-align:center"><div class="sig-line"></div>Parent / Guardian</div>
+    <div style="text-align:right"><div class="sig-line"></div>Principal</div>
+  </div>
+  <div class="footer">This is a computer-generated report card. — ${inst?.name ?? ''}</div>
+</div>
+<script>window.onload=function(){window.print();}</script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=740,height=900');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+// ── Print: Admit Card ─────────────────────────────────────────────────────────
+
+function printAdmitCard(ac: AdmitCard) {
+  const inst = ac.institution;
+  const studentName = `${ac.student.firstName} ${ac.student.lastName}`;
+  const className = ac.student.academicUnit?.displayName || ac.student.academicUnit?.name || '—';
+  const fmt = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+
+  const subjectRows = ac.subjects.map((s) => `
+    <tr>
+      <td>${s.subjectName}</td>
+      <td class="c">${s.examDate ? new Date(s.examDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+      <td class="c">${s.examTime ?? '—'}</td>
+      <td class="c">${s.maxMarks}</td>
+      <td class="c">${s.passingMarks}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html><head><title>Admit Card — ${studentName}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:28px}
+  .card{max-width:660px;margin:0 auto;background:#fff;border:2px solid #0f172a;border-radius:8px;overflow:hidden}
+  .letterhead{background:#0f172a;color:#fff;padding:18px 24px;text-align:center}
+  .letterhead h1{font-size:17px;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
+  .letterhead .sub{font-size:11px;opacity:.65;line-height:1.5}
+  .title-bar{background:#fef9c3;border-bottom:1px solid #fde047;border-top:1px solid #fde047;padding:8px 20px;text-align:center;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#713f12}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #e2e8f0}
+  .info-cell{padding:9px 20px;border-right:1px solid #e2e8f0;font-size:12px}
+  .info-cell:nth-child(even){border-right:none}
+  .info-label{color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+  .info-value{font-weight:600;color:#0f172a}
+  .info-cell.full{grid-column:1/-1;border-right:none}
+  table{width:100%;border-collapse:collapse}
+  th{background:#f8fafc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;padding:8px 12px;border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0}
+  td{padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#334155}
+  td.c{text-align:center}
+  .instructions{background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 20px;font-size:11px;color:#475569}
+  .instructions ul{list-style:disc;padding-left:16px;line-height:1.8}
+  .sig{display:flex;justify-content:space-between;padding:16px 32px 8px;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b}
+  .sig-line{border-top:1px solid #94a3b8;width:140px;margin-bottom:4px}
+  .footer{text-align:center;font-size:10px;color:#94a3b8;padding:10px;border-top:1px solid #f1f5f9}
+  @media print{body{background:#fff;padding:0}.card{border-radius:0};-webkit-print-color-adjust:exact;print-color-adjust:exact}
+</style></head><body>
+<div class="card">
+  <div class="letterhead">
+    <h1>${inst?.name ?? '—'}</h1>
+    <div class="sub">${[inst?.board, inst?.address].filter(Boolean).join(' · ')}</div>
+  </div>
+  <div class="title-bar">Admit Card — ${ac.exam.name} (${ac.exam.academicYear})</div>
+  <div class="info-grid">
+    <div class="info-cell"><div class="info-label">Student Name</div><div class="info-value">${studentName}</div></div>
+    <div class="info-cell"><div class="info-label">Admission No</div><div class="info-value">${ac.student.admissionNo}</div></div>
+    <div class="info-cell"><div class="info-label">Class / Section</div><div class="info-value">${className}</div></div>
+    ${ac.student.rollNo ? `<div class="info-cell"><div class="info-label">Roll No</div><div class="info-value">${ac.student.rollNo}</div></div>` : ''}
+    ${ac.exam.examCenter ? `<div class="info-cell full"><div class="info-label">Exam Center</div><div class="info-value">${ac.exam.examCenter}</div></div>` : ''}
+    ${ac.exam.reportingTime ? `<div class="info-cell full"><div class="info-label">Reporting Time</div><div class="info-value">${ac.exam.reportingTime}</div></div>` : ''}
+  </div>
+  <table>
+    <thead><tr><th style="text-align:left">Subject</th><th class="c">Date</th><th class="c">Time</th><th class="c">Max Marks</th><th class="c">Passing Marks</th></tr></thead>
+    <tbody>${subjectRows}</tbody>
+  </table>
+  <div class="instructions">
+    <strong style="display:block;margin-bottom:6px">Instructions:</strong>
+    <ul>
+      <li>Bring this admit card to the examination hall. Entry will not be permitted without it.</li>
+      <li>Arrive at the exam center at the reporting time mentioned above.</li>
+      <li>No electronic devices or unfair materials are allowed inside the hall.</li>
+      <li>Verify your name, class, and subjects before the examination.</li>
+    </ul>
+  </div>
+  <div class="sig">
+    <div><div class="sig-line"></div>Student Signature</div>
+    <div style="text-align:right"><div class="sig-line"></div>Principal / Exam Controller</div>
+  </div>
+  <div class="footer">${inst?.name ?? ''} · This admit card is issued for ${ac.exam.name} · ${ac.exam.academicYear}</div>
+</div>
+<script>window.onload=function(){window.print();}</script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=720,height=900');
+  if (w) { w.document.write(html); w.document.close(); }
+}
 
 const STATUS_BADGE: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-500',
@@ -53,6 +244,8 @@ export default function ParentExamsPage() {
   const [selectedExamId, setSelectedExamId] = useState('');
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [loadingScorecard, setLoadingScorecard] = useState(false);
+  const [admitCard, setAdmitCard] = useState<AdmitCard | null>(null);
+  const [loadingAdmitCard, setLoadingAdmitCard] = useState<string | null>(null); // examId being loaded
 
   useEffect(() => {
     Promise.all([apiFetch('/students/child'), apiFetch('/academic/years')])
@@ -85,6 +278,20 @@ export default function ParentExamsPage() {
       .catch(() => setScorecard(null))
       .finally(() => setLoadingScorecard(false));
   }, [selectedExamId, selectedChildId]);
+
+  const fetchAndPrintAdmitCard = async (examId: string) => {
+    if (!selectedChildId) return;
+    setLoadingAdmitCard(examId);
+    try {
+      const ac = await apiFetch(`/exams/${examId}/admit-card/${selectedChildId}`) as AdmitCard;
+      setAdmitCard(ac);
+      printAdmitCard(ac);
+    } catch {
+      // ignore — no subjects may be configured yet
+    } finally {
+      setLoadingAdmitCard(null);
+    }
+  };
 
   if (notLinked) {
     return (
@@ -166,20 +373,30 @@ export default function ParentExamsPage() {
             {exams.map((e) => (
               <div
                 key={e.id}
-                onClick={() => e.status === 'completed' ? setSelectedExamId(selectedExamId === e.id ? '' : e.id) : undefined}
-                className={`px-5 py-3 flex items-center justify-between ${
-                  e.status === 'completed' ? 'cursor-pointer hover:bg-gray-50' : ''
-                } ${selectedExamId === e.id ? 'bg-blue-50' : ''}`}
+                className={`px-5 py-3 flex items-center justify-between ${selectedExamId === e.id ? 'bg-blue-50' : ''}`}
               >
                 <p className="text-sm font-medium text-gray-800">{e.name}</p>
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[e.status] ?? 'bg-gray-100 text-gray-500'}`}>
                     {e.status === 'active' ? 'In Progress' : e.status === 'completed' ? 'Completed' : 'Upcoming'}
                   </span>
+                  {/* Admit Card — available for upcoming and active exams */}
+                  {(e.status === 'draft' || e.status === 'active') && (
+                    <button
+                      onClick={() => fetchAndPrintAdmitCard(e.id)}
+                      disabled={loadingAdmitCard === e.id}
+                      className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded-lg hover:bg-amber-700 font-medium disabled:opacity-50"
+                    >
+                      {loadingAdmitCard === e.id ? '…' : 'Admit Card'}
+                    </button>
+                  )}
                   {e.status === 'completed' && (
-                    <span className="text-xs text-indigo-600 font-medium">
+                    <button
+                      onClick={() => setSelectedExamId(selectedExamId === e.id ? '' : e.id)}
+                      className="text-xs text-indigo-600 font-medium hover:underline"
+                    >
                       {selectedExamId === e.id ? 'Hide results ↑' : 'View results →'}
-                    </span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -205,19 +422,27 @@ export default function ParentExamsPage() {
         ) : (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="bg-black text-white px-5 py-4">
-              <p className="text-xs text-gray-400 mb-1">{selectedExam?.name}</p>
+              <div className="flex items-start justify-between mb-2">
+                <p className="text-xs text-gray-400">{selectedExam?.name}</p>
+                <button
+                  onClick={() => scorecard && printReportCard(scorecard)}
+                  className="text-xs bg-white text-black px-3 py-1 rounded-lg font-semibold hover:bg-gray-100"
+                >
+                  Print Report Card
+                </button>
+              </div>
               <div className="flex gap-8">
                 <div>
                   <p className="text-xs text-gray-400">Total</p>
-                  <p className="text-xl font-bold">{scorecard.summary.total} / {scorecard.summary.maxTotal}</p>
+                  <p className="text-xl font-bold">{scorecard.totalObtained} / {scorecard.totalMax}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">Percentage</p>
-                  <p className="text-xl font-bold">{scorecard.summary.percentage?.toFixed(1)}%</p>
+                  <p className="text-xl font-bold">{scorecard.percentage?.toFixed(1)}%</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">Class Rank</p>
-                  <p className="text-xl font-bold">#{scorecard.summary.rank ?? '—'}</p>
+                  <p className="text-xl font-bold">#{scorecard.rank ?? '—'}</p>
                 </div>
               </div>
             </div>
@@ -228,31 +453,33 @@ export default function ParentExamsPage() {
                   <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Marks</th>
                   <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Max</th>
                   <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">%</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Grade</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Status</th>
+                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Result</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {scorecard.entries.map((e, i) => (
-                  <tr key={i}>
-                    <td className="px-5 py-3 text-gray-800 font-medium">{e.subject.name}</td>
-                    <td className="px-5 py-3 text-center text-gray-700">
-                      {e.isAbsent ? <span className="text-xs text-gray-400">Absent</span> : (e.marksObtained ?? '—')}
-                    </td>
-                    <td className="px-5 py-3 text-center text-gray-500">{e.maxMarks}</td>
-                    <td className="px-5 py-3 text-center text-gray-600">{e.isAbsent ? '—' : `${e.percentage?.toFixed(0)}%`}</td>
-                    <td className={`px-5 py-3 text-center font-bold ${GRADE_COLORS[e.grade] ?? 'text-gray-600'}`}>
-                      {e.isAbsent ? '—' : e.grade}
-                    </td>
-                    <td className="px-5 py-3 text-center">
-                      {e.isAbsent
-                        ? <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Absent</span>
-                        : e.isPassed
-                          ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Pass</span>
-                          : <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Fail</span>}
-                    </td>
-                  </tr>
-                ))}
+                {scorecard.rows.map((r, i) => {
+                  const isAbsent = r.marksObtained === 'AB';
+                  const pct = !isAbsent && r.maxMarks > 0 && typeof r.marksObtained === 'number'
+                    ? ((r.marksObtained / r.maxMarks) * 100).toFixed(0) + '%'
+                    : '—';
+                  return (
+                    <tr key={i}>
+                      <td className="px-5 py-3 text-gray-800 font-medium">{r.subject}</td>
+                      <td className="px-5 py-3 text-center text-gray-700">
+                        {isAbsent ? <span className="text-xs text-gray-400">Absent</span> : (r.marksObtained ?? '—')}
+                      </td>
+                      <td className="px-5 py-3 text-center text-gray-500">{r.maxMarks}</td>
+                      <td className="px-5 py-3 text-center text-gray-600">{pct}</td>
+                      <td className="px-5 py-3 text-center">
+                        {isAbsent
+                          ? <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Absent</span>
+                          : r.passed
+                            ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Pass</span>
+                            : <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Fail</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

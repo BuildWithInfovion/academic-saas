@@ -276,4 +276,27 @@ export class FeesService {
       })
       .filter(Boolean);
   }
+
+  async getPaymentById(institutionId: string, paymentId: string) {
+    const payment = await this.prisma.feePayment.findFirst({
+      where: { id: paymentId, institutionId },
+      include: {
+        feeHead: true,
+        student: {
+          select: {
+            firstName: true, lastName: true, admissionNo: true,
+            academicUnit: { select: { displayName: true, name: true } },
+          },
+        },
+      },
+    });
+    if (!payment) throw new NotFoundException('Payment not found');
+
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { name: true, board: true, address: true, phone: true, email: true },
+    });
+
+    return { ...payment, institution };
+  }
 }

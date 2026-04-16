@@ -39,6 +39,8 @@ export class ExamService {
         name: dto.name,
         startDate: dto.startDate ? new Date(dto.startDate) : null,
         endDate: dto.endDate ? new Date(dto.endDate) : null,
+        examCenter: dto.examCenter ?? null,
+        reportingTime: dto.reportingTime ?? null,
         status: 'draft',
       },
     });
@@ -135,11 +137,13 @@ export class ExamService {
         maxMarks: dto.maxMarks ?? 100,
         passingMarks: dto.passingMarks ?? 35,
         examDate: dto.examDate ? new Date(dto.examDate) : null,
+        examTime: dto.examTime ?? null,
       },
       update: {
         maxMarks: dto.maxMarks ?? 100,
         passingMarks: dto.passingMarks ?? 35,
         examDate: dto.examDate ? new Date(dto.examDate) : null,
+        examTime: dto.examTime ?? null,
       },
     });
   }
@@ -299,6 +303,11 @@ export class ExamService {
     });
     if (!exam) throw new NotFoundException('Exam not found');
 
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { name: true, code: true, board: true, address: true, phone: true, email: true },
+    });
+
     const results = await this.prisma.examResult.findMany({
       where: { institutionId, examId, studentId },
     });
@@ -353,6 +362,7 @@ export class ExamService {
         name: exam.name,
         academicYear: exam.academicYear.name,
       },
+      institution,
       rows,
       totalMax,
       totalObtained,
@@ -566,5 +576,58 @@ export class ExamService {
     // Add rank
     const sorted = [...summaries].sort((a, b) => b.percentage - a.percentage);
     return sorted.map((s, i) => ({ ...s, rank: i + 1 }));
+  }
+
+  // ── Admit Card ────────────────────────────────────────────────────────────
+
+  async getAdmitCard(institutionId: string, examId: string, studentId: string) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, institutionId, deletedAt: null },
+      select: {
+        id: true, firstName: true, lastName: true,
+        admissionNo: true, rollNo: true, dateOfBirth: true, gender: true,
+        academicUnitId: true,
+        academicUnit: { select: { id: true, name: true, displayName: true } },
+      },
+    });
+    if (!student) throw new NotFoundException('Student not found');
+
+    const exam = await this.prisma.exam.findFirst({
+      where: { id: examId, institutionId, deletedAt: null },
+      include: { academicYear: { select: { name: true } } },
+    });
+    if (!exam) throw new NotFoundException('Exam not found');
+
+    const subjects = await this.prisma.examSubject.findMany({
+      where: { examId, academicUnitId: student.academicUnitId ?? '' },
+      include: { subject: { select: { id: true, name: true } } },
+      orderBy: { examDate: 'asc' },
+    });
+
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { name: true, code: true, board: true, address: true, phone: true, email: true },
+    });
+
+    return {
+      student,
+      exam: {
+        id: exam.id,
+        name: exam.name,
+        academicYear: exam.academicYear.name,
+        startDate: exam.startDate,
+        endDate: exam.endDate,
+        examCenter: exam.examCenter,
+        reportingTime: exam.reportingTime,
+      },
+      institution,
+      subjects: subjects.map((s) => ({
+        subjectName: s.subject.name,
+        examDate: s.examDate,
+        examTime: s.examTime,
+        maxMarks: s.maxMarks,
+        passingMarks: s.passingMarks,
+      })),
+    };
   }
 }

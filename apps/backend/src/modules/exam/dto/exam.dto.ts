@@ -20,6 +20,14 @@ export class CreateExamDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  @IsOptional()
+  @IsString()
+  examCenter?: string;
+
+  @IsOptional()
+  @IsString()
+  reportingTime?: string;
 }
 
 export class AddExamSubjectDto {
@@ -46,6 +54,10 @@ export class AddExamSubjectDto {
   @IsOptional()
   @IsDateString()
   examDate?: string;
+
+  @IsOptional()
+  @IsString()
+  examTime?: string;
 }
 
 export class ExamResultEntryDto {

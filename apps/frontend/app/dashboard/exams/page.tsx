@@ -10,12 +10,13 @@ interface Subject { id: string; name: string; code?: string; }
 interface Exam {
   id: string; name: string; status: string;
   startDate?: string; endDate?: string;
+  examCenter?: string; reportingTime?: string;
   academicYear: { name: string };
   _count?: { subjects: number };
 }
 interface ExamSubject {
   id: string; subjectId: string; academicUnitId: string;
-  maxMarks: number; passingMarks: number; examDate?: string;
+  maxMarks: number; passingMarks: number; examDate?: string; examTime?: string;
   subject: Subject; academicUnit: AcademicUnit;
 }
 interface CompletenessEntry {
@@ -54,6 +55,8 @@ export default function ExamsPage() {
   const [newExamName, setNewExamName] = useState('');
   const [newExamStart, setNewExamStart] = useState('');
   const [newExamEnd, setNewExamEnd] = useState('');
+  const [newExamCenter, setNewExamCenter] = useState('');
+  const [newExamReportingTime, setNewExamReportingTime] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Selected exam for configuration
@@ -66,6 +69,7 @@ export default function ExamsPage() {
   const [addSubMax, setAddSubMax] = useState('100');
   const [addSubPass, setAddSubPass] = useState('35');
   const [addSubDate, setAddSubDate] = useState('');
+  const [addSubTime, setAddSubTime] = useState('');
   const [addingSubject, setAddingSubject] = useState(false);
   const [unitSubjects, setUnitSubjects] = useState<Subject[]>([]);
   const [loadingUnitSubjects, setLoadingUnitSubjects] = useState(false);
@@ -130,10 +134,13 @@ export default function ExamsPage() {
           name: newExamName.trim(),
           startDate: newExamStart || undefined,
           endDate: newExamEnd || undefined,
+          examCenter: newExamCenter.trim() || undefined,
+          reportingTime: newExamReportingTime.trim() || undefined,
         }),
       }) as Exam;
       setExams((prev) => [exam, ...prev]);
       setNewExamName(''); setNewExamStart(''); setNewExamEnd('');
+      setNewExamCenter(''); setNewExamReportingTime('');
       showSuccess('Exam created. Now configure subjects per class.');
       openConfigure(exam);
     } catch (e: unknown) {
@@ -165,11 +172,12 @@ export default function ExamsPage() {
           maxMarks: parseInt(addSubMax),
           passingMarks: parseInt(addSubPass),
           examDate: addSubDate || undefined,
+          examTime: addSubTime.trim() || undefined,
         }),
       });
       const subs = await apiFetch(`/exams/${selectedExam.id}/subjects`);
       setExamSubjects(Array.isArray(subs) ? subs : []);
-      setAddSubSubject(''); setAddSubDate('');
+      setAddSubSubject(''); setAddSubDate(''); setAddSubTime('');
       showSuccess('Subject added');
     } catch (e: unknown) {
       setError((e as Error).message || 'Failed');
@@ -287,6 +295,18 @@ export default function ExamsPage() {
                 <label className="text-xs font-medium text-gray-600 block mb-1">End Date</label>
                 <input type="date" className={inp + ' w-full'} value={newExamEnd}
                   onChange={(e) => setNewExamEnd(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Exam Center <span className="text-gray-400 font-normal">(for admit cards)</span></label>
+                <input className={inp + ' w-full'} placeholder="e.g. Main Block — Room 101"
+                  value={newExamCenter} onChange={(e) => setNewExamCenter(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Reporting Time <span className="text-gray-400 font-normal">(for admit cards)</span></label>
+                <input className={inp + ' w-full'} placeholder="e.g. 30 minutes before exam"
+                  value={newExamReportingTime} onChange={(e) => setNewExamReportingTime(e.target.value)} />
               </div>
             </div>
             <button onClick={createExam}
@@ -509,8 +529,8 @@ export default function ExamsPage() {
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
               Add Subject to Class *
             </p>
-            <div className="grid grid-cols-5 gap-3 items-end">
-              <div className="col-span-1">
+            <div className="grid grid-cols-3 gap-3 items-end">
+              <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Class *</label>
                 <select className={inp + ' w-full'} value={addSubUnit}
                   onChange={(e) => { setAddSubUnit(e.target.value); setAddSubSubject(''); setUnitSubjects([]); }}>
@@ -518,7 +538,7 @@ export default function ExamsPage() {
                   {units.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
                 </select>
               </div>
-              <div className="col-span-1">
+              <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Subject *</label>
                 <select className={inp + ' w-full'} value={addSubSubject}
                   onChange={(e) => setAddSubSubject(e.target.value)}
@@ -530,6 +550,18 @@ export default function ExamsPage() {
                 </select>
               </div>
               <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Exam Date</label>
+                <input type="date" className={inp + ' w-full'} value={addSubDate}
+                  onChange={(e) => setAddSubDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3 items-end mt-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Exam Time <span className="text-gray-400 font-normal">(for admit cards)</span></label>
+                <input className={inp + ' w-full'} placeholder="e.g. 10:00 AM – 12:00 PM"
+                  value={addSubTime} onChange={(e) => setAddSubTime(e.target.value)} />
+              </div>
+              <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Max Marks</label>
                 <input type="number" className={inp + ' w-full'} value={addSubMax}
                   onChange={(e) => setAddSubMax(e.target.value)} min="1" />
@@ -538,11 +570,6 @@ export default function ExamsPage() {
                 <label className="text-xs font-medium text-gray-600 block mb-1">Pass Marks</label>
                 <input type="number" className={inp + ' w-full'} value={addSubPass}
                   onChange={(e) => setAddSubPass(e.target.value)} min="1" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Exam Date</label>
-                <input type="date" className={inp + ' w-full'} value={addSubDate}
-                  onChange={(e) => setAddSubDate(e.target.value)} />
               </div>
             </div>
             <button onClick={addExamSubject}
@@ -579,6 +606,7 @@ export default function ExamsPage() {
                           <th className="px-5 py-2 text-center">Max Marks</th>
                           <th className="px-5 py-2 text-center">Pass Marks</th>
                           <th className="px-5 py-2 text-center">Exam Date</th>
+                          <th className="px-5 py-2 text-center">Exam Time</th>
                           <th className="px-5 py-2"></th>
                         </tr>
                       </thead>
@@ -590,6 +618,9 @@ export default function ExamsPage() {
                             <td className="px-5 py-2.5 text-center text-gray-600">{es.passingMarks}</td>
                             <td className="px-5 py-2.5 text-center text-gray-500 text-xs">
                               {es.examDate ? new Date(es.examDate).toLocaleDateString('en-IN') : '—'}
+                            </td>
+                            <td className="px-5 py-2.5 text-center text-gray-500 text-xs">
+                              {es.examTime ?? '—'}
                             </td>
                             <td className="px-5 py-2.5 text-right">
                               <button onClick={() => removeExamSubject(es.id)}

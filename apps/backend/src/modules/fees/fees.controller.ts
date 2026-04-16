@@ -90,6 +90,12 @@ export class FeesController {
     return this.feesService.getDailyCollection(req.tenant?.institutionId, date);
   }
 
+  @Get('payments/:id')
+  @Permissions('fees.read')
+  getPaymentById(@Request() req: any, @Param('id') id: string) {
+    return this.feesService.getPaymentById(req.tenant?.institutionId, id);
+  }
+
   @Get('defaulters')
   @Permissions('fees.read')
   getDefaulters(

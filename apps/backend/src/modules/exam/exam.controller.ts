@@ -114,4 +114,14 @@ export class ExamController {
   ) {
     return this.examService.getStudentScorecard(req.tenant?.institutionId, id, studentId);
   }
+
+  @Get(':id/admit-card/:studentId')
+  @Permissions('exams.read')
+  getAdmitCard(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.examService.getAdmitCard(req.tenant?.institutionId, id, studentId);
+  }
 }

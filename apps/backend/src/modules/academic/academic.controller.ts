@@ -154,6 +154,15 @@ export class AcademicController {
     return this.academicService.removeClassTeacher(institutionId, unitId);
   }
 
+  // ── Institution profile — used by portal pages for print letterheads ─────
+
+  @Get('institution')
+  getInstitution(@Req() req: any) {
+    const institutionId = this.resolveInstitutionId(req);
+    if (!institutionId) return null;
+    return this.academicService.getInstitution(institutionId);
+  }
+
   // ── Academic Years ─────────────────────────────────────────────────────────
 
   @Get('years')
