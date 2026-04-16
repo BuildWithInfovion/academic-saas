@@ -112,7 +112,16 @@ export class ExamController {
     @Param('id') id: string,
     @Param('studentId') studentId: string,
   ) {
-    return this.examService.getStudentScorecard(req.tenant?.institutionId, id, studentId);
+    // C-06: pass parentUserId so service enforces child ownership for parent role
+    const parentUserId = req.user?.roles?.includes('parent')
+      ? req.user.userId
+      : undefined;
+    return this.examService.getStudentScorecard(
+      req.tenant?.institutionId,
+      id,
+      studentId,
+      parentUserId,
+    );
   }
 
   @Get(':id/admit-card/:studentId')
@@ -122,6 +131,15 @@ export class ExamController {
     @Param('id') id: string,
     @Param('studentId') studentId: string,
   ) {
-    return this.examService.getAdmitCard(req.tenant?.institutionId, id, studentId);
+    // C-06: pass parentUserId so service enforces child ownership for parent role
+    const parentUserId = req.user?.roles?.includes('parent')
+      ? req.user.userId
+      : undefined;
+    return this.examService.getAdmitCard(
+      req.tenant?.institutionId,
+      id,
+      studentId,
+      parentUserId,
+    );
   }
 }

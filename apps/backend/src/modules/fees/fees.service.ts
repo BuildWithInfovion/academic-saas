@@ -277,13 +277,14 @@ export class FeesService {
       .filter(Boolean);
   }
 
-  async getPaymentById(institutionId: string, paymentId: string) {
+  async getPaymentById(institutionId: string, paymentId: string, parentUserId?: string) {
     const payment = await this.prisma.feePayment.findFirst({
       where: { id: paymentId, institutionId },
       include: {
         feeHead: true,
         student: {
           select: {
+            id: true,
             firstName: true, lastName: true, admissionNo: true,
             academicUnit: { select: { displayName: true, name: true } },
           },
@@ -291,6 +292,16 @@ export class FeesService {
       },
     });
     if (!payment) throw new NotFoundException('Payment not found');
+
+    // C-06: if caller is a parent, verify the payment belongs to their child
+    if (parentUserId) {
+      const linked = await this.prisma.student.findFirst({
+        where: { id: payment.studentId, institutionId, parentUserId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!linked)
+        throw new ForbiddenException('You are not authorised to view this payment');
+    }
 
     const institution = await this.prisma.institution.findUnique({
       where: { id: institutionId },

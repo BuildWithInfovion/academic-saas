@@ -93,7 +93,11 @@ export class FeesController {
   @Get('payments/:id')
   @Permissions('fees.read')
   getPaymentById(@Request() req: any, @Param('id') id: string) {
-    return this.feesService.getPaymentById(req.tenant?.institutionId, id);
+    // C-06: pass parentUserId so service enforces child ownership for parent role
+    const parentUserId = req.user?.roles?.includes('parent')
+      ? req.user.userId
+      : undefined;
+    return this.feesService.getPaymentById(req.tenant?.institutionId, id, parentUserId);
   }
 
   @Get('defaulters')

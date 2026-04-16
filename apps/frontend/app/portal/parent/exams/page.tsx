@@ -56,6 +56,11 @@ type AdmitCard = {
   subjects: AdmitCardSubject[];
 };
 
+function esc(s: string | null | undefined): string {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // ── Print: Report Card ────────────────────────────────────────────────────────
 
 function printReportCard(sc: Scorecard) {
@@ -70,14 +75,14 @@ function printReportCard(sc: Scorecard) {
 
   const rows = sc.rows.map((r) => `
     <tr>
-      <td>${r.subject}</td>
+      <td>${esc(r.subject)}</td>
       <td class="c">${r.maxMarks}</td>
-      <td class="c">${r.isAbsent ?? false ? '<span style="color:#94a3b8">Absent</span>' : (r.marksObtained ?? '—')}</td>
+      <td class="c">${r.isAbsent ?? false ? '<span style="color:#94a3b8">Absent</span>' : esc(String(r.marksObtained ?? '—'))}</td>
       <td class="c">${r.isAbsent ?? false ? '—' : r.maxMarks > 0 ? ((Number(r.marksObtained) / r.maxMarks) * 100).toFixed(0) + '%' : '—'}</td>
       <td class="c" style="font-weight:700;color:${gradeColor(String(r.passed === null ? 'F' : r.passed ? 'B' : 'F'))}">${r.isAbsent ?? false ? '—' : r.passed ? 'Pass' : 'Fail'}</td>
     </tr>`).join('');
 
-  const html = `<!DOCTYPE html><html><head><title>Report Card — ${studentName}</title>
+  const html = `<!DOCTYPE html><html><head><title>Report Card — ${esc(studentName)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:28px}
@@ -107,15 +112,15 @@ function printReportCard(sc: Scorecard) {
 </style></head><body>
 <div class="card">
   <div class="letterhead">
-    <h1>${inst?.name ?? '—'}</h1>
-    <div class="sub">${[inst?.board, inst?.address].filter(Boolean).join(' · ')}</div>
+    <h1>${esc(inst?.name ?? '—')}</h1>
+    <div class="sub">${esc([inst?.board, inst?.address].filter(Boolean).join(' · '))}</div>
   </div>
-  <div class="title-bar">Progress Report Card — ${sc.exam.academicYear}</div>
+  <div class="title-bar">Progress Report Card — ${esc(sc.exam.academicYear)}</div>
   <div class="info-grid">
-    <div class="info-cell"><div class="info-label">Student Name</div><div class="info-value">${studentName}</div></div>
-    <div class="info-cell"><div class="info-label">Admission No</div><div class="info-value">${sc.student.admissionNo}</div></div>
-    <div class="info-cell"><div class="info-label">Class / Section</div><div class="info-value">${className}</div></div>
-    <div class="info-cell"><div class="info-label">Examination</div><div class="info-value">${sc.exam.name}</div></div>
+    <div class="info-cell"><div class="info-label">Student Name</div><div class="info-value">${esc(studentName)}</div></div>
+    <div class="info-cell"><div class="info-label">Admission No</div><div class="info-value">${esc(sc.student.admissionNo)}</div></div>
+    <div class="info-cell"><div class="info-label">Class / Section</div><div class="info-value">${esc(className)}</div></div>
+    <div class="info-cell"><div class="info-label">Examination</div><div class="info-value">${esc(sc.exam.name)}</div></div>
   </div>
   <table>
     <thead><tr><th style="text-align:left">Subject</th><th class="c">Max Marks</th><th class="c">Marks Obtained</th><th class="c">Percentage</th><th class="c">Result</th></tr></thead>
@@ -132,7 +137,7 @@ function printReportCard(sc: Scorecard) {
     <div style="text-align:center"><div class="sig-line"></div>Parent / Guardian</div>
     <div style="text-align:right"><div class="sig-line"></div>Principal</div>
   </div>
-  <div class="footer">This is a computer-generated report card. — ${inst?.name ?? ''}</div>
+  <div class="footer">This is a computer-generated report card. — ${esc(inst?.name ?? '')}</div>
 </div>
 <script>window.onload=function(){window.print();}</script>
 </body></html>`;
@@ -151,14 +156,14 @@ function printAdmitCard(ac: AdmitCard) {
 
   const subjectRows = ac.subjects.map((s) => `
     <tr>
-      <td>${s.subjectName}</td>
+      <td>${esc(s.subjectName)}</td>
       <td class="c">${s.examDate ? new Date(s.examDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
-      <td class="c">${s.examTime ?? '—'}</td>
+      <td class="c">${esc(s.examTime ?? '—')}</td>
       <td class="c">${s.maxMarks}</td>
       <td class="c">${s.passingMarks}</td>
     </tr>`).join('');
 
-  const html = `<!DOCTYPE html><html><head><title>Admit Card — ${studentName}</title>
+  const html = `<!DOCTYPE html><html><head><title>Admit Card — ${esc(studentName)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:28px}
@@ -186,17 +191,17 @@ function printAdmitCard(ac: AdmitCard) {
 </style></head><body>
 <div class="card">
   <div class="letterhead">
-    <h1>${inst?.name ?? '—'}</h1>
-    <div class="sub">${[inst?.board, inst?.address].filter(Boolean).join(' · ')}</div>
+    <h1>${esc(inst?.name ?? '—')}</h1>
+    <div class="sub">${esc([inst?.board, inst?.address].filter(Boolean).join(' · '))}</div>
   </div>
-  <div class="title-bar">Admit Card — ${ac.exam.name} (${ac.exam.academicYear})</div>
+  <div class="title-bar">Admit Card — ${esc(ac.exam.name)} (${esc(ac.exam.academicYear)})</div>
   <div class="info-grid">
-    <div class="info-cell"><div class="info-label">Student Name</div><div class="info-value">${studentName}</div></div>
-    <div class="info-cell"><div class="info-label">Admission No</div><div class="info-value">${ac.student.admissionNo}</div></div>
-    <div class="info-cell"><div class="info-label">Class / Section</div><div class="info-value">${className}</div></div>
-    ${ac.student.rollNo ? `<div class="info-cell"><div class="info-label">Roll No</div><div class="info-value">${ac.student.rollNo}</div></div>` : ''}
-    ${ac.exam.examCenter ? `<div class="info-cell full"><div class="info-label">Exam Center</div><div class="info-value">${ac.exam.examCenter}</div></div>` : ''}
-    ${ac.exam.reportingTime ? `<div class="info-cell full"><div class="info-label">Reporting Time</div><div class="info-value">${ac.exam.reportingTime}</div></div>` : ''}
+    <div class="info-cell"><div class="info-label">Student Name</div><div class="info-value">${esc(studentName)}</div></div>
+    <div class="info-cell"><div class="info-label">Admission No</div><div class="info-value">${esc(ac.student.admissionNo)}</div></div>
+    <div class="info-cell"><div class="info-label">Class / Section</div><div class="info-value">${esc(className)}</div></div>
+    ${ac.student.rollNo ? `<div class="info-cell"><div class="info-label">Roll No</div><div class="info-value">${esc(ac.student.rollNo)}</div></div>` : ''}
+    ${ac.exam.examCenter ? `<div class="info-cell full"><div class="info-label">Exam Center</div><div class="info-value">${esc(ac.exam.examCenter)}</div></div>` : ''}
+    ${ac.exam.reportingTime ? `<div class="info-cell full"><div class="info-label">Reporting Time</div><div class="info-value">${esc(ac.exam.reportingTime)}</div></div>` : ''}
   </div>
   <table>
     <thead><tr><th style="text-align:left">Subject</th><th class="c">Date</th><th class="c">Time</th><th class="c">Max Marks</th><th class="c">Passing Marks</th></tr></thead>
@@ -215,7 +220,7 @@ function printAdmitCard(ac: AdmitCard) {
     <div><div class="sig-line"></div>Student Signature</div>
     <div style="text-align:right"><div class="sig-line"></div>Principal / Exam Controller</div>
   </div>
-  <div class="footer">${inst?.name ?? ''} · This admit card is issued for ${ac.exam.name} · ${ac.exam.academicYear}</div>
+  <div class="footer">${esc(inst?.name ?? '')} · This admit card is issued for ${esc(ac.exam.name)} · ${esc(ac.exam.academicYear)}</div>
 </div>
 <script>window.onload=function(){window.print();}</script>
 </body></html>`;

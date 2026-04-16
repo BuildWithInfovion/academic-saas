@@ -6,6 +6,11 @@ import { usePortalAuthStore } from '@/store/portal-auth.store';
 
 type Institution = { name: string; board?: string; address?: string; phone?: string; email?: string };
 
+function esc(s: string | null | undefined): string {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function printFeeReceipt(
   payment: Payment,
   studentName: string,
@@ -18,7 +23,7 @@ function printFeeReceipt(
     cash: 'Cash', upi: 'UPI', cheque: 'Cheque',
     bank_transfer: 'Bank Transfer', dd: 'Demand Draft',
   };
-  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${payment.receiptNo}</title>
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${esc(payment.receiptNo)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:30px}
@@ -43,28 +48,28 @@ function printFeeReceipt(
 </style></head><body>
 <div class="receipt">
   <div class="letterhead">
-    <h1>${institution.name}</h1>
+    <h1>${esc(institution.name)}</h1>
     <div class="sub">
-      ${institution.board ? `${institution.board}<br>` : ''}
-      ${institution.address ? `${institution.address}<br>` : ''}
-      ${[institution.phone ? `Ph: ${institution.phone}` : '', institution.email ? `Email: ${institution.email}` : ''].filter(Boolean).join('  ·  ')}
+      ${institution.board ? `${esc(institution.board)}<br>` : ''}
+      ${institution.address ? `${esc(institution.address)}<br>` : ''}
+      ${[institution.phone ? `Ph: ${esc(institution.phone)}` : '', institution.email ? `Email: ${esc(institution.email)}` : ''].filter(Boolean).join('  ·  ')}
     </div>
   </div>
   <div class="receipt-header">
-    <span class="rno">Receipt No: ${payment.receiptNo}</span>
+    <span class="rno">Receipt No: ${esc(payment.receiptNo)}</span>
     <span class="rdate">${date}</span>
   </div>
   <div class="section">
     <div class="section-title">Student Details</div>
-    <div class="row"><span class="label">Student Name</span><span class="value">${studentName}</span></div>
-    <div class="row"><span class="label">Admission No</span><span class="value">${admissionNo}</span></div>
-    <div class="row"><span class="label">Class / Section</span><span class="value">${studentClass || '—'}</span></div>
+    <div class="row"><span class="label">Student Name</span><span class="value">${esc(studentName)}</span></div>
+    <div class="row"><span class="label">Admission No</span><span class="value">${esc(admissionNo)}</span></div>
+    <div class="row"><span class="label">Class / Section</span><span class="value">${esc(studentClass || '—')}</span></div>
   </div>
   <div class="section" style="padding-top:0">
     <div class="section-title">Payment Details</div>
-    <div class="row"><span class="label">Fee Head</span><span class="value">${payment.feeHead?.name ?? '—'}</span></div>
-    <div class="row"><span class="label">Payment Mode</span><span class="value">${payModeLabel[payment.paymentMode] ?? payment.paymentMode?.toUpperCase()}</span></div>
-    ${payment.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${payment.remarks}</span></div>` : ''}
+    <div class="row"><span class="label">Fee Head</span><span class="value">${esc(payment.feeHead?.name ?? '—')}</span></div>
+    <div class="row"><span class="label">Payment Mode</span><span class="value">${esc(payModeLabel[payment.paymentMode] ?? payment.paymentMode?.toUpperCase())}</span></div>
+    ${payment.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${esc(payment.remarks)}</span></div>` : ''}
   </div>
   <div class="amount-box">
     <span class="lbl">Amount Paid</span>
@@ -72,7 +77,7 @@ function printFeeReceipt(
   </div>
   <div class="footer">
     This is a computer-generated receipt and does not require a signature.<br>
-    Issued by ${institution.name}
+    Issued by ${esc(institution.name)}
   </div>
 </div>
 <script>window.onload=function(){window.print();}</script>

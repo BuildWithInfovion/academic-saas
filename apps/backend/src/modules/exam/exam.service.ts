@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -282,7 +283,20 @@ export class ExamService {
     institutionId: string,
     examId: string,
     studentId: string,
+    parentUserId?: string,
   ) {
+    // C-06: if caller is a parent, verify the student is their linked child
+    if (parentUserId) {
+      const linked = await this.prisma.student.findFirst({
+        where: { id: studentId, institutionId, parentUserId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!linked)
+        throw new ForbiddenException(
+          'You are not authorised to view this student\'s data',
+        );
+    }
+
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, institutionId },
       select: {
@@ -580,7 +594,24 @@ export class ExamService {
 
   // ── Admit Card ────────────────────────────────────────────────────────────
 
-  async getAdmitCard(institutionId: string, examId: string, studentId: string) {
+  async getAdmitCard(
+    institutionId: string,
+    examId: string,
+    studentId: string,
+    parentUserId?: string,
+  ) {
+    // C-06: if caller is a parent, verify the student is their linked child
+    if (parentUserId) {
+      const linked = await this.prisma.student.findFirst({
+        where: { id: studentId, institutionId, parentUserId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!linked)
+        throw new ForbiddenException(
+          'You are not authorised to view this student\'s data',
+        );
+    }
+
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, institutionId, deletedAt: null },
       select: {
