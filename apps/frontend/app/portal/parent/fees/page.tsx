@@ -92,6 +92,13 @@ type Balance = {
   totalDue: number; totalPaid: number; balance: number;
   breakdown: { feeHeadName: string; due: number; paid: number; balance: number }[];
 };
+type ChildDue = {
+  studentId: string; studentName: string; admissionNo: string; className: string;
+  upcomingDues: {
+    feeHeadId: string; feeHeadName: string; installmentName: string | null;
+    dueDate: string; daysFromToday: number; amount: number; isPaid: boolean;
+  }[];
+};
 
 export default function ParentFeesPage() {
   const user = usePortalAuthStore((s) => s.user);
@@ -103,14 +110,16 @@ export default function ParentFeesPage() {
   const [balance, setBalance] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(false);
   const [institution, setInstitution] = useState<Institution>({ name: user?.institutionName ?? 'School' });
+  const [childDues, setChildDues] = useState<ChildDue[]>([]);
 
   useEffect(() => {
     Promise.all([
       apiFetch('/students/child'),
       apiFetch('/academic/years'),
       apiFetch('/academic/institution'),
+      apiFetch('/fees/my-children/upcoming-dues').catch(() => []),
     ])
-      .then(([kids, years, inst]) => {
+      .then(([kids, years, inst, dues]) => {
         const children = Array.isArray(kids) ? kids : [];
         setChildren(children);
         if (children.length > 0) setSelectedChildId(children[0].id);
@@ -118,6 +127,7 @@ export default function ParentFeesPage() {
         const current = years.find((y: any) => y.isCurrent) ?? years[0];
         if (current) setCurrentYearId(current.id);
         if (inst) setInstitution(inst as Institution);
+        setChildDues(Array.isArray(dues) ? dues : []);
       })
       .catch(() => setNotLinked(true));
   }, []);
@@ -150,10 +160,64 @@ export default function ParentFeesPage() {
     );
   }
 
+  // Flatten all upcoming dues across children, excluding already-paid ones
+  const unpaidDues = childDues.flatMap((cd) =>
+    cd.upcomingDues
+      .filter((d) => !d.isPaid)
+      .map((d) => ({ ...d, studentName: cd.studentName, className: cd.className }))
+  ).sort((a, b) => a.daysFromToday - b.daysFromToday);
+
   return (
     <div className="p-4 sm:p-8 max-w-4xl">
       <h1 className="text-2xl font-bold text-gray-800 mb-1">Child's Fee Status</h1>
       <p className="text-sm text-gray-400 mb-6">Fee dues and payment history</p>
+
+      {/* Upcoming Due Dates Alert Panel */}
+      {unpaidDues.length > 0 && (
+        <div className="mb-6 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+            <span className="font-semibold text-gray-800 text-sm">Upcoming Fee Dues</span>
+            {unpaidDues.some((d) => d.daysFromToday < 0) && (
+              <span className="text-xs bg-red-100 text-red-700 font-medium px-2 py-0.5 rounded-full">
+                {unpaidDues.filter((d) => d.daysFromToday < 0).length} overdue
+              </span>
+            )}
+          </div>
+          <div className="divide-y divide-gray-50">
+            {unpaidDues.map((d, i) => {
+              const overdue = d.daysFromToday < 0;
+              const today   = d.daysFromToday === 0;
+              const urgent  = d.daysFromToday <= 7 && d.daysFromToday >= 0;
+              const timingLabel = overdue
+                ? `${Math.abs(d.daysFromToday)} day${Math.abs(d.daysFromToday) !== 1 ? 's' : ''} overdue`
+                : today ? 'Due today'
+                : `Due in ${d.daysFromToday} day${d.daysFromToday !== 1 ? 's' : ''}`;
+              const timingCls = overdue
+                ? 'bg-red-100 text-red-700'
+                : urgent ? 'bg-amber-100 text-amber-700'
+                : 'bg-blue-100 text-blue-700';
+
+              return (
+                <div key={i} className={`px-5 py-3 flex items-center justify-between ${overdue ? 'bg-red-50/40' : ''}`}>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">
+                      {d.feeHeadName}
+                      {d.installmentName && <span className="text-gray-400 font-normal"> · {d.installmentName}</span>}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {d.studentName} · {d.className} · Due {new Date(d.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${timingCls}`}>{timingLabel}</span>
+                    <span className="text-sm font-semibold text-gray-800">₹{d.amount.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {children.length > 1 && (
         <div className="mb-5">

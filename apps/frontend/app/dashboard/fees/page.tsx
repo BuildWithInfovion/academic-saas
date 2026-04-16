@@ -56,7 +56,7 @@ function printFeeReceipt(payment: FeePayment, student: Student, institutionName:
 
 export default function FeesPage() {
   const user = useAuthStore((s) => s.user);
-  const [tab, setTab] = useState<'collect' | 'structure' | 'defaulters' | 'heads' | 'daily'>('collect');
+  const [tab, setTab] = useState<'collect' | 'structure' | 'defaulters' | 'heads' | 'daily' | 'alerts'>('collect');
 
   const [feeHeads, setFeeHeads] = useState<FeeHead[]>([]);
   const [units, setUnits] = useState<AcademicUnit[]>([]);
@@ -96,6 +96,19 @@ export default function FeesPage() {
   // ── Daily Collection ───────────────────────────────────────────────────────
   const [dailyDate, setDailyDate] = useState(new Date().toISOString().split('T')[0]);
   const [dailyData, setDailyData] = useState<{ payments: any[]; total: number } | null>(null);
+
+  // ── Due Alerts ─────────────────────────────────────────────────────────────
+  type AlertItem = {
+    feeStructureId: string; feeHeadName: string; installmentName: string | null;
+    dueDate: string; daysFromToday: number; amount: number;
+    className: string; studentsInClass: number; totalAmount: number;
+  };
+  type AlertData = {
+    overdue: AlertItem[]; thisWeek: AlertItem[]; thisMonth: AlertItem[];
+    summary: { overdueCount: number; thisWeekCount: number; thisMonthCount: number; overdueAmount: number };
+  };
+  const [alertData, setAlertData] = useState<AlertData | null>(null);
+  const [loadingAlerts, setLoadingAlerts] = useState(false);
 
   useEffect(() => {
     if (!user?.institutionId) return;
@@ -280,6 +293,21 @@ export default function FeesPage() {
     }
   };
 
+  // ── Due Alerts handler ─────────────────────────────────────────────────────
+  const loadDueAlerts = async () => {
+    setLoadingAlerts(true);
+    setError(null);
+    try {
+      const url = currentYearId ? `/fees/due-alerts?yearId=${currentYearId}` : '/fees/due-alerts';
+      const res = await apiFetch(url);
+      setAlertData(res as AlertData);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load due alerts');
+    } finally {
+      setLoadingAlerts(false);
+    }
+  };
+
   // ── Daily Collection ───────────────────────────────────────────────────────
   const loadDailyCollection = async () => {
     try {
@@ -309,6 +337,14 @@ export default function FeesPage() {
         <button className={tabBtn('defaulters')} onClick={() => { setTab('defaulters'); }}>Defaulters</button>
         <button className={tabBtn('daily')} onClick={() => { setTab('daily'); loadDailyCollection(); }}>Daily Collection</button>
         <button className={tabBtn('heads')} onClick={() => setTab('heads')}>Fee Heads</button>
+        <button className={tabBtn('alerts')} onClick={() => { setTab('alerts'); loadDueAlerts(); }}>
+          Due Alerts
+          {alertData && alertData.summary.overdueCount > 0 && (
+            <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
+              {alertData.summary.overdueCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ── Collect Fee ── */}
@@ -663,6 +699,106 @@ export default function FeesPage() {
                 </table>
               )}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Due Alerts ── */}
+      {tab === 'alerts' && (
+        <div className="space-y-5">
+          {loadingAlerts ? (
+            <p className="text-sm text-gray-400">Loading...</p>
+          ) : !alertData ? (
+            <p className="text-sm text-gray-400">Click the tab to load alerts.</p>
+          ) : (
+            <>
+              {/* Summary strip */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <p className="text-2xl font-bold text-red-700">{alertData.summary.overdueCount}</p>
+                  <p className="text-xs text-red-600 font-medium mt-1">Overdue Installments</p>
+                  {alertData.summary.overdueAmount > 0 && (
+                    <p className="text-xs text-red-500 mt-0.5">₹{alertData.summary.overdueAmount.toLocaleString('en-IN')} outstanding</p>
+                  )}
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-2xl font-bold text-amber-700">{alertData.summary.thisWeekCount}</p>
+                  <p className="text-xs text-amber-600 font-medium mt-1">Due This Week</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-2xl font-bold text-blue-700">{alertData.summary.thisMonthCount}</p>
+                  <p className="text-xs text-blue-600 font-medium mt-1">Due This Month</p>
+                </div>
+              </div>
+
+              {alertData.summary.overdueCount === 0 && alertData.summary.thisWeekCount === 0 && alertData.summary.thisMonthCount === 0 && (
+                <div className="text-center py-12 text-gray-400 text-sm">
+                  No upcoming fee due dates in the next 30 days.
+                  <br />
+                  <span className="text-xs">Set due dates on fee structures to see alerts here.</span>
+                </div>
+              )}
+
+              {/* Alert table helper */}
+              {(['overdue', 'thisWeek', 'thisMonth'] as const).map((section) => {
+                const items = alertData[section];
+                if (items.length === 0) return null;
+                const config = {
+                  overdue:   { label: 'Overdue', headerCls: 'bg-red-600',   badgeCls: 'bg-red-100 text-red-700',   dayLabel: (d: number) => `${Math.abs(d)}d overdue` },
+                  thisWeek:  { label: 'Due This Week',  headerCls: 'bg-amber-500', badgeCls: 'bg-amber-100 text-amber-700', dayLabel: (d: number) => d === 0 ? 'Today' : `In ${d}d` },
+                  thisMonth: { label: 'Due This Month', headerCls: 'bg-blue-600',  badgeCls: 'bg-blue-100 text-blue-700',  dayLabel: (d: number) => `In ${d}d` },
+                }[section];
+
+                return (
+                  <div key={section} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className={`px-5 py-3 text-white text-sm font-semibold ${config.headerCls}`}>
+                      {config.label} — {items.length} installment{items.length !== 1 ? 's' : ''}
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Class</th>
+                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Fee Head</th>
+                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Installment</th>
+                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Due Date</th>
+                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Timing</th>
+                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Amount / Student</th>
+                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Students</th>
+                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Total Due</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {items.map((item) => (
+                          <tr key={item.feeStructureId} className="hover:bg-gray-50">
+                            <td className="px-5 py-3 font-medium text-gray-800">{item.className}</td>
+                            <td className="px-5 py-3 text-gray-700">{item.feeHeadName}</td>
+                            <td className="px-5 py-3 text-gray-500 text-xs">{item.installmentName || 'Annual'}</td>
+                            <td className="px-5 py-3 text-gray-600 text-xs">
+                              {new Date(item.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td className="px-5 py-3 text-center">
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.badgeCls}`}>
+                                {config.dayLabel(item.daysFromToday)}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-right text-gray-700">₹{item.amount.toLocaleString('en-IN')}</td>
+                            <td className="px-5 py-3 text-right text-gray-600">{item.studentsInClass}</td>
+                            <td className="px-5 py-3 text-right font-semibold text-gray-800">₹{item.totalAmount.toLocaleString('en-IN')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+
+              <div className="flex justify-end">
+                <button onClick={loadDueAlerts}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                  Refresh
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}

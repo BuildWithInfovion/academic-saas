@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Delete, Body, Param, Query,
-  UseGuards, Request,
+  UseGuards, Request, ForbiddenException,
 } from '@nestjs/common';
 import { FeesService } from './fees.service';
 import { CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto } from './dto/fees.dto';
@@ -108,5 +108,29 @@ export class FeesController {
     @Query('unitId') unitId: string,
   ) {
     return this.feesService.getDefaulters(req.tenant?.institutionId, yearId, unitId);
+  }
+
+  // ── Fee Due-Date Alerts ────────────────────────────────────────────────────
+
+  /**
+   * Operator / accountant only — requires BOTH fees.read AND students.read.
+   * Parents only have fees.read, so they cannot reach this endpoint.
+   */
+  @Get('due-alerts')
+  @Permissions('fees.read', 'students.read')
+  getDueAlerts(@Request() req: any, @Query('yearId') yearId: string) {
+    return this.feesService.getDueAlerts(req.tenant?.institutionId, yearId || undefined);
+  }
+
+  /**
+   * Parent portal — returns upcoming/overdue dues for the caller's linked children.
+   * Non-parent callers get an empty array (no error, just nothing).
+   */
+  @Get('my-children/upcoming-dues')
+  @Permissions('fees.read')
+  getChildrenUpcomingDues(@Request() req: any) {
+    const parentUserId = req.user?.roles?.includes('parent') ? req.user.userId : null;
+    if (!parentUserId) return [];
+    return this.feesService.getChildrenUpcomingDues(req.tenant?.institutionId, parentUserId);
   }
 }

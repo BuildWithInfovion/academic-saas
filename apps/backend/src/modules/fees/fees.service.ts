@@ -310,4 +310,207 @@ export class FeesService {
 
     return { ...payment, institution };
   }
+
+  // ── Fee Due-Date Alerts (operator / accountant) ───────────────────────────
+
+  /**
+   * Returns fee installments that are overdue, due within 7 days, or due within 30 days.
+   * Intended for operator/accountant dashboards only — gated by fees.read + students.read
+   * so parents (who only have fees.read) cannot reach it.
+   *
+   * Uses IST-aware "today" so the boundary is correct for Indian schools.
+   */
+  async getDueAlerts(institutionId: string, academicYearId?: string) {
+    // Resolve current year when not supplied
+    let yearId = academicYearId;
+    if (!yearId) {
+      const current = await this.prisma.academicYear.findFirst({
+        where: { institutionId, isCurrent: true },
+        select: { id: true },
+      });
+      yearId = current?.id;
+    }
+    if (!yearId) {
+      return { overdue: [], thisWeek: [], thisMonth: [], summary: { overdueCount: 0, thisWeekCount: 0, thisMonthCount: 0, overdueAmount: 0 } };
+    }
+
+    // IST-aware today: advance UTC clock by +5:30, read date, build UTC midnight for comparison
+    const istMs = 5.5 * 60 * 60 * 1000;
+    const todayStr = new Date(Date.now() + istMs).toISOString().slice(0, 10);
+    const today     = new Date(`${todayStr}T00:00:00.000Z`);
+    const weekLater  = new Date(today.getTime() + 7 * 86400000);
+    const monthLater = new Date(today.getTime() + 30 * 86400000);
+
+    const structures = await this.prisma.feeStructure.findMany({
+      where: {
+        institutionId,
+        academicYearId: yearId,
+        dueDate: { not: null },
+        deletedAt: null,
+      },
+      include: {
+        feeHead:      { select: { id: true, name: true } },
+        academicUnit: { select: { id: true, name: true, displayName: true } },
+      },
+    });
+
+    if (structures.length === 0) {
+      return { overdue: [], thisWeek: [], thisMonth: [], summary: { overdueCount: 0, thisWeekCount: 0, thisMonthCount: 0, overdueAmount: 0 } };
+    }
+
+    // Batch student counts per affected class (one query, O(1) lookup per structure)
+    const classIds = [...new Set(structures.map((s) => s.academicUnitId))];
+    const countRows = await this.prisma.student.groupBy({
+      by: ['academicUnitId'],
+      where: { institutionId, academicUnitId: { in: classIds }, deletedAt: null, status: 'active' },
+      _count: { id: true },
+    });
+    const countByClass = new Map(countRows.map((r) => [r.academicUnitId!, r._count.id]));
+
+    type AlertItem = {
+      feeStructureId: string;
+      feeHeadId: string;
+      feeHeadName: string;
+      installmentName: string | null;
+      dueDate: string;
+      daysFromToday: number;
+      amount: number;
+      classId: string;
+      className: string;
+      studentsInClass: number;
+      totalAmount: number;
+    };
+
+    const overdue: AlertItem[] = [];
+    const thisWeek: AlertItem[] = [];
+    const thisMonth: AlertItem[] = [];
+
+    for (const s of structures) {
+      const due = s.dueDate!;
+      const daysFromToday = Math.ceil((due.getTime() - today.getTime()) / 86400000);
+      const studentsInClass = countByClass.get(s.academicUnitId) ?? 0;
+      const item: AlertItem = {
+        feeStructureId: s.id,
+        feeHeadId:     s.feeHead.id,
+        feeHeadName:   s.feeHead.name,
+        installmentName: s.installmentName ?? null,
+        dueDate:       due.toISOString().slice(0, 10),
+        daysFromToday,
+        amount:        s.amount,
+        classId:       s.academicUnitId,
+        className:     s.academicUnit.displayName || s.academicUnit.name,
+        studentsInClass,
+        totalAmount:   s.amount * studentsInClass,
+      };
+
+      if (daysFromToday < 0)          overdue.push(item);
+      else if (due <= weekLater)       thisWeek.push(item);
+      else if (due <= monthLater)      thisMonth.push(item);
+    }
+
+    const byDate = (a: AlertItem, b: AlertItem) => a.dueDate.localeCompare(b.dueDate);
+    overdue.sort(byDate);
+    thisWeek.sort(byDate);
+    thisMonth.sort(byDate);
+
+    return {
+      overdue,
+      thisWeek,
+      thisMonth,
+      summary: {
+        overdueCount:   overdue.length,
+        thisWeekCount:  thisWeek.length,
+        thisMonthCount: thisMonth.length,
+        overdueAmount:  overdue.reduce((s, i) => s + i.totalAmount, 0),
+      },
+    };
+  }
+
+  // ── Children Upcoming Dues (parent portal) ────────────────────────────────
+
+  /**
+   * Returns upcoming + recently-overdue fee installments for a parent's linked children.
+   * Window: 30 days past → 30 days ahead (enough to always show the next installment).
+   * "isPaid" = child has at least one payment for that feeHead in the current academic year.
+   */
+  async getChildrenUpcomingDues(institutionId: string, parentUserId: string) {
+    const children = await this.prisma.student.findMany({
+      where: { institutionId, parentUserId, deletedAt: null, status: 'active' },
+      select: {
+        id: true, firstName: true, lastName: true, admissionNo: true,
+        academicUnitId: true,
+        academicUnit: { select: { id: true, name: true, displayName: true } },
+      },
+    });
+    if (children.length === 0) return [];
+
+    const currentYear = await this.prisma.academicYear.findFirst({
+      where: { institutionId, isCurrent: true },
+      select: { id: true },
+    });
+    if (!currentYear) return [];
+    const yearId = currentYear.id;
+
+    // IST today
+    const istMs = 5.5 * 60 * 60 * 1000;
+    const todayStr = new Date(Date.now() + istMs).toISOString().slice(0, 10);
+    const today      = new Date(`${todayStr}T00:00:00.000Z`);
+    const monthAgo   = new Date(today.getTime() - 30 * 86400000);
+    const monthLater = new Date(today.getTime() + 30 * 86400000);
+
+    const classIds = [...new Set(children.map((c) => c.academicUnitId).filter(Boolean))] as string[];
+    if (classIds.length === 0) return [];
+
+    // Fee structures for children's classes within the window
+    const structures = await this.prisma.feeStructure.findMany({
+      where: {
+        institutionId,
+        academicYearId: yearId,
+        academicUnitId: { in: classIds },
+        dueDate: { gte: monthAgo, lte: monthLater },
+        deletedAt: null,
+      },
+      include: { feeHead: { select: { id: true, name: true } } },
+    });
+
+    if (structures.length === 0) {
+      return children.map((c) => ({
+        studentId: c.id,
+        studentName: `${c.firstName} ${c.lastName}`,
+        admissionNo: c.admissionNo,
+        className: c.academicUnit?.displayName || c.academicUnit?.name || '—',
+        upcomingDues: [] as never[],
+      }));
+    }
+
+    // One query for all children's payments for this year
+    const payments = await this.prisma.feePayment.findMany({
+      where: { institutionId, studentId: { in: children.map((c) => c.id) }, academicYearId: yearId },
+      select: { studentId: true, feeHeadId: true },
+    });
+    const paidSet = new Set(payments.map((p) => `${p.studentId}:${p.feeHeadId}`));
+
+    return children.map((child) => {
+      const childStructures = structures.filter((s) => s.academicUnitId === child.academicUnitId);
+      const upcomingDues = childStructures
+        .map((s) => ({
+          feeHeadId:       s.feeHead.id,
+          feeHeadName:     s.feeHead.name,
+          installmentName: s.installmentName ?? null,
+          dueDate:         s.dueDate!.toISOString().slice(0, 10),
+          daysFromToday:   Math.ceil((s.dueDate!.getTime() - today.getTime()) / 86400000),
+          amount:          s.amount,
+          isPaid:          paidSet.has(`${child.id}:${s.feeHead.id}`),
+        }))
+        .sort((a, b) => a.daysFromToday - b.daysFromToday);
+
+      return {
+        studentId:   child.id,
+        studentName: `${child.firstName} ${child.lastName}`,
+        admissionNo: child.admissionNo,
+        className:   child.academicUnit?.displayName || child.academicUnit?.name || '—',
+        upcomingDues,
+      };
+    });
+  }
 }
