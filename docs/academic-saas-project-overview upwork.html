@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>School Management SaaS — Project Overview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      color: #1a1a2e;
+      background: #fff;
+      line-height: 1.6;
+    }
+
+    /* ── Cover page ── */
+    .cover {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 60px 40px;
+      page-break-after: always;
+    }
+
+    .cover .badge {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      color: #a5b4fc;
+    }
+
+    .cover h1 {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .cover h1 span { color: #818cf8; }
+
+    .cover .subtitle {
+      font-size: 16px;
+      color: rgba(255,255,255,0.65);
+      max-width: 520px;
+      margin-bottom: 48px;
+    }
+
+    .cover-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 560px;
+      width: 100%;
+      margin-bottom: 48px;
+    }
+
+    .cover-stat {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 16px 12px;
+    }
+
+    .cover-stat .num { font-size: 26px; font-weight: 700; color: #a5b4fc; }
+    .cover-stat .lbl { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 3px; }
+
+    .cover .built-by {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 24px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .cover .built-by strong { color: rgba(255,255,255,0.75); }
+
+    /* ── Content pages ── */
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 52px 48px;
+      page-break-after: always;
+    }
+
+    .page:last-child { page-break-after: auto; }
+
+    /* Section header */
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #6366f1;
+      margin-bottom: 6px;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+
+    .section-desc {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 32px;
+      max-width: 580px;
+    }
+
+    /* ── Module cards ── */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .module-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px 20px;
+      background: #fafafa;
+    }
+
+    .module-card .icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .module-card h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 5px;
+    }
+
+    .module-card p {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.55;
+    }
+
+    .bg-indigo  { background: #eef2ff; }
+    .bg-green   { background: #f0fdf4; }
+    .bg-amber   { background: #fffbeb; }
+    .bg-blue    { background: #eff6ff; }
+    .bg-rose    { background: #fff1f2; }
+    .bg-purple  { background: #faf5ff; }
+    .bg-teal    { background: #f0fdfa; }
+    .bg-orange  { background: #fff7ed; }
+
+    /* ── Feature list ── */
+    .feature-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 24px;
+      margin-bottom: 24px;
+    }
+
+    .feature-list li {
+      font-size: 12.5px;
+      color: #334155;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .feature-list li::before {
+      content: '✓';
+      color: #6366f1;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── TC Workflow ── */
+    .workflow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 24px 0;
+      flex-wrap: wrap;
+    }
+
+    .wf-step {
+      flex: 1;
+      min-width: 120px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .wf-step .num {
+      width: 24px;
+      height: 24px;
+      background: #6366f1;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px;
+    }
+
+    .wf-step h4 { font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+    .wf-step p  { font-size: 11px; color: #64748b; }
+
+    .wf-arrow {
+      font-size: 18px;
+      color: #cbd5e1;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Tech stack ── */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .stack-block {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .stack-block h4 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+
+    .tag {
+      display: inline-block;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #334155;
+      margin: 2px 2px 2px 0;
+      font-weight: 500;
+    }
+
+    .tag.accent {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      color: #4338ca;
+    }
+
+    /* ── Role table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 12px;
+    }
+
+    th {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 9px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+    }
+
+    td {
+      border: 1px solid #e2e8f0;
+      padding: 9px 12px;
+      color: #334155;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td { background: #fafafa; }
+
+    /* ── Security highlight ── */
+    .highlight-box {
+      background: linear-gradient(135deg, #eef2ff, #f0f9ff);
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+
+    .highlight-box h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #3730a3;
+      margin-bottom: 10px;
+    }
+
+    .highlight-box ul {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px 24px;
+    }
+
+    .highlight-box ul li {
+      font-size: 12px;
+      color: #1e40af;
+      display: flex;
+      gap: 7px;
+      align-items: flex-start;
+    }
+
+    .highlight-box ul li::before { content: '→'; color: #6366f1; flex-shrink: 0; }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid #e2e8f0; margin: 28px 0; }
+
+    /* ── Footer strip ── */
+    .footer {
+      background: #0f172a;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      padding: 18px;
+      font-size: 11px;
+    }
+
+    .footer strong { color: rgba(255,255,255,0.8); }
+
+    /* Print */
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .cover { min-height: 100vh; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ COVER ══ -->
+<div class="cover">
+  <div class="badge">Product Overview — 2025</div>
+  <h1>School Management<br><span>SaaS Platform</span></h1>
+  <p class="subtitle">
+    A complete multi-tenant platform for schools to manage admissions,
+    academics, fees, attendance, and compliance — from one dashboard.
+  </p>
+
+  <div class="cover-grid">
+    <div class="cover-stat">
+      <div class="num">8+</div>
+      <div class="lbl">Core Modules</div>
+    </div>
+    <div class="cover-stat">
+      <div class="num">7</div>
+      <div class="lbl">User Roles</div>
+    </div>
+    <div class="cover-stat">
+      <div class="num">Multi</div>
+      <div class="lbl">School Ready</div>
+    </div>
+  </div>
+
+  <div class="built-by">
+    Built by <strong>Sankalp Deshpande</strong> &nbsp;·&nbsp; Full-Stack Developer &nbsp;·&nbsp;
+    <strong>BuildWithInfovion</strong>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ PAGE 1 — OVERVIEW ══ -->
+<div class="page">
+  <div class="section-label">What We Built</div>
+  <h2 class="section-title">One Platform. Every School Operation.</h2>
+  <p class="section-desc">
+    Most schools run on spreadsheets, disconnected tools, and manual paperwork.
+    This platform replaces all of that — a single system that handles every operational
+    workflow, built specifically for how Indian schools work.
+  </p>
+
+  <div class="module-grid">
+    <div class="module-card">
+      <div class="icon bg-indigo">🎓</div>
+      <h3>Student Management</h3>
+      <p>Admissions, profiles, status tracking (active / transferred / alumni), demographic records, and incoming TC from previous school.</p>
+    </div>
+    <div class="module-card">
+      <div class="icon bg-green">🏫</div>
+      <h3>Academic Structure</h3>
+      <p>Hierarchical class setup — boards, streams, grades, divisions. Academic years with current-year tracking. Subject assignment per class.</p>
+    </div>
+    <div class="module-card">
+      <div class="icon bg-amber">📋</div>
+      <h3>Attendance</h3>
+      <p>Session-based daily attendance with present / absent / late / half-day statuses. Per-class sessions, bulk marking, and analytics.</p>
+    </div>
+    <div class="module-card">
+      <div class="icon bg-blue">📝</div>
+      <h3>Exam & Results</h3>
+      <p>Multi-subject exams with per-subject passing marks. Result entry, pass/fail analytics, and promotion eligibility calculation.</p>
+    </div>
+    <div class="module-card">
+      <div class="icon bg-rose">💰</div>
+      <h3>Fee Management</h3>
+      <p>Fee structures per class and academic year. Payment recording, dues tracking, and outstanding balance calculation per student.</p>
+    </div>
+    <div class="module-card">
+      <div class="icon bg-purple">📄</div>
+      <h3>Transfer Certificate (TC)</h3>
+      <p>Government-approved 21-field TC workflow — request, approval, issue. Atomic TC number generation. Auto-populated from records.</p>
+    </div>
+    <div class="module-card">
+      <div class="icon bg-teal">👤</div>
+      <h3>Staff & Role Management</h3>
+      <p>7 role types with granular permissions. Portal access for teachers, parents, receptionists, accountants, and management.</p>
+    </div>
+    <div class="module-card">
+      <div class="icon bg-orange">🔒</div>
+      <h3>Multi-School Isolation</h3>
+      <p>Each school on the platform is completely isolated. No data crossover. Institution-level tenancy enforced at every layer.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ PAGE 2 — TC MODULE ══ -->
+<div class="page">
+  <div class="section-label">Key Module Deep Dive</div>
+  <h2 class="section-title">Transfer Certificate Workflow</h2>
+  <p class="section-desc">
+    TC issuance is a government-regulated process in India. The platform handles
+    the full lifecycle — from request to printed document — with proper approval
+    controls and data immutability.
+  </p>
+
+  <div class="workflow">
+    <div class="wf-step">
+      <div class="num">1</div>
+      <h4>Student Request</h4>
+      <p>Operator opens student profile and initiates TC request</p>
+    </div>
+    <div class="wf-arrow">›</div>
+    <div class="wf-step">
+      <div class="num">2</div>
+      <h4>Operator Form</h4>
+      <p>Fill all 21 TC fields — personal, academic, fee, conduct</p>
+    </div>
+    <div class="wf-arrow">›</div>
+    <div class="wf-step">
+      <div class="num">3</div>
+      <h4>Principal Approval</h4>
+      <p>Approve or reject with remark. Rejected can be resubmitted</p>
+    </div>
+    <div class="wf-arrow">›</div>
+    <div class="wf-step">
+      <div class="num">4</div>
+      <h4>Issue & Print</h4>
+      <p>TC number generated. Student marked transferred. Document ready to print</p>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <h3>Government-Approved 21-Field Format</h3>
+    <ul>
+      <li>Name, Mother's & Father's Name</li>
+      <li>Nationality, Religion, Caste/Category</li>
+      <li>Gender, Blood Group</li>
+      <li>Date of first admission with class</li>
+      <li>Date of Birth (figures &amp; words)</li>
+      <li>Class last studied</li>
+      <li>Annual exam taken with result</li>
+      <li>Subjects studied</li>
+      <li>Promotion eligibility</li>
+      <li>Fees paid up to month</li>
+      <li>Working days &amp; days present</li>
+      <li>General conduct</li>
+      <li>Application &amp; issue dates</li>
+      <li>Reason for leaving</li>
+    </ul>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section-label" style="margin-top:0">Data Integrity</div>
+  <ul class="feature-list">
+    <li>All student data captured as immutable snapshot at request time</li>
+    <li>TC number generated atomically inside DB transaction</li>
+    <li>Duplicate TC blocked — one active TC per student at a time</li>
+    <li>Re-request blocked once student is marked as transferred</li>
+    <li>School letterhead auto-populated from institution record</li>
+    <li>Fee dues automatically flagged during TC request</li>
+    <li>Attendance auto-computed from session records</li>
+    <li>Exam pass/fail auto-detected from result records</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ PAGE 3 — ROLES & ACCESS ══ -->
+<div class="page">
+  <div class="section-label">Access Control</div>
+  <h2 class="section-title">Role-Based Permissions</h2>
+  <p class="section-desc">
+    Every user has a role that controls exactly what they can see and do.
+    Roles are enforced at both the API layer and the UI layer.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Role</th>
+        <th>Access Level</th>
+        <th>Key Capabilities</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Director (Super Admin)</strong></td>
+        <td>Full access</td>
+        <td>All modules, all schools, user management, system config</td>
+      </tr>
+      <tr>
+        <td><strong>Principal</strong></td>
+        <td>School-wide</td>
+        <td>Approve TCs, view all reports, manage staff, academic setup</td>
+      </tr>
+      <tr>
+        <td><strong>Teacher</strong></td>
+        <td>Class-level</td>
+        <td>Mark attendance, enter exam results, view assigned class</td>
+      </tr>
+      <tr>
+        <td><strong>Receptionist</strong></td>
+        <td>Front desk</td>
+        <td>Student admissions, TC requests, fee collection, enquiries</td>
+      </tr>
+      <tr>
+        <td><strong>Accountant</strong></td>
+        <td>Finance</td>
+        <td>Fee structures, payment records, dues reports</td>
+      </tr>
+      <tr>
+        <td><strong>Non-Teaching Staff</strong></td>
+        <td>Limited</td>
+        <td>View-only access to assigned functions</td>
+      </tr>
+      <tr>
+        <td><strong>Parent</strong></td>
+        <td>Own child only</td>
+        <td>View child's attendance, results, fee status via parent portal</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr class="divider" />
+
+  <div class="section-label" style="margin-top:0">Multi-Tenant Security</div>
+  <div class="highlight-box">
+    <h3>Complete School Data Isolation</h3>
+    <ul>
+      <li>Every DB row tagged with institutionId</li>
+      <li>Tenant middleware validates X-Institution-ID header</li>
+      <li>AuthGuard + RolesGuard on every API route</li>
+      <li>No cross-school data leakage possible</li>
+      <li>School A cannot read, write, or access School B's data</li>
+      <li>TC numbers unique per school, not globally</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ PAGE 4 — TECH STACK ══ -->
+<div class="page">
+  <div class="section-label">Technical Architecture</div>
+  <h2 class="section-title">Built on Modern, Production-Ready Stack</h2>
+  <p class="section-desc">
+    Every technology choice is intentional — optimized for reliability,
+    scalability, and long-term maintainability.
+  </p>
+
+  <div class="stack-grid">
+    <div class="stack-block">
+      <h4>Frontend</h4>
+      <span class="tag accent">Next.js 14</span>
+      <span class="tag accent">TypeScript</span>
+      <span class="tag accent">React</span>
+      <span class="tag">Tailwind CSS</span>
+      <span class="tag">App Router</span>
+      <span class="tag">Server Components</span>
+    </div>
+    <div class="stack-block">
+      <h4>Backend</h4>
+      <span class="tag accent">NestJS</span>
+      <span class="tag accent">TypeScript</span>
+      <span class="tag">REST API</span>
+      <span class="tag">JWT Auth</span>
+      <span class="tag">Guards &amp; Decorators</span>
+      <span class="tag">Modular Architecture</span>
+    </div>
+    <div class="stack-block">
+      <h4>Database</h4>
+      <span class="tag accent">PostgreSQL</span>
+      <span class="tag accent">Prisma ORM</span>
+      <span class="tag">Neon Serverless</span>
+      <span class="tag">DB Transactions</span>
+      <span class="tag">Indexed Queries</span>
+    </div>
+    <div class="stack-block">
+      <h4>Auth &amp; Security</h4>
+      <span class="tag">JWT Tokens</span>
+      <span class="tag">Bcrypt Hashing</span>
+      <span class="tag">Role Guards</span>
+      <span class="tag">Tenant Middleware</span>
+      <span class="tag">HTTP-only Cookies</span>
+    </div>
+    <div class="stack-block">
+      <h4>Architecture</h4>
+      <span class="tag">Multi-Tenant SaaS</span>
+      <span class="tag">Monorepo</span>
+      <span class="tag">MVC Pattern</span>
+      <span class="tag">DTO Validation</span>
+      <span class="tag">Snapshot Pattern</span>
+    </div>
+    <div class="stack-block">
+      <h4>Deployment</h4>
+      <span class="tag">Vercel (Frontend)</span>
+      <span class="tag">Railway (Backend)</span>
+      <span class="tag">Neon (Database)</span>
+      <span class="tag">CI/CD Ready</span>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section-label" style="margin-top:0">Why This Stack</div>
+  <ul class="feature-list">
+    <li>Next.js App Router for fast, SEO-friendly frontend</li>
+    <li>NestJS for structured, testable backend architecture</li>
+    <li>Prisma for type-safe, auto-completed DB queries</li>
+    <li>PostgreSQL for ACID compliance and relational integrity</li>
+    <li>TypeScript end-to-end — fewer bugs, better refactoring</li>
+    <li>Neon serverless scales to zero — no idle DB cost</li>
+  </ul>
+
+  <hr class="divider" />
+
+  <div class="section-label" style="margin-top:0">What Can Be Customized for Your School</div>
+  <ul class="feature-list">
+    <li>Branding — school name, logo, colors</li>
+    <li>Fee structure types and installment plans</li>
+    <li>Custom report formats</li>
+    <li>Additional user roles and permissions</li>
+    <li>SMS / WhatsApp notification integration</li>
+    <li>Hostel, transport, or library modules</li>
+    <li>Custom TC or document formats</li>
+    <li>Mobile app (React Native)</li>
+  </ul>
+</div>
+
+<!-- ══════════════════════════════════════════════════ FOOTER ══ -->
+<div class="footer">
+  <strong>School Management SaaS Platform</strong> &nbsp;·&nbsp;
+  Built by <strong>Sankalp Deshpande</strong> &nbsp;·&nbsp;
+  Full-Stack Developer at BuildWithInfovion &nbsp;·&nbsp;
+  Available for custom development &amp; white-label deployments
+</div>
+
+</body>
+</html>

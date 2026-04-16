@@ -15,6 +15,18 @@ export class RequestTcDto {
   @IsString() @IsOptional()
   @IsIn(['Excellent', 'Good', 'Satisfactory', 'Poor'])
   conductGrade?: string;
+
+  // Operator overrides — if provided, these take precedence over auto-computed values
+  @IsString() @IsOptional() nationality?: string;
+  @IsString() @IsOptional() religion?: string;
+  @IsString() @IsOptional() casteCategory?: string;
+  @IsString() @IsOptional() gender?: string;
+  @IsString() @IsOptional() bloodGroup?: string;
+  @IsString() @IsOptional() subjectsStudied?: string;
+  @IsString() @IsOptional() lastExamName?: string;
+  @IsString() @IsOptional() lastExamResult?: string;
+  @IsString() @IsOptional() promotionEligible?: string;
+  @IsString() @IsOptional() feesPaidUpToMonth?: string;
 }
 
 export class RejectTcDto {
@@ -198,27 +210,27 @@ export class TcService {
         institutionId,
         studentId,
         status: 'pending_approval',
-        // Student snapshot — immutable; independent of future record changes
+        // Student snapshot — immutable; operator overrides take precedence over auto-fetched values
         studentName: `${student.firstName} ${student.lastName}`,
         admissionNo: student.admissionNo,
         dateOfBirth: student.dateOfBirth,
-        gender: student.gender,
-        fatherName: student.fatherName,
-        motherName: student.motherName,
-        nationality: student.nationality,
-        religion: student.religion,
-        casteCategory: student.casteCategory,
-        bloodGroup: student.bloodGroup,
+        gender:          dto.gender          ?? student.gender,
+        fatherName:      student.fatherName,
+        motherName:      student.motherName,
+        nationality:     dto.nationality     ?? student.nationality,
+        religion:        dto.religion        ?? student.religion,
+        casteCategory:   dto.casteCategory   ?? student.casteCategory,
+        bloodGroup:      dto.bloodGroup      ?? student.bloodGroup,
         classLastStudied,
         admissionDate: student.admissionDate,
         academicYearName: currentYear?.name ?? null,
-        // Academic snapshot (government TC §8-12)
-        subjectsStudied,
-        lastExamName,
-        lastExamResult,
-        promotionEligible,
-        // Fee snapshot
-        feesPaidUpToMonth,
+        // Academic snapshot (operator overrides take precedence)
+        subjectsStudied:  dto.subjectsStudied  ?? subjectsStudied,
+        lastExamName:     dto.lastExamName     ?? lastExamName,
+        lastExamResult:   dto.lastExamResult   ?? lastExamResult,
+        promotionEligible: dto.promotionEligible ?? promotionEligible,
+        // Fee snapshot (operator override takes precedence)
+        feesPaidUpToMonth: dto.feesPaidUpToMonth ?? feesPaidUpToMonth,
         // TC fields
         conductGrade: dto.conductGrade ?? 'Good',
         reason: dto.reason ?? null,
