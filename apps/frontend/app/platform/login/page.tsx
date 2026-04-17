@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { usePlatformAuthStore } from '@/store/platform-auth.store';
 
@@ -43,6 +44,7 @@ export default function PlatformLoginPage() {
   const router  = useRouter();
   const setAuth = usePlatformAuthStore((s) => s.setAuth);
 
+  const [logoError,   setLogoError]   = useState(false);
   const [phase,       setPhase]       = useState<Phase>('init');
   const [email,       setEmail]       = useState('');
   const [password,    setPassword]    = useState('');
@@ -261,19 +263,29 @@ export default function PlatformLoginPage() {
           <div style={{
             transform: getLogoTransform(phase),
             transition: getLogoTransition(phase),
-            zIndex:1, marginBottom:36,
+            zIndex:1, marginBottom:36, textAlign:'center',
           }}>
-            {/* Stylised IV badge */}
-            <div style={{
-              width:120, height:120, borderRadius:28,
-              background:'linear-gradient(145deg, rgba(99,102,241,0.25), rgba(139,92,246,0.15))',
-              border:'2px solid rgba(99,102,241,0.5)',
-              boxShadow:'0 0 60px rgba(99,102,241,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-              display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-            }}>
-              <span style={{ color:'#a5b4fc', fontWeight:800, fontSize:'2.2rem', letterSpacing:'-0.04em', lineHeight:1 }}>IV</span>
-              <span style={{ color:'rgba(139,116,246,0.5)', fontSize:'0.55rem', letterSpacing:'0.18em', marginTop:4, textTransform:'uppercase' }}>Platform</span>
-            </div>
+            {!logoError ? (
+              <Image src="/logo.png" alt="Infovion" width={160} height={160}
+                style={{ objectFit:'contain', width:'auto', maxHeight:140, display:'block', margin:'0 auto',
+                  filter:'drop-shadow(0 0 24px rgba(99,102,241,0.35))' }}
+                onError={() => setLogoError(true)} />
+            ) : (
+              /* Tech fallback: </> code icon */
+              <div style={{
+                width:120, height:120, borderRadius:28,
+                background:'linear-gradient(145deg, rgba(99,102,241,0.25), rgba(139,92,246,0.15))',
+                border:'2px solid rgba(99,102,241,0.5)',
+                boxShadow:'0 0 60px rgba(99,102,241,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+                <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                  <polyline points="19,14 7,26 19,38" stroke="#a5b4fc" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <polyline points="33,14 45,26 33,38" stroke="#a5b4fc" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <line x1="30" y1="10" x2="22" y2="42" stroke="rgba(165,180,252,0.45)" strokeWidth="2.5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            )}
           </div>
 
           {/* Welcome text */}
@@ -284,7 +296,7 @@ export default function PlatformLoginPage() {
             transition: 'opacity 0.6s ease, transform 0.6s ease',
           }}>
             <h1 style={{ margin:0, fontWeight:300, fontSize:'clamp(1.35rem,4vw,2.1rem)', letterSpacing:'0.22em', textTransform:'uppercase' }}>
-              <span className="dev-welcome-shimmer">Infovion Platform</span>
+              <span className="dev-welcome-shimmer">Infovion Developer Portal</span>
             </h1>
             <div style={{ height:1, background:'linear-gradient(to right,transparent,rgba(99,102,241,0.3),transparent)',
               margin:'18px auto 0', width:280, maxWidth:'80vw' }} />
@@ -323,20 +335,28 @@ export default function PlatformLoginPage() {
 
             <div style={{ padding:'30px 30px 0' }}>
 
-              {/* Badge */}
+              {/* Logo */}
               <div style={{ textAlign:'center', marginBottom:24 }}>
-                <div style={{
-                  width:52, height:52, borderRadius:14,
-                  background:'linear-gradient(145deg, rgba(99,102,241,0.2), rgba(139,92,246,0.12))',
-                  border:'1.5px solid rgba(99,102,241,0.35)',
-                  boxShadow:'0 0 24px rgba(99,102,241,0.18)',
-                  display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                  margin:'0 auto',
-                }}>
-                  <span style={{ color:'#a5b4fc', fontWeight:800, fontSize:'1rem', letterSpacing:'-0.03em' }}>IV</span>
-                </div>
+                {!logoError ? (
+                  <Image src="/logo.png" alt="Infovion" width={80} height={80}
+                    style={{ objectFit:'contain', width:'auto', maxHeight:56, display:'block', margin:'0 auto',
+                      filter:'drop-shadow(0 0 12px rgba(99,102,241,0.3))' }}
+                    onError={() => setLogoError(true)} />
+                ) : (
+                  <div style={{
+                    width:48, height:48, borderRadius:12,
+                    background:'linear-gradient(145deg, rgba(99,102,241,0.2), rgba(139,92,246,0.12))',
+                    border:'1.5px solid rgba(99,102,241,0.35)',
+                    display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto',
+                  }}>
+                    <svg width="24" height="24" viewBox="0 0 52 52" fill="none">
+                      <polyline points="19,14 7,26 19,38" stroke="#a5b4fc" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+                      <polyline points="33,14 45,26 33,38" stroke="#a5b4fc" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                )}
                 <p style={{ color:'rgba(139,116,246,0.4)', fontSize:10.5, letterSpacing:'0.14em',
-                  textTransform:'uppercase', margin:'8px 0 0' }}>Developer Console</p>
+                  textTransform:'uppercase', margin:'8px 0 0' }}>Infovion Developer Portal</p>
               </div>
 
               {/* Divider */}
@@ -345,7 +365,7 @@ export default function PlatformLoginPage() {
               {/* Heading */}
               <div style={{ marginBottom:22 }}>
                 <h2 style={{ margin:0, color:'#ebe9ff', fontWeight:600, fontSize:19, letterSpacing:'-0.025em' }}>
-                  Sign in to Platform
+                  Sign in to Developer Portal
                 </h2>
                 <p style={{ margin:'5px 0 0', color:'rgba(139,116,246,0.5)', fontSize:13 }}>
                   Restricted to authorised developers
@@ -366,7 +386,7 @@ export default function PlatformLoginPage() {
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                       </svg>
                     </div>
-                    <input className="dev-ldf" type="email" placeholder="developer@infovion.in"
+                    <input className="dev-ldf" type="email" placeholder=""
                       value={email} onChange={(e) => setEmail(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                       disabled={loading} autoCapitalize="none" autoCorrect="off" />
@@ -385,7 +405,7 @@ export default function PlatformLoginPage() {
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                       </svg>
                     </div>
-                    <input className="dev-ldf" type="password" placeholder="••••••••"
+                    <input className="dev-ldf" type="password" placeholder=""
                       value={password} onChange={(e) => setPassword(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                       disabled={loading} />
