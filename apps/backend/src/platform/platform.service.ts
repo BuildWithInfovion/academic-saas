@@ -147,8 +147,8 @@ export class PlatformService {
   // The portal is an internal dev tool; two seats cover all real use cases.
   private static readonly MAX_PLATFORM_ADMINS = 2;
 
-  // Hard limit: only 5 failed attempts before DB-level lockout kicks in.
-  private static readonly MAX_FAILED = 5;
+  // Hard limit: only 8 failed attempts before DB-level lockout kicks in.
+  private static readonly MAX_FAILED = 8;
   // DB lockout duration: 30 minutes after 5 consecutive failures.
   private static readonly LOCKOUT_MS = 30 * 60 * 1000;
   // Password reset tokens are valid for 15 minutes (internal tool, short window).

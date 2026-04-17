@@ -24,7 +24,7 @@ interface WindowEntry {
  */
 @Injectable()
 export class PlatformRateLimitGuard implements CanActivate {
-  private static readonly MAX_ATTEMPTS = 5;
+  private static readonly MAX_ATTEMPTS = 10;
   private static readonly WINDOW_MS = 30 * 60 * 1000;   // 30 minutes
   private static readonly BLOCK_MS  = 60 * 60 * 1000;   // 60 minutes
 
