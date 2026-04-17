@@ -26,6 +26,13 @@ const PARTICLES: { top?: string; bottom?: string; left?: string; right?: string;
   { top:'60%', right:'32%', size:2, dur:'8s',  delay:'0.6s' },
 ];
 
+const getLogoTransition = (phase: Phase): string => {
+  if (phase === 'init')     return 'none';
+  if (phase === 'zoom-in')  return 'transform 0.72s cubic-bezier(0.34,1.56,0.64,1)'; // snappy spring in
+  if (phase === 'zoom-out') return 'transform 1.6s cubic-bezier(0.25,0.46,0.45,0.94)'; // slow graceful out
+  return 'transform 0.9s ease';
+};
+
 const getLogoTransform = (phase: Phase): string => {
   switch (phase) {
     case 'init':    return 'scale(0)';
@@ -58,10 +65,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     const r  = requestAnimationFrame(() => setPhase('zoom-in'));
-    const t1 = setTimeout(() => setPhase('zoom-out'), 820);
-    const t2 = setTimeout(() => setPhase('greet'),   1560);
-    const t3 = setTimeout(() => setPhase('reveal'),  2400);
-    const t4 = setTimeout(() => setPhase('done'),    3150);
+    const t1 = setTimeout(() => setPhase('zoom-out'),  900);   // hold zoom-in briefly
+    const t2 = setTimeout(() => setPhase('greet'),    2700);   // after 1.6s zoom-out + 200ms hold
+    const t3 = setTimeout(() => setPhase('reveal'),   3900);   // welcome text visible for ~1.2s
+    const t4 = setTimeout(() => setPhase('done'),     4700);   // overlay fade completes
     return () => { cancelAnimationFrame(r); [t1, t2, t3, t4].forEach(clearTimeout); };
   }, []);
 
@@ -259,7 +266,7 @@ export default function LoginPage() {
           <div style={{
             position:'relative', zIndex:1, marginBottom:36,
             transform: getLogoTransform(phase),
-            transition: phase === 'init' ? 'none' : 'transform 0.72s cubic-bezier(0.34,1.56,0.64,1)',
+                    transition: getLogoTransition(phase),
           }}>
             {!logoError ? (
               <Image src="/logo.png" alt="Infovion" width={200} height={200}
