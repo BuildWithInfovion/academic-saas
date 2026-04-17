@@ -544,6 +544,9 @@ export class AcademicService {
   /**
    * Suggests a class progression map based on natural sort order.
    * Each class maps to the next class; the last class maps to null (graduate).
+   *
+   * Uses the same score-based deduplication as getTransitionOverview so that
+   * the sourceUnitIds in the suggestion always match the IDs in the overview.
    */
   async getClassMapSuggestion(institutionId: string) {
     const units = await this.prisma.academicUnit.findMany({
@@ -552,13 +555,26 @@ export class AcademicService {
         deletedAt: null,
         children: { none: { deletedAt: null } },
       },
-      select: { id: true, name: true, displayName: true, parentId: true },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        parentId: true,
+        classTeacherUserId: true,
+        _count: { select: { students: true } },
+      },
     });
 
+    // Mirror the deduplication from getTransitionOverview: prefer the unit with
+    // the most students, then the one with a class teacher assigned.
     const deduped = new Map<string, (typeof units)[0]>();
     for (const u of units) {
       const key = (u.displayName || u.name).toLowerCase().trim();
-      if (!deduped.has(key)) deduped.set(key, u);
+      const ex = deduped.get(key);
+      if (!ex) { deduped.set(key, u); continue; }
+      const score = (x: typeof u) =>
+        (x._count.students > 0 ? 2 : 0) + (x.classTeacherUserId ? 1 : 0);
+      if (score(u) > score(ex)) deduped.set(key, u);
     }
 
     const sorted = naturalSort(Array.from(deduped.values()));
@@ -645,7 +661,11 @@ export class AcademicService {
     let studentsHeldBackReset = 0;
 
     await this.prisma.$transaction(async (tx) => {
-      for (const mapping of dto.classMap) {
+      // Process in REVERSE order (Class12 → Class11 → … → Class1) so that
+      // when we move Class N students into Class N+1, those students are never
+      // counted as "existing" when we later compute roll numbers for Class N-1
+      // students moving into Class N.
+      for (const mapping of [...dto.classMap].reverse()) {
         const students = await tx.student.findMany({
           where: {
             institutionId,

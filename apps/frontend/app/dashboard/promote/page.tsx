@@ -143,7 +143,10 @@ export default function YearEndPage() {
 
   const goToConfigure = () => {
     setStep('configure');
-    loadConfigData();
+    // Only load config data if the class map hasn't been populated yet.
+    // This preserves any manual changes the admin made if they navigate
+    // back to Step 1 and then return to Step 2.
+    if (classMap.length === 0) loadConfigData();
   };
 
   const canPreview = newYearName && classMap.length > 0 && !configLoading;
@@ -349,12 +352,16 @@ export default function YearEndPage() {
                 <div
                   className="w-full px-3 py-2 rounded-lg text-sm font-semibold"
                   style={{
-                    background: newYearName ? '#f0fdf4' : 'var(--bg)',
-                    border: `1px solid ${newYearName ? '#86efac' : 'var(--border)'}`,
-                    color: newYearName ? '#15803d' : 'var(--text-3)',
+                    background: newYearName ? '#f0fdf4' : newYearStartDate && newYearEndDate ? '#fef2f2' : 'var(--bg)',
+                    border: `1px solid ${newYearName ? '#86efac' : newYearStartDate && newYearEndDate ? '#fecaca' : 'var(--border)'}`,
+                    color: newYearName ? '#15803d' : newYearStartDate && newYearEndDate ? '#dc2626' : 'var(--text-3)',
                   }}
                 >
-                  {newYearName || 'Auto-calculated'}
+                  {newYearName
+                    ? newYearName
+                    : newYearStartDate && newYearEndDate
+                    ? 'End date must be after start date'
+                    : 'Auto-calculated from dates'}
                 </div>
               </div>
             </div>
@@ -458,7 +465,7 @@ export default function YearEndPage() {
             {[
               { label: 'Will be Promoted', value: preview.promoted, color: '#16a34a', bg: '#f0fdf4', border: '#86efac' },
               { label: 'Will Graduate', value: preview.graduated, color: '#7c3aed', bg: '#faf5ff', border: '#c4b5fd' },
-              { label: 'Held Back → Reset', value: preview.heldBackReset, color: '#d97706', bg: '#fffbeb', border: '#fcd34d' },
+              { label: 'Repeat Year (Stay in Class)', value: preview.heldBackReset, color: '#d97706', bg: '#fffbeb', border: '#fcd34d' },
             ].map((c) => (
               <div key={c.label} className="rounded-xl p-5" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
                 <p className="text-xs font-medium" style={{ color: c.color }}>{c.label}</p>
@@ -549,7 +556,7 @@ export default function YearEndPage() {
             {[
               { label: 'Promoted', value: result.studentsPromoted, color: '#16a34a' },
               { label: 'Graduated', value: result.studentsGraduated, color: '#7c3aed' },
-              { label: 'Held Back Reset', value: result.studentsHeldBackReset, color: '#d97706' },
+              { label: 'Repeat Year', value: result.studentsHeldBackReset, color: '#d97706' },
             ].map((c) => (
               <div key={c.label} className="rounded-xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
                 <p className="text-2xl font-bold" style={{ color: c.color }}>{c.value}</p>
