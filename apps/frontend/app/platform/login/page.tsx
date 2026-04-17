@@ -53,6 +53,17 @@ export default function PlatformLoginPage() {
   const [error,       setError]       = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<{ name: string } | null>(null);
 
+  // ── Forgot-password modal state ────────────────────────────────────────────
+  type ResetStep = 'closed' | 'request' | 'reset';
+  const [resetStep,      setResetStep]      = useState<ResetStep>('closed');
+  const [resetEmail,     setResetEmail]     = useState('');
+  const [resetToken,     setResetToken]     = useState('');
+  const [resetNewPwd,    setResetNewPwd]    = useState('');
+  const [resetLoading,   setResetLoading]   = useState(false);
+  const [resetError,     setResetError]     = useState<string | null>(null);
+  const [resetMsg,       setResetMsg]       = useState<string | null>(null);
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+
   useEffect(() => {
     const r  = requestAnimationFrame(() => setPhase('zoom-in'));
     const t1 = setTimeout(() => setPhase('zoom-out'),  900);
@@ -61,6 +72,57 @@ export default function PlatformLoginPage() {
     const t4 = setTimeout(() => setPhase('done'),     4700);
     return () => { cancelAnimationFrame(r); [t1,t2,t3,t4].forEach(clearTimeout); };
   }, []);
+
+  const handleRequestReset = async () => {
+    if (!resetEmail.trim()) return setResetError('Email is required');
+    setResetLoading(true); setResetError(null);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/platform/auth/request-reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail.trim() }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || 'Request failed');
+      if (data?.token) {
+        setGeneratedToken(data.token);
+        setResetMsg('Token generated — valid for 15 minutes. Copy it then proceed to reset.');
+        setResetStep('reset');
+      } else {
+        setResetMsg(data?.message ?? 'If that email is registered, a token has been generated.');
+      }
+    } catch (err: unknown) {
+      setResetError(err instanceof Error ? err.message : 'Request failed');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetToken.trim())  return setResetError('Token is required');
+    if (!resetNewPwd.trim()) return setResetError('New password is required');
+    setResetLoading(true); setResetError(null);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/platform/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken.trim(), newPassword: resetNewPwd }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || 'Reset failed');
+      setResetMsg(data?.message ?? 'Password reset successfully.');
+      setGeneratedToken(null);
+      setTimeout(() => {
+        setResetStep('closed');
+        setResetEmail(''); setResetToken(''); setResetNewPwd('');
+        setResetMsg(null);
+      }, 2600);
+    } catch (err: unknown) {
+      setResetError(err instanceof Error ? err.message : 'Reset failed');
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (loading) return;
@@ -459,6 +521,16 @@ export default function PlatformLoginPage() {
                   </span>
                 )}
               </button>
+
+              {/* Forgot password */}
+              <div style={{ textAlign:'center', marginTop:16 }}>
+                <button onClick={() => { setResetStep('request'); setResetError(null); setResetMsg(null); setGeneratedToken(null); }}
+                  style={{ background:'none', border:'none', cursor:'pointer', padding:0,
+                    color:'rgba(139,116,246,0.5)', fontSize:12.5, letterSpacing:'0.03em' }}>
+                  Forgot password?
+                </button>
+              </div>
+
             </div>{/* /inner padding */}
           </div>{/* /card */}
 
@@ -466,6 +538,159 @@ export default function PlatformLoginPage() {
             letterSpacing:'0.04em', marginTop:20 }}>
             © {new Date().getFullYear()} Infovion. All rights reserved.
           </p>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          FORGOT PASSWORD MODAL
+      ══════════════════════════════════════════════════ */}
+      {resetStep !== 'closed' && (
+        <div style={{ position:'fixed', inset:0, zIndex:100,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          background:'rgba(2,3,8,0.85)', backdropFilter:'blur(8px)',
+          WebkitBackdropFilter:'blur(8px)',
+        }} onClick={(e) => { if (e.target === e.currentTarget) setResetStep('closed'); }}>
+          <div style={{
+            width:'100%', maxWidth:380, margin:'0 16px',
+            background:'linear-gradient(160deg, rgba(10,8,28,0.98) 0%, rgba(6,5,18,0.99) 100%)',
+            border:'1px solid rgba(99,102,241,0.22)', borderRadius:20,
+            boxShadow:'0 40px 90px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(99,102,241,0.08)',
+            overflow:'hidden',
+          }}>
+            {/* Accent bar */}
+            <div style={{ height:2, background:'linear-gradient(90deg, transparent, rgba(99,102,241,0.5), rgba(165,180,252,0.9), rgba(99,102,241,0.5), transparent)' }} />
+
+            <div style={{ padding:'26px 26px 28px' }}>
+              {/* Header */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+                <div>
+                  <h3 style={{ margin:0, color:'#ebe9ff', fontWeight:600, fontSize:17 }}>
+                    {resetStep === 'request' ? 'Reset Password' : 'Set New Password'}
+                  </h3>
+                  <p style={{ margin:'4px 0 0', color:'rgba(139,116,246,0.5)', fontSize:12 }}>
+                    {resetStep === 'request'
+                      ? 'Enter your admin email to generate a reset token'
+                      : 'Enter the token and your new password'}
+                  </p>
+                </div>
+                <button onClick={() => setResetStep('closed')}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(139,116,246,0.4)',
+                    padding:4, lineHeight:1, fontSize:20 }}>
+                  ×
+                </button>
+              </div>
+
+              {resetMsg && (
+                <div style={{ marginBottom:14, padding:'10px 13px', borderRadius:8, fontSize:13,
+                  background:'rgba(16,36,99,0.4)', border:'1px solid rgba(99,102,241,0.3)',
+                  color:'rgba(165,180,252,0.9)' }}>
+                  {resetMsg}
+                </div>
+              )}
+
+              {/* Step 1: request token */}
+              {resetStep === 'request' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
+                  <div>
+                    <label style={{ display:'block', fontSize:11, fontWeight:600, marginBottom:6,
+                      color:'rgba(139,116,246,0.7)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      Admin Email
+                    </label>
+                    <input className="dev-ldf" type="email"
+                      value={resetEmail} onChange={(e) => setResetEmail(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleRequestReset()}
+                      disabled={resetLoading} style={{ paddingLeft:12 }} />
+                  </div>
+
+                  {resetError && (
+                    <div style={{ padding:'10px 13px', borderRadius:8, fontSize:13,
+                      background:'rgba(127,29,29,0.25)', border:'1px solid rgba(239,68,68,0.25)',
+                      color:'#fca5a5' }}>
+                      {resetError}
+                    </div>
+                  )}
+
+                  <button onClick={handleRequestReset} disabled={resetLoading} className="dev-btn"
+                    style={{ padding:'11px', fontSize:14, fontWeight:600, borderRadius:10,
+                      cursor: resetLoading ? 'default' : 'pointer',
+                      background: resetLoading ? 'rgba(79,70,229,0.5)' : 'linear-gradient(135deg,#4f46e5 0%,#3730a3 100%)',
+                      color:'#e0e7ff', border:'1px solid rgba(79,70,229,0.4)',
+                      boxShadow: resetLoading ? 'none' : '0 2px 16px rgba(99,102,241,0.38)' }}>
+                    {resetLoading ? 'Generating token…' : 'Generate Reset Token'}
+                  </button>
+
+                  <button onClick={() => setResetStep('reset')}
+                    style={{ background:'none', border:'none', cursor:'pointer', padding:0,
+                      color:'rgba(139,116,246,0.5)', fontSize:12.5, textAlign:'center', marginTop:2 }}>
+                    Already have a token? Set new password →
+                  </button>
+                </div>
+              )}
+
+              {/* Step 2: use token + set new password */}
+              {resetStep === 'reset' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
+                  {/* Show generated token for easy copy */}
+                  {generatedToken && (
+                    <div style={{ padding:'10px 13px', borderRadius:8, fontSize:12,
+                      background:'rgba(16,36,99,0.35)', border:'1px solid rgba(99,102,241,0.25)',
+                      color:'rgba(165,180,252,0.85)', wordBreak:'break-all', fontFamily:'monospace' }}>
+                      <span style={{ display:'block', fontSize:10, color:'rgba(139,116,246,0.6)',
+                        marginBottom:4, letterSpacing:'0.08em', textTransform:'uppercase' }}>Your reset token</span>
+                      {generatedToken}
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={{ display:'block', fontSize:11, fontWeight:600, marginBottom:6,
+                      color:'rgba(139,116,246,0.7)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      Reset Token
+                    </label>
+                    <input className="dev-ldf" type="text"
+                      value={resetToken} onChange={(e) => setResetToken(e.target.value)}
+                      disabled={resetLoading} style={{ paddingLeft:12, fontFamily:'monospace', fontSize:12 }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display:'block', fontSize:11, fontWeight:600, marginBottom:6,
+                      color:'rgba(139,116,246,0.7)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      New Password
+                    </label>
+                    <input className="dev-ldf" type="password"
+                      value={resetNewPwd} onChange={(e) => setResetNewPwd(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleResetPassword()}
+                      disabled={resetLoading} style={{ paddingLeft:12 }} />
+                    <p style={{ margin:'5px 0 0', fontSize:11, color:'rgba(139,116,246,0.4)' }}>
+                      Min 12 chars · 1 uppercase · 1 number · 1 special char
+                    </p>
+                  </div>
+
+                  {resetError && (
+                    <div style={{ padding:'10px 13px', borderRadius:8, fontSize:13,
+                      background:'rgba(127,29,29,0.25)', border:'1px solid rgba(239,68,68,0.25)',
+                      color:'#fca5a5' }}>
+                      {resetError}
+                    </div>
+                  )}
+
+                  <button onClick={handleResetPassword} disabled={resetLoading} className="dev-btn"
+                    style={{ padding:'11px', fontSize:14, fontWeight:600, borderRadius:10,
+                      cursor: resetLoading ? 'default' : 'pointer',
+                      background: resetLoading ? 'rgba(79,70,229,0.5)' : 'linear-gradient(135deg,#4f46e5 0%,#3730a3 100%)',
+                      color:'#e0e7ff', border:'1px solid rgba(79,70,229,0.4)',
+                      boxShadow: resetLoading ? 'none' : '0 2px 16px rgba(99,102,241,0.38)' }}>
+                    {resetLoading ? 'Resetting…' : 'Reset Password'}
+                  </button>
+
+                  <button onClick={() => { setResetStep('request'); setResetError(null); setGeneratedToken(null); }}
+                    style={{ background:'none', border:'none', cursor:'pointer', padding:0,
+                      color:'rgba(139,116,246,0.5)', fontSize:12.5, textAlign:'center' }}>
+                    ← Back
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

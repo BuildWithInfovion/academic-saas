@@ -10,13 +10,15 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 import { PlatformService } from './platform.service';
 import { PlatformGuard } from './platform.guard';
 import { PlatformLoginDto } from './dto/platform-login.dto';
 import { OnboardClientDto } from './dto/onboard-client.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { LoginRateLimitGuard } from '../common/guards/login-rate-limit.guard';
+import { RequestResetDto } from './dto/request-reset.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { PlatformRateLimitGuard } from './guards/platform-rate-limit.guard';
 
 const PLATFORM_RT_OPTIONS = {
   httpOnly: true,
@@ -32,21 +34,37 @@ export class PlatformController {
 
   // ── PUBLIC ────────────────────────────────────────────────────────────────
 
-  // M-08: Rate-limit platform admin login to prevent brute-force attacks.
+  // Platform login — stricter rate limit (5/30min) than the shared guard
   @Post('auth/login')
-  @UseGuards(LoginRateLimitGuard)
+  @UseGuards(PlatformRateLimitGuard)
   async login(
     @Body() dto: PlatformLoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.platformService.login(dto.email, dto.password);
-    // Set the token as an httpOnly cookie for Next.js middleware protection.
-    // Also returned in the body so the frontend can store it in-memory.
+    const ip =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip;
+    const userAgent = req.headers['user-agent'];
+    const result = await this.platformService.login(dto.email, dto.password, ip, userAgent);
     res.cookie('platform_rt', result.accessToken, {
       ...PLATFORM_RT_OPTIONS,
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 8 * 60 * 60 * 1000,   // 8 h — aligned with JWT expiry
     });
     return result;
+  }
+
+  // Password reset — public, rate-limited (no auth required by design for internal tool)
+  @Post('auth/request-reset')
+  @UseGuards(PlatformRateLimitGuard)
+  async requestPasswordReset(@Body() dto: RequestResetDto) {
+    return this.platformService.requestPasswordReset(dto.email);
+  }
+
+  @Post('auth/reset-password')
+  @UseGuards(PlatformRateLimitGuard)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.platformService.resetPassword(dto.token, dto.newPassword);
   }
 
   // ── PROTECTED (PlatformGuard) ─────────────────────────────────────────────
@@ -64,7 +82,7 @@ export class PlatformController {
     return { message: 'Logged out' };
   }
 
-  @UseGuards(PlatformGuard, LoginRateLimitGuard)
+  @UseGuards(PlatformGuard)
   @Post('auth/change-password')
   async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
     return this.platformService.changePassword(
@@ -72,6 +90,12 @@ export class PlatformController {
       dto.currentPassword,
       dto.newPassword,
     );
+  }
+
+  @UseGuards(PlatformGuard)
+  @Get('auth/login-logs')
+  async getLoginLogs(@Req() req: any) {
+    return this.platformService.getLoginLogs(req.platformAdmin.sub);
   }
 
   @UseGuards(PlatformGuard)

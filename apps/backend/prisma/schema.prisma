@@ -598,16 +598,52 @@ model PasswordResetRequest {
 // ── PLATFORM (DEVELOPER) LAYER ────────────────────────────────────────────────
 
 model PlatformAdmin {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  name         String
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  name              String
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  failedLoginCount  Int       @default(0)
+  lockedUntil       DateTime?
+  lastFailedAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  loginLogs         PlatformLoginLog[]
+  passwordResets    PlatformPasswordReset[]
 
   @@map("platform_admins")
+}
+
+model PlatformLoginLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  ipAddress   String?
+  userAgent   String?
+  success     Boolean
+  failReason  String?
+  createdAt   DateTime @default(now())
+
+  admin       PlatformAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("platform_login_logs")
+}
+
+model PlatformPasswordReset {
+  id          String   @id @default(cuid())
+  adminId     String
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  admin       PlatformAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("platform_password_resets")
 }
 
 // ── Staff Attendance ──────────────────────────────────────────────────────────

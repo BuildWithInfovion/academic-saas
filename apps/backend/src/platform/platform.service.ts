@@ -147,30 +147,100 @@ export class PlatformService {
   // The portal is an internal dev tool; two seats cover all real use cases.
   private static readonly MAX_PLATFORM_ADMINS = 2;
 
+  // Hard limit: only 5 failed attempts before DB-level lockout kicks in.
+  private static readonly MAX_FAILED = 5;
+  // DB lockout duration: 30 minutes after 5 consecutive failures.
+  private static readonly LOCKOUT_MS = 30 * 60 * 1000;
+  // Password reset tokens are valid for 15 minutes (internal tool, short window).
+  private static readonly RESET_TOKEN_TTL_MS = 15 * 60 * 1000;
+
   // ── AUTH ──────────────────────────────────────────────────────────────────
 
-  async login(email: string, password: string) {
+  async login(
+    email: string,
+    password: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const normalizedEmail = email.toLowerCase().trim();
     const admin = await this.prisma.platformAdmin.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
     });
 
+    const logFail = async (adminId: string | null, reason: string) => {
+      if (adminId) {
+        await this.prisma.platformLoginLog.create({
+          data: { adminId, ipAddress, userAgent, success: false, failReason: reason },
+        });
+      }
+    };
+
     if (!admin || !admin.isActive) {
+      // Don't leak whether the account exists — generic message
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const valid = await bcrypt.compare(password, admin.passwordHash);
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
+    // DB-level lockout check
+    if (admin.lockedUntil && admin.lockedUntil > new Date()) {
+      const mins = Math.ceil((admin.lockedUntil.getTime() - Date.now()) / 60000);
+      await logFail(admin.id, 'account_locked');
+      throw new UnauthorizedException(
+        `Account locked. Try again in ${mins} minute(s).`,
+      );
+    }
 
-    // Enforce max-seat policy: count ALL active admins. If somehow > limit,
-    // block login so access is self-healing without a DB migration.
+    const valid = await bcrypt.compare(password, admin.passwordHash);
+
+    if (!valid) {
+      const newCount = admin.failedLoginCount + 1;
+      const isNowLocked = newCount >= PlatformService.MAX_FAILED;
+      await this.prisma.platformAdmin.update({
+        where: { id: admin.id },
+        data: {
+          failedLoginCount: newCount,
+          lastFailedAt: new Date(),
+          ...(isNowLocked
+            ? { lockedUntil: new Date(Date.now() + PlatformService.LOCKOUT_MS) }
+            : {}),
+        },
+      });
+      await logFail(admin.id, 'invalid_password');
+
+      const remaining = PlatformService.MAX_FAILED - newCount;
+      if (isNowLocked) {
+        throw new UnauthorizedException(
+          'Too many failed attempts. Account locked for 30 minutes.',
+        );
+      }
+      throw new UnauthorizedException(
+        `Invalid credentials. ${remaining} attempt(s) remaining before lockout.`,
+      );
+    }
+
+    // Enforce max-seat policy
     const activeCount = await this.prisma.platformAdmin.count({
       where: { isActive: true },
     });
     if (activeCount > PlatformService.MAX_PLATFORM_ADMINS) {
+      await logFail(admin.id, 'seat_limit_exceeded');
       throw new ForbiddenException(
         `Access restricted to ${PlatformService.MAX_PLATFORM_ADMINS} accounts. Contact the system owner.`,
       );
     }
+
+    // Success — reset lockout counters, update lastLoginAt, write log
+    await this.prisma.platformAdmin.update({
+      where: { id: admin.id },
+      data: {
+        failedLoginCount: 0,
+        lockedUntil: null,
+        lastFailedAt: null,
+        lastLoginAt: new Date(),
+      },
+    });
+    await this.prisma.platformLoginLog.create({
+      data: { adminId: admin.id, ipAddress, userAgent, success: true },
+    });
 
     const payload = {
       sub: admin.id,
@@ -181,13 +251,8 @@ export class PlatformService {
 
     const token = await this.jwtService.signAsync(payload, {
       secret: this.config.get<string>('JWT_SECRET'),
-      expiresIn: '24h',
+      expiresIn: '8h',
     });
-
-    // Non-blocking: track last login time for profile display.
-    this.prisma.platformAdmin
-      .update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } })
-      .catch(() => {/* ignore, not critical */});
 
     return {
       accessToken: token,
@@ -198,7 +263,21 @@ export class PlatformService {
   async getMe(adminId: string) {
     const admin = await this.prisma.platformAdmin.findUnique({
       where: { id: adminId },
-      select: { id: true, email: true, name: true, lastLoginAt: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        lastLoginAt: true,
+        createdAt: true,
+        loginLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true, ipAddress: true, userAgent: true,
+            success: true, failReason: true, createdAt: true,
+          },
+        },
+      },
     });
     if (!admin) throw new UnauthorizedException('Admin not found');
     return admin;
@@ -213,17 +292,118 @@ export class PlatformService {
     const valid = await bcrypt.compare(currentPassword, admin.passwordHash);
     if (!valid) throw new BadRequestException('Current password is incorrect');
 
-    // Prevent reuse of the same password
     const same = await bcrypt.compare(newPassword, admin.passwordHash);
     if (same) throw new BadRequestException('New password must differ from current password');
+
+    this.enforcePasswordComplexity(newPassword);
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await this.prisma.platformAdmin.update({
       where: { id: adminId },
-      data: { passwordHash },
+      data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
     });
 
     return { message: 'Password updated successfully' };
+  }
+
+  /**
+   * Generates a one-time reset token, stores its SHA-256 hash in the DB,
+   * and returns the raw token. For an internal tool with ≤2 users this is
+   * acceptable — no email is needed; the admin shows the token directly.
+   */
+  async requestPasswordReset(email: string) {
+    const admin = await this.prisma.platformAdmin.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+    // Always return the same shape — don't leak whether the email exists
+    if (!admin || !admin.isActive) {
+      return { message: 'If that email is registered, a reset token has been generated.' };
+    }
+
+    // Invalidate any previous unused tokens for this admin
+    await this.prisma.platformPasswordReset.updateMany({
+      where: { adminId: admin.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    await this.prisma.platformPasswordReset.create({
+      data: {
+        adminId: admin.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + PlatformService.RESET_TOKEN_TTL_MS),
+      },
+    });
+
+    // For an internal 2-person tool, return the raw token directly.
+    // In a multi-user product this would be emailed; here it's shown in the UI.
+    return {
+      message: 'Reset token generated. Use it within 15 minutes.',
+      token: rawToken,
+    };
+  }
+
+  async resetPassword(rawToken: string, newPassword: string) {
+    this.enforcePasswordComplexity(newPassword);
+
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const reset = await this.prisma.platformPasswordReset.findUnique({
+      where: { tokenHash },
+      include: { admin: true },
+    });
+
+    if (!reset || reset.usedAt || reset.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired reset token.');
+    }
+
+    const same = await bcrypt.compare(newPassword, reset.admin.passwordHash);
+    if (same) throw new BadRequestException('New password must differ from the current one.');
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.$transaction([
+      this.prisma.platformAdmin.update({
+        where: { id: reset.adminId },
+        data: {
+          passwordHash,
+          failedLoginCount: 0,
+          lockedUntil: null,
+          lastFailedAt: null,
+        },
+      }),
+      this.prisma.platformPasswordReset.update({
+        where: { id: reset.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    return { message: 'Password reset successfully. You can now log in.' };
+  }
+
+  async getLoginLogs(adminId: string) {
+    return this.prisma.platformLoginLog.findMany({
+      where: { adminId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
+  // ── PRIVATE HELPERS ────────────────────────────────────────────────────────
+
+  private enforcePasswordComplexity(password: string) {
+    if (password.length < 12) {
+      throw new BadRequestException('Password must be at least 12 characters.');
+    }
+    if (!/[A-Z]/.test(password)) {
+      throw new BadRequestException('Password must contain at least one uppercase letter.');
+    }
+    if (!/[0-9]/.test(password)) {
+      throw new BadRequestException('Password must contain at least one number.');
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      throw new BadRequestException('Password must contain at least one special character.');
+    }
   }
 
   // ── STATS ─────────────────────────────────────────────────────────────────
