@@ -9,6 +9,43 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+class ClassMapEntryDto {
+  @IsString()
+  @IsNotEmpty()
+  sourceUnitId: string;
+
+  @IsOptional()
+  @IsString()
+  targetUnitId: string | null;
+}
+
+class ExecuteTransitionDto {
+  @IsString()
+  @IsNotEmpty()
+  newYearName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  newYearStartDate: string;
+
+  @IsString()
+  @IsNotEmpty()
+  newYearEndDate: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ClassMapEntryDto)
+  classMap: ClassMapEntryDto[];
+}
 import { AcademicService, CreateAcademicYearDto } from './academic.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
@@ -192,5 +229,46 @@ export class AcademicController {
   setCurrentYear(@Req() req: any, @Param('id') id: string) {
     const institutionId = this.resolveInstitutionId(req);
     return this.academicService.setCurrentYear(institutionId, id);
+  }
+
+  // ── Year-End Transition ─────────────────────────────────────────────────────
+
+  /**
+   * GET /academic/transition/overview
+   * Per-class student counts (active / held_back) for the transition review screen.
+   * Accessible by admin, super_admin, and principal (academic.read).
+   */
+  @Get('transition/overview')
+  getTransitionOverview(@Req() req: any) {
+    const institutionId = this.resolveInstitutionId(req);
+    return this.academicService.getTransitionOverview(institutionId);
+  }
+
+  /**
+   * GET /academic/transition/class-map
+   * Auto-suggested class progression map (Class N → Class N+1, last → graduate).
+   */
+  @Get('transition/class-map')
+  getClassMapSuggestion(@Req() req: any) {
+    const institutionId = this.resolveInstitutionId(req);
+    return this.academicService.getClassMapSuggestion(institutionId);
+  }
+
+  /**
+   * POST /academic/transition/execute
+   * Executes the full year-end student transition.
+   * Restricted to academic.write (admin / super_admin only).
+   */
+  @Post('transition/execute')
+  @UseGuards(RolesGuard)
+  @Permissions('academic.write')
+  executeTransition(@Req() req: any, @Body() dto: ExecuteTransitionDto) {
+    const institutionId = this.resolveInstitutionId(req);
+    return this.academicService.executeTransition(institutionId, {
+      newYearName: dto.newYearName,
+      newYearStartDate: dto.newYearStartDate,
+      newYearEndDate: dto.newYearEndDate,
+      classMap: dto.classMap,
+    });
   }
 }

@@ -45,7 +45,7 @@ const menuGroups = [
       { label: 'Admission',         path: '/dashboard/students',           icon: 'admission'  },
       { label: 'Student Directory', path: '/dashboard/students/directory', icon: 'directory'  },
       { label: 'Inquiries',         path: '/dashboard/inquiries',          icon: 'inquiries'  },
-      { label: 'Promote',              path: '/dashboard/promote',            icon: 'promote'    },
+      { label: 'Year-End / Promote',     path: '/dashboard/promote',            icon: 'promote'    },
       { label: 'Transfer Certificates', path: '/dashboard/tc',               icon: 'tc'         },
     ],
   },

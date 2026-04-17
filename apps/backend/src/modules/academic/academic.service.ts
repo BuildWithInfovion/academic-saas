@@ -489,4 +489,228 @@ export class AcademicService {
     }
     return year;
   }
+
+  // ── Year-End Transition ────────────────────────────────────────────────────
+
+  /**
+   * Returns all leaf classes with per-status student counts.
+   * Used by the operator to review readiness before running the transition.
+   */
+  async getTransitionOverview(institutionId: string) {
+    const units = await this.prisma.academicUnit.findMany({
+      where: {
+        institutionId,
+        deletedAt: null,
+        children: { none: { deletedAt: null } },
+      },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        parentId: true,
+        classTeacherUserId: true,
+        classTeacher: { select: { id: true, email: true, phone: true } },
+        parent: { select: { id: true, name: true, displayName: true } },
+        students: {
+          where: { deletedAt: null, status: { in: ['active', 'held_back'] } },
+          select: { status: true },
+        },
+      },
+    });
+
+    const deduped = new Map<string, (typeof units)[0]>();
+    for (const u of units) {
+      const key = (u.displayName || u.name).toLowerCase().trim();
+      const ex = deduped.get(key);
+      if (!ex) { deduped.set(key, u); continue; }
+      const score = (x: typeof u) =>
+        (x.students.length > 0 ? 2 : 0) + (x.classTeacherUserId ? 1 : 0);
+      if (score(u) > score(ex)) deduped.set(key, u);
+    }
+
+    return naturalSort(Array.from(deduped.values())).map((u) => ({
+      id: u.id,
+      name: u.name,
+      displayName: u.displayName,
+      parent: u.parent,
+      classTeacher: u.classTeacher,
+      hasTeacher: !!u.classTeacherUserId,
+      totalStudents: u.students.length,
+      activeStudents: u.students.filter((s) => s.status === 'active').length,
+      heldBackStudents: u.students.filter((s) => s.status === 'held_back').length,
+    }));
+  }
+
+  /**
+   * Suggests a class progression map based on natural sort order.
+   * Each class maps to the next class; the last class maps to null (graduate).
+   */
+  async getClassMapSuggestion(institutionId: string) {
+    const units = await this.prisma.academicUnit.findMany({
+      where: {
+        institutionId,
+        deletedAt: null,
+        children: { none: { deletedAt: null } },
+      },
+      select: { id: true, name: true, displayName: true, parentId: true },
+    });
+
+    const deduped = new Map<string, (typeof units)[0]>();
+    for (const u of units) {
+      const key = (u.displayName || u.name).toLowerCase().trim();
+      if (!deduped.has(key)) deduped.set(key, u);
+    }
+
+    const sorted = naturalSort(Array.from(deduped.values()));
+    return sorted.map((unit, idx) => ({
+      sourceUnit: { id: unit.id, name: unit.name, displayName: unit.displayName },
+      suggestedTargetUnitId: idx + 1 < sorted.length ? sorted[idx + 1].id : null,
+    }));
+  }
+
+  /**
+   * Executes the year-end student transition atomically.
+   *
+   * Rules applied per class:
+   *   - active   + targetUnitId  → promoted to target class with new roll numbers
+   *   - active   + null target   → graduated (status='graduated', academicUnitId=null)
+   *   - held_back               → status reset to 'active', stays in same class (repeating year)
+   *
+   * After the move the new academic year is set as current.
+   */
+  async executeTransition(
+    institutionId: string,
+    dto: {
+      newYearName: string;
+      newYearStartDate: string;
+      newYearEndDate: string;
+      classMap: Array<{ sourceUnitId: string; targetUnitId: string | null }>;
+    },
+  ) {
+    if (!dto.classMap.length) {
+      throw new BadRequestException('Class progression map cannot be empty');
+    }
+
+    // Guard: duplicate sourceUnitIds would double-process the same class
+    const sourceIds = dto.classMap.map((m) => m.sourceUnitId);
+    if (new Set(sourceIds).size !== sourceIds.length) {
+      throw new BadRequestException('classMap contains duplicate source class IDs');
+    }
+
+    const startDate = parseDateOnly(dto.newYearStartDate);
+    const endDate = parseDateOnly(dto.newYearEndDate);
+    if (!startDate || !endDate) {
+      throw new BadRequestException('Invalid year dates');
+    }
+
+    const name = dto.newYearName.trim();
+    if (!/^\d{4}-\d{2}$/.test(name)) {
+      throw new BadRequestException('Year name must be in format YYYY-YY (e.g. 2026-27)');
+    }
+
+    // Guard: if the target year already exists and is current, the transition was already run
+    const existingYear = await this.prisma.academicYear.findFirst({
+      where: { institutionId, name },
+    });
+    if (existingYear?.isCurrent) {
+      throw new BadRequestException(
+        `Academic year "${name}" is already active. The transition has already been executed.`,
+      );
+    }
+
+    // Validate all unit IDs belong to this institution
+    const allUnitIds = [
+      ...dto.classMap.map((m) => m.sourceUnitId),
+      ...dto.classMap.filter((m) => m.targetUnitId).map((m) => m.targetUnitId!),
+    ];
+    const uniqueIds = [...new Set(allUnitIds)];
+    const foundUnits = await this.prisma.academicUnit.findMany({
+      where: { id: { in: uniqueIds }, institutionId, deletedAt: null },
+      select: { id: true },
+    });
+    if (foundUnits.length !== uniqueIds.length) {
+      throw new BadRequestException('One or more class IDs not found in this institution');
+    }
+
+    // Create new year if it doesn't already exist (reuse the record found above)
+    let newYear = existingYear;
+    if (!newYear) {
+      newYear = await this.prisma.academicYear.create({
+        data: { institutionId, name, startDate, endDate, isCurrent: false },
+      });
+    }
+
+    let studentsPromoted = 0;
+    let studentsGraduated = 0;
+    let studentsHeldBackReset = 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const mapping of dto.classMap) {
+        const students = await tx.student.findMany({
+          where: {
+            institutionId,
+            academicUnitId: mapping.sourceUnitId,
+            deletedAt: null,
+            status: { in: ['active', 'held_back'] },
+          },
+          select: { id: true, status: true },
+          orderBy: { rollNo: 'asc' },
+        });
+        if (!students.length) continue;
+
+        const active = students.filter((s) => s.status === 'active');
+        const heldBack = students.filter((s) => s.status === 'held_back');
+
+        if (active.length > 0) {
+          if (!mapping.targetUnitId) {
+            // Graduate: exit school
+            await tx.student.updateMany({
+              where: { id: { in: active.map((s) => s.id) }, institutionId },
+              data: { status: 'graduated', academicUnitId: null },
+            });
+            studentsGraduated += active.length;
+          } else {
+            // Promote: assign to next class with sequential roll numbers
+            const existingCount = await tx.student.count({
+              where: { academicUnitId: mapping.targetUnitId, deletedAt: null },
+            });
+            await Promise.all(
+              active.map((s, idx) =>
+                tx.student.update({
+                  where: { id: s.id },
+                  data: {
+                    academicUnitId: mapping.targetUnitId,
+                    rollNo: String(existingCount + idx + 1).padStart(2, '0'),
+                    status: 'active',
+                  },
+                }),
+              ),
+            );
+            studentsPromoted += active.length;
+          }
+        }
+
+        if (heldBack.length > 0) {
+          // Reset held-back students for the new year — they repeat in the same class
+          await tx.student.updateMany({
+            where: { id: { in: heldBack.map((s) => s.id) }, institutionId },
+            data: { status: 'active' },
+          });
+          studentsHeldBackReset += heldBack.length;
+        }
+      }
+
+      // Activate the new year
+      await tx.academicYear.updateMany({
+        where: { institutionId, isCurrent: true },
+        data: { isCurrent: false },
+      });
+      await tx.academicYear.update({
+        where: { id: newYear!.id },
+        data: { isCurrent: true },
+      });
+    });
+
+    return { studentsPromoted, studentsGraduated, studentsHeldBackReset, newYearId: newYear.id, newYearName: newYear.name };
+  }
 }
