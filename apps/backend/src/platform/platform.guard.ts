@@ -6,12 +6,14 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class PlatformGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -27,19 +29,39 @@ export class PlatformGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException('Missing platform token');
     }
+
+    let payload: any;
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
+      payload = await this.jwtService.verifyAsync(token, {
         secret: this.config.get<string>('JWT_SECRET'),
       });
-
-      if (payload.type !== 'platform_admin') {
-        throw new UnauthorizedException('Not a platform admin token');
-      }
-
-      req.platformAdmin = payload;
-      return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired platform token');
     }
+
+    if (payload.type !== 'platform_admin') {
+      throw new UnauthorizedException('Not a platform admin token');
+    }
+
+    // Single-session enforcement: validate that the session ID in the JWT
+    // matches what is currently stored in the DB. If the admin logged out or
+    // logged in from another device, activeSessionId will differ → reject.
+    if (payload.sid) {
+      const admin = await this.prisma.platformAdmin.findUnique({
+        where: { id: payload.sub },
+        select: { activeSessionId: true, isActive: true },
+      });
+      if (!admin || !admin.isActive) {
+        throw new UnauthorizedException('Account not found or inactive');
+      }
+      if (admin.activeSessionId !== payload.sid) {
+        throw new UnauthorizedException(
+          'Session has been invalidated. Please log in again.',
+        );
+      }
+    }
+
+    req.platformAdmin = payload;
+    return true;
   }
 }

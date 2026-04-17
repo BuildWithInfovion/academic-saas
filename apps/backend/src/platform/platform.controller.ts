@@ -77,7 +77,8 @@ export class PlatformController {
 
   @UseGuards(PlatformGuard)
   @Post('auth/logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+    await this.platformService.logout(req.platformAdmin.sub);
     res.clearCookie('platform_rt', PLATFORM_RT_OPTIONS);
     return { message: 'Logged out' };
   }

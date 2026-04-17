@@ -607,6 +607,7 @@ model PlatformAdmin {
   failedLoginCount  Int       @default(0)
   lockedUntil       DateTime?
   lastFailedAt      DateTime?
+  activeSessionId   String?   // set on login, cleared on logout — enforces single active session
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

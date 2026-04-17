@@ -228,7 +228,17 @@ export class PlatformService {
       );
     }
 
-    // Success — reset lockout counters, update lastLoginAt, write log
+    // Single-session enforcement: if this admin already has an active session,
+    // reject the new login attempt. They must log out first.
+    if (admin.activeSessionId) {
+      await logFail(admin.id, 'session_already_active');
+      throw new ForbiddenException(
+        'A session is already active for this account. Please log out from the other device first.',
+      );
+    }
+
+    // Success — reset lockout counters, stamp new session ID, write log
+    const sessionId = crypto.randomBytes(16).toString('hex');
     await this.prisma.platformAdmin.update({
       where: { id: admin.id },
       data: {
@@ -236,6 +246,7 @@ export class PlatformService {
         lockedUntil: null,
         lastFailedAt: null,
         lastLoginAt: new Date(),
+        activeSessionId: sessionId,
       },
     });
     await this.prisma.platformLoginLog.create({
@@ -247,6 +258,7 @@ export class PlatformService {
       type: 'platform_admin',
       email: admin.email,
       name: admin.name,
+      sid: sessionId,   // session ID — PlatformGuard validates this against DB
     };
 
     const token = await this.jwtService.signAsync(payload, {
@@ -258,6 +270,13 @@ export class PlatformService {
       accessToken: token,
       admin: { id: admin.id, email: admin.email, name: admin.name },
     };
+  }
+
+  async logout(adminId: string) {
+    await this.prisma.platformAdmin.update({
+      where: { id: adminId },
+      data: { activeSessionId: null },
+    }).catch(() => {/* already gone — fine */});
   }
 
   async getMe(adminId: string) {
