@@ -24,23 +24,34 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function PlatformSupportPage() {
-  const [tickets,  setTickets]  = useState<Ticket[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [filter,   setFilter]   = useState<'all' | 'open' | 'resolved'>('open');
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [tickets,   setTickets]   = useState<Ticket[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [fetchErr,  setFetchErr]  = useState<string | null>(null);
+  const [filter,    setFilter]    = useState<'all' | 'open' | 'resolved'>('open');
+  const [expanded,  setExpanded]  = useState<string | null>(null);
+  const [resolving, setResolving] = useState<string | null>(null);
+  const [resolveErr, setResolveErr] = useState<string | null>(null);
 
   useEffect(() => {
     platformFetch('/platform/support-tickets')
       .then((data) => setTickets(data as Ticket[]))
-      .catch(() => {})
+      .catch((e: unknown) => setFetchErr(e instanceof Error ? e.message : 'Failed to load tickets'))
       .finally(() => setLoading(false));
   }, []);
 
   const resolve = async (id: string) => {
+    setResolving(id);
+    setResolveErr(null);
     try {
       await platformFetch(`/platform/support-tickets/${id}/resolve`, { method: 'PATCH' });
+      // Only update UI after backend confirms success
       setTickets((prev) => prev.map((t) => t.id === id ? { ...t, status: 'resolved' } : t));
-    } catch { /* noop */ }
+      setExpanded(null);
+    } catch (e: unknown) {
+      setResolveErr(e instanceof Error ? e.message : 'Failed to resolve ticket');
+    } finally {
+      setResolving(null);
+    }
   };
 
   const shown = tickets.filter((t) => filter === 'all' || t.status === filter);
@@ -72,8 +83,20 @@ export default function PlatformSupportPage() {
         </div>
       </div>
 
+      {resolveErr && (
+        <div className="bg-red-900/30 border border-red-700 rounded-xl px-4 py-3 text-sm text-red-400 flex items-center justify-between">
+          <span>{resolveErr}</span>
+          <button onClick={() => setResolveErr(null)} className="ml-3 text-red-400 hover:text-red-300">✕</button>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-gray-500 text-sm">Loading tickets…</p>
+      ) : fetchErr ? (
+        <div className="bg-red-900/30 border border-red-700 rounded-xl p-8 text-center">
+          <p className="text-red-400 text-sm font-medium">Failed to load tickets</p>
+          <p className="text-red-500 text-xs mt-1">{fetchErr}</p>
+        </div>
       ) : shown.length === 0 ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-10 text-center">
           <p className="text-gray-500 text-sm">No {filter !== 'all' ? filter : ''} tickets</p>
@@ -117,9 +140,10 @@ export default function PlatformSupportPage() {
                   {t.status === 'open' && (
                     <button
                       onClick={() => void resolve(t.id)}
-                      className="mt-4 px-4 py-1.5 rounded-lg text-xs font-semibold bg-green-700 text-white hover:bg-green-600 transition-colors"
+                      disabled={resolving === t.id}
+                      className="mt-4 px-4 py-1.5 rounded-lg text-xs font-semibold bg-green-700 text-white hover:bg-green-600 transition-colors disabled:opacity-50"
                     >
-                      Mark as Resolved
+                      {resolving === t.id ? 'Resolving…' : 'Mark as Resolved'}
                     </button>
                   )}
                 </div>
