@@ -157,26 +157,26 @@ export default function LoginPage() {
 
         .ldf {
           width: 100%; padding: 10px 12px 10px 36px;
-          font-size: 14px; border: 1px solid rgba(220,146,75,0.22);
-          border-radius: 8px; color: #f0e6d3;
-          background: rgba(255,255,255,0.045);
+          font-size: 14px; border: 1px solid rgba(107,67,47,0.18);
+          border-radius: 8px; color: #1a0e06;
+          background: rgba(107,67,47,0.04);
           transition: border-color 0.18s, box-shadow 0.18s; outline: none;
         }
-        .ldf::placeholder { color: rgba(174,112,64,0.38); }
-        .ldf:hover  { border-color: rgba(220,146,75,0.42); }
-        .ldf:focus  { border-color: #dc924b; box-shadow: 0 0 0 3px rgba(220,146,75,0.13); }
-        .ldf:disabled { opacity: 0.38; cursor: not-allowed; }
+        .ldf::placeholder { color: rgba(107,67,47,0.35); }
+        .ldf:hover  { border-color: rgba(174,85,37,0.38); }
+        .ldf:focus  { border-color: #ae5525; box-shadow: 0 0 0 3px rgba(174,85,37,0.12); }
+        .ldf:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .ldf-plain {
           width: 100%; padding: 10px 12px;
-          font-size: 14px; border: 1px solid rgba(220,146,75,0.22);
-          border-radius: 8px; color: #f0e6d3;
-          background: rgba(255,255,255,0.045);
+          font-size: 14px; border: 1px solid rgba(107,67,47,0.18);
+          border-radius: 8px; color: #1a0e06;
+          background: rgba(107,67,47,0.04);
           transition: border-color 0.18s, box-shadow 0.18s; outline: none;
         }
-        .ldf-plain::placeholder { color: rgba(174,112,64,0.38); }
-        .ldf-plain:hover  { border-color: rgba(220,146,75,0.42); }
-        .ldf-plain:focus  { border-color: #dc924b; box-shadow: 0 0 0 3px rgba(220,146,75,0.13); }
+        .ldf-plain::placeholder { color: rgba(107,67,47,0.35); }
+        .ldf-plain:hover  { border-color: rgba(174,85,37,0.38); }
+        .ldf-plain:focus  { border-color: #ae5525; box-shadow: 0 0 0 3px rgba(174,85,37,0.12); }
 
         .welcome-shimmer {
           background: linear-gradient(90deg, #f7c576 0%, #fffbe8 45%, #f7c576 80%);
@@ -311,11 +311,11 @@ export default function LoginPage() {
           animation:'loginCardReveal 0.62s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
         }}>
           <div style={{
-            background:'rgba(13,7,2,0.92)',
-            border:'1px solid rgba(220,146,75,0.14)',
+            background:'rgba(255,255,255,0.97)',
+            border:'1px solid rgba(220,146,75,0.22)',
             borderRadius:22,
             padding:'36px 32px 32px',
-            boxShadow:'0 36px 90px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(220,146,75,0.07), inset 0 1px 0 rgba(255,255,255,0.04)',
+            boxShadow:'0 40px 100px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(220,146,75,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
             backdropFilter:'blur(28px)',
             WebkitBackdropFilter:'blur(28px)',
           }}>
@@ -327,21 +327,21 @@ export default function LoginPage() {
                   style={{ objectFit:'contain', width:'auto', maxHeight:60, margin:'0 auto', display:'block' }}
                   onError={() => setLogoError(true)} />
               ) : (
-                <p style={{ color:'#f7c576', fontWeight:700, fontSize:'1.25rem', letterSpacing:'0.1em', margin:0 }}>INFOVION</p>
+                <p style={{ color:'#ae5525', fontWeight:700, fontSize:'1.25rem', letterSpacing:'0.1em', margin:0 }}>INFOVION</p>
               )}
-              <p style={{ color:'rgba(174,112,64,0.4)', fontSize:10.5, letterSpacing:'0.14em',
+              <p style={{ color:'rgba(107,67,47,0.45)', fontSize:10.5, letterSpacing:'0.14em',
                 textTransform:'uppercase', margin:'7px 0 0' }}>Academic Management</p>
             </div>
 
             {/* Thin divider */}
-            <div style={{ height:'0.5px', background:'rgba(220,146,75,0.1)', marginBottom:24 }} />
+            <div style={{ height:'0.5px', background:'rgba(107,67,47,0.1)', marginBottom:24 }} />
 
             {/* Heading */}
             <div style={{ marginBottom:22 }}>
-              <h2 style={{ margin:0, color:'#f0e6d3', fontWeight:600, fontSize:19.5, letterSpacing:'-0.025em' }}>
+              <h2 style={{ margin:0, color:'#1a0e06', fontWeight:700, fontSize:19.5, letterSpacing:'-0.025em' }}>
                 Sign in to your account
               </h2>
-              <p style={{ margin:'5px 0 0', color:'rgba(174,112,64,0.5)', fontSize:13 }}>
+              <p style={{ margin:'5px 0 0', color:'rgba(107,67,47,0.52)', fontSize:13 }}>
                 Enter your school credentials to continue
               </p>
             </div>
@@ -352,12 +352,12 @@ export default function LoginPage() {
               {/* School Code */}
               <div>
                 <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                  color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                  color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                   School Code
                 </label>
                 <div style={{ position:'relative' }}>
                   <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                    alignItems:'center', pointerEvents:'none', color:'rgba(174,112,64,0.4)' }}>
+                    alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
                     </svg>
@@ -373,12 +373,12 @@ export default function LoginPage() {
               {/* Email / Phone */}
               <div>
                 <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                  color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                  color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                   Email or Phone
                 </label>
                 <div style={{ position:'relative' }}>
                   <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                    alignItems:'center', pointerEvents:'none', color:'rgba(174,112,64,0.4)' }}>
+                    alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                     </svg>
@@ -395,21 +395,21 @@ export default function LoginPage() {
               <div>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
                   <label style={{ fontSize:11.5, fontWeight:600,
-                    color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                    color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                     Password
                   </label>
                   <button type="button" onClick={openForgot}
-                    style={{ fontSize:12, fontWeight:500, color:'rgba(220,146,75,0.6)',
+                    style={{ fontSize:12, fontWeight:500, color:'rgba(174,85,37,0.65)',
                       background:'none', border:'none', cursor:'pointer', padding:0,
                       transition:'color 0.18s' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#dc924b')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(220,146,75,0.6)')}>
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#ae5525')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(174,85,37,0.65)')}>
                     Forgot password?
                   </button>
                 </div>
                 <div style={{ position:'relative' }}>
                   <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                    alignItems:'center', pointerEvents:'none', color:'rgba(174,112,64,0.4)' }}>
+                    alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
@@ -426,8 +426,8 @@ export default function LoginPage() {
             {error && (
               <div style={{
                 marginTop:14, padding:'10px 13px', borderRadius:8, fontSize:13,
-                background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.3)',
-                color:'#ff8b8b',
+                background:'#fff0f0', border:'1px solid rgba(200,50,50,0.22)',
+                color:'#b02020',
               }}>
                 {error}
               </div>
@@ -477,7 +477,7 @@ export default function LoginPage() {
           </div>
 
           {/* Footer */}
-          <p style={{ textAlign:'center', color:'rgba(174,112,64,0.25)', fontSize:11,
+          <p style={{ textAlign:'center', color:'rgba(255,255,255,0.22)', fontSize:11,
             letterSpacing:'0.04em', marginTop:20 }}>
             © {new Date().getFullYear()} Infovion. All rights reserved.
           </p>
@@ -496,8 +496,8 @@ export default function LoginPage() {
           onClick={(e) => e.target === e.currentTarget && setShowForgot(false)}>
           <div style={{
             width:'100%', maxWidth:360, borderRadius:18, overflow:'hidden',
-            background:'rgba(13,7,2,0.97)', border:'1px solid rgba(220,146,75,0.16)',
-            boxShadow:'0 32px 80px rgba(0,0,0,0.7)',
+            background:'#ffffff', border:'1px solid rgba(220,146,75,0.2)',
+            boxShadow:'0 32px 80px rgba(0,0,0,0.6)',
             animation:'loginCardReveal 0.4s ease forwards',
           }}>
             {/* Modal header */}
@@ -522,7 +522,7 @@ export default function LoginPage() {
               {fpSuccess ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
                   <div style={{ padding:'11px 13px', borderRadius:8, fontSize:13,
-                    background:'rgba(26,95,60,0.2)', border:'1px solid rgba(26,95,60,0.35)', color:'#6ee7b7' }}>
+                    background:'#f0faf4', border:'1px solid rgba(26,120,70,0.25)', color:'#1a6040' }}>
                     {fpSuccess}
                   </div>
                   <button onClick={() => setShowForgot(false)} style={{
@@ -535,7 +535,7 @@ export default function LoginPage() {
                 <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
                   <div>
                     <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                      color:'rgba(220,146,75,0.7)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                       School Code
                     </label>
                     <input className="ldf-plain" type="text" placeholder="Your school code"
@@ -544,7 +544,7 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                      color:'rgba(220,146,75,0.7)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                       Phone or Email
                     </label>
                     <input className="ldf-plain" type="text" placeholder="Your registered phone or email"
@@ -552,18 +552,18 @@ export default function LoginPage() {
                   </div>
                   {fpError && (
                     <div style={{ padding:'9px 12px', borderRadius:8, fontSize:12.5,
-                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.3)', color:'#ff8b8b' }}>
+                      background:'#fff0f0', border:'1px solid rgba(200,50,50,0.22)', color:'#b02020' }}>
                       {fpError}
                     </div>
                   )}
                   <div style={{ display:'flex', gap:8, paddingTop:4 }}>
                     <button onClick={() => setShowForgot(false)} style={{
                       flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:500, cursor:'pointer',
-                      background:'rgba(255,255,255,0.04)', color:'rgba(240,230,211,0.7)',
-                      border:'1px solid rgba(220,146,75,0.18)', transition:'all 0.18s',
+                      background:'#f5f0ec', color:'#6b432f',
+                      border:'1px solid rgba(107,67,47,0.18)', transition:'all 0.18s',
                     }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.08)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.04)')}>
+                      onMouseEnter={(e) => (e.currentTarget.style.background='#ede5dc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background='#f5f0ec')}>
                       Cancel
                     </button>
                     <button onClick={handleForgotSubmit} disabled={fpLoading} style={{
