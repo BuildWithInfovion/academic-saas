@@ -5,9 +5,7 @@ import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { silentRefresh, apiFetch } from '@/lib/api';
-import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
-
-const DASHBOARD_ROLES = ['admin'];
+import { getRoleRoute, getRoleLabel, DASHBOARD_ROLES } from '@/lib/auth-utils';
 
 // Most-specific match wins — prevents parent paths staying active on child pages
 function getActivePath(pathname: string): string | undefined {

@@ -21,17 +21,13 @@ export default function AccountantOverviewPage() {
   });
 
   useEffect(() => {
-    Promise.all([
-      apiFetch('/fees/payments/summary').catch(() => null),
-      apiFetch('/students').catch(() => []),
-    ])
-      .then(([summary, students]) => {
-        const s = summary as any;
+    apiFetch('/fees/payments/summary')
+      .then((summary: any) => {
         setStats({
-          totalCollectedToday: s?.todayTotal ?? 0,
-          totalCollectedMonth: s?.monthTotal ?? 0,
-          totalDue: s?.totalDue ?? 0,
-          totalStudents: Array.isArray(students) ? students.length : (s?.totalStudents ?? 0),
+          totalCollectedToday: summary?.todayTotal ?? 0,
+          totalCollectedMonth: summary?.monthTotal ?? 0,
+          totalDue: summary?.totalDue ?? 0,
+          totalStudents: summary?.totalStudents ?? 0,
         });
       })
       .catch(() => {})

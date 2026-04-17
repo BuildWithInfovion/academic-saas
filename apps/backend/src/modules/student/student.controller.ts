@@ -41,7 +41,7 @@ export class StudentController {
   }
 
   @Get('count')
-  @Permissions('users.read')
+  @Permissions('students.read')
   count(@Tenant() tenant: TenantContext) {
     return this.studentService.count(tenant.institutionId);
   }
@@ -76,7 +76,7 @@ export class StudentController {
   }
 
   @Get()
-  @Permissions('users.read')
+  @Permissions('students.read')
   findAll(
     @Tenant() tenant: TenantContext,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
@@ -88,7 +88,7 @@ export class StudentController {
   }
 
   @Get(':id')
-  @Permissions('users.read')
+  @Permissions('students.read')
   findOne(@Tenant() tenant: TenantContext, @Param('id') id: string) {
     return this.studentService.findOne(tenant.institutionId, id);
   }

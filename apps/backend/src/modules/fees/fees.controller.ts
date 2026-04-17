@@ -84,6 +84,12 @@ export class FeesController {
     return this.feesService.getStudentBalance(req.tenant?.institutionId, studentId, yearId, parentUserId);
   }
 
+  @Get('payments/summary')
+  @Permissions('fees.read')
+  getPaymentsSummary(@Request() req: any) {
+    return this.feesService.getPaymentsSummary(req.tenant?.institutionId);
+  }
+
   @Get('payments/daily')
   @Permissions('fees.read')
   getDailyCollection(@Request() req: any, @Query('date') date: string) {

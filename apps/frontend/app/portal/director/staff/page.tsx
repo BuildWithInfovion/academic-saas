@@ -16,7 +16,7 @@ type Assignments = {
   }[];
 };
 
-const ALL_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist', 'non_teaching_staff'];
+const ALL_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist', 'non_teaching_staff', 'accountant'];
 
 const ROLE_BADGE: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
@@ -25,6 +25,7 @@ const ROLE_BADGE: Record<string, string> = {
   teacher: 'bg-green-100 text-green-700',
   receptionist: 'bg-pink-100 text-pink-700',
   non_teaching_staff: 'bg-orange-100 text-orange-700',
+  accountant: 'bg-teal-100 text-teal-700',
 };
 
 function generatePassword(): string {

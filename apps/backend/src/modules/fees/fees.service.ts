@@ -230,6 +230,62 @@ export class FeesService {
     return { date, payments, total };
   }
 
+  async getPaymentsSummary(institutionId: string) {
+    const now = new Date();
+    const istOffsetMs = 5.5 * 60 * 60 * 1000; // IST = UTC+5:30
+
+    const todayStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - istOffsetMs);
+    const todayEnd   = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1) - istOffsetMs);
+    const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1) - istOffsetMs);
+
+    const [todayAgg, monthAgg, currentYear, studentCount] = await Promise.all([
+      this.prisma.feePayment.aggregate({
+        where: { institutionId, paidOn: { gte: todayStart, lt: todayEnd } },
+        _sum: { amount: true },
+      }),
+      this.prisma.feePayment.aggregate({
+        where: { institutionId, paidOn: { gte: monthStart } },
+        _sum: { amount: true },
+      }),
+      this.prisma.academicYear.findFirst({
+        where: { institutionId, isCurrent: true },
+        select: { id: true },
+      }),
+      this.prisma.student.count({
+        where: { institutionId, status: 'active', deletedAt: null },
+      }),
+    ]);
+
+    let totalDue = 0;
+    if (currentYear) {
+      const [structuresByUnit, paidAgg, students] = await Promise.all([
+        this.prisma.feeStructure.groupBy({
+          by: ['academicUnitId'],
+          where: { institutionId, academicYearId: currentYear.id, deletedAt: null },
+          _sum: { amount: true },
+        }),
+        this.prisma.feePayment.aggregate({
+          where: { institutionId, academicYearId: currentYear.id },
+          _sum: { amount: true },
+        }),
+        this.prisma.student.findMany({
+          where: { institutionId, status: 'active', deletedAt: null },
+          select: { academicUnitId: true },
+        }),
+      ]);
+      const dueByUnit = new Map(structuresByUnit.map((s) => [s.academicUnitId, s._sum.amount ?? 0]));
+      const totalFeeDue = students.reduce((sum, s) => sum + (dueByUnit.get(s.academicUnitId ?? '') ?? 0), 0);
+      totalDue = Math.max(0, totalFeeDue - (paidAgg._sum.amount ?? 0));
+    }
+
+    return {
+      todayTotal: todayAgg._sum.amount ?? 0,
+      monthTotal: monthAgg._sum.amount ?? 0,
+      totalDue,
+      totalStudents: studentCount,
+    };
+  }
+
   async getDefaulters(institutionId: string, academicYearId: string, academicUnitId?: string) {
     // Optimised: 3 parallel queries instead of 2+N (one aggregate per student)
     const [structures, students, paidGroups] = await Promise.all([

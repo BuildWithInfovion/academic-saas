@@ -131,16 +131,17 @@ async function main() {
     {
       code: 'super_admin',
       label: 'Director',
+      // Read-only monitoring role — matches the production migration.
+      // Directors oversee the school but do not operate day-to-day; operators (admin) do.
       permissions: [
-        'users.read', 'users.write', 'users.assignRole',
-        'roles.read', 'roles.write',
-        'students.read', 'students.write',
-        'fees.read', 'fees.write',
-        'attendance.read', 'attendance.write',
-        'exams.read', 'exams.write',
-        'subjects.read', 'subjects.write',
-        'academic.read', 'academic.write',
-        'institution.read', 'institution.write',
+        'users.read', 'roles.read',
+        'students.read',
+        'fees.read',
+        'attendance.read',
+        'exams.read',
+        'subjects.read',
+        'academic.read',
+        'institution.read',
       ],
     },
     {
