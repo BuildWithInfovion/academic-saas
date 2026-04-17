@@ -62,6 +62,7 @@ export default function LoginPage() {
   const [fpLoading,       setFpLoading]       = useState(false);
   const [fpError,         setFpError]         = useState<string | null>(null);
   const [fpSuccess,       setFpSuccess]       = useState<string | null>(null);
+  const [successInfo,     setSuccessInfo]     = useState<{ institution: string } | null>(null);
 
   useEffect(() => {
     const r  = requestAnimationFrame(() => setPhase('zoom-in'));
@@ -98,7 +99,11 @@ export default function LoginPage() {
       if (isDashboardUser) { setAuth(authPayload); } else { usePortalAuthStore.getState().setAuth(authPayload); }
       setLoadStep(3);
       const portalRoles = roles.filter((r) => PORTAL_ROLES.includes(r));
-      if (portalRoles.length > 1) { router.push('/portal/select-role'); } else { router.push(getRoleRoute(roles)); }
+      const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
+      // Show success animation, then redirect
+      setSuccessInfo({ institution: data.user.institutionName || institutionCode });
+      await new Promise<void>((res) => setTimeout(res, 3000));
+      router.push(destination);
     } catch (err) { setError(err instanceof Error ? err.message : 'Login failed'); setLoadStep(0); }
     finally { setLoading(false); }
   };
@@ -158,6 +163,51 @@ export default function LoginPage() {
         @keyframes cardBorderPulse {
           0%, 100% { opacity: 0.55; }
           50%      { opacity: 1; }
+        }
+
+        /* ── Success screen ── */
+        @keyframes successBgIn {
+          from { opacity: 0; } to { opacity: 1; }
+        }
+        @keyframes successCircleIn {
+          0%   { transform: scale(0);    opacity: 0; }
+          60%  { transform: scale(1.12); opacity: 1; }
+          80%  { transform: scale(0.96); }
+          100% { transform: scale(1);    opacity: 1; }
+        }
+        @keyframes successRingOut {
+          0%   { transform: scale(1);   opacity: 0.5; }
+          100% { transform: scale(2.8); opacity: 0; }
+        }
+        @keyframes successCheckDraw {
+          from { stroke-dashoffset: 80; opacity: 0; }
+          15%  { opacity: 1; }
+          to   { stroke-dashoffset: 0; }
+        }
+        @keyframes successTextIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes successDot {
+          0%, 70%, 100% { transform: translateY(0px);  opacity: 0.28; }
+          35%            { transform: translateY(-7px); opacity: 1; }
+        }
+        @keyframes successBarFill {
+          from { width: 0%; }
+          to   { width: 100%; }
+        }
+
+        .login-btn {
+          transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .login-btn:not(:disabled):hover {
+          background: linear-gradient(135deg, #c5692e 0%, #ae5525 100%) !important;
+          box-shadow: 0 6px 28px rgba(174,85,37,0.52), 0 2px 8px rgba(0,0,0,0.25) !important;
+          transform: translateY(-2px) scale(1.01) !important;
+        }
+        .login-btn:not(:disabled):active {
+          transform: translateY(0) scale(0.98) !important;
+          box-shadow: 0 2px 10px rgba(174,85,37,0.3) !important;
         }
 
         .ldf {
@@ -446,17 +496,14 @@ export default function LoginPage() {
             )}
 
             {/* Sign In button */}
-            <button onClick={handleLogin} disabled={loading}
+            <button onClick={handleLogin} disabled={loading} className="login-btn"
               style={{
                 marginTop:18, width:'100%', padding:'12px',
-                fontSize:14.5, fontWeight:600, borderRadius:10, cursor:'pointer',
-                background: loading ? 'rgba(174,85,37,0.6)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
+                fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
+                background: loading ? 'rgba(174,85,37,0.55)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
                 color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)',
-                boxShadow: loading ? 'none' : '0 2px 12px rgba(174,85,37,0.35)',
-                transition:'all 0.2s', transform:'none',
+                boxShadow: loading ? 'none' : '0 2px 16px rgba(174,85,37,0.38)',
               }}
-              onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background='linear-gradient(135deg,#c5692e 0%,#ae5525 100%)'; e.currentTarget.style.boxShadow='0 4px 20px rgba(174,85,37,0.45)'; e.currentTarget.style.transform='translateY(-1px)'; }}}
-              onMouseLeave={(e) => { if (!loading) { e.currentTarget.style.background='linear-gradient(135deg,#ae5525 0%,#8c3919 100%)'; e.currentTarget.style.boxShadow='0 2px 12px rgba(174,85,37,0.35)'; e.currentTarget.style.transform='none'; }}}
             >
               {loading ? (
                 <span style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
@@ -592,6 +639,116 @@ export default function LoginPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          SUCCESS / WELCOME ANIMATION OVERLAY
+      ══════════════════════════════════════════════════ */}
+      {successInfo && (
+        <div style={{
+          position:'fixed', inset:0, zIndex:80,
+          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+          background:'#060402',
+          animation:'successBgIn 0.4s ease forwards',
+        }}>
+          {/* Ambient glow behind the check */}
+          <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
+            width:400, height:400, borderRadius:'50%', filter:'blur(100px)',
+            background:'radial-gradient(circle, rgba(220,146,75,0.18) 0%, transparent 65%)',
+            pointerEvents:'none' }} />
+
+          {/* Ripple rings */}
+          {[0, 0.3, 0.6].map((delay, i) => (
+            <div key={i} style={{
+              position:'absolute', top:'50%', left:'50%',
+              width: 110, height: 110,
+              marginTop: -55, marginLeft: -55,
+              borderRadius:'50%',
+              border:`1.5px solid rgba(220,146,75,${0.5 - i * 0.12})`,
+              animation:`successRingOut 1.6s ${delay}s cubic-bezier(0.2,0.6,0.4,1) infinite`,
+              pointerEvents:'none',
+            }} />
+          ))}
+
+          {/* Circle + checkmark */}
+          <div style={{
+            width:100, height:100, borderRadius:'50%',
+            background:'linear-gradient(145deg, rgba(220,146,75,0.18), rgba(174,85,37,0.1))',
+            border:'2px solid rgba(220,146,75,0.55)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            animation:'successCircleIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards',
+            boxShadow:'0 0 40px rgba(220,146,75,0.22), inset 0 1px 0 rgba(255,255,255,0.06)',
+            position:'relative', zIndex:1,
+          }}>
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <polyline points="8,22 18,32 36,14" stroke="#f7c576" strokeWidth="3.2"
+                strokeLinecap="round" strokeLinejoin="round"
+                strokeDasharray="80" strokeDashoffset="80"
+                style={{ animation:'successCheckDraw 0.6s 0.55s cubic-bezier(0.25,0.46,0.45,0.94) forwards' }} />
+            </svg>
+          </div>
+
+          {/* Institution name tag */}
+          <div style={{
+            marginTop:28,
+            padding:'5px 16px', borderRadius:999,
+            background:'rgba(220,146,75,0.1)', border:'1px solid rgba(220,146,75,0.22)',
+            animation:'successTextIn 0.55s 0.9s ease both',
+          }}>
+            <p style={{ margin:0, color:'rgba(220,146,75,0.8)', fontSize:11.5,
+              letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:600 }}>
+              {successInfo.institution}
+            </p>
+          </div>
+
+          {/* Heading */}
+          <h1 style={{
+            margin:'16px 0 0', color:'#f5ede0', fontWeight:300,
+            fontSize:'clamp(1.8rem,5vw,2.6rem)', letterSpacing:'-0.02em',
+            textAlign:'center',
+            animation:'successTextIn 0.55s 1.05s ease both',
+          }}>
+            Welcome back!
+          </h1>
+
+          {/* Subtitle */}
+          <p style={{
+            margin:'10px 0 0', color:'rgba(174,112,64,0.55)', fontSize:14,
+            letterSpacing:'0.01em', textAlign:'center',
+            animation:'successTextIn 0.55s 1.2s ease both',
+          }}>
+            Setting up your workspace
+          </p>
+
+          {/* Bouncing dots */}
+          <div style={{
+            display:'flex', gap:7, marginTop:20,
+            animation:'successTextIn 0.5s 1.35s ease both',
+          }}>
+            {[0, 0.18, 0.36].map((delay, i) => (
+              <div key={i} style={{
+                width:7, height:7, borderRadius:'50%',
+                background:'rgba(220,146,75,0.6)',
+                animation:`successDot 1.1s ${delay}s ease-in-out infinite`,
+              }} />
+            ))}
+          </div>
+
+          {/* Progress bar */}
+          <div style={{
+            marginTop:32, width:200, height:2, borderRadius:999,
+            background:'rgba(220,146,75,0.1)',
+            overflow:'hidden',
+            animation:'successTextIn 0.5s 1.4s ease both',
+          }}>
+            <div style={{
+              height:'100%',
+              background:'linear-gradient(90deg, #ae5525, #f7c576, #dc924b)',
+              animation:'successBarFill 2.4s 1.5s cubic-bezier(0.4,0,0.2,1) forwards',
+              width:0,
+            }} />
           </div>
         </div>
       )}
