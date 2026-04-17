@@ -24,6 +24,7 @@ import { TimetableModule } from './modules/timetable/timetable.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
 import { TcModule } from './modules/tc/tc.module';
 import { SupportModule } from './modules/support/support.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 import { PlatformModule } from './platform/platform.module';
 
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
@@ -57,6 +58,7 @@ import { AppController } from './app.controller';
     StaffAttendanceModule,
     TcModule,
     SupportModule,
+    CalendarModule,
     PlatformModule,
   ],
   controllers: [AppController],

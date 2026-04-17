@@ -47,6 +47,7 @@ model Institution {
   staffLeaveRequests     StaffLeaveRequest[]
   transferCertificates   TransferCertificate[]
   supportTickets         SupportTicket[]
+  calendarEvents         CalendarEvent[]
 
   @@map("institutions")
 }
@@ -231,6 +232,7 @@ model User {
   staffAttendance       StaffAttendance[]      @relation("StaffAttendanceUser")
   staffLeaveRequests    StaffLeaveRequest[]    @relation("StaffLeaveUser")
   staffLeaveApprovals   StaffLeaveRequest[]    @relation("StaffLeaveApprover")
+  calendarEvents        CalendarEvent[]
 
   @@index([institutionId])
   @@index([email])                      // login lookups — auth.service queries by email
@@ -770,4 +772,27 @@ model SupportTicket {
   @@index([status])
   @@index([createdAt])
   @@map("support_tickets")
+}
+
+model CalendarEvent {
+  id              String    @id @default(cuid())
+  institutionId   String
+  title           String
+  description     String?
+  // holiday | exam | event | meeting | vacation | other
+  eventType       String    @default("event")
+  startDate       DateTime
+  endDate         DateTime
+  isAllDay        Boolean   @default(true)
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  createdBy       User        @relation(fields: [createdByUserId], references: [id])
+
+  @@index([institutionId])
+  @@index([institutionId, startDate])
+  @@map("calendar_events")
 }

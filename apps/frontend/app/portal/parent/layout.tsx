@@ -10,6 +10,7 @@ const menuItems = [
   { label: 'Timetable', path: '/portal/parent/timetable' },
   { label: 'Exam Schedule', path: '/portal/parent/exams' },
   { label: 'Fees', path: '/portal/parent/fees' },
+  { label: 'Calendar',     path: '/portal/parent/calendar' },
   { label: 'Announcements', path: '/portal/parent/announcements' },
 ];
 

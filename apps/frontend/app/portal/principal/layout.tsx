@@ -10,6 +10,7 @@ const menuItems = [
   { label: 'Attendance Reports',  path: '/portal/principal/attendance' },
   { label: 'Staff Attendance',    path: '/portal/principal/staff-attendance' },
   { label: 'Fee Reports',         path: '/portal/principal/fees' },
+  { label: 'Calendar',            path: '/portal/principal/calendar' },
   { label: 'Announcements',       path: '/portal/principal/announcements' },
   { label: 'Settings',            path: '/portal/principal/settings' },
 ];
