@@ -228,16 +228,9 @@ export class PlatformService {
       );
     }
 
-    // Single-session enforcement: if this admin already has an active session,
-    // reject the new login attempt. They must log out first.
-    if (admin.activeSessionId) {
-      await logFail(admin.id, 'session_already_active');
-      throw new ForbiddenException(
-        'A session is already active for this account. Please log out from the other device first.',
-      );
-    }
-
     // Success — reset lockout counters, stamp new session ID, write log
+    // Note: if an older session exists it is silently overwritten here —
+    // the old token becomes invalid on the next request (PlatformGuard checks sid).
     const sessionId = crypto.randomBytes(16).toString('hex');
     await this.prisma.platformAdmin.update({
       where: { id: admin.id },
