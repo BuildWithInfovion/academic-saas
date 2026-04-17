@@ -155,28 +155,33 @@ export default function LoginPage() {
           100% { background-position:  200% center; }
         }
 
+        @keyframes cardBorderPulse {
+          0%, 100% { opacity: 0.55; }
+          50%      { opacity: 1; }
+        }
+
         .ldf {
           width: 100%; padding: 10px 12px 10px 36px;
-          font-size: 14px; border: 1px solid rgba(107,67,47,0.18);
-          border-radius: 8px; color: #1a0e06;
-          background: rgba(107,67,47,0.04);
-          transition: border-color 0.18s, box-shadow 0.18s; outline: none;
+          font-size: 14px; border: 1px solid rgba(220,146,75,0.18);
+          border-radius: 9px; color: #f0e6d3;
+          background: rgba(255,255,255,0.04);
+          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; outline: none;
         }
-        .ldf::placeholder { color: rgba(107,67,47,0.35); }
-        .ldf:hover  { border-color: rgba(174,85,37,0.38); }
-        .ldf:focus  { border-color: #ae5525; box-shadow: 0 0 0 3px rgba(174,85,37,0.12); }
-        .ldf:disabled { opacity: 0.4; cursor: not-allowed; }
+        .ldf::placeholder { color: rgba(174,112,64,0.32); }
+        .ldf:hover  { background: rgba(255,255,255,0.065); border-color: rgba(220,146,75,0.38); }
+        .ldf:focus  { background: rgba(255,255,255,0.07); border-color: #dc924b; box-shadow: 0 0 0 3px rgba(220,146,75,0.14), inset 0 1px 0 rgba(255,255,255,0.04); }
+        .ldf:disabled { opacity: 0.35; cursor: not-allowed; }
 
         .ldf-plain {
           width: 100%; padding: 10px 12px;
-          font-size: 14px; border: 1px solid rgba(107,67,47,0.18);
-          border-radius: 8px; color: #1a0e06;
-          background: rgba(107,67,47,0.04);
-          transition: border-color 0.18s, box-shadow 0.18s; outline: none;
+          font-size: 14px; border: 1px solid rgba(220,146,75,0.18);
+          border-radius: 9px; color: #f0e6d3;
+          background: rgba(255,255,255,0.04);
+          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; outline: none;
         }
-        .ldf-plain::placeholder { color: rgba(107,67,47,0.35); }
-        .ldf-plain:hover  { border-color: rgba(174,85,37,0.38); }
-        .ldf-plain:focus  { border-color: #ae5525; box-shadow: 0 0 0 3px rgba(174,85,37,0.12); }
+        .ldf-plain::placeholder { color: rgba(174,112,64,0.32); }
+        .ldf-plain:hover  { background: rgba(255,255,255,0.065); border-color: rgba(220,146,75,0.38); }
+        .ldf-plain:focus  { background: rgba(255,255,255,0.07); border-color: #dc924b; box-shadow: 0 0 0 3px rgba(220,146,75,0.14); }
 
         .welcome-shimmer {
           background: linear-gradient(90deg, #f7c576 0%, #fffbe8 45%, #f7c576 80%);
@@ -311,14 +316,21 @@ export default function LoginPage() {
           animation:'loginCardReveal 0.62s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
         }}>
           <div style={{
-            background:'rgba(255,255,255,0.97)',
-            border:'1px solid rgba(220,146,75,0.22)',
+            background:'linear-gradient(160deg, rgba(28,14,6,0.96) 0%, rgba(18,9,3,0.97) 100%)',
+            border:'1px solid rgba(220,146,75,0.2)',
             borderRadius:22,
-            padding:'36px 32px 32px',
-            boxShadow:'0 40px 100px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(220,146,75,0.15), inset 0 1px 0 rgba(255,255,255,0.9)',
-            backdropFilter:'blur(28px)',
-            WebkitBackdropFilter:'blur(28px)',
+            padding:'0 0 32px',
+            boxShadow:'0 48px 100px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(220,146,75,0.08), 0 0 80px rgba(220,146,75,0.06)',
+            backdropFilter:'blur(32px)',
+            WebkitBackdropFilter:'blur(32px)',
+            overflow:'hidden',
+            position:'relative',
           }}>
+            {/* Gold top accent bar */}
+            <div style={{ height:2, background:'linear-gradient(90deg, transparent 0%, rgba(220,146,75,0.5) 30%, rgba(247,197,118,0.9) 50%, rgba(220,146,75,0.5) 70%, transparent 100%)', animation:'cardBorderPulse 4s ease-in-out infinite' }} />
+            {/* Inner top highlight */}
+            <div style={{ position:'absolute', top:2, left:0, right:0, height:60, background:'linear-gradient(180deg, rgba(220,146,75,0.04) 0%, transparent 100%)', pointerEvents:'none' }} />
+            <div style={{ padding:'32px 32px 0' }}>
 
             {/* Card logo */}
             <div style={{ textAlign:'center', marginBottom:26 }}>
@@ -327,21 +339,21 @@ export default function LoginPage() {
                   style={{ objectFit:'contain', width:'auto', maxHeight:60, margin:'0 auto', display:'block' }}
                   onError={() => setLogoError(true)} />
               ) : (
-                <p style={{ color:'#ae5525', fontWeight:700, fontSize:'1.25rem', letterSpacing:'0.1em', margin:0 }}>INFOVION</p>
+                <p style={{ color:'#f7c576', fontWeight:700, fontSize:'1.25rem', letterSpacing:'0.1em', margin:0 }}>INFOVION</p>
               )}
-              <p style={{ color:'rgba(107,67,47,0.45)', fontSize:10.5, letterSpacing:'0.14em',
+              <p style={{ color:'rgba(174,112,64,0.4)', fontSize:10.5, letterSpacing:'0.14em',
                 textTransform:'uppercase', margin:'7px 0 0' }}>Academic Management</p>
             </div>
 
             {/* Thin divider */}
-            <div style={{ height:'0.5px', background:'rgba(107,67,47,0.1)', marginBottom:24 }} />
+            <div style={{ height:'0.5px', background:'linear-gradient(to right, transparent, rgba(220,146,75,0.18), transparent)', marginBottom:24 }} />
 
             {/* Heading */}
             <div style={{ marginBottom:22 }}>
-              <h2 style={{ margin:0, color:'#1a0e06', fontWeight:700, fontSize:19.5, letterSpacing:'-0.025em' }}>
+              <h2 style={{ margin:0, color:'#f5ede0', fontWeight:600, fontSize:19.5, letterSpacing:'-0.025em' }}>
                 Sign in to your account
               </h2>
-              <p style={{ margin:'5px 0 0', color:'rgba(107,67,47,0.52)', fontSize:13 }}>
+              <p style={{ margin:'5px 0 0', color:'rgba(174,112,64,0.5)', fontSize:13 }}>
                 Enter your school credentials to continue
               </p>
             </div>
@@ -352,7 +364,7 @@ export default function LoginPage() {
               {/* School Code */}
               <div>
                 <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                  color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                  color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                   School Code
                 </label>
                 <div style={{ position:'relative' }}>
@@ -373,7 +385,7 @@ export default function LoginPage() {
               {/* Email / Phone */}
               <div>
                 <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                  color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                  color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                   Email or Phone
                 </label>
                 <div style={{ position:'relative' }}>
@@ -395,15 +407,15 @@ export default function LoginPage() {
               <div>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
                   <label style={{ fontSize:11.5, fontWeight:600,
-                    color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                    color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                     Password
                   </label>
                   <button type="button" onClick={openForgot}
-                    style={{ fontSize:12, fontWeight:500, color:'rgba(174,85,37,0.65)',
+                    style={{ fontSize:12, fontWeight:500, color:'rgba(220,146,75,0.6)',
                       background:'none', border:'none', cursor:'pointer', padding:0,
                       transition:'color 0.18s' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#ae5525')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(174,85,37,0.65)')}>
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#f7c576')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(220,146,75,0.6)')}>
                     Forgot password?
                   </button>
                 </div>
@@ -426,8 +438,8 @@ export default function LoginPage() {
             {error && (
               <div style={{
                 marginTop:14, padding:'10px 13px', borderRadius:8, fontSize:13,
-                background:'#fff0f0', border:'1px solid rgba(200,50,50,0.22)',
-                color:'#b02020',
+                background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)',
+                color:'#ff9090',
               }}>
                 {error}
               </div>
@@ -474,7 +486,8 @@ export default function LoginPage() {
                 </span>
               )}
             </button>
-          </div>
+          </div>{/* /inner padding */}
+          </div>{/* /card */}
 
           {/* Footer */}
           <p style={{ textAlign:'center', color:'rgba(255,255,255,0.22)', fontSize:11,
@@ -496,8 +509,9 @@ export default function LoginPage() {
           onClick={(e) => e.target === e.currentTarget && setShowForgot(false)}>
           <div style={{
             width:'100%', maxWidth:360, borderRadius:18, overflow:'hidden',
-            background:'#ffffff', border:'1px solid rgba(220,146,75,0.2)',
-            boxShadow:'0 32px 80px rgba(0,0,0,0.6)',
+            background:'linear-gradient(160deg, rgba(28,14,6,0.98) 0%, rgba(18,9,3,0.99) 100%)',
+            border:'1px solid rgba(220,146,75,0.18)',
+            boxShadow:'0 32px 80px rgba(0,0,0,0.75)',
             animation:'loginCardReveal 0.4s ease forwards',
           }}>
             {/* Modal header */}
@@ -510,8 +524,8 @@ export default function LoginPage() {
                   🔐
                 </div>
                 <div>
-                  <h2 style={{ margin:0, color:'#f0e6d3', fontSize:14, fontWeight:600 }}>Reset Password</h2>
-                  <p style={{ margin:'3px 0 0', color:'rgba(174,112,64,0.55)', fontSize:12 }}>
+                  <h2 style={{ margin:0, color:'#f5ede0', fontSize:14, fontWeight:600 }}>Reset Password</h2>
+                  <p style={{ margin:'3px 0 0', color:'rgba(174,112,64,0.5)', fontSize:12 }}>
                     School operator will set a new password
                   </p>
                 </div>
@@ -522,7 +536,7 @@ export default function LoginPage() {
               {fpSuccess ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
                   <div style={{ padding:'11px 13px', borderRadius:8, fontSize:13,
-                    background:'#f0faf4', border:'1px solid rgba(26,120,70,0.25)', color:'#1a6040' }}>
+                    background:'rgba(26,95,60,0.2)', border:'1px solid rgba(26,95,60,0.35)', color:'#6ee7b7' }}>
                     {fpSuccess}
                   </div>
                   <button onClick={() => setShowForgot(false)} style={{
@@ -535,7 +549,7 @@ export default function LoginPage() {
                 <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
                   <div>
                     <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                      color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                       School Code
                     </label>
                     <input className="ldf-plain" type="text" placeholder="Your school code"
@@ -544,7 +558,7 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                      color:'#8c4a20', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                       Phone or Email
                     </label>
                     <input className="ldf-plain" type="text" placeholder="Your registered phone or email"
@@ -552,18 +566,18 @@ export default function LoginPage() {
                   </div>
                   {fpError && (
                     <div style={{ padding:'9px 12px', borderRadius:8, fontSize:12.5,
-                      background:'#fff0f0', border:'1px solid rgba(200,50,50,0.22)', color:'#b02020' }}>
+                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)', color:'#ff9090' }}>
                       {fpError}
                     </div>
                   )}
                   <div style={{ display:'flex', gap:8, paddingTop:4 }}>
                     <button onClick={() => setShowForgot(false)} style={{
                       flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:500, cursor:'pointer',
-                      background:'#f5f0ec', color:'#6b432f',
-                      border:'1px solid rgba(107,67,47,0.18)', transition:'all 0.18s',
+                      background:'rgba(255,255,255,0.05)', color:'rgba(240,230,211,0.7)',
+                      border:'1px solid rgba(220,146,75,0.18)', transition:'all 0.18s',
                     }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background='#ede5dc')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background='#f5f0ec')}>
+                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.09)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.05)')}>
                       Cancel
                     </button>
                     <button onClick={handleForgotSubmit} disabled={fpLoading} style={{
