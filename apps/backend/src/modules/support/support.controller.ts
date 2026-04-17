@@ -1,12 +1,10 @@
 import {
   Controller, Post, Body, UseGuards, Request,
-  UnauthorizedException, BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { PrismaService } from '../../prisma/prisma.service';
-
-const SUBJECT_MAX = 200;
-const MESSAGE_MAX = 5000;
+import { SubmitTicketDto } from './dto/submit-ticket.dto';
 
 @Controller('support')
 export class SupportController {
@@ -16,10 +14,11 @@ export class SupportController {
    * Any authenticated school user can submit a support ticket.
    * institutionId and userId come from the JWT (req.user) — not from
    * the request header — so this route does not depend on TenantGuard.
+   * Input validation is handled by the global ValidationPipe via SubmitTicketDto.
    */
   @Post('ticket')
   @UseGuards(AuthGuard)
-  async submitTicket(@Request() req: any, @Body() body: Record<string, unknown>) {
+  async submitTicket(@Request() req: any, @Body() body: SubmitTicketDto) {
     const userId: string | undefined = req.user?.userId;
     const institutionId: string | undefined = req.user?.institutionId;
     const roles: string[] = req.user?.roles ?? [];
@@ -29,18 +28,8 @@ export class SupportController {
       throw new UnauthorizedException('Invalid session');
     }
 
-    // Input validation — prevent DB abuse with unbounded strings.
-    const subject = String(body.subject ?? '').trim();
-    const message = String(body.message ?? '').trim();
-
-    if (!subject) throw new BadRequestException('Subject is required');
-    if (!message) throw new BadRequestException('Message is required');
-    if (subject.length > SUBJECT_MAX) {
-      throw new BadRequestException(`Subject must be ${SUBJECT_MAX} characters or fewer`);
-    }
-    if (message.length > MESSAGE_MAX) {
-      throw new BadRequestException(`Message must be ${MESSAGE_MAX} characters or fewer`);
-    }
+    const subject = body.subject.trim();
+    const message = body.message.trim();
 
     // Fetch institution name + submitter identity in one round-trip.
     const [institution, user] = await Promise.all([

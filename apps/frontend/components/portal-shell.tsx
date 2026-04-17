@@ -42,21 +42,36 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSending, setSupportSending] = useState(false);
   const [supportDone,    setSupportDone]    = useState(false);
+  const [supportError,   setSupportError]   = useState<string | null>(null);
+
+  const SUPPORT_TOPICS = [
+    'Login / Access Issue',
+    'Student Data Issue',
+    'Fee / Payment Issue',
+    'Attendance Issue',
+    'Exam / Marks Issue',
+    'Report / Download Issue',
+    'Admission / Enrollment Issue',
+    'Settings / Configuration',
+    'Other',
+  ];
 
   const submitSupport = async () => {
-    if (!supportSubject.trim() || !supportMessage.trim()) return;
+    if (!supportSubject || !supportMessage.trim()) return;
     setSupportSending(true);
+    setSupportError(null);
     try {
       await apiFetch('/support/ticket', {
         method: 'POST',
-        body: JSON.stringify({ subject: supportSubject.trim(), message: supportMessage.trim() }),
+        body: JSON.stringify({ subject: supportSubject, message: supportMessage.trim() }),
       });
       setSupportDone(true);
       setSupportSubject('');
       setSupportMessage('');
       setTimeout(() => { setSupportOpen(false); setSupportDone(false); }, 2000);
-    } catch { /* silent — ticket submission should never block the user */ }
-    finally { setSupportSending(false); }
+    } catch (e: unknown) {
+      setSupportError(e instanceof Error ? e.message : 'Failed to submit ticket. Please try again.');
+    } finally { setSupportSending(false); }
   };
 
   // On mount: restore session from httpOnly cookie if token not in memory.
@@ -187,7 +202,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
           </p>
         </div>
         <button
-          onClick={() => setSupportOpen(true)}
+          onClick={() => { setSupportOpen(true); setSupportError(null); setSupportSubject(''); setSupportMessage(''); }}
           className="flex items-center gap-1.5 text-xs font-medium mb-2 transition-colors"
           style={{ color: '#c4956a' }}
           onMouseEnter={(e) => (e.currentTarget.style.color = '#f7c576')}
@@ -267,15 +282,22 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
                   </button>
                 </div>
                 <div className="space-y-3">
+                  {supportError && (
+                    <div className="px-3 py-2 rounded-lg text-xs" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
+                      {supportError}
+                    </div>
+                  )}
                   <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-2)' }}>Subject</label>
-                    <input
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-2)' }}>Issue Type</label>
+                    <select
                       value={supportSubject}
                       onChange={(e) => setSupportSubject(e.target.value)}
-                      placeholder="Brief description of your issue"
                       className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                      style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
-                    />
+                      style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: supportSubject ? 'var(--text-1)' : 'var(--text-3)' }}
+                    >
+                      <option value="">Select an issue type…</option>
+                      {SUPPORT_TOPICS.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-2)' }}>Message</label>
@@ -283,14 +305,14 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
                       rows={4}
                       value={supportMessage}
                       onChange={(e) => setSupportMessage(e.target.value)}
-                      placeholder="Describe your issue in detail..."
+                      placeholder="Describe your issue in detail…"
                       className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
                       style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
                     />
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button
-                      onClick={() => setSupportOpen(false)}
+                      onClick={() => { setSupportOpen(false); setSupportError(null); }}
                       className="flex-1 py-2 rounded-lg text-xs font-medium"
                       style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
                     >
@@ -298,7 +320,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
                     </button>
                     <button
                       onClick={() => void submitSupport()}
-                      disabled={supportSending || !supportSubject.trim() || !supportMessage.trim()}
+                      disabled={supportSending || !supportSubject || !supportMessage.trim()}
                       className="flex-1 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
                       style={{ background: 'var(--brand)' }}
                     >

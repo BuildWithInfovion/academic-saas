@@ -21,21 +21,36 @@ export default function DashboardPage() {
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSending, setSupportSending] = useState(false);
   const [supportDone,    setSupportDone]    = useState(false);
+  const [supportError,   setSupportError]   = useState<string | null>(null);
+
+  const SUPPORT_TOPICS = [
+    'Login / Access Issue',
+    'Student Data Issue',
+    'Fee / Payment Issue',
+    'Attendance Issue',
+    'Exam / Marks Issue',
+    'Report / Download Issue',
+    'Admission / Enrollment Issue',
+    'Settings / Configuration',
+    'Other',
+  ];
 
   const submitSupport = async () => {
-    if (!supportSubject.trim() || !supportMessage.trim()) return;
+    if (!supportSubject || !supportMessage.trim()) return;
     setSupportSending(true);
+    setSupportError(null);
     try {
       await apiFetch('/support/ticket', {
         method: 'POST',
-        body: JSON.stringify({ subject: supportSubject.trim(), message: supportMessage.trim() }),
+        body: JSON.stringify({ subject: supportSubject, message: supportMessage.trim() }),
       });
       setSupportDone(true);
       setSupportSubject('');
       setSupportMessage('');
       setTimeout(() => { setSupportOpen(false); setSupportDone(false); }, 2000);
-    } catch { /* silent */ }
-    finally { setSupportSending(false); }
+    } catch (e: unknown) {
+      setSupportError(e instanceof Error ? e.message : 'Failed to submit ticket. Please try again.');
+    } finally { setSupportSending(false); }
   };
 
   const todayDate = new Date().toLocaleDateString('en-IN', {
@@ -159,7 +174,7 @@ export default function DashboardPage() {
           <div
             key={s.label}
             className={`card card-hover ${s.accent} p-5 ${'onClick' in s ? 'cursor-pointer' : 'cursor-default'}`}
-            onClick={'onClick' in s ? () => setSupportOpen(true) : undefined}
+            onClick={'onClick' in s ? () => { setSupportOpen(true); setSupportError(null); setSupportSubject(''); setSupportMessage(''); } : undefined}
           >
             <div className="mb-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -261,15 +276,22 @@ export default function DashboardPage() {
                   </button>
                 </div>
                 <div className="space-y-3">
+                  {supportError && (
+                    <div className="px-3 py-2 rounded-lg text-xs" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
+                      {supportError}
+                    </div>
+                  )}
                   <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-2)' }}>Subject</label>
-                    <input
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-2)' }}>Issue Type</label>
+                    <select
                       value={supportSubject}
                       onChange={(e) => setSupportSubject(e.target.value)}
-                      placeholder="Brief description of your issue"
                       className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                      style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
-                    />
+                      style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: supportSubject ? 'var(--text-1)' : 'var(--text-3)' }}
+                    >
+                      <option value="">Select an issue type…</option>
+                      {SUPPORT_TOPICS.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-2)' }}>Message</label>
@@ -277,14 +299,14 @@ export default function DashboardPage() {
                       rows={4}
                       value={supportMessage}
                       onChange={(e) => setSupportMessage(e.target.value)}
-                      placeholder="Describe your issue in detail..."
+                      placeholder="Describe your issue in detail…"
                       className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
                       style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
                     />
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button
-                      onClick={() => setSupportOpen(false)}
+                      onClick={() => { setSupportOpen(false); setSupportError(null); }}
                       className="flex-1 py-2 rounded-lg text-xs font-medium"
                       style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
                     >
@@ -292,7 +314,7 @@ export default function DashboardPage() {
                     </button>
                     <button
                       onClick={() => void submitSupport()}
-                      disabled={supportSending || !supportSubject.trim() || !supportMessage.trim()}
+                      disabled={supportSending || !supportSubject || !supportMessage.trim()}
                       className="flex-1 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
                       style={{ background: 'var(--brand)' }}
                     >

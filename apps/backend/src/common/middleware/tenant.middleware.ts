@@ -9,14 +9,16 @@ export class TenantMiddleware implements NestMiddleware {
       return next();
     }
 
-    // ✅ Skip auth routes and platform routes (platform has its own auth)
+    // ✅ Skip auth routes, platform routes, and support routes
+    // Support routes use JWT-only auth — no tenant header required.
     const url = req.url || req.path;
     const isAuthRoute =
       url.startsWith('/auth/login') ||
       url.startsWith('/auth/refresh') ||
       url.startsWith('/auth/forgot-password');
     const isPlatformRoute = url.startsWith('/platform');
-    if (isAuthRoute || isPlatformRoute) {
+    const isSupportRoute = url.startsWith('/support');
+    if (isAuthRoute || isPlatformRoute || isSupportRoute) {
       return next();
     }
 
