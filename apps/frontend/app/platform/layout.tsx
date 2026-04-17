@@ -8,8 +8,9 @@ import { silentPlatformRefresh } from '@/lib/platform-api';
 
 const NAV = [
   { label: 'Dashboard', path: '/platform/dashboard', icon: '◈' },
-  { label: 'Clients', path: '/platform/clients', icon: '◉' },
-  { label: 'Profile', path: '/platform/profile', icon: '◎' },
+  { label: 'Clients',   path: '/platform/clients',   icon: '◉' },
+  { label: 'Support',   path: '/platform/support',   icon: '◑' },
+  { label: 'Profile',   path: '/platform/profile',   icon: '◎' },
 ];
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {

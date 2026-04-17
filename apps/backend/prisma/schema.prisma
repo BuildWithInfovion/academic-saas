@@ -46,6 +46,7 @@ model Institution {
   staffAttendance        StaffAttendance[]
   staffLeaveRequests     StaffLeaveRequest[]
   transferCertificates   TransferCertificate[]
+  supportTickets         SupportTicket[]
 
   @@map("institutions")
 }
@@ -748,4 +749,25 @@ model TransferCertificate {
   @@index([studentId])
   @@index([institutionId, status])
   @@map("transfer_certificates")
+}
+
+model SupportTicket {
+  id              String   @id @default(cuid())
+  institutionId   String
+  institutionName String
+  submittedBy     String   // email or phone
+  submitterRole   String
+  subject         String
+  message         String
+  status          String   @default("open")  // open | resolved
+  adminNotes      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("support_tickets")
 }

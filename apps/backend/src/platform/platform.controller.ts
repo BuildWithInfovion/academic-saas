@@ -132,4 +132,18 @@ export class PlatformController {
   async removeClient(@Param('id') id: string) {
     return this.platformService.removeClient(id);
   }
+
+  // ── Support Tickets ───────────────────────────────────────────────────────
+
+  @UseGuards(PlatformGuard)
+  @Get('support-tickets')
+  async getSupportTickets() {
+    return this.platformService.getSupportTickets();
+  }
+
+  @UseGuards(PlatformGuard)
+  @Patch('support-tickets/:id/resolve')
+  async resolveTicket(@Param('id') id: string) {
+    return this.platformService.resolveTicket(id);
+  }
 }

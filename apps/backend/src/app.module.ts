@@ -23,6 +23,7 @@ import { AnnouncementModule } from './modules/announcement/announcement.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
 import { TcModule } from './modules/tc/tc.module';
+import { SupportModule } from './modules/support/support.module';
 import { PlatformModule } from './platform/platform.module';
 
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
@@ -55,6 +56,7 @@ import { AppController } from './app.controller';
     TimetableModule,
     StaffAttendanceModule,
     TcModule,
+    SupportModule,
     PlatformModule,
   ],
   controllers: [AppController],
@@ -86,6 +88,7 @@ export class AppModule implements NestModule {
         { path: 'auth/forgot-password', method: RequestMethod.ALL },
         { path: 'platform', method: RequestMethod.ALL },
         { path: 'platform/*path', method: RequestMethod.ALL },
+        { path: 'support/*path', method: RequestMethod.ALL },
       )
       .forRoutes('*');
   }

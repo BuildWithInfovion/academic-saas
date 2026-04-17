@@ -629,4 +629,20 @@ export class PlatformService {
 
     return code;
   }
+
+  // ── Support Tickets ─────────────────────────────────────────────────────────
+
+  async getSupportTickets() {
+    return this.prisma.supportTicket.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  async resolveTicket(id: string) {
+    return this.prisma.supportTicket.update({
+      where: { id },
+      data: { status: 'resolved' },
+    });
+  }
 }

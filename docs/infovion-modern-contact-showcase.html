@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infovion | Modern Education Digitization Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f6efe8;
+      --paper: rgba(255, 251, 246, 0.88);
+      --paper-strong: #fffaf4;
+      --text: #25160f;
+      --muted: #735d50;
+      --brand: #a84d1c;
+      --brand-dark: #6e2c0f;
+      --gold: #d6a15d;
+      --line: rgba(115, 93, 80, 0.16);
+      --shadow: 0 25px 70px rgba(75, 36, 18, 0.12);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --max: 1180px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Manrope", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(214, 161, 93, 0.20), transparent 24%),
+        radial-gradient(circle at 85% 14%, rgba(168, 77, 28, 0.14), transparent 22%),
+        radial-gradient(circle at 70% 80%, rgba(214, 161, 93, 0.14), transparent 18%),
+        linear-gradient(180deg, #f8f1ea 0%, #f6efe8 40%, #f2e7dc 100%);
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .wrap {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(18px);
+      background: rgba(246, 239, 232, 0.68);
+      border-bottom: 1px solid rgba(115, 93, 80, 0.10);
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.86rem;
+      color: var(--brand-dark);
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+      box-shadow: 0 12px 28px rgba(168, 77, 28, 0.22);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .brand-mark::before {
+      width: 42px;
+      height: 10px;
+      left: -4px;
+      top: 10px;
+      transform: rotate(-32deg);
+    }
+
+    .brand-mark::after {
+      width: 48px;
+      height: 10px;
+      right: -12px;
+      bottom: 8px;
+      transform: rotate(-32deg);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--brand);
+    }
+
+    .hero {
+      padding: 72px 0 52px;
+      position: relative;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(168, 77, 28, 0.14);
+      background: rgba(255, 250, 244, 0.78);
+      color: var(--brand);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #2e8b57;
+      box-shadow: 0 0 0 8px rgba(46, 139, 87, 0.09);
+    }
+
+    h1 {
+      margin: 18px 0 18px;
+      font-family: "Playfair Display", serif;
+      font-size: clamp(3rem, 7vw, 5.7rem);
+      line-height: 0.94;
+      letter-spacing: -0.045em;
+    }
+
+    .hero-copy p {
+      margin: 0;
+      max-width: 700px;
+      font-size: 1.06rem;
+      color: var(--muted);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-weight: 800;
+      font-size: 0.95rem;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+      color: #fff;
+      box-shadow: 0 16px 36px rgba(168, 77, 28, 0.24);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.74);
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .hero-card {
+      background: linear-gradient(180deg, rgba(255, 250, 244, 0.96), rgba(255, 247, 239, 0.92));
+      border: 1px solid rgba(115, 93, 80, 0.10);
+      border-radius: 32px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: auto -40px -60px auto;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(214, 161, 93, 0.24), transparent 68%);
+      pointer-events: none;
+    }
+
+    .hero-card h2 {
+      margin: 0 0 10px;
+      font-size: 1.04rem;
+      color: var(--brand);
+    }
+
+    .hero-card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stat {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(115, 93, 80, 0.10);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.12rem;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .stat span {
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    section {
+      padding: 28px 0;
+      position: relative;
+    }
+
+    .section-panel {
+      background: var(--paper);
+      border: 1px solid rgba(115, 93, 80, 0.10);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .section-kicker {
+      color: var(--brand);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin: 0 0 10px;
+    }
+
+    .section-title {
+      font-family: "Playfair Display", serif;
+      font-size: clamp(2.1rem, 4vw, 3.2rem);
+      line-height: 0.98;
+      letter-spacing: -0.03em;
+      margin: 0 0 12px;
+    }
+
+    .section-intro {
+      margin: 0 0 24px;
+      max-width: 780px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+
+    .feature-card,
+    .contact-card,
+    .promise-card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(115, 93, 80, 0.10);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .feature-card:hover,
+    .contact-card:hover,
+    .promise-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 34px rgba(75, 36, 18, 0.10);
+    }
+
+    .feature-card h3,
+    .contact-card h3,
+    .promise-card h3 {
+      margin: 0 0 8px;
+      font-size: 1.02rem;
+    }
+
+    .feature-card p,
+    .contact-card p,
+    .promise-card p,
+    .story-text p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .feature-icon,
+    .contact-icon,
+    .promise-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 14px;
+      font-weight: 800;
+      color: var(--brand-dark);
+      background: linear-gradient(135deg, rgba(214, 161, 93, 0.24), rgba(168, 77, 28, 0.12));
+    }
+
+    .story-layout {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .story-box {
+      background: linear-gradient(140deg, #2b150b, #532412 64%, #6e2c0f);
+      border-radius: 30px;
+      color: #fff7f1;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .story-box::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -80px;
+      bottom: -90px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(214, 161, 93, 0.20), transparent 68%);
+    }
+
+    .story-box h2 {
+      margin: 0 0 12px;
+      font-family: "Playfair Display", serif;
+      font-size: clamp(2rem, 3.8vw, 3rem);
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .story-box p {
+      margin: 0;
+      color: rgba(255, 247, 241, 0.76);
+      max-width: 620px;
+    }
+
+    .story-points {
+      display: grid;
+      gap: 14px;
+    }
+
+    .story-point {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(115, 93, 80, 0.10);
+      border-radius: 20px;
+      padding: 18px;
+    }
+
+    .story-point strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.98rem;
+    }
+
+    .contact-band {
+      background: linear-gradient(135deg, rgba(255, 250, 244, 0.96), rgba(252, 243, 233, 0.94));
+      border: 1px solid rgba(115, 93, 80, 0.10);
+      border-radius: 30px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .contact-value {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      text-decoration: none;
+      color: var(--brand-dark);
+      word-break: break-word;
+    }
+
+    .promise-section {
+      background: linear-gradient(140deg, #1e1009, #4f230f 58%, #75411d);
+      border-radius: 32px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+      color: #fff7f1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .promise-section::before {
+      content: "";
+      position: absolute;
+      top: -100px;
+      right: -50px;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(214, 161, 93, 0.24), transparent 70%);
+    }
+
+    .promise-section .section-kicker,
+    .promise-section .section-title {
+      color: #fff6ef;
+    }
+
+    .promise-section .section-intro {
+      color: rgba(255, 247, 241, 0.75);
+    }
+
+    .promise-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .promise-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .promise-card h3 {
+      color: #ffd7a8;
+    }
+
+    .promise-card p {
+      color: rgba(255, 247, 241, 0.72);
+    }
+
+    .footer {
+      padding: 28px 0 60px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(34px) scale(0.985);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      transition-delay: var(--delay, 0ms);
+      will-change: opacity, transform;
+    }
+
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .story-layout,
+      .grid-3,
+      .grid-2,
+      .contact-grid,
+      .promise-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .nav {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .nav-links {
+        flex-wrap: wrap;
+        gap: 10px 16px;
+      }
+
+      .hero {
+        padding-top: 42px;
+      }
+
+      .section-panel,
+      .story-box,
+      .contact-band,
+      .promise-section,
+      .hero-card {
+        padding: 22px;
+      }
+
+      h1 {
+        font-size: clamp(2.6rem, 13vw, 4.2rem);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap nav">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <span>Infovion</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#story">Story</a>
+        <a href="#features">Features</a>
+        <a href="#promise">Promise</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-copy reveal is-visible">
+          <div class="eyebrow">Modern Education Showcase</div>
+          <h1>Building the digital future of schools with clarity, trust, and purpose.</h1>
+          <p>
+            Infovion is building modern systems for schools that want to move beyond manual work, scattered follow-ups,
+            and disconnected communication. Our mission is to support the digitization of schools and contribute to a stronger,
+            more connected Indian education ecosystem.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#contact">Work With Infovion</a>
+            <a class="btn btn-secondary" href="#features">See What We Offer</a>
+          </div>
+        </div>
+
+        <aside class="hero-card reveal is-visible" style="--delay: 120ms;">
+          <h2>What this showcase represents</h2>
+          <p>
+            A modern platform vision for schools that need admissions, communication, academic workflows,
+            operations, parent visibility, and institutional confidence in one connected experience.
+          </p>
+          <div class="stats">
+            <div class="stat">
+              <strong>School Digitization</strong>
+              <span>Focused on real operational change</span>
+            </div>
+            <div class="stat">
+              <strong>Role-Based Experience</strong>
+              <span>Different views for different people</span>
+            </div>
+            <div class="stat">
+              <strong>Modern Communication</strong>
+              <span>Clear updates for school stakeholders</span>
+            </div>
+            <div class="stat">
+              <strong>Growth Vision</strong>
+              <span>Built for the next phase of education</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="story">
+      <div class="wrap story-layout">
+        <div class="story-box reveal">
+          <h2>Infovion is not just making software pages. We are shaping smoother school journeys.</h2>
+          <p>
+            The real goal is simple: reduce friction, improve follow-through, support better communication,
+            and help institutions move with more confidence every day.
+          </p>
+        </div>
+
+        <div class="story-points">
+          <div class="story-point reveal" style="--delay: 80ms;">
+            <strong>Built for practical use</strong>
+            <p>We focus on the daily reality of schools, not only on what looks impressive in a demo.</p>
+          </div>
+          <div class="story-point reveal" style="--delay: 150ms;">
+            <strong>Designed for trust</strong>
+            <p>Parents, teachers, school leaders, and students all need different kinds of visibility and clarity.</p>
+          </div>
+          <div class="story-point reveal" style="--delay: 220ms;">
+            <strong>Made for momentum</strong>
+            <p>Infovion aims to turn school operations from fragmented tasks into connected progress.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap section-panel reveal">
+        <p class="section-kicker">What We Bring</p>
+        <h2 class="section-title">A modern product direction for school transformation</h2>
+        <p class="section-intro">
+          Infovion is built around the idea that school management should feel organized, responsive,
+          and genuinely helpful for the people using it every day.
+        </p>
+
+        <div class="grid-3">
+          <article class="feature-card reveal" style="--delay: 60ms;">
+            <div class="feature-icon">01</div>
+            <h3>Admissions with structure</h3>
+            <p>Support the student journey from inquiry to onboarding with a smoother, more organized school process.</p>
+          </article>
+          <article class="feature-card reveal" style="--delay: 120ms;">
+            <div class="feature-icon">02</div>
+            <h3>Attendance with visibility</h3>
+            <p>Help teachers, leadership, and families stay aware of attendance in a more useful and timely way.</p>
+          </article>
+          <article class="feature-card reveal" style="--delay: 180ms;">
+            <div class="feature-icon">03</div>
+            <h3>Fees with clarity</h3>
+            <p>Bring more transparency to dues, collections, and school-side financial follow-up.</p>
+          </article>
+          <article class="feature-card reveal" style="--delay: 240ms;">
+            <div class="feature-icon">04</div>
+            <h3>Exam progress and outcomes</h3>
+            <p>Support academic workflows with stronger visibility around marks, performance, and result review.</p>
+          </article>
+          <article class="feature-card reveal" style="--delay: 300ms;">
+            <div class="feature-icon">05</div>
+            <h3>Communication that reaches people</h3>
+            <p>Keep school updates relevant and focused so information feels timely instead of overwhelming.</p>
+          </article>
+          <article class="feature-card reveal" style="--delay: 360ms;">
+            <div class="feature-icon">06</div>
+            <h3>Different experiences for different roles</h3>
+            <p>Because school operations work better when each stakeholder sees what matters to them most.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap grid-2">
+        <div class="section-panel story-text reveal">
+          <p class="section-kicker">How We Think</p>
+          <h2 class="section-title">Technology should make school operations feel lighter, not heavier.</h2>
+          <p class="section-intro">
+            We believe good education systems deserve equally good operational systems. Infovion is aiming to support that shift
+            with practical digital experiences schools can trust and grow with.
+          </p>
+          <p>
+            This is not about replacing the human side of education. It is about reducing administrative friction so schools can focus
+            more energy on students, communication, and consistent delivery.
+          </p>
+        </div>
+
+        <div class="section-panel story-text reveal" style="--delay: 120ms;">
+          <p class="section-kicker">What We Are Aiming For</p>
+          <h2 class="section-title">A stronger digital foundation for Indian education.</h2>
+          <p class="section-intro">
+            Infovion built this vision to help digitalize schools and support the modernization of the Indian education system.
+          </p>
+          <p>
+            We want institutions to feel more connected, more responsive, and more future-ready without losing the values and trust
+            that matter most in education.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="promise">
+      <div class="wrap promise-section reveal">
+        <p class="section-kicker">What We Promise</p>
+        <h2 class="section-title">The next phase is smarter, faster, and more automated.</h2>
+        <p class="section-intro">
+          Infovion is not stopping at digital records. We are moving toward digital momentum with stronger communication,
+          automation, and operational intelligence.
+        </p>
+
+        <div class="promise-grid">
+          <article class="promise-card reveal" style="--delay: 60ms;">
+            <div class="promise-icon">A</div>
+            <h3>Automate workflow</h3>
+            <p>Routine follow-ups and repetitive school tasks should move with much less manual effort.</p>
+          </article>
+          <article class="promise-card reveal" style="--delay: 120ms;">
+            <div class="promise-icon">W</div>
+            <h3>WhatsApp notifications</h3>
+            <p>Important school communication should reach families where they are most active and responsive.</p>
+          </article>
+          <article class="promise-card reveal" style="--delay: 180ms;">
+            <div class="promise-icon">R</div>
+            <h3>Smarter reminders</h3>
+            <p>Attendance, dues, pending actions, and updates should become easier to manage at the right time.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="wrap contact-band reveal">
+        <p class="section-kicker">Contact Infovion</p>
+        <h2 class="section-title">Let’s build modern digital systems for education together.</h2>
+        <p class="section-intro">
+          If you want to explore school digitization, product collaboration, or technology support for education-focused businesses,
+          reach out to Infovion here.
+        </p>
+
+        <div class="contact-grid">
+          <article class="contact-card reveal" style="--delay: 70ms;">
+            <div class="contact-icon">@</div>
+            <h3>Email</h3>
+            <p>For partnerships, product discussions, and business communication.</p>
+            <a class="contact-value" href="mailto:infovion2025@gmail.com">infovion2025@gmail.com</a>
+          </article>
+
+          <article class="contact-card reveal" style="--delay: 140ms;">
+            <div class="contact-icon">W</div>
+            <h3>Business Website</h3>
+            <p>Visit our business presence and connect with the broader Infovion brand.</p>
+            <a class="contact-value" href="https://buildwithinfovion.in" target="_blank" rel="noreferrer">buildwithinfovion.in</a>
+          </article>
+
+          <article class="contact-card reveal" style="--delay: 210ms;">
+            <div class="contact-icon">C</div>
+            <h3>Contact Number</h3>
+            <p>Reach out directly for business inquiries and collaboration opportunities.</p>
+            <a class="contact-value" href="tel:+919156302024">9156302024</a>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer reveal">
+    Infovion | Built to support school digitization with clarity, confidence, and a modern product mindset.
+  </footer>
+
+  <script>
+    (function () {
+      const items = document.querySelectorAll(".reveal");
+      if (!("IntersectionObserver" in window)) {
+        items.forEach((item) => item.classList.add("is-visible"));
+        return;
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, {
+        threshold: 0.14,
+        rootMargin: "0px 0px -40px 0px"
+      });
+
+      items.forEach((item) => observer.observe(item));
+    })();
+  </script>
+</body>
+</html>

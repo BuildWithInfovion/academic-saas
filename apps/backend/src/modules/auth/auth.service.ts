@@ -135,21 +135,27 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = await this.prisma.user.findFirst({
-      where: {
-        id: storedToken.userId,
-        institutionId: storedToken.institutionId,
-        deletedAt: null,
-        isActive: true,
-      },
-      include: {
-        roles: {
-          include: {
-            role: true,
+    const [user, institution] = await Promise.all([
+      this.prisma.user.findFirst({
+        where: {
+          id: storedToken.userId,
+          institutionId: storedToken.institutionId,
+          deletedAt: null,
+          isActive: true,
+        },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
           },
         },
-      },
-    });
+      }),
+      this.prisma.institution.findUnique({
+        where: { id: storedToken.institutionId },
+        select: { name: true },
+      }),
+    ]);
 
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -200,7 +206,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         institutionId: user.institutionId,
-        institutionName: null as string | null,
+        institutionName: institution?.name ?? null,
         roles,
         permissions,
       },

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remaining Issues Audit - Academic SaaS - 2026-04-12</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #dbe3f0;
+      --critical: #b42318;
+      --high: #c2410c;
+      --medium: #b45309;
+      --low: #1d4ed8;
+      --ok: #15803d;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(29, 78, 216, 0.07), transparent 32%),
+        radial-gradient(circle at top right, rgba(194, 65, 12, 0.08), transparent 26%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 18px 56px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a, #1e293b 55%, #312e81);
+      color: #fff;
+      border-radius: 24px;
+      padding: 28px 30px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin: 6px 0;
+      color: #dbe7ff;
+      max-width: 920px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .meta span {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 13px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      margin: 20px 0 26px;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat .label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .stat .value {
+      margin-top: 8px;
+      font-size: 32px;
+      font-weight: 800;
+    }
+
+    .critical .value { color: var(--critical); }
+    .high .value { color: var(--high); }
+    .medium .value { color: var(--medium); }
+    .low .value { color: var(--low); }
+    .ok .value { color: var(--ok); }
+
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+
+    .section h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+    }
+
+    .section p {
+      margin: 8px 0;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 16px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #eef3fb;
+      color: #1e293b;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .issue-list {
+      display: grid;
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .issue {
+      border: 1px solid var(--border);
+      border-left: 6px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 18px 16px;
+      background: #fff;
+    }
+
+    .issue.critical { border-left-color: var(--critical); }
+    .issue.high { border-left-color: var(--high); }
+    .issue.medium { border-left-color: var(--medium); }
+    .issue.low { border-left-color: var(--low); }
+
+    .issue-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 5px 10px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .badge.critical { background: var(--critical); }
+    .badge.high { background: var(--high); }
+    .badge.medium { background: var(--medium); }
+    .badge.low { background: var(--low); }
+
+    .issue h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .issue strong {
+      color: var(--text);
+    }
+
+    .code, code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+    }
+
+    ul {
+      margin: 10px 0 0 18px;
+      padding: 0;
+    }
+
+    li { margin: 6px 0; }
+
+    .foot {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 960px) {
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container { padding: 16px 12px 36px; }
+      .hero { padding: 22px 18px; border-radius: 18px; }
+      .hero h1 { font-size: 28px; }
+      .summary { grid-template-columns: 1fr; }
+      .section { padding: 18px; }
+      th, td { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <h1>Remaining Issues Audit</h1>
+      <p>This report captures the bugs and engineering flaws that still remain in the current project state as of April 12, 2026. It is based on live validation of the checked-out code, not only on older audit notes.</p>
+      <p>Checks run during this review: frontend lint, frontend production build, backend build, backend lint, backend test suite, plus targeted code review of high-risk modules.</p>
+      <div class="meta">
+        <span>Project: Academic SaaS</span>
+        <span>Audit Date: 2026-04-12</span>
+        <span>Branch State: clean main</span>
+        <span>Frontend build: passes</span>
+        <span>Backend build: passes</span>
+      </div>
+    </section>
+
+    <section class="summary">
+      <div class="stat critical">
+        <div class="label">Critical</div>
+        <div class="value">2</div>
+      </div>
+      <div class="stat high">
+        <div class="label">High</div>
+        <div class="value">3</div>
+      </div>
+      <div class="stat medium">
+        <div class="label">Medium</div>
+        <div class="value">2</div>
+      </div>
+      <div class="stat low">
+        <div class="label">Low</div>
+        <div class="value">1</div>
+      </div>
+      <div class="stat ok">
+        <div class="label">Verified OK</div>
+        <div class="value">2</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Validation Snapshot</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>Status</th>
+            <th>Observed result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>apps/frontend - npm run build</code></td>
+            <td>Pass with warnings</td>
+            <td>Production bundle builds, but Next.js warns that <code>eslint</code> config in <code>apps/frontend/next.config.ts</code> is invalid and no longer supported.</td>
+          </tr>
+          <tr>
+            <td><code>apps/frontend - npm run lint</code></td>
+            <td>Fail</td>
+            <td>148 problems total: 125 errors and 23 warnings.</td>
+          </tr>
+          <tr>
+            <td><code>apps/backend - npm run build</code></td>
+            <td>Pass</td>
+            <td>Backend compiles successfully.</td>
+          </tr>
+          <tr>
+            <td><code>apps/backend - npm run lint</code></td>
+            <td>Fail</td>
+            <td>271 problems total: 7 errors and 264 warnings.</td>
+          </tr>
+          <tr>
+            <td><code>apps/backend - npm test</code></td>
+            <td>Fail</td>
+            <td>Only current test suite fails because <code>AppController</code> now needs <code>PrismaService</code>, but the test module does not provide it.</td>
+          </tr>
+          <tr>
+            <td><code>repo root - npm test</code></td>
+            <td>Broken by design</td>
+            <td>Root script is still the default placeholder and exits with an error instead of running workspace validation.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>Remaining Bugs And Flaws</h2>
+      <div class="issue-list">
+        <article class="issue critical">
+          <div class="issue-head">
+            <span class="badge critical">Critical</span>
+            <h3>Frontend quality gates are effectively bypassed during production build</h3>
+          </div>
+          <p><strong>Evidence:</strong> <code>apps/frontend/next.config.ts:3-9</code> sets <code>typescript.ignoreBuildErrors = true</code> and also includes an <code>eslint</code> build config key that Next.js 16 now reports as invalid. The build still succeeds while lint reports 125 errors.</p>
+          <p><strong>Why this matters:</strong> shipping remains possible even when serious React, typing, and effect issues are present. That means regressions can go live undetected.</p>
+          <ul>
+            <li>Reference: <code>apps/frontend/next.config.ts</code></li>
+            <li>Command evidence: frontend build passed while warning about invalid config, and frontend lint failed with 148 problems.</li>
+          </ul>
+        </article>
+
+        <article class="issue critical">
+          <div class="issue-head">
+            <span class="badge critical">Critical</span>
+            <h3>Backend automated tests are currently broken and cannot protect core routes</h3>
+          </div>
+          <p><strong>Evidence:</strong> <code>apps/backend/src/app.controller.ts:6-9</code> injects <code>PrismaService</code>, but <code>apps/backend/src/app.controller.spec.ts:8-12</code> still registers only <code>AppService</code>. Running <code>npm test</code> fails immediately.</p>
+          <p><strong>Why this matters:</strong> the backend has effectively lost its baseline regression safety net. Even small controller changes can now break routes without any test feedback.</p>
+          <ul>
+            <li>Observed failure: Nest cannot resolve <code>PrismaService</code> in the test module.</li>
+            <li>This also shows the test suite is stale compared with the real application wiring.</li>
+          </ul>
+        </article>
+
+        <article class="issue high">
+          <div class="issue-head">
+            <span class="badge high">High</span>
+            <h3>React effect patterns are unstable across portal and dashboard pages</h3>
+          </div>
+          <p><strong>Evidence:</strong> lint reports repeated <code>react-hooks/set-state-in-effect</code> violations. Representative cases include <code>apps/frontend/components/portal-shell.tsx:39-49</code>, <code>apps/frontend/app/portal/select-role/page.tsx:37-49</code>, <code>apps/frontend/app/portal/student/fees/page.tsx:41-57</code>, and <code>apps/frontend/app/dashboard/students/page.tsx:23-27</code>.</p>
+          <p><strong>Why this matters:</strong> these components synchronously set state inside effects or depend on unstable effect flows. That increases the chance of cascading renders, hydration flicker, stale data, and route-transition glitches in React 19 and newer lint rules.</p>
+          <ul>
+            <li>The issue is not isolated to one screen; it appears in dashboard, principal, student, and role-selection flows.</li>
+            <li>Because auth and navigation shells are affected, these problems sit on critical user paths.</li>
+          </ul>
+        </article>
+
+        <article class="issue high">
+          <div class="issue-head">
+            <span class="badge high">High</span>
+            <h3>Frontend data layer is weakly typed, forcing unsafe casts throughout the UI</h3>
+          </div>
+          <p><strong>Evidence:</strong> <code>apps/frontend/lib/api.ts:113-164</code> returns <code>Promise&lt;unknown&gt;</code>. As a result, many pages fall back to <code>any</code> casts and unchecked assumptions, for example <code>apps/frontend/app/portal/student/fees/page.tsx:31-36</code> and <code>apps/frontend/app/portal/student/fees/page.tsx:50-53</code>.</p>
+          <p><strong>Why this matters:</strong> the app builds, but type safety stops at the API boundary. Real API shape changes can silently break UI screens and only surface at runtime.</p>
+          <ul>
+            <li>Lint evidence: many of the 125 frontend errors are <code>@typescript-eslint/no-explicit-any</code>.</li>
+            <li>This increases maintenance cost and slows down future feature work.</li>
+          </ul>
+        </article>
+
+        <article class="issue high">
+          <div class="issue-head">
+            <span class="badge high">High</span>
+            <h3>Backend request and middleware layers still rely heavily on unsafe untyped access</h3>
+          </div>
+          <p><strong>Evidence:</strong> backend lint shows broad <code>no-unsafe-assignment</code>, <code>no-unsafe-member-access</code>, and async misuse in key infrastructure files, including <code>apps/backend/src/prisma/prisma.service.ts:63-117</code> and <code>apps/backend/src/common/interceptors/audit-log.interceptor.ts:37-65</code>.</p>
+          <p><strong>Why this matters:</strong> guard, middleware, interceptor, and Prisma plumbing code sits below every module. Weak typing here makes security, tenancy, and audit behavior harder to trust and easier to break during refactors.</p>
+          <ul>
+            <li>Lint also flags hard errors in infrastructure files, not just style warnings.</li>
+            <li>This is a cross-cutting platform risk rather than a single-feature bug.</li>
+          </ul>
+        </article>
+
+        <article class="issue medium">
+          <div class="issue-head">
+            <span class="badge medium">Medium</span>
+            <h3>Repo-level developer workflow is still incomplete</h3>
+          </div>
+          <p><strong>Evidence:</strong> the root <code>package.json</code> still defines <code>"test": "echo \"Error: no test specified\" &amp;&amp; exit 1"</code>. There is no working root validation command for the monorepo.</p>
+          <p><strong>Why this matters:</strong> contributors cannot reliably run one standard command before pushing. That makes CI and local quality checks inconsistent and increases accidental breakage.</p>
+        </article>
+
+        <article class="issue medium">
+          <div class="issue-head">
+            <span class="badge medium">Medium</span>
+            <h3>Platform onboarding still returns the generated operator password in the API response</h3>
+          </div>
+          <p><strong>Evidence:</strong> <code>apps/backend/src/platform/platform.service.ts:539-546</code> returns <code>operatorCredentials.password</code> as plain text after client creation.</p>
+          <p><strong>Why this matters:</strong> this may be intentional for first-time provisioning, but it increases exposure through browser devtools, network captures, support screenshots, and client-side logs unless the surrounding UI treats it very carefully.</p>
+        </article>
+
+        <article class="issue low">
+          <div class="issue-head">
+            <span class="badge low">Low</span>
+            <h3>Minor code hygiene drift remains in backend modules</h3>
+          </div>
+          <p><strong>Evidence:</strong> backend lint still flags unused imports and unused locals in files like <code>apps/backend/src/platform/platform.controller.ts:9</code>, <code>apps/backend/src/platform/platform.service.ts:4</code>, and <code>apps/backend/src/platform/platform.service.ts:438</code>.</p>
+          <p><strong>Why this matters:</strong> these are not production blockers by themselves, but they are a sign that refactors are leaving dead code behind and that the lint baseline is not actively enforced.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>What Looks Good Right Now</h2>
+      <ul>
+        <li>The frontend production build completes successfully, so the current app can still be deployed.</li>
+        <li>The backend build also succeeds, which means the TypeScript server code is structurally compilable.</li>
+        <li>The recent navigation fixes around active portal and dashboard menu states appear integrated in the checked-in code.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>Recommended Next Order Of Work</h2>
+      <ol>
+        <li>Restore trust in validation: fix the backend test suite and stop ignoring frontend type errors in production builds.</li>
+        <li>Stabilize auth and navigation surfaces first: clean up <code>portal-shell</code>, role selection, and student portal effect flows.</li>
+        <li>Introduce typed API response helpers so pages stop falling back to <code>any</code> and <code>unknown</code>.</li>
+        <li>Clean the backend infrastructure lint errors in guards, interceptors, and Prisma service before adding more modules.</li>
+        <li>Add a real root workspace validation command so the repo can be checked consistently before every push.</li>
+      </ol>
+      <p class="foot">Prepared from live project inspection on April 12, 2026. This report intentionally focuses on issues that are still open in the current codebase.</p>
+    </section>
+  </div>
+</body>
+</html>

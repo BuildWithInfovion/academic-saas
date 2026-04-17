@@ -1,0 +1,701 @@
+================================================================
+INFOVION — ACADEMIC SAAS PLATFORM
+Complete Product Content File for buildwithinfovion.com
+Written: April 15, 2026 | Current Build Stage: Production-ready MVP
+================================================================
+
+
+================================================================
+SECTION 1 — WHAT IS THIS PRODUCT
+================================================================
+
+Product Name: Infovion Academic ERP
+Tagline Options:
+  - "One platform. Every role. Every school operation."
+  - "School management, reimagined for India."
+  - "From admission to exam results — managed in one place."
+
+What it is:
+Infovion Academic ERP is a cloud-based, multi-tenant school management
+platform built specifically for K–12 schools in India. It replaces
+scattered spreadsheets, WhatsApp chains, and disconnected software with
+a single, role-aware system where every stakeholder — Director, Operator,
+Principal, Teacher, Student, Parent, Accountant, Receptionist — gets
+their own purpose-built portal.
+
+It is not a generic SaaS template. It is built ground-up for the Indian
+school system: Aadhar fields, Indian fee head standards, subject naming
+conventions, TC (Transfer Certificate) workflows, and roll number systems
+are baked in from day one.
+
+
+================================================================
+SECTION 2 — THE PROBLEM IT SOLVES
+================================================================
+
+Every small-to-mid school in India faces the same problems:
+
+1. ADMISSION CHAOS
+   - Inquiries tracked on paper or WhatsApp
+   - No admission number system
+   - TC verification done manually
+   - No digital record of demographic info (Nationality, Caste, Religion,
+     Aadhar) required by Indian school regulations
+
+2. ATTENDANCE HEADACHES
+   - Teachers mark attendance on registers
+   - No way to alert parents when child is absent
+   - No defaulter list for the principal
+   - Month-end reports assembled manually
+
+3. EXAMINATION DISORDER
+   - Marks entered in Excel, shared over email
+   - No unified scorecard or rank list
+   - Admit cards printed manually
+   - Results not accessible to students/parents
+
+4. FEE CONFUSION
+   - Fee collection tracked in ledgers
+   - No balance view per student
+   - No daily collection report for the accountant
+   - No defaulter list for follow-up
+
+5. ZERO PARENT VISIBILITY
+   - Parents call the school for everything
+   - No portal to check marks, fees, or attendance
+
+6. STAFF MANAGEMENT GAPS
+   - No staff attendance system
+   - No leave request workflow
+   - No staff directory with profiles
+
+Infovion solves all of these — in a single login, role-specific interface,
+accessible from any device, anywhere.
+
+
+================================================================
+SECTION 3 — WHO IT IS FOR (TARGET MARKET)
+================================================================
+
+Primary:
+- K–12 private schools in India (CBSE, ICSE, State Board)
+- School Directors/Trustees who want visibility without micromanaging
+- School Principals who want operational data on one screen
+
+Secondary (roadmap):
+- Junior Colleges (Class 11–12 standalone)
+- Coaching institutes
+- Multi-branch school groups
+
+Institution Size:
+- 200 to 3,000 students
+- 10 to 150 staff
+- Single branch (multi-branch architecture already planned in schema)
+
+Geography:
+- India-first (Aadhar, Indian fee structure, Indian curriculum subjects)
+- Designed for Tier 2 and Tier 3 cities that can't afford enterprise ERPs
+
+
+================================================================
+SECTION 4 — THE JOURNEY (START TO CURRENT STATE)
+================================================================
+
+PHASE 1 — FOUNDATION (Completed)
+  - Monorepo initialized: NestJS backend + Next.js frontend
+  - PostgreSQL database on Neon (cloud-hosted, serverless)
+  - Prisma ORM with full schema design
+  - JWT authentication with 15-minute access tokens + 7-day refresh rotation
+  - Role-Based Access Control (RBAC): guards, permissions, roles in DB
+  - Multi-tenancy: shared database, institution_id on every table,
+    TenantMiddleware reads X-Institution-ID header
+  - Audit log: every write action tracked with user + timestamp
+  - Health check endpoint
+  - Backend deployed on Railway
+  - Frontend deployed on Vercel
+
+PHASE 2 — ADMISSION MODULE (Completed)
+  - Student CRUD with auto-generated admission numbers (ADM-YYYY-XXXX)
+  - Auto roll number assignment per class
+  - TC (Transfer Certificate) validation: Class 1 skip, Class 2+ enforced
+  - Inquiry capture module (walk-in, phone, online)
+  - Academic year creation and management
+  - Academic unit (class/section) hierarchy
+  - Demographic fields: Nationality, Religion, Caste Category, Aadhar Number
+  - Seed defaults: 10 Indian-standard fee heads + 22 standard subjects
+    auto-created on institution setup
+
+PHASE 3 — ACADEMIC OPERATIONS (Completed)
+  - Subject CRUD and assignment to classes
+  - Teacher assignment to subjects per class
+  - Timetable: weekly period grid per class, subject + teacher mapped
+  - Attendance system: daily marking per class, status cycle
+    (Present → Absent → Late → Leave)
+  - Monthly attendance reports
+  - Attendance defaulter list (configurable threshold, e.g. below 75%)
+
+PHASE 4 — EXAMINATION MODULE (Completed)
+  - Exam creation linked to academic year
+  - Exam subject configuration per class
+  - Bulk marks entry by teachers (per subject, per exam, per class)
+  - Absent toggle per student per exam
+  - Exam results: ranked summary, per-student scorecard
+  - Exam lifecycle: Draft → Active → Completed
+
+PHASE 5 — FEE MANAGEMENT (Completed)
+  - Fee head management (Tuition, Transport, Activity, etc.)
+  - Fee structure: configurable amount per class per year per fee head
+  - Payment recording
+  - Per-student payment history and outstanding balance
+  - Daily collection report for accountant
+  - Fee defaulter list with outstanding amounts
+
+PHASE 6 — 7-PORTAL ARCHITECTURE (Completed)
+  - Every role gets a separate, purpose-built portal
+  - Shared PortalShell component with role guards and nav
+  - Role routing: correct portal auto-assigned on login
+  - See Section 5 for full portal breakdown
+
+PHASE 7 — DEPLOYMENT + SECURITY HARDENING (Completed)
+  - Railway (backend) + Vercel (frontend) deployment live
+  - httpOnly cookie architecture (replaces localStorage tokens)
+  - CORS locked to specific origins via environment variable
+  - 128-character JWT secret (replaced dev placeholder)
+  - JWT strategy uses getOrThrow — fails fast if secret not set
+  - Middleware route protection using same-root-domain cookies
+  - PrismaExceptionFilter: structured error codes, P2002 field details
+  - Browser-level caching (Cache-Control headers)
+  - In-memory TTL cache for hot endpoints (class lists, subject lists)
+  - DB indexes on high-query columns (institution_id, student_id, date)
+  - Slow query logging for production monitoring
+  - Soft delete on exams, announcements, fee structures
+  - Account block: deleted/deactivated accounts rejected at every API call
+  - Rate limiting (planned, P2)
+  - DB-level RLS (planned, P2)
+
+PHASE 8 — ADDITIONAL MODULES (Completed)
+  - Announcements / Notice Board (institution-wide + class-specific)
+  - Staff Attendance module (clock-in/clock-out)
+  - Staff Leave Request workflow
+  - Student Promotion engine (bulk promote to next class, hold-back, transfer)
+  - Student Directory: class-first UX, Excel export
+  - Student and Staff profile pages with password reset
+  - Parent linking: connect parent login to specific student records
+  - Platform onboarding wizard (Director account creation + institution setup
+    with academic year + classes seeded automatically)
+  - Developer portal: max 2-seat license management, profile/password reset
+
+CURRENT BUILD STATUS (April 2026):
+  Backend:   100% complete for K–12 MVP
+  Frontend:  All 8 portals built and functional
+  Deployed:  Backend live on Railway, Frontend live on Vercel
+  First client: Anchor school being onboarded (institution: Infovion)
+
+
+================================================================
+SECTION 5 — THE 8 PORTALS (ROLE-BASED UX)
+================================================================
+
+Every person in a school gets a portal. Not a single admin panel with
+different buttons hidden. A completely separate, purpose-designed interface.
+
+--- 1. DIRECTOR PORTAL ---
+Who: School owner / Trustee / Managing Director
+Route: /portal/director
+What they can do:
+  - Full school overview: student count, staff count, fee collection,
+    attendance summary
+  - Institution settings management
+  - All module access (attendance, exams, fees, announcements, timetable)
+  - Staff management: view all roles, reset passwords, deactivate accounts
+  - Reports: attendance, fees, academic performance
+  - Academic year and class structure management
+  - Announcements: create school-wide and class-specific notices
+
+--- 2. OPERATOR PORTAL (Admin Dashboard) ---
+Who: School administrator / Office manager
+Route: /dashboard
+What they can do:
+  - Student admission: full multi-step admission form
+  - Student directory: class-first view, search, Excel export
+  - Staff CRUD: create accounts, assign roles
+  - Fee management: record payments, view balances, daily collection
+  - Inquiry tracking: capture, follow up, convert to admission
+  - Examination management: create exams, manage subjects
+  - Attendance reports
+  - Announcements
+
+--- 3. PRINCIPAL PORTAL ---
+Who: Academic head / Vice Principal
+Route: /portal/principal
+What they can do:
+  - Overview: total students, academic year, class count, staff count
+  - Attendance defaulters across all classes (configurable threshold)
+  - Fee defaulters list
+  - Attendance reports per class
+  - Fee reports
+  - Timetable view
+  - Staff attendance tracking
+  - Announcements management
+
+--- 4. TEACHER PORTAL ---
+Who: Class teachers, subject teachers
+Route: /portal/teacher
+What they can do:
+  - Dashboard showing assigned classes
+  - Attendance marking: select class → select date → mark each student
+    (Present/Absent/Late/Leave), bulk "All Present" / "All Absent"
+    Pre-fills if already marked for the day
+  - Marks entry: select exam → select class → select subject →
+    enter marks per student, mark absent, bulk save
+  - Class timetable view
+  - Announcements view
+  - Staff attendance (own clock-in / clock-out)
+
+--- 5. STUDENT PORTAL ---
+Who: Enrolled students
+Route: /portal/student
+What they can do:
+  - Own attendance history (monthly view)
+  - Own exam marks and scorecard
+  - Fee balance and payment history
+  - Announcements / Notice board
+  - Timetable view
+
+--- 6. PARENT PORTAL ---
+Who: Parent / Guardian of a student
+Route: /portal/parent
+What they can do:
+  - Child's attendance (monthly view with absent alerts)
+  - Child's exam results and scorecard
+  - Child's fee balance and payment history
+  - Announcements from school
+  Real-time connection: parent account is linked to a specific student
+  record — sees only their child's data
+
+--- 7. RECEPTIONIST PORTAL ---
+Who: Front desk staff, reception
+Route: /portal/receptionist
+What they can do:
+  - Student inquiry capture
+  - Fee payment recording
+  - Announcements view
+  - Student lookup / directory
+
+--- 8. ACCOUNTANT PORTAL ---
+Who: School accountant / finance staff
+Route: /portal/accountant
+What they can do:
+  - Fee collection: daily collection report
+  - Student fee balance view
+  - Fee defaulter list (year-wise, class-wise)
+  - Payment recording
+  - Fee head and structure management
+
+
+================================================================
+SECTION 6 — FULL FEATURE LIST (SEO KEYWORDS)
+================================================================
+
+ADMISSION MANAGEMENT
+  - Online / offline student admission form
+  - Auto-generated admission numbers (ADM-YYYY-XXXX format)
+  - Auto roll number assignment per class
+  - Transfer Certificate (TC) validation
+  - Inquiry management: capture, follow-up, conversion tracking
+  - Student demographic fields: Name, DOB, Gender, Address, Nationality,
+    Religion, Caste Category, Aadhar Number, Parent Details
+  - Admission status tracking (Inquiry → Applied → Confirmed → Enrolled)
+
+STUDENT MANAGEMENT
+  - Complete student profiles
+  - Student directory with class-first navigation
+  - Search and filter by name, class, roll number
+  - Excel export of student lists
+  - Student promotion (bulk, single, hold-back, transfer)
+  - Profile photo support (roadmap)
+  - Parent linking (connect parent login to student record)
+
+ATTENDANCE MANAGEMENT
+  - Daily attendance marking per class by teacher
+  - Status: Present, Absent, Late, Leave
+  - Bulk marking (All Present / All Absent)
+  - Pre-filled if attendance already marked
+  - Monthly attendance report per student
+  - Attendance defaulter list (configurable %)
+  - Parent notification on absence (roadmap: SMS/push)
+
+EXAMINATION & RESULTS
+  - Exam creation linked to academic year
+  - Subject assignment per exam per class
+  - Marks entry by teacher (per subject, per student)
+  - Absent toggle in marks entry
+  - Rank-wise class result summary
+  - Individual student scorecard
+  - Exam status lifecycle: Draft → Active → Completed
+  - Admit card generation (roadmap)
+  - Report card PDF (roadmap)
+
+FEE MANAGEMENT
+  - Indian-standard fee heads (Tuition, Transport, Lab, Library, etc.)
+  - Fee structure: configurable per class per academic year
+  - Payment recording with receipt
+  - Per-student outstanding balance
+  - Daily collection report
+  - Fee defaulter list with outstanding amounts
+  - Razorpay online payment integration (roadmap)
+  - Fee receipt PDF (roadmap)
+
+STAFF MANAGEMENT
+  - Staff accounts with role assignment
+  - Staff directory with profiles
+  - Password reset
+  - Account deactivation / reactivation
+  - Staff attendance: clock-in / clock-out
+  - Leave request and approval workflow
+  - Role hierarchy: Director, Operator, Principal, Teacher, Receptionist,
+    Accountant, Non-Teaching Staff
+
+TIMETABLE
+  - Weekly period grid per class
+  - Subject + teacher mapping per period
+  - Teacher-facing timetable view
+  - Student-facing timetable view
+
+ANNOUNCEMENTS
+  - School-wide announcements
+  - Class-specific targeted announcements
+  - All roles can view relevant announcements
+  - Director / Operator / Principal can create
+
+ACADEMIC CONFIGURATION
+  - Academic year management
+  - Class hierarchy setup (School → Standard → Section)
+  - Subject library with code support
+  - Subject assignment to classes
+  - Teacher assignment to subjects per class
+
+MULTI-TENANCY
+  - Single platform, multiple schools
+  - Each school is a completely isolated tenant
+  - Institution login code system (no email overlap between schools)
+  - Shared database with institution_id isolation
+  - Data never crosses between schools
+
+SECURITY
+  - JWT authentication (15-min access + 7-day refresh rotation)
+  - httpOnly cookies (XSS-resistant token storage)
+  - Role-Based Access Control (RBAC) at API level
+  - Audit log: every action tracked
+  - CORS locked to production origins
+  - Soft delete (records not permanently deleted)
+  - Account block enforcement at every API call
+  - HTTPS enforced on all endpoints
+
+
+================================================================
+SECTION 7 — TECHNOLOGY STACK
+================================================================
+
+BACKEND
+  - Runtime: Node.js
+  - Framework: NestJS 11 (TypeScript)
+  - Database: PostgreSQL (cloud-hosted on Neon, serverless)
+  - ORM: Prisma
+  - Authentication: JWT (passport-jwt) + httpOnly cookies
+  - Architecture: Modular (13 feature modules)
+  - Deployment: Railway (Docker container)
+  - API style: REST
+
+FRONTEND
+  - Framework: Next.js 14 with App Router
+  - Language: TypeScript
+  - Styling: Tailwind CSS (no UI component library — 100% custom)
+  - State management: Zustand with persistence
+  - Deployment: Vercel (edge network)
+
+INFRASTRUCTURE
+  - Database host: Neon (PostgreSQL, serverless, auto-scaling)
+  - Backend host: Railway (Docker, auto-deploy from GitHub)
+  - Frontend host: Vercel (global edge, auto-deploy from GitHub)
+  - Repository: GitHub (BuildWithInfovion org)
+  - CI/CD: GitHub → Railway + Vercel auto-deploy on push
+
+WHY THIS STACK
+  - Zero infrastructure management: Neon + Railway + Vercel handle scaling
+  - India-accessible: works on 4G, mobile-first responsive design
+  - No vendor lock-in: PostgreSQL is portable, NestJS is framework-agnostic
+  - Cost-efficient for school budgets: cloud-native, pay-as-you-grow
+
+
+================================================================
+SECTION 8 — ARCHITECTURE DECISIONS (TECHNICAL DEPTH FOR WEBSITE)
+================================================================
+
+MULTI-TENANCY APPROACH
+  Design: Shared database with row-level isolation via institution_id.
+  Every table that holds school data has an institution_id column.
+  A TenantMiddleware reads the X-Institution-ID header on every API request
+  and scopes all queries automatically.
+  Future: Database-level Row-Level Security (RLS) policies planned for P2.
+
+ROLE-BASED ACCESS CONTROL
+  Roles and permissions stored in the database (not hardcoded).
+  Every API endpoint is guarded by both AuthGuard (valid JWT) and
+  RolesGuard (correct role).
+  The JWT payload carries roles[] and permissions[] — no extra DB hit
+  per request for authorization.
+
+PORTAL ARCHITECTURE
+  Each role gets a PortalShell component with its own nav, role badge,
+  and guard. Navigating to the wrong portal auto-redirects to the correct one.
+  Single source of truth: getRoleRoute() in auth-utils.ts.
+
+TOKEN SECURITY
+  Access token: 15-minute lifetime (short window limits exposure).
+  Refresh token: 7-day rotation (new refresh token issued every time).
+  Stored in httpOnly cookies (JavaScript cannot read them — XSS-safe).
+  Refresh tokens stored hashed in DB. Revocation deletes the DB record.
+
+AUDIT TRAIL
+  Every write operation (create, update, delete) is logged with:
+  user ID, institution ID, action, resource type, resource ID, timestamp.
+  Non-deletable (append-only log table).
+
+PERFORMANCE
+  - In-memory TTL cache on hot read endpoints (class lists, subject lists)
+  - DB indexes on institution_id, student_id, date columns
+  - Slow query logging in production
+  - Browser-level Cache-Control headers on static data responses
+  - Batch DB operations in onboarding (createMany reduces 27 ops to ~9)
+
+
+================================================================
+SECTION 9 — WHAT'S BEING BUILT NEXT (ROADMAP)
+================================================================
+
+NEAR-TERM (Before First School Handover)
+  - Student and parent portals showing real linked data
+    (userId → student record link)
+  - Admit card generation (PDF)
+  - Fee receipt PDF
+  - Report card PDF
+  - TC (outgoing Transfer Certificate) generation workflow
+  - Setup wizard for new school onboarding (first-login guided setup)
+  - Staff name fields (currently email-only display)
+  - Branch protection rules on GitHub
+
+SHORT-TERM (V2 — Next Quarter)
+  - Teacher sees only assigned classes (not all classes)
+  - Absent → Parent SMS / WhatsApp notification (BullMQ queue)
+  - Razorpay online fee payment
+  - Academic calendar
+  - Homework and task assignment module
+  - Pagination on all list pages
+  - Full timetable engine
+
+MEDIUM-TERM (V3 — Multi-Segment Expansion)
+  - Junior College (Class 11–12) support
+  - Coaching institute variant
+  - Multi-branch school groups
+  - Sentry error tracking integration
+  - GitHub Actions full CI/CD pipeline
+  - Rate limiting and DDoS protection
+  - Database RLS policies
+
+
+================================================================
+SECTION 10 — SEO KEYWORD TARGETS (FOR WEBSITE PAGES)
+================================================================
+
+Primary keywords:
+  - school management software India
+  - school ERP software India
+  - student management system India
+  - K-12 school management system
+  - school administration software
+
+Secondary keywords:
+  - online attendance management system for schools
+  - student fee management software India
+  - school exam management software
+  - teacher portal school software
+  - parent portal school app India
+  - multi-tenant school SaaS
+  - cloud-based school ERP India
+  - school software for CBSE schools
+  - school software for ICSE schools
+  - school management system Tier 2 cities
+
+Long-tail keywords:
+  - school management software without annual contract India
+  - student admission management system for K-12
+  - parent absent notification school software
+  - school fee defaulter management software
+  - role based school management portal
+  - NestJS school management system
+  - school ERP built for India affordable
+
+
+================================================================
+SECTION 11 — SUGGESTED WEBSITE PAGES FOR SEO
+================================================================
+
+HOME PAGE
+  Hero: "Complete School Management. Built for India."
+  Sub: "Manage admissions, attendance, exams, fees, and staff —
+        all in one platform, with a dedicated portal for every role."
+  CTA: "Request a Demo" / "Start Free Trial"
+
+FEATURES PAGE
+  Section per module:
+  - Admissions & Enrollment
+  - Attendance Tracking
+  - Examinations & Results
+  - Fee Management
+  - Staff Management
+  - Parent & Student Portals
+  - Timetable
+  - Announcements
+
+PORTALS PAGE (NEW — SEO GOLDMINE)
+  "Every Role Gets Their Own Portal"
+  Show each of the 8 portals with screenshots + use cases:
+  Director | Operator | Principal | Teacher | Student | Parent |
+  Receptionist | Accountant
+
+PRICING PAGE
+  Per-school monthly subscription (to be defined)
+  Mention: No setup fee, No long-term contract (planned)
+
+FOR SCHOOLS PAGE
+  Pain points + how Infovion solves each one
+  India-specific: Aadhar fields, TC workflow, Indian fee heads,
+  CBSE/ICSE/State board compatibility
+
+TECHNOLOGY PAGE (optional, for credibility)
+  Stack overview, security practices, multi-tenancy explanation,
+  uptime + hosting partners
+
+BLOG / RESOURCES (for ongoing SEO)
+  - "How Indian schools manage attendance with software"
+  - "School fee management: moving from registers to the cloud"
+  - "Why every K-12 school in India needs a parent portal"
+  - "Transfer Certificate workflow: manual vs. digital"
+  - "What is multi-tenant school ERP? A simple explanation"
+
+ABOUT PAGE
+  - Infovion Technologies
+  - Built by developers who understand Indian school operations
+  - India-first design (not a Western ERP adapted for India)
+
+CONTACT / DEMO PAGE
+  - Contact: sankalp7456@gmail.com
+  - Website: buildwithinfovion.com
+  - CTA: "Schedule a free demo for your school"
+
+
+================================================================
+SECTION 12 — DIFFERENTIATORS (COPY FOR WEBSITE)
+================================================================
+
+vs. Generic ERP systems (Tally, SAP adapted):
+  "Built only for schools. Not a finance tool forced to do school work."
+
+vs. Expensive international SaaS (PowerSchool, etc.):
+  "Indian pricing, Indian fields, Indian workflows. No expensive
+   customization needed."
+
+vs. Spreadsheets and WhatsApp:
+  "Stop managing a school in Excel. Every role, every operation,
+   one platform."
+
+vs. Basic attendance apps:
+  "Attendance is one of 8 modules. Exams, fees, admissions, staff —
+   it's all here."
+
+Key differentiators to highlight:
+  1. 8 role-specific portals (not one admin panel for everyone)
+  2. India-first: Aadhar, TC, Indian fee structure, Indian curriculum
+  3. Cloud-native: no server installation, works on mobile
+  4. Multi-tenant: one platform, many schools, zero data mixing
+  5. Affordable: built for Tier 2/3 schools, not enterprise budgets
+  6. Complete: admission to result — full lifecycle covered
+
+
+================================================================
+SECTION 13 — CURRENT PRODUCT MATURITY SUMMARY
+================================================================
+
+What is LIVE and WORKING today (April 2026):
+
+BACKEND (NestJS on Railway):
+  ✓ Authentication (login, refresh, logout, role-based)
+  ✓ Multi-tenancy (institution isolation)
+  ✓ Admission module (student CRUD, inquiry, TC, auto numbers)
+  ✓ Attendance module (daily marking, reports, defaulters)
+  ✓ Examination module (marks, results, scorecard, rankings)
+  ✓ Fee module (heads, structures, payments, defaulters)
+  ✓ Subject + timetable module
+  ✓ Staff module (users, roles, staff attendance, leave)
+  ✓ Announcement module
+  ✓ Student promotion engine
+  ✓ Parent linking
+  ✓ Audit log
+  ✓ Platform onboarding API
+  ✓ 13 backend modules, 72 git commits
+
+FRONTEND (Next.js on Vercel):
+  ✓ Director portal (full operations)
+  ✓ Operator dashboard (admissions, fees, staff, exams)
+  ✓ Principal portal (overview, defaulters, timetable)
+  ✓ Teacher portal (attendance marking, marks entry, timetable)
+  ✓ Student portal (attendance, marks, fees, timetable)
+  ✓ Parent portal (child attendance, marks, fees)
+  ✓ Receptionist portal (inquiries, fees, directory)
+  ✓ Accountant portal (fees, collections)
+  ✓ Platform onboarding flow (Director + school setup wizard)
+  ✓ Developer portal (seat management)
+  ✓ Mobile-responsive on all portals
+
+SECURITY:
+  ✓ httpOnly cookie auth
+  ✓ JWT 15min/7d rotation
+  ✓ CORS locked
+  ✓ Audit trail
+  ✓ Soft delete
+  ✓ Account block enforcement
+  ✓ Pre-launch security audit: 13 bugs resolved
+
+IN PROGRESS / NEXT:
+  ○ PDF generation (fee receipts, report cards, admit cards, TC)
+  ○ Student portal real-data link (userId → student record)
+  ○ Parent SMS/notification on absent
+  ○ Razorpay integration
+  ○ DB-level RLS
+
+
+================================================================
+SECTION 14 — COMPANY INFORMATION
+================================================================
+
+Company: Infovion Technologies
+Product: Infovion Academic ERP
+Website: buildwithinfovion.com
+Contact: sankalp7456@gmail.com
+GitHub: BuildWithInfovion (organization)
+
+Build started: Early 2026
+Current version: V1.0 MVP (April 2026)
+First client: K–12 anchor school (onboarding in progress)
+Stack: NestJS + Next.js + PostgreSQL + Prisma + Tailwind CSS
+Infrastructure: Railway + Vercel + Neon
+Total commits: 72 (as of April 15, 2026)
+Total backend modules: 13
+Total portals: 8
+Total roles: 8 (Director, Operator, Principal, Teacher, Student,
+              Parent, Receptionist, Accountant)
+
+================================================================
+END OF FILE
+================================================================
