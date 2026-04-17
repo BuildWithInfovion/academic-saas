@@ -15,7 +15,7 @@ import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
-import type { CreateAnnouncementDto } from './dto/create-announcement.dto';
+import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 
 @Controller('announcements')
 @UseGuards(AuthGuard, TenantGuard, RolesGuard)

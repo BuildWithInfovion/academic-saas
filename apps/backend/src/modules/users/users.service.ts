@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -247,7 +248,7 @@ export class UsersService {
     return { message: 'Password changed successfully' };
   }
 
-  async assignRole(institutionId: string, userId: string, roleId: string) {
+  async assignRole(institutionId: string, userId: string, roleId: string, callerRoles: string[] = []) {
     // Validate user
     const user = await this.prisma.user.findFirst({
       where: {
@@ -271,6 +272,11 @@ export class UsersService {
 
     if (!role) {
       throw new NotFoundException('Role not found');
+    }
+
+    // Prevent privilege escalation: only super_admin can assign the super_admin role
+    if (role.code === 'super_admin' && !callerRoles.includes('super_admin')) {
+      throw new ForbiddenException('Only a Director can assign the Director role');
     }
 
     // Check for existing assignment before creating to return a friendly 409

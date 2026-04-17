@@ -187,6 +187,11 @@ async function main() {
       label: 'Non-Teaching Staff',
       permissions: ['attendance.read'],
     },
+    {
+      code: 'accountant',
+      label: 'Accountant',
+      permissions: ['fees.read', 'fees.write', 'students.read', 'attendance.read', 'institution.read', 'subjects.read'],
+    },
   ];
 
   for (const roleDef of roleDefinitions) {

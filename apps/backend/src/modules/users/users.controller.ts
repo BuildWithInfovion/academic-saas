@@ -10,6 +10,7 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -98,13 +99,16 @@ export class UsersController {
   @Permissions('users.assignRole')
   assignRole(
     @Tenant() tenant: TenantContext,
+    @Req() req: any,
     @Param('userId') userId: string,
     @Body('roleId') roleId: string,
   ) {
+    const callerRoles: string[] = req.user?.roles ?? [];
     return this.usersService.assignRole(
       tenant.institutionId,
       userId,
       roleId,
+      callerRoles,
     );
   }
 }
