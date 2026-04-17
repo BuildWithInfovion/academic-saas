@@ -102,7 +102,7 @@ export default function LoginPage() {
       const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
       // Show success animation, then redirect
       setSuccessInfo({ institution: data.user.institutionName || institutionCode });
-      await new Promise<void>((res) => setTimeout(res, 3000));
+      await new Promise<void>((res) => setTimeout(res, 5500));
       router.push(destination);
     } catch (err) { setError(err instanceof Error ? err.message : 'Login failed'); setLoadStep(0); }
     finally { setLoading(false); }
@@ -660,14 +660,14 @@ export default function LoginPage() {
             pointerEvents:'none' }} />
 
           {/* Ripple rings */}
-          {[0, 0.3, 0.6].map((delay, i) => (
+          {[0, 0.6, 1.2].map((delay, i) => (
             <div key={i} style={{
               position:'absolute', top:'50%', left:'50%',
               width: 110, height: 110,
               marginTop: -55, marginLeft: -55,
               borderRadius:'50%',
               border:`1.5px solid rgba(220,146,75,${0.5 - i * 0.12})`,
-              animation:`successRingOut 1.6s ${delay}s cubic-bezier(0.2,0.6,0.4,1) infinite`,
+              animation:`successRingOut 2.4s ${delay}s cubic-bezier(0.2,0.6,0.4,1) infinite`,
               pointerEvents:'none',
             }} />
           ))}
@@ -678,7 +678,7 @@ export default function LoginPage() {
             background:'linear-gradient(145deg, rgba(220,146,75,0.18), rgba(174,85,37,0.1))',
             border:'2px solid rgba(220,146,75,0.55)',
             display:'flex', alignItems:'center', justifyContent:'center',
-            animation:'successCircleIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards',
+            animation:'successCircleIn 1.1s 0.15s cubic-bezier(0.34,1.56,0.64,1) both',
             boxShadow:'0 0 40px rgba(220,146,75,0.22), inset 0 1px 0 rgba(255,255,255,0.06)',
             position:'relative', zIndex:1,
           }}>
@@ -686,7 +686,7 @@ export default function LoginPage() {
               <polyline points="8,22 18,32 36,14" stroke="#f7c576" strokeWidth="3.2"
                 strokeLinecap="round" strokeLinejoin="round"
                 strokeDasharray="80" strokeDashoffset="80"
-                style={{ animation:'successCheckDraw 0.6s 0.55s cubic-bezier(0.25,0.46,0.45,0.94) forwards' }} />
+                style={{ animation:'successCheckDraw 1.1s 1.0s cubic-bezier(0.25,0.46,0.45,0.94) forwards' }} />
             </svg>
           </div>
 
@@ -695,7 +695,7 @@ export default function LoginPage() {
             marginTop:28,
             padding:'5px 16px', borderRadius:999,
             background:'rgba(220,146,75,0.1)', border:'1px solid rgba(220,146,75,0.22)',
-            animation:'successTextIn 0.55s 0.9s ease both',
+            animation:'successTextIn 0.7s 1.8s ease both',
           }}>
             <p style={{ margin:0, color:'rgba(220,146,75,0.8)', fontSize:11.5,
               letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:600 }}>
@@ -708,7 +708,7 @@ export default function LoginPage() {
             margin:'16px 0 0', color:'#f5ede0', fontWeight:300,
             fontSize:'clamp(1.8rem,5vw,2.6rem)', letterSpacing:'-0.02em',
             textAlign:'center',
-            animation:'successTextIn 0.55s 1.05s ease both',
+            animation:'successTextIn 0.75s 2.1s ease both',
           }}>
             Welcome back!
           </h1>
@@ -717,7 +717,7 @@ export default function LoginPage() {
           <p style={{
             margin:'10px 0 0', color:'rgba(174,112,64,0.55)', fontSize:14,
             letterSpacing:'0.01em', textAlign:'center',
-            animation:'successTextIn 0.55s 1.2s ease both',
+            animation:'successTextIn 0.75s 2.45s ease both',
           }}>
             Setting up your workspace
           </p>
@@ -725,13 +725,13 @@ export default function LoginPage() {
           {/* Bouncing dots */}
           <div style={{
             display:'flex', gap:7, marginTop:20,
-            animation:'successTextIn 0.5s 1.35s ease both',
+            animation:'successTextIn 0.7s 2.75s ease both',
           }}>
-            {[0, 0.18, 0.36].map((delay, i) => (
+            {[0, 0.22, 0.44].map((delay, i) => (
               <div key={i} style={{
                 width:7, height:7, borderRadius:'50%',
                 background:'rgba(220,146,75,0.6)',
-                animation:`successDot 1.1s ${delay}s ease-in-out infinite`,
+                animation:`successDot 1.5s ${delay}s ease-in-out infinite`,
               }} />
             ))}
           </div>
@@ -741,12 +741,12 @@ export default function LoginPage() {
             marginTop:32, width:200, height:2, borderRadius:999,
             background:'rgba(220,146,75,0.1)',
             overflow:'hidden',
-            animation:'successTextIn 0.5s 1.4s ease both',
+            animation:'successTextIn 0.7s 2.9s ease both',
           }}>
             <div style={{
               height:'100%',
               background:'linear-gradient(90deg, #ae5525, #f7c576, #dc924b)',
-              animation:'successBarFill 2.4s 1.5s cubic-bezier(0.4,0,0.2,1) forwards',
+              animation:'successBarFill 3.8s 3.1s cubic-bezier(0.4,0,0.2,1) forwards',
               width:0,
             }} />
           </div>
