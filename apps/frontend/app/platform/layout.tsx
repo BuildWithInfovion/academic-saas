@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePlatformAuthStore } from '@/store/platform-auth.store';
 import { silentPlatformRefresh } from '@/lib/platform-api';
 
@@ -42,8 +43,9 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const router   = useRouter();
   const pathname = usePathname();
   const { admin, logout } = usePlatformAuthStore();
-  const [ready, setReady] = useState(false);
-  const [clock, setClock] = useState('');
+  const [ready,     setReady]     = useState(false);
+  const [clock,     setClock]     = useState('');
+  const [logoError, setLogoError] = useState(false);
 
   const isLoginPage = pathname === '/platform/login';
 
@@ -215,17 +217,32 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,rgba(0,212,255,.15),transparent)', pointerEvents:'none' }} />
 
         {/* Logo area */}
-        <div style={{ padding:'18px 16px 16px', borderBottom:'1px solid rgba(0,160,220,.07)' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            {/* Orbital badge */}
-            <div style={{ position:'relative', width:40, height:40, flexShrink:0 }}>
-              <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:'1px solid rgba(0,212,255,.18)', animation:'scfOrbit 14s linear infinite' }}>
-                <div style={{ position:'absolute', top:-2.5, left:'50%', transform:'translateX(-50%)', width:5, height:5, borderRadius:'50%', background:'#00d4ff', boxShadow:'0 0 10px #00d4ff,0 0 20px rgba(0,212,255,.4)' }} />
+        <div style={{ padding:'16px 16px 14px', borderBottom:'1px solid rgba(0,160,220,.07)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+            {/* Logo with orbital ring */}
+            <div style={{ position:'relative', width:44, height:44, flexShrink:0 }}>
+              {/* Spinning orbit ring */}
+              <div style={{ position:'absolute', inset:-4, borderRadius:'50%', border:'1px solid rgba(0,212,255,.15)', animation:'scfOrbit 14s linear infinite', pointerEvents:'none' }}>
+                <div style={{ position:'absolute', top:-2.5, left:'50%', transform:'translateX(-50%)', width:5, height:5, borderRadius:'50%', background:'#00d4ff', boxShadow:'0 0 10px #00d4ff,0 0 20px rgba(0,212,255,.35)' }} />
               </div>
-              <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:'0.5px dashed rgba(0,180,255,.1)', animation:'scfSpinRev 9s linear infinite' }} />
-              <div style={{ position:'absolute', inset:9, borderRadius:'50%', background:'linear-gradient(135deg,rgba(0,55,130,.95),rgba(0,25,70,1))', border:'1px solid rgba(0,180,255,.28)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 16px rgba(0,180,255,.22)' }}>
-                <span style={{ fontSize:9, fontWeight:800, color:'#00d4ff', letterSpacing:'.03em' }}>IV</span>
-              </div>
+              {/* Slow reverse ring */}
+              <div style={{ position:'absolute', inset:-1, borderRadius:'50%', border:'0.5px dashed rgba(0,180,255,.08)', animation:'scfSpinRev 20s linear infinite', pointerEvents:'none' }} />
+              {/* Logo image */}
+              {!logoError ? (
+                <Image
+                  src="/logo.png"
+                  alt="Infovion"
+                  width={44}
+                  height={44}
+                  style={{ objectFit:'contain', width:44, height:44, display:'block', filter:'drop-shadow(0 0 10px rgba(0,180,255,.4)) brightness(1.05)' }}
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                /* Fallback: IV badge */
+                <div style={{ width:44, height:44, borderRadius:'50%', background:'linear-gradient(135deg,rgba(0,55,130,.95),rgba(0,25,70,1))', border:'1px solid rgba(0,180,255,.28)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 16px rgba(0,180,255,.22)' }}>
+                  <span style={{ fontSize:11, fontWeight:800, color:'#00d4ff', letterSpacing:'.03em' }}>IV</span>
+                </div>
+              )}
             </div>
             <div>
               <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:'#c8e6ff', letterSpacing:'.01em' }}>Infovion</p>
