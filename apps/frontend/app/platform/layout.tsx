@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePlatformAuthStore } from '@/store/platform-auth.store';
-import { silentPlatformRefresh } from '@/lib/platform-api';
+import { silentPlatformRefresh, platformFetch } from '@/lib/platform-api';
 
 const IconDash = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -43,9 +43,12 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const router   = useRouter();
   const pathname = usePathname();
   const { admin, logout } = usePlatformAuthStore();
-  const [ready,     setReady]     = useState(false);
-  const [clock,     setClock]     = useState('');
-  const [logoError, setLogoError] = useState(false);
+  const [ready,        setReady]       = useState(false);
+  const [clock,        setClock]       = useState('');
+  const [logoError,    setLogoError]   = useState(false);
+  const [notifOpen,    setNotifOpen]   = useState(false);
+  const [openTickets,  setOpenTickets] = useState<{ id:string; subject:string; institutionName:string; createdAt:string }[]>([]);
+  const [openCount,    setOpenCount]   = useState(0);
 
   const isLoginPage = pathname === '/platform/login';
 
@@ -65,6 +68,25 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Poll open support tickets every 60 s for notification badge
+  useEffect(() => {
+    if (isLoginPage) return;
+    const fetchTickets = () => {
+      platformFetch('/platform/support-tickets')
+        .then((data) => {
+          const all = data as { id:string; subject:string; institutionName:string; createdAt:string; status:string }[];
+          const open = all.filter((t) => t.status === 'open');
+          setOpenTickets(open.slice(0, 6));
+          setOpenCount(open.length);
+        })
+        .catch(() => {});
+    };
+    fetchTickets();
+    const id = setInterval(fetchTickets, 60_000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoginPage]);
 
   if (isLoginPage) return <>{children}</>;
   if (!ready || !admin) return null;
@@ -93,8 +115,10 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         @keyframes scfBlink    { 0%,100%{opacity:1} 50%{opacity:0} }
         @keyframes scfFlicker  { 0%,18%,20%,22%,53%,55%,100%{opacity:1} 19%,21%,54%{opacity:.6} }
         @keyframes scfDataDot  { 0%{left:-8px;opacity:0} 10%{opacity:.8} 90%{opacity:.5} 100%{left:calc(100% + 8px);opacity:0} }
-        @keyframes scfOrbit    { to { transform: rotate(360deg); } }
-        @keyframes scfBarFill  { from{width:0} }
+        @keyframes scfOrbit      { to { transform: rotate(360deg); } }
+        @keyframes scfBarFill    { from{width:0} }
+        @keyframes scfNotifSlide { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes scfBadgePop   { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
 
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -272,6 +296,131 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
             );
           })}
         </nav>
+
+        {/* ── Notification bell ── */}
+        <div style={{ padding:'6px 8px 8px', borderTop:'1px solid rgba(0,160,220,.06)', position:'relative' }}>
+          <button onClick={() => setNotifOpen((v) => !v)}
+            style={{
+              width:'100%', display:'flex', alignItems:'center', gap:10,
+              padding:'8px 12px', borderRadius:8, background:'none',
+              border:`1px solid ${notifOpen ? 'rgba(0,212,255,.22)' : 'rgba(0,120,180,.1)'}`,
+              cursor:'pointer', transition:'all .2s',
+              background: notifOpen ? 'rgba(0,180,255,.06)' : 'transparent',
+            } as React.CSSProperties}
+            onMouseEnter={e => { if (!notifOpen) { e.currentTarget.style.background='rgba(0,120,180,.05)'; e.currentTarget.style.borderColor='rgba(0,180,255,.18)'; } }}
+            onMouseLeave={e => { if (!notifOpen) { e.currentTarget.style.background='transparent'; e.currentTarget.style.borderColor='rgba(0,120,180,.1)'; } }}
+          >
+            {/* Bell icon */}
+            <div style={{ position:'relative', flexShrink:0 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke={openCount > 0 ? '#ffbb00' : 'rgba(0,180,255,.5)'}
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                {openCount > 0 && <circle cx="18" cy="5" r="3" fill="#ff4466" stroke="none"/>}
+              </svg>
+              {/* Count badge */}
+              {openCount > 0 && (
+                <div style={{
+                  position:'absolute', top:-5, right:-6,
+                  minWidth:14, height:14, borderRadius:7,
+                  background:'#ff3355', border:'1.5px solid rgba(3,8,20,.99)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:8, fontWeight:800, color:'#fff', letterSpacing:0,
+                  animation:'scfBadgePop .3s cubic-bezier(.34,1.56,.64,1) both',
+                  boxShadow:'0 0 8px rgba(255,50,80,.6)',
+                  padding:'0 3px',
+                }}>
+                  {openCount > 9 ? '9+' : openCount}
+                </div>
+              )}
+            </div>
+            <span style={{ fontSize:12.5, color: openCount > 0 ? 'rgba(255,200,80,.75)' : 'rgba(100,160,200,.55)', fontWeight: openCount > 0 ? 600 : 400, flex:1, textAlign:'left' }}>
+              {openCount > 0 ? `${openCount} open ticket${openCount !== 1 ? 's' : ''}` : 'No new tickets'}
+            </span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(80,140,190,.35)" strokeWidth="2" strokeLinecap="round"
+              style={{ transition:'transform .25s', transform: notifOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          {/* Dropdown panel — slides out to the right of the sidebar */}
+          {notifOpen && (
+            <div style={{
+              position:'fixed', left:220, top:'auto',
+              width:300, maxHeight:400,
+              background:'linear-gradient(160deg,rgba(3,9,24,.98),rgba(4,12,30,.99))',
+              border:'1px solid rgba(0,180,255,.18)',
+              borderRadius:12, overflow:'hidden',
+              boxShadow:'0 20px 60px rgba(0,0,0,.7), 0 0 0 .5px rgba(0,180,255,.06)',
+              zIndex:200,
+              animation:'scfNotifSlide .2s ease both',
+            }}>
+              {/* Panel header */}
+              <div style={{ padding:'12px 16px 10px', borderBottom:'1px solid rgba(0,160,220,.08)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={openCount > 0 ? '#ffbb00' : '#00d4ff'} strokeWidth="2" strokeLinecap="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                  </svg>
+                  <span style={{ fontSize:12, fontWeight:700, color:'rgba(160,210,240,.8)', letterSpacing:'.06em' }}>Support Tickets</span>
+                </div>
+                {openCount > 0 && (
+                  <span className="scf-badge scf-b-red" style={{ fontSize:9 }}>{openCount} open</span>
+                )}
+              </div>
+
+              {/* Ticket list */}
+              <div style={{ overflowY:'auto', maxHeight:320 }}>
+                {openTickets.length === 0 ? (
+                  <div style={{ padding:'32px 16px', textAlign:'center' }}>
+                    <div style={{ fontSize:24, marginBottom:8 }}>✓</div>
+                    <p style={{ margin:0, fontSize:12, color:'rgba(0,200,120,.5)', letterSpacing:'.06em' }}>All tickets resolved</p>
+                  </div>
+                ) : (
+                  openTickets.map((t, i) => {
+                    const mins = Math.floor((Date.now() - new Date(t.createdAt).getTime()) / 60000);
+                    const ago  = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.floor(mins/60)}h ago` : `${Math.floor(mins/1440)}d ago`;
+                    return (
+                      <Link key={t.id} href="/platform/support"
+                        onClick={() => setNotifOpen(false)}
+                        style={{ textDecoration:'none', display:'block', padding:'11px 16px', borderBottom: i < openTickets.length - 1 ? '1px solid rgba(0,160,220,.06)' : 'none', transition:'background .15s' }}
+                        onMouseEnter={e => { e.currentTarget.style.background='rgba(0,120,200,.06)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background='transparent'; }}
+                      >
+                        <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                          <div className="scf-dot-red" style={{ marginTop:4, flexShrink:0 }} />
+                          <div style={{ minWidth:0, flex:1 }}>
+                            <p style={{ margin:'0 0 3px', fontSize:12.5, fontWeight:600, color:'#c8e6ff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              {t.subject}
+                            </p>
+                            <p style={{ margin:0, fontSize:11, color:'rgba(0,180,255,.5)' }}>{t.institutionName}</p>
+                          </div>
+                          <span style={{ fontSize:10, color:'rgba(70,120,170,.45)', fontFamily:'monospace', flexShrink:0, marginTop:2 }}>{ago}</span>
+                        </div>
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(0,160,220,.07)' }}>
+                <Link href="/platform/support" onClick={() => setNotifOpen(false)}
+                  style={{ textDecoration:'none', fontSize:11.5, color:'rgba(0,180,255,.55)', letterSpacing:'.06em', display:'flex', alignItems:'center', gap:5, justifyContent:'center', fontWeight:600 }}
+                  onMouseEnter={e => { e.currentTarget.style.color='#00d4ff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color='rgba(0,180,255,.55)'; }}>
+                  View all tickets →
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Click-away backdrop */}
+        {notifOpen && (
+          <div style={{ position:'fixed', inset:0, zIndex:199 }} onClick={() => setNotifOpen(false)} />
+        )}
 
         {/* Bottom */}
         <div style={{ padding:'10px 14px 16px', borderTop:'1px solid rgba(0,160,220,.07)' }}>
