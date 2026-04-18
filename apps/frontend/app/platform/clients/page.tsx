@@ -5,167 +5,202 @@ import { platformFetch } from '@/lib/platform-api';
 import Link from 'next/link';
 
 interface Client {
-  id: string;
-  name: string;
-  code: string;
-  institutionType: string;
-  planCode: string;
-  status: string;
-  createdAt: string;
-  subscription?: {
-    planName: string;
-    maxStudents: number;
-    pricePerUser: number;
-    totalAmount: number;
-    endDate: string;
-    status: string;
-    amountPaid?: number;
-  };
+  id: string; name: string; code: string; institutionType: string;
+  planCode: string; status: string; createdAt: string;
+  subscription?: { planName: string; maxStudents: number; pricePerUser: number; totalAmount: number; endDate: string; status: string; amountPaid?: number; };
   _count: { students: number; users: number };
 }
 
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+function fmt(n: number) {
+  return new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(n);
 }
+function daysLeft(d: string) { return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000); }
 
-function daysLeft(endDate: string) {
-  return Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+function Corners({ color = 'rgba(0,212,255,.3)' }: { color?: string }) {
+  const b: React.CSSProperties = { position:'absolute', width:9, height:9, borderColor:color, borderStyle:'solid' };
+  return (
+    <>
+      <div style={{ ...b, top:5, left:5,    borderWidth:'1.5px 0 0 1.5px' }} />
+      <div style={{ ...b, top:5, right:5,   borderWidth:'1.5px 1.5px 0 0' }} />
+      <div style={{ ...b, bottom:5, left:5,  borderWidth:'0 0 1.5px 1.5px' }} />
+      <div style={{ ...b, bottom:5, right:5, borderWidth:'0 1.5px 1.5px 0' }} />
+    </>
+  );
 }
 
 function SubBadge({ sub }: { sub?: Client['subscription'] }) {
-  if (!sub) return <span className="text-xs text-gray-600">No subscription</span>;
-  const days = daysLeft(sub.endDate);
-  if (days < 0) return <span className="text-xs font-medium text-red-400 bg-red-900/20 px-2 py-0.5 rounded-full">Expired</span>;
-  if (days <= 30) return <span className="text-xs font-medium text-yellow-400 bg-yellow-900/20 px-2 py-0.5 rounded-full">{days}d left</span>;
-  return <span className="text-xs font-medium text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full">Active · {days}d</span>;
+  if (!sub) return <span className="scf-badge scf-b-gray">No Sub</span>;
+  const d = daysLeft(sub.endDate);
+  if (d < 0)  return <span className="scf-badge scf-b-red">Expired</span>;
+  if (d <= 30) return <span className="scf-badge scf-b-yellow">{d}d left</span>;
+  return <span className="scf-badge scf-b-green">Active · {d}d</span>;
 }
+
+type Filter = 'all' | 'active' | 'expired' | 'no-sub';
 
 export default function PlatformClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'no-sub'>('all');
+  const [error,   setError]   = useState<string | null>(null);
+  const [filter,  setFilter]  = useState<Filter>('all');
+  const [hoverRow, setHoverRow] = useState<string | null>(null);
 
   const fetchClients = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await platformFetch('/platform/clients');
-      setClients(res as Client[]);
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to load clients');
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true); setError(null);
+    try { setClients(await platformFetch('/platform/clients') as Client[]); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Failed'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchClients(); }, [fetchClients]);
 
   const filtered = clients.filter((c) => {
-    if (filter === 'all') return true;
-    if (filter === 'no-sub') return !c.subscription;
+    if (filter === 'no-sub')  return !c.subscription;
     if (filter === 'expired') return c.subscription && daysLeft(c.subscription.endDate) < 0;
-    if (filter === 'active') return c.subscription && daysLeft(c.subscription.endDate) >= 0;
+    if (filter === 'active')  return c.subscription && daysLeft(c.subscription.endDate) >= 0;
     return true;
   });
 
+  const FILTERS: { key: Filter; label: string; accent: string }[] = [
+    { key:'all',    label:'All',            accent:'0,180,255' },
+    { key:'active', label:'Active',         accent:'0,220,120' },
+    { key:'expired',label:'Expired',        accent:'255,50,80' },
+    { key:'no-sub', label:'No Subscription',accent:'255,150,0' },
+  ];
+
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div style={{ padding:'28px 32px 40px', animation:'scfReveal .4s ease both' }}>
+
+      {/* ── Header ── */}
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white">Clients</h1>
-          <p className="text-sm text-gray-400 mt-1">{clients.length} institution{clients.length !== 1 ? 's' : ''} onboarded</p>
+          <h1 style={{ margin:'0 0 6px', fontSize:22, fontWeight:700, color:'#e8f4ff', letterSpacing:'-.02em' }}>
+            Clients
+          </h1>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ height:1, width:28, background:'linear-gradient(90deg,#00d4ff,transparent)' }} />
+            <p style={{ margin:0, fontSize:11.5, color:'rgba(100,160,200,.5)', letterSpacing:'.06em' }}>
+              {clients.length} institution{clients.length !== 1 ? 's' : ''} on the network
+            </p>
+          </div>
         </div>
-        <Link
-          href="/platform/clients/new"
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          + Onboard Client
+        <Link href="/platform/clients/new" className="scf-btn-primary"
+          style={{ padding:'9px 18px', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:7 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Onboard Client
         </Link>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2">
-        {(['all', 'active', 'expired', 'no-sub'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
-              filter === f
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            {f === 'no-sub' ? 'No Subscription' : f}
-          </button>
-        ))}
+      {/* ── Filter tabs ── */}
+      <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+        {FILTERS.map(({ key, label, accent }) => {
+          const active = filter === key;
+          return (
+            <button key={key} onClick={() => setFilter(key)}
+              style={{
+                padding:'6px 14px', borderRadius:7, fontSize:11.5, fontWeight:600,
+                cursor:'pointer', letterSpacing:'.06em', textTransform:'uppercase',
+                border:`1px solid ${active ? `rgba(${accent},.35)` : 'rgba(0,120,180,.15)'}`,
+                background: active ? `rgba(${accent},.1)` : 'rgba(0,15,35,.7)',
+                color: active ? `rgb(${accent})` : 'rgba(100,160,200,.5)',
+                transition:'all .2s',
+                boxShadow: active ? `0 0 12px rgba(${accent},.15)` : 'none',
+              }}>
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {error && (
-        <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 text-red-400 text-sm">{error}</div>
+        <div style={{ background:'rgba(255,30,50,.07)', border:'1px solid rgba(255,30,50,.2)', borderRadius:10, padding:'12px 16px', marginBottom:16 }}>
+          <p style={{ margin:0, color:'#ff4466', fontSize:13 }}>{error}</p>
+        </div>
       )}
 
-      {/* Table */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+      {/* ── Table ── */}
+      <div className="scf-card" style={{ overflow:'hidden' }}>
+        <Corners />
+
         {loading ? (
-          <div className="p-8 text-center text-gray-500 text-sm">Loading clients...</div>
+          <div style={{ padding:56, display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
+            <div style={{ position:'relative', width:44, height:44 }}>
+              <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:'2px solid rgba(0,212,255,.12)' }} />
+              <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:'2px solid transparent', borderTopColor:'#00d4ff', animation:'scfSpin .8s linear infinite' }} />
+            </div>
+            <p style={{ margin:0, fontSize:11, letterSpacing:'.16em', color:'rgba(0,180,255,.35)', textTransform:'uppercase' }}>Fetching clients…</p>
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 text-sm">No clients found</div>
+          <div style={{ padding:56, textAlign:'center' }}>
+            <p style={{ margin:0, color:'rgba(80,140,190,.35)', fontSize:13 }}>No clients found</p>
+          </div>
         ) : (
-          <table className="w-full text-sm">
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
-              <tr className="border-b border-gray-800 text-xs text-gray-500">
-                <th className="px-4 py-3 text-left font-medium">Institution</th>
-                <th className="px-4 py-3 text-left font-medium">Login Code</th>
-                <th className="px-4 py-3 text-left font-medium">Students</th>
-                <th className="px-4 py-3 text-left font-medium">Seats</th>
-                <th className="px-4 py-3 text-left font-medium">Total Fee</th>
-                <th className="px-4 py-3 text-left font-medium">Subscription</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium"></th>
+              <tr style={{ borderBottom:'1px solid rgba(0,160,220,.09)' }}>
+                {['Institution','Login Code','Students','Seats','Total Fee','Subscription','Status',''].map((h) => (
+                  <th key={h} style={{ padding:'11px 16px', textAlign:'left', fontSize:10, fontWeight:700, color:'rgba(0,180,255,.4)', letterSpacing:'.14em', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
-              {filtered.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-800/40 transition-colors">
-                  <td className="px-4 py-3">
-                    <Link href={`/platform/clients/${c.id}`} className="font-medium text-white hover:text-indigo-300">
-                      {c.name}
-                    </Link>
-                    <p className="text-xs text-gray-500 capitalize">{c.institutionType}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-xs text-indigo-300 bg-indigo-900/30 px-2 py-1 rounded">{c.code}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-300">{c._count.students}</td>
-                  <td className="px-4 py-3 text-gray-300">{c.subscription?.maxStudents ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-300">
-                    {c.subscription ? formatCurrency(c.subscription.totalAmount) : '—'}
-                  </td>
-                  <td className="px-4 py-3"><SubBadge sub={c.subscription} /></td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      c.status === 'active'
-                        ? 'text-green-400 bg-green-900/20'
-                        : 'text-gray-400 bg-gray-800'
-                    }`}>
-                      {c.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/platform/clients/${c.id}`}
-                      className="text-xs text-indigo-400 hover:text-indigo-300"
-                    >
-                      Manage →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+            <tbody>
+              {filtered.map((c, i) => {
+                const isHov = hoverRow === c.id;
+                return (
+                  <tr key={c.id} className="scf-tr"
+                    style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(0,160,220,.055)' : 'none' }}
+                    onMouseEnter={() => setHoverRow(c.id)}
+                    onMouseLeave={() => setHoverRow(null)}
+                  >
+                    <td style={{ padding:'12px 16px' }}>
+                      <Link href={`/platform/clients/${c.id}`}
+                        style={{ textDecoration:'none', fontWeight:600, fontSize:13.5, color: isHov ? '#00d4ff' : '#c8e6ff', transition:'color .2s', display:'block' }}>
+                        {c.name}
+                      </Link>
+                      <p style={{ margin:'2px 0 0', fontSize:11, color:'rgba(80,140,190,.5)', textTransform:'capitalize' }}>{c.institutionType}</p>
+                    </td>
+                    <td style={{ padding:'12px 16px' }}>
+                      <span style={{ fontFamily:'monospace', fontSize:11.5, color:'#00d4ff', background:'rgba(0,180,255,.07)', border:'1px solid rgba(0,180,255,.14)', padding:'2px 8px', borderRadius:4 }}>
+                        {c.code}
+                      </span>
+                    </td>
+                    <td style={{ padding:'12px 16px', fontSize:13, color:'rgba(140,190,220,.7)', fontVariantNumeric:'tabular-nums' }}>
+                      {c._count.students.toLocaleString()}
+                    </td>
+                    <td style={{ padding:'12px 16px', fontSize:13, color:'rgba(140,190,220,.7)', fontVariantNumeric:'tabular-nums' }}>
+                      {c.subscription?.maxStudents.toLocaleString() ?? <span style={{ color:'rgba(80,120,160,.35)' }}>—</span>}
+                    </td>
+                    <td style={{ padding:'12px 16px', fontSize:13, color:'rgba(140,190,220,.7)', fontVariantNumeric:'tabular-nums' }}>
+                      {c.subscription ? fmt(c.subscription.totalAmount) : <span style={{ color:'rgba(80,120,160,.35)' }}>—</span>}
+                    </td>
+                    <td style={{ padding:'12px 16px' }}><SubBadge sub={c.subscription} /></td>
+                    <td style={{ padding:'12px 16px' }}>
+                      <span className={`scf-badge ${c.status === 'active' ? 'scf-b-green' : 'scf-b-gray'}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td style={{ padding:'12px 16px' }}>
+                      <Link href={`/platform/clients/${c.id}`}
+                        style={{ fontSize:11.5, color: isHov ? '#00d4ff' : 'rgba(0,160,220,.45)', textDecoration:'none', letterSpacing:'.04em', fontWeight:600, transition:'color .2s' }}>
+                        Manage →
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Total row */}
+      {!loading && filtered.length > 0 && (
+        <div style={{ display:'flex', justifyContent:'flex-end', marginTop:12 }}>
+          <p style={{ margin:0, fontSize:11, color:'rgba(80,130,180,.4)', letterSpacing:'.06em' }}>
+            Showing {filtered.length} of {clients.length} institutions
+          </p>
+        </div>
+      )}
     </div>
   );
 }
