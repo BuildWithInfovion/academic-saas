@@ -14,8 +14,10 @@ export class TenantMiddleware implements NestMiddleware {
     const url = req.url || req.path;
     const isAuthRoute =
       url.startsWith('/auth/login') ||
-      url.startsWith('/auth/refresh') ||
-      url.startsWith('/auth/forgot-password');
+      url.startsWith('/auth/refresh') ||      // covers /auth/refresh and /auth/refresh-op
+      url.startsWith('/auth/forgot-password') ||
+      url.startsWith('/auth/otp/') ||         // OTP request + verify (public, no tenant yet)
+      url.startsWith('/auth/parent/');        // Parent phone+password login (no tenant header)
     const isPlatformRoute = url.startsWith('/platform');
     const isSupportRoute = url.startsWith('/support');
     if (isAuthRoute || isPlatformRoute || isSupportRoute) {

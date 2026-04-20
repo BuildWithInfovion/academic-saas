@@ -35,7 +35,9 @@ export class AuthService {
     private readonly smsService: SmsService,
   ) {}
 
-  async resolveInstitution(code: string): Promise<{ id: string; name: string }> {
+  async resolveInstitution(
+    code: string,
+  ): Promise<{ id: string; name: string }> {
     const normalizedCode = code.toLowerCase().trim();
 
     const institution = await this.prisma.institution.findUnique({
@@ -346,7 +348,8 @@ export class AuthService {
    */
   async requestOtp(institutionCode: string, phone: string) {
     const RESPONSE = {
-      message: 'If this number is registered, an OTP has been sent to your phone.',
+      message:
+        'If this number is registered, an OTP has been sent to your phone.',
     };
 
     let institutionId: string;
@@ -382,7 +385,9 @@ export class AuthService {
     });
 
     await this.smsService.sendOtp(phone, otp);
-    this.logger.log(`[requestOtp] OTP issued — institution=${institutionId} phone=${phone.slice(0, 5)}***`);
+    this.logger.log(
+      `[requestOtp] OTP issued — institution=${institutionId} phone=${phone.slice(0, 5)}***`,
+    );
 
     return RESPONSE;
   }
@@ -398,6 +403,14 @@ export class AuthService {
     const { id: institutionId, name: institutionName } =
       await this.resolveInstitution(institutionCode);
 
+    // DEV_MASTER_OTP: a fixed bypass code for developers / QA.
+    // Only active outside production — never set this in prod.
+    const masterOtp =
+      process.env.NODE_ENV !== 'production'
+        ? (process.env.DEV_MASTER_OTP ?? '').trim()
+        : '';
+    const isMasterOtp = masterOtp.length > 0 && otp.trim() === masterOtp;
+
     // Find the most-recently issued active OTP for this phone+institution.
     const record = await this.prisma.otpRecord.findFirst({
       where: {
@@ -412,36 +425,50 @@ export class AuthService {
 
     if (!record) throw INVALID;
 
-    // Guard: OTP already exceeded max allowed attempts — invalidate and reject.
-    if (record.attemptCount >= OTP_MAX_ATTEMPTS) {
+    if (isMasterOtp) {
+      // Master bypass — skip hash check but still require a valid record
+      // so the phone must have been registered and OTP requested first.
+      this.logger.warn(
+        `[verifyOtp] DEV master OTP used — phone=${phone.slice(0, 5)}*** institution=${institutionId}`,
+      );
+    } else {
+      // Guard: OTP already exceeded max allowed attempts — invalidate and reject.
+      if (record.attemptCount >= OTP_MAX_ATTEMPTS) {
+        await this.prisma.otpRecord.update({
+          where: { id: record.id },
+          data: { isUsed: true },
+        });
+        this.logger.warn(
+          `[verifyOtp] OTP locked after ${OTP_MAX_ATTEMPTS} attempts — phone=${phone.slice(0, 5)}***`,
+        );
+        throw INVALID;
+      }
+
+      // Increment attempt counter BEFORE comparing hashes so every failed guess
+      // is counted even if the request is retried concurrently.
       await this.prisma.otpRecord.update({
         where: { id: record.id },
-        data: { isUsed: true },
+        data: { attemptCount: { increment: 1 } },
       });
-      this.logger.warn(`[verifyOtp] OTP locked after ${OTP_MAX_ATTEMPTS} attempts — phone=${phone.slice(0, 5)}***`);
-      throw INVALID;
-    }
 
-    // Increment attempt counter BEFORE comparing hashes so every failed guess
-    // is counted even if the request is retried concurrently.
-    await this.prisma.otpRecord.update({
-      where: { id: record.id },
-      data: { attemptCount: { increment: 1 } },
-    });
+      // Timing-safe hash comparison prevents timing-based OTP enumeration.
+      const providedHash = crypto
+        .createHash('sha256')
+        .update(otp.trim())
+        .digest('hex');
+      const storedBuf = Buffer.from(record.otpHash, 'hex');
+      const providedBuf = Buffer.from(providedHash, 'hex');
 
-    // Timing-safe hash comparison prevents timing-based OTP enumeration.
-    const providedHash = crypto.createHash('sha256').update(otp.trim()).digest('hex');
-    const storedBuf    = Buffer.from(record.otpHash, 'hex');
-    const providedBuf  = Buffer.from(providedHash, 'hex');
+      const isMatch =
+        storedBuf.length === providedBuf.length &&
+        crypto.timingSafeEqual(storedBuf, providedBuf);
 
-    let isMatch = false;
-    if (storedBuf.length === providedBuf.length) {
-      isMatch = crypto.timingSafeEqual(storedBuf, providedBuf);
-    }
-
-    if (!isMatch) {
-      this.logger.warn(`[verifyOtp] Bad OTP attempt ${record.attemptCount + 1}/${OTP_MAX_ATTEMPTS} — phone=${phone.slice(0, 5)}***`);
-      throw INVALID;
+      if (!isMatch) {
+        this.logger.warn(
+          `[verifyOtp] Bad OTP attempt ${record.attemptCount + 1}/${OTP_MAX_ATTEMPTS} — phone=${phone.slice(0, 5)}***`,
+        );
+        throw INVALID;
+      }
     }
 
     // Mark OTP as consumed — single-use guarantee.
@@ -457,15 +484,29 @@ export class AuthService {
 
     if (!user) throw INVALID;
 
-    const roles       = this.extractRoles(user.roles);
+    const roles = this.extractRoles(user.roles);
     const permissions = this.extractPermissions(user.roles);
-    const payload     = { sub: user.id, userId: user.id, institutionId, roles, permissions };
+    const payload = {
+      sub: user.id,
+      userId: user.id,
+      institutionId,
+      roles,
+      permissions,
+    };
 
-    const accessToken  = await this.jwtService.signAsync(payload);
-    const refreshToken = await this.generateRefreshToken(user.id, institutionId);
+    const accessToken = await this.jwtService.signAsync(payload);
+    const refreshToken = await this.generateRefreshToken(
+      user.id,
+      institutionId,
+    );
 
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    this.logger.log(`[verifyOtp] Login success — userId=${user.id} institution=${institutionId}`);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+    this.logger.log(
+      `[verifyOtp] Login success — userId=${user.id} institution=${institutionId}`,
+    );
 
     return {
       accessToken,
@@ -497,7 +538,9 @@ export class AuthService {
    * - Only users with the 'parent' role are matched — staff cannot use this flow.
    */
   async parentLogin(phone: string, password: string) {
-    const INVALID = new UnauthorizedException('Invalid phone number or password.');
+    const INVALID = new UnauthorizedException(
+      'Invalid phone number or password.',
+    );
 
     // Cross-institution lookup: find all parent-role users with this phone.
     const candidates = await this.prisma.user.findMany({
@@ -517,19 +560,27 @@ export class AuthService {
 
     // Filter to users in live active institutions only.
     const active = candidates.filter(
-      (u) => u.institution && !u.institution.deletedAt && u.institution.status === 'active',
+      (u) =>
+        u.institution &&
+        !u.institution.deletedAt &&
+        u.institution.status === 'active',
     );
 
     if (active.length === 0) {
       // Simulate bcrypt timing even when no user exists to prevent timing attacks.
-      await bcrypt.compare(password, '$2b$12$invalidhashpadding000000000000000000000000000000000000000');
+      await bcrypt.compare(
+        password,
+        '$2b$12$invalidhashpadding000000000000000000000000000000000000000',
+      );
       throw INVALID;
     }
 
     if (active.length > 1) {
       // Phone found in multiple schools — ambiguous, cannot auto-bind.
       // Do NOT reveal which schools exist; just ask them to contact admin.
-      this.logger.warn(`[parentLogin] Ambiguous phone across ${active.length} institutions — phone=${phone.slice(0, 5)}***`);
+      this.logger.warn(
+        `[parentLogin] Ambiguous phone across ${active.length} institutions — phone=${phone.slice(0, 5)}***`,
+      );
       throw new BadRequestException(
         'Multiple school accounts found for this number. Please contact your school administrator.',
       );
@@ -537,23 +588,40 @@ export class AuthService {
 
     const user = active[0];
     if (!user.passwordHash) {
-      await bcrypt.compare(password, '$2b$12$invalidhashpadding000000000000000000000000000000000000000');
+      await bcrypt.compare(
+        password,
+        '$2b$12$invalidhashpadding000000000000000000000000000000000000000',
+      );
       throw INVALID;
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) throw INVALID;
 
-    const roles        = this.extractRoles(user.roles);
-    const permissions  = this.extractPermissions(user.roles);
+    const roles = this.extractRoles(user.roles);
+    const permissions = this.extractPermissions(user.roles);
     const institutionId = user.institutionId;
-    const payload      = { sub: user.id, userId: user.id, institutionId, roles, permissions };
+    const payload = {
+      sub: user.id,
+      userId: user.id,
+      institutionId,
+      roles,
+      permissions,
+    };
 
-    const accessToken  = await this.jwtService.signAsync(payload);
-    const refreshToken = await this.generateRefreshToken(user.id, institutionId);
+    const accessToken = await this.jwtService.signAsync(payload);
+    const refreshToken = await this.generateRefreshToken(
+      user.id,
+      institutionId,
+    );
 
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    this.logger.log(`[parentLogin] Login success — userId=${user.id} institution=${institutionId}`);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+    this.logger.log(
+      `[parentLogin] Login success — userId=${user.id} institution=${institutionId}`,
+    );
 
     return {
       accessToken,

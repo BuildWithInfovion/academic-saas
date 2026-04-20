@@ -86,8 +86,12 @@ export class AppModule implements NestModule {
       .apply(TenantMiddleware)
       .exclude(
         { path: 'auth/login', method: RequestMethod.ALL },
-        { path: 'auth/refresh', method: RequestMethod.ALL },   // cookie-only, no tenant header
+        { path: 'auth/refresh', method: RequestMethod.ALL },
+        { path: 'auth/refresh-op', method: RequestMethod.ALL },
         { path: 'auth/forgot-password', method: RequestMethod.ALL },
+        { path: 'auth/otp/request', method: RequestMethod.ALL },
+        { path: 'auth/otp/verify', method: RequestMethod.ALL },
+        { path: 'auth/parent/login', method: RequestMethod.ALL },
         { path: 'platform', method: RequestMethod.ALL },
         { path: 'platform/*path', method: RequestMethod.ALL },
         { path: 'support/*path', method: RequestMethod.ALL },
