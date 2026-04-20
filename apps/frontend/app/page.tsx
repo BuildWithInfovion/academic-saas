@@ -53,9 +53,14 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<'staff' | 'parent'>('staff');
   const [staffStep, setStaffStep] = useState<1 | 2>(1);
 
+  // Staff login mode: OTP (default) or password fallback
+  const [staffLoginMode, setStaffLoginMode] = useState<'otp' | 'password'>('otp');
+
   // Staff step-1 fields
   const [institutionCode, setInstitutionCode] = useState('');
   const [staffPhone,      setStaffPhone]      = useState('');
+  const [staffEmail,      setStaffEmail]      = useState('');
+  const [staffPassword,   setStaffPassword]   = useState('');
 
   // Staff step-2 OTP
   const [otpDigits,      setOtpDigits]      = useState(['', '', '', '', '', '']);
@@ -135,6 +140,47 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ── Staff password login (fallback when SMS not configured) ────────────────
+  const handlePasswordLogin = async () => {
+    if (!institutionCode.trim()) return setError('School code is required');
+    if (!staffEmail.trim())      return setError('Email or phone is required');
+    if (!staffPassword.trim())   return setError('Password is required');
+    setLoading(true); setLoadStep(1); setError(null);
+    try {
+      const res = await fetch(api('/auth/login'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          institutionCode: institutionCode.trim().toLowerCase(),
+          email: staffEmail.trim(),
+          password: staffPassword,
+        }),
+      });
+      setLoadStep(2);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || 'Login failed');
+      if (!data.accessToken) throw new Error('No token received');
+      const roles: string[] = data.user?.roles ?? [];
+      const authPayload = {
+        accessToken: data.accessToken,
+        user: { email: data.user.email, phone: data.user.phone,
+          institutionId: data.user.institutionId, institutionName: data.user.institutionName, roles },
+      };
+      const isDashboard = (DASHBOARD_ROLES as string[]).some((r) => roles.includes(r));
+      if (isDashboard) { setAuth(authPayload); } else { usePortalAuthStore.getState().setAuth(authPayload); }
+      setLoadStep(3);
+      const portalRoles = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
+      const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
+      setSuccessInfo({ institution: data.user.institutionName || institutionCode });
+      await new Promise<void>((resolve) => setTimeout(resolve, 5500));
+      router.push(destination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+      setLoadStep(0);
+    } finally { setLoading(false); }
   };
 
   // ── Staff Step 2 — verify OTP ────────────────────────────────────────────
@@ -265,6 +311,7 @@ export default function LoginPage() {
   const switchTab = (tab: 'staff' | 'parent') => {
     setActiveTab(tab);
     setStaffStep(1);
+    setStaffLoginMode('otp');
     setError(null);
     setOtpDigits(['', '', '', '', '', '']);
     setDevOtpBanner(null);
@@ -639,28 +686,82 @@ export default function LoginPage() {
                           </div>
                           <input className="ldf" type="text" placeholder="Your school code"
                             value={institutionCode} onChange={(e) => setInstitutionCode(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
+                            onKeyDown={(e) => e.key === 'Enter' && (staffLoginMode === 'otp' ? handleSendOtp() : handlePasswordLogin())}
                             disabled={loading} autoCapitalize="none" autoCorrect="off" />
                         </div>
                       </div>
 
-                      <div>
-                        <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                          color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                          Phone Number
-                        </label>
-                        <div style={{ position:'relative' }}>
-                          <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                            alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.13 1 .38 1.97.74 2.91a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 5.16 5.16l.96-.96a2 2 0 0 1 2.11-.45c.94.36 1.92.61 2.91.74A2 2 0 0 1 22 16.92z"/>
-                            </svg>
+                      {staffLoginMode === 'otp' ? (
+                        <div>
+                          <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
+                            color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                            Phone Number
+                          </label>
+                          <div style={{ position:'relative' }}>
+                            <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
+                              alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.13 1 .38 1.97.74 2.91a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 5.16 5.16l.96-.96a2 2 0 0 1 2.11-.45c.94.36 1.92.61 2.91.74A2 2 0 0 1 22 16.92z"/>
+                              </svg>
+                            </div>
+                            <input className="ldf" type="tel" placeholder="Registered phone number"
+                              value={staffPhone} onChange={(e) => setStaffPhone(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
+                              disabled={loading} />
                           </div>
-                          <input className="ldf" type="tel" placeholder="Registered phone number"
-                            value={staffPhone} onChange={(e) => setStaffPhone(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
-                            disabled={loading} />
                         </div>
+                      ) : (
+                        <>
+                          <div>
+                            <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
+                              color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                              Email / Phone
+                            </label>
+                            <div style={{ position:'relative' }}>
+                              <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
+                                alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                                </svg>
+                              </div>
+                              <input className="ldf" type="text" placeholder="Email address or phone"
+                                value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handlePasswordLogin()}
+                                disabled={loading} autoCapitalize="none" autoCorrect="off" />
+                            </div>
+                          </div>
+                          <div>
+                            <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
+                              color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                              Password
+                            </label>
+                            <div style={{ position:'relative' }}>
+                              <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
+                                alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                              </div>
+                              <input className="ldf" type="password" placeholder="Your password"
+                                value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handlePasswordLogin()}
+                                disabled={loading} />
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Mode toggle */}
+                      <div style={{ textAlign:'center', marginTop:4 }}>
+                        <button type="button"
+                          onClick={() => { setStaffLoginMode(staffLoginMode === 'otp' ? 'password' : 'otp'); setError(null); }}
+                          disabled={loading}
+                          style={{ fontSize:12, color:'rgba(220,146,75,0.5)', background:'none', border:'none',
+                            cursor:'pointer', padding:0 }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color='#f7c576')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.5)')}>
+                          {staffLoginMode === 'otp' ? 'Sign in with password instead' : 'Use OTP instead'}
+                        </button>
                       </div>
                     </div>
                   )}
@@ -737,7 +838,9 @@ export default function LoginPage() {
 
                   {/* Action button */}
                   {staffStep === 1 ? (
-                    <button onClick={handleSendOtp} disabled={loading} className="login-btn"
+                    <button
+                      onClick={staffLoginMode === 'otp' ? handleSendOtp : handlePasswordLogin}
+                      disabled={loading} className="login-btn"
                       style={{
                         marginTop:18, width:'100%', padding:'12px',
                         fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
@@ -750,11 +853,11 @@ export default function LoginPage() {
                           <svg style={{ width:16, height:16, animation:'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
                           </svg>
-                          Sending OTP…
+                          {staffLoginMode === 'otp' ? 'Sending OTP…' : 'Signing in…'}
                         </span>
                       ) : (
                         <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                          Send OTP
+                          {staffLoginMode === 'otp' ? 'Send OTP' : 'Sign In'}
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                           </svg>
