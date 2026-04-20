@@ -1,11 +1,8 @@
 import { useAuthStore } from '@/store/auth.store';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
+import { DASHBOARD_ROLES } from '@/lib/auth-utils';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
-
-// Only 'admin' (Operator) uses the dashboard store.
-// 'super_admin' (Director) is a portal user and goes to usePortalAuthStore.
-const DASHBOARD_ROLES = ['admin'];
 
 /**
  * Returns the auth store that currently holds a valid session.
