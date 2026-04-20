@@ -53,20 +53,15 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<'staff' | 'parent'>('staff');
   const [staffStep, setStaffStep] = useState<1 | 2>(1);
 
-  // Staff login mode: OTP (default) or password fallback
-  const [staffLoginMode, setStaffLoginMode] = useState<'otp' | 'password'>('otp');
-
   // Staff step-1 fields
   const [institutionCode, setInstitutionCode] = useState('');
-  const [staffPhone,      setStaffPhone]      = useState('');
   const [staffEmail,      setStaffEmail]      = useState('');
   const [staffPassword,   setStaffPassword]   = useState('');
 
-  // Staff step-2 OTP
-  const [otpDigits,      setOtpDigits]      = useState(['', '', '', '', '', '']);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null, null]);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [devOtpBanner,   setDevOtpBanner]   = useState<string | null>(null);
+  // Staff step-2 TOTP
+  const [totpToken,  setTotpToken]  = useState<string | null>(null);
+  const [totpDigits, setTotpDigits] = useState(['', '', '', '', '', '']);
+  const totpRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null, null]);
 
   // Parent fields
   const [parentPhone,    setParentPhone]    = useState('');
@@ -79,12 +74,15 @@ export default function LoginPage() {
   const [successInfo, setSuccessInfo] = useState<{ institution: string } | null>(null);
 
   // Forgot-password modal
-  const [showForgot,   setShowForgot]   = useState(false);
-  const [fpCode,       setFpCode]       = useState('');
-  const [fpIdentifier, setFpIdentifier] = useState('');
-  const [fpLoading,    setFpLoading]    = useState(false);
-  const [fpError,      setFpError]      = useState<string | null>(null);
-  const [fpSuccess,    setFpSuccess]    = useState<string | null>(null);
+  const [showForgot,     setShowForgot]     = useState(false);
+  const [fpStep,         setFpStep]         = useState<'form' | 'otp'>('form');
+  const [fpCode,         setFpCode]         = useState('');
+  const [fpEmail,        setFpEmail]        = useState('');
+  const [fpOtp,          setFpOtp]          = useState('');
+  const [fpNewPassword,  setFpNewPassword]  = useState('');
+  const [fpLoading,      setFpLoading]      = useState(false);
+  const [fpError,        setFpError]        = useState<string | null>(null);
+  const [fpSuccess,      setFpSuccess]      = useState<string | null>(null);
 
   // Intro animation
   useEffect(() => {
@@ -96,56 +94,37 @@ export default function LoginPage() {
     return () => { cancelAnimationFrame(r); [t1, t2, t3, t4].forEach(clearTimeout); };
   }, []);
 
-  // Resend countdown
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendCooldown]);
-
   const api = (path: string) =>
     `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}${path}`;
 
-  // ── Staff Step 1 — send OTP ──────────────────────────────────────────────
-  const handleSendOtp = async () => {
-    if (!institutionCode.trim()) return setError('School code is required');
-    if (!staffPhone.trim())      return setError('Phone number is required');
-    setLoading(true); setError(null);
-    try {
-      const res = await fetch(api('/auth/otp/request'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          institutionCode: institutionCode.trim().toLowerCase(),
-          phone: staffPhone.trim(),
-        }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.message || 'Failed to send OTP');
-      setStaffStep(2);
-      setResendCooldown(60);
-      // Non-production: backend returns devOtp so testers don't need SMS
-      if (data?.devOtp) {
-        const digits = String(data.devOtp).padStart(6, '0').slice(0, 6).split('');
-        setOtpDigits(digits);
-        setDevOtpBanner(`DEV MODE — OTP auto-filled: ${data.devOtp}`);
-        setTimeout(() => otpRefs.current[5]?.focus(), 120);
-      } else {
-        setOtpDigits(['', '', '', '', '', '']);
-        setDevOtpBanner(null);
-        setTimeout(() => otpRefs.current[0]?.focus(), 120);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
+  // ── Shared session handler ────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const applySession = async (data: any, fallbackCode: string) => {
+    const roles: string[] = data.user?.roles ?? [];
+    const authPayload = {
+      accessToken: data.accessToken as string,
+      user: {
+        email: (data.user.email ?? '') as string,
+        phone: data.user.phone as string | undefined,
+        institutionId: data.user.institutionId as string,
+        institutionName: data.user.institutionName as string | undefined,
+        roles,
+      },
+    };
+    const isDashboard = (DASHBOARD_ROLES as string[]).some((r) => roles.includes(r));
+    if (isDashboard) { setAuth(authPayload); } else { usePortalAuthStore.getState().setAuth(authPayload); }
+    setLoadStep(3);
+    const portalRoles = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
+    const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
+    setSuccessInfo({ institution: data.user.institutionName || fallbackCode });
+    await new Promise<void>((resolve) => setTimeout(resolve, 5500));
+    router.push(destination);
   };
 
-  // ── Staff password login (fallback when SMS not configured) ────────────────
-  const handlePasswordLogin = async () => {
+  // ── Staff login (step 1: email + password) ────────────────────────────────
+  const handleStaffLogin = async () => {
     if (!institutionCode.trim()) return setError('School code is required');
-    if (!staffEmail.trim())      return setError('Email or phone is required');
+    if (!staffEmail.trim())      return setError('Email is required');
     if (!staffPassword.trim())   return setError('Password is required');
     setLoading(true); setLoadStep(1); setError(null);
     try {
@@ -162,69 +141,45 @@ export default function LoginPage() {
       setLoadStep(2);
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || 'Login failed');
+
+      // TOTP required — move to step 2
+      if (data.requiresTOTP) {
+        setTotpToken(data.totpToken);
+        setStaffStep(2);
+        setLoading(false);
+        setLoadStep(0);
+        setTimeout(() => totpRefs.current[0]?.focus(), 120);
+        return;
+      }
+
       if (!data.accessToken) throw new Error('No token received');
-      const roles: string[] = data.user?.roles ?? [];
-      const authPayload = {
-        accessToken: data.accessToken,
-        user: { email: data.user.email, phone: data.user.phone,
-          institutionId: data.user.institutionId, institutionName: data.user.institutionName, roles },
-      };
-      const isDashboard = (DASHBOARD_ROLES as string[]).some((r) => roles.includes(r));
-      if (isDashboard) { setAuth(authPayload); } else { usePortalAuthStore.getState().setAuth(authPayload); }
-      setLoadStep(3);
-      const portalRoles = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
-      const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
-      setSuccessInfo({ institution: data.user.institutionName || institutionCode });
-      await new Promise<void>((resolve) => setTimeout(resolve, 5500));
-      router.push(destination);
+      await applySession(data, institutionCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       setLoadStep(0);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ── Staff Step 2 — verify OTP ────────────────────────────────────────────
-  const handleVerifyOtp = async () => {
-    const otp = otpDigits.join('');
-    if (otp.length < 6) return setError('Enter the complete 6-digit OTP');
+  // ── TOTP verification (step 2) ────────────────────────────────────────────
+  const handleTotpVerify = async () => {
+    const code = totpDigits.join('');
+    if (code.length < 6)  return setError('Enter the complete 6-digit code');
+    if (!totpToken)        return setError('Session expired — please sign in again');
     setLoading(true); setLoadStep(1); setError(null);
     try {
-      const res = await fetch(api('/auth/otp/verify'), {
+      const res = await fetch(api('/auth/totp/authenticate'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          institutionCode: institutionCode.trim().toLowerCase(),
-          phone: staffPhone.trim(),
-          otp,
-        }),
+        body: JSON.stringify({ totpToken, code }),
       });
       setLoadStep(2);
-      if (!res.ok) {
-        const j = await res.json().catch(() => null);
-        throw new Error(j?.message || 'Invalid OTP');
-      }
-      const data = await res.json();
-      if (!data.accessToken) throw new Error('No token received from server');
-      const roles: string[] = data.user.roles ?? [];
-      const authPayload = {
-        accessToken: data.accessToken,
-        user: {
-          email: data.user.email,
-          phone: data.user.phone,
-          institutionId: data.user.institutionId,
-          institutionName: data.user.institutionName,
-          roles,
-        },
-      };
-      const isDashboardUser = roles.some((r) => DASHBOARD_ROLES.includes(r));
-      if (isDashboardUser) { setAuth(authPayload); } else { usePortalAuthStore.getState().setAuth(authPayload); }
-      setLoadStep(3);
-      const portalRoles = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
-      const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
-      setSuccessInfo({ institution: data.user.institutionName || institutionCode });
-      await new Promise<void>((resolve) => setTimeout(resolve, 5500));
-      router.push(destination);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || 'Invalid code');
+      if (!data.accessToken) throw new Error('No token received');
+      await applySession(data, institutionCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
       setLoadStep(0);
@@ -233,7 +188,39 @@ export default function LoginPage() {
     }
   };
 
-  // ── Parent login ─────────────────────────────────────────────────────────
+  // ── TOTP input helpers ────────────────────────────────────────────────────
+  const handleTotpChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    const next  = [...totpDigits];
+    next[index] = digit;
+    setTotpDigits(next);
+    if (digit && index < 5) totpRefs.current[index + 1]?.focus();
+  };
+
+  const handleTotpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (totpDigits[index]) {
+        const next = [...totpDigits]; next[index] = ''; setTotpDigits(next);
+      } else if (index > 0) {
+        totpRefs.current[index - 1]?.focus();
+      }
+    } else if (e.key === 'Enter') {
+      handleTotpVerify();
+    }
+  };
+
+  const handleTotpPaste = (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (text.length > 0) {
+      const next = (text + '      ').slice(0, 6).split('').map((c) => (/\d/.test(c) ? c : ''));
+      setTotpDigits(next);
+      const focus = Math.min(text.length, 5);
+      totpRefs.current[focus]?.focus();
+    }
+    e.preventDefault();
+  };
+
+  // ── Parent login ──────────────────────────────────────────────────────────
   const handleParentLogin = async () => {
     if (!parentPhone.trim())    return setError('Phone number is required');
     if (!parentPassword.trim()) return setError('Password is required');
@@ -246,13 +233,9 @@ export default function LoginPage() {
         body: JSON.stringify({ phone: parentPhone.trim(), password: parentPassword }),
       });
       setLoadStep(2);
-      if (!res.ok) {
-        const j = await res.json().catch(() => null);
-        throw new Error(j?.message || 'Login failed');
-      }
-      const data = await res.json();
-      if (!data.accessToken) throw new Error('No token received from server');
-      const roles: string[] = data.user.roles ?? [];
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || 'Login failed');
+      if (!data.accessToken) throw new Error('No token received');
       usePortalAuthStore.getState().setAuth({
         accessToken: data.accessToken,
         user: {
@@ -260,7 +243,7 @@ export default function LoginPage() {
           phone: data.user.phone,
           institutionId: data.user.institutionId,
           institutionName: data.user.institutionName,
-          roles,
+          roles: data.user.roles ?? [],
         },
       });
       setLoadStep(3);
@@ -275,68 +258,72 @@ export default function LoginPage() {
     }
   };
 
-  // ── OTP input helpers ────────────────────────────────────────────────────
-  const handleOtpChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    const next  = [...otpDigits];
-    next[index] = digit;
-    setOtpDigits(next);
-    if (digit && index < 5) otpRefs.current[index + 1]?.focus();
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-      if (otpDigits[index]) {
-        const next = [...otpDigits]; next[index] = ''; setOtpDigits(next);
-      } else if (index > 0) {
-        otpRefs.current[index - 1]?.focus();
-      }
-    } else if (e.key === 'Enter') {
-      handleVerifyOtp();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (text.length > 0) {
-      const next = (text + '      ').slice(0, 6).split('').map((c) => (/\d/.test(c) ? c : ''));
-      setOtpDigits(next);
-      const focus = Math.min(text.length, 5);
-      otpRefs.current[focus]?.focus();
-    }
-    e.preventDefault();
-  };
-
-  // ── Misc ─────────────────────────────────────────────────────────────────
+  // ── Misc ──────────────────────────────────────────────────────────────────
   const switchTab = (tab: 'staff' | 'parent') => {
     setActiveTab(tab);
     setStaffStep(1);
-    setStaffLoginMode('otp');
+    setTotpToken(null);
+    setTotpDigits(['', '', '', '', '', '']);
     setError(null);
-    setOtpDigits(['', '', '', '', '', '']);
-    setDevOtpBanner(null);
   };
 
   const openForgot = () => {
-    setFpCode(institutionCode); setFpIdentifier('');
-    setFpError(null); setFpSuccess(null); setShowForgot(true);
+    setFpCode(institutionCode);
+    setFpEmail('');
+    setFpOtp('');
+    setFpNewPassword('');
+    setFpStep('form');
+    setFpError(null);
+    setFpSuccess(null);
+    setShowForgot(true);
   };
 
-  const handleForgotSubmit = async () => {
-    if (!fpCode.trim())       return setFpError('School code is required');
-    if (!fpIdentifier.trim()) return setFpError('Phone number or email is required');
+  // ── Forgot password: send OTP ─────────────────────────────────────────────
+  const handleForgotSendOtp = async () => {
+    if (!fpCode.trim())  return setFpError('School code is required');
+    if (!fpEmail.trim()) return setFpError('Email is required');
     setFpLoading(true); setFpError(null);
     try {
       const res = await fetch(api('/auth/forgot-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ institutionCode: fpCode.trim().toLowerCase(), identifier: fpIdentifier.trim() }),
+        body: JSON.stringify({
+          institutionCode: fpCode.trim().toLowerCase(),
+          email: fpEmail.trim(),
+        }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || 'Request failed');
-      setFpSuccess(data.message);
+      setFpStep('otp');
     } catch (err) {
       setFpError(err instanceof Error ? err.message : 'Request failed');
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  // ── Forgot password: verify OTP + set new password ────────────────────────
+  const handleForgotReset = async () => {
+    if (!fpOtp.trim())         return setFpError('Verification code is required');
+    if (!fpNewPassword.trim()) return setFpError('New password is required');
+    if (fpNewPassword.length < 8) return setFpError('Password must be at least 8 characters');
+    setFpLoading(true); setFpError(null);
+    try {
+      const res = await fetch(api('/auth/reset-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          institutionCode: fpCode.trim().toLowerCase(),
+          email: fpEmail.trim(),
+          otp: fpOtp.trim(),
+          newPassword: fpNewPassword,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || 'Reset failed');
+      setFpSuccess('Password updated. You can now sign in with your new password.');
+    } catch (err) {
+      setFpError(err instanceof Error ? err.message : 'Reset failed');
     } finally {
       setFpLoading(false);
     }
@@ -346,16 +333,16 @@ export default function LoginPage() {
   const showOverlay    = phase !== 'done';
   const showCard       = phase === 'reveal' || phase === 'done';
 
-  // ── Card heading/subtext based on state ──────────────────────────────────
+  // ── Card heading / subtext ────────────────────────────────────────────────
   const cardHeading = activeTab === 'parent'
     ? 'Parent Login'
-    : staffStep === 2 ? 'Enter OTP' : 'Staff Login';
+    : staffStep === 2 ? 'Two-Factor Auth' : 'Staff Login';
 
   const cardSub = activeTab === 'parent'
     ? 'Enter your phone number and password'
     : staffStep === 2
-      ? `6-digit code sent to ${staffPhone}`
-      : 'Enter your school code and phone number';
+      ? 'Enter the 6-digit code from your authenticator app'
+      : 'Enter your school code and credentials';
 
   return (
     <div style={{ minHeight:'100vh', background:'#060402', position:'relative', overflow:'hidden',
@@ -409,7 +396,7 @@ export default function LoginPage() {
           35%            { transform: translateY(-7px); opacity: 1; }
         }
         @keyframes successBarFill  { from { width: 0%; } to { width: 100%; } }
-        @keyframes otpReveal       { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes totpReveal      { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .login-btn {
           transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
@@ -669,7 +656,7 @@ export default function LoginPage() {
               ════════════════════════════════════════ */}
               {activeTab === 'staff' && (
                 <>
-                  {/* Step 1: school code + phone */}
+                  {/* Step 1: school code + email + password */}
                   {staffStep === 1 && (
                     <div style={{ display:'flex', flexDirection:'column', gap:15 }}>
                       <div>
@@ -686,121 +673,92 @@ export default function LoginPage() {
                           </div>
                           <input className="ldf" type="text" placeholder="Your school code"
                             value={institutionCode} onChange={(e) => setInstitutionCode(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && (staffLoginMode === 'otp' ? handleSendOtp() : handlePasswordLogin())}
+                            onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
                             disabled={loading} autoCapitalize="none" autoCorrect="off" />
                         </div>
                       </div>
 
-                      {staffLoginMode === 'otp' ? (
-                        <div>
-                          <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                            color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                            Phone Number
-                          </label>
-                          <div style={{ position:'relative' }}>
-                            <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                              alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.13 1 .38 1.97.74 2.91a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 5.16 5.16l.96-.96a2 2 0 0 1 2.11-.45c.94.36 1.92.61 2.91.74A2 2 0 0 1 22 16.92z"/>
-                              </svg>
-                            </div>
-                            <input className="ldf" type="tel" placeholder="Registered phone number"
-                              value={staffPhone} onChange={(e) => setStaffPhone(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
-                              disabled={loading} />
+                      <div>
+                        <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
+                          color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                          Email Address
+                        </label>
+                        <div style={{ position:'relative' }}>
+                          <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
+                            alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                            </svg>
                           </div>
+                          <input className="ldf" type="email" placeholder="Your email address"
+                            value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
+                            disabled={loading} autoCapitalize="none" autoCorrect="off" />
                         </div>
-                      ) : (
-                        <>
-                          <div>
-                            <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                              color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                              Email / Phone
-                            </label>
-                            <div style={{ position:'relative' }}>
-                              <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                                alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-                                </svg>
-                              </div>
-                              <input className="ldf" type="text" placeholder="Email address or phone"
-                                value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handlePasswordLogin()}
-                                disabled={loading} autoCapitalize="none" autoCorrect="off" />
-                            </div>
-                          </div>
-                          <div>
-                            <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                              color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                              Password
-                            </label>
-                            <div style={{ position:'relative' }}>
-                              <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                                alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                                </svg>
-                              </div>
-                              <input className="ldf" type="password" placeholder="Your password"
-                                value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handlePasswordLogin()}
-                                disabled={loading} />
-                            </div>
-                          </div>
-                        </>
-                      )}
+                      </div>
 
-                      {/* Mode toggle */}
-                      <div style={{ textAlign:'center', marginTop:4 }}>
-                        <button type="button"
-                          onClick={() => { setStaffLoginMode(staffLoginMode === 'otp' ? 'password' : 'otp'); setError(null); }}
-                          disabled={loading}
-                          style={{ fontSize:12, color:'rgba(220,146,75,0.5)', background:'none', border:'none',
-                            cursor:'pointer', padding:0 }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color='#f7c576')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.5)')}>
-                          {staffLoginMode === 'otp' ? 'Sign in with password instead' : 'Use OTP instead'}
-                        </button>
+                      <div>
+                        <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
+                          color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                          Password
+                        </label>
+                        <div style={{ position:'relative' }}>
+                          <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
+                            alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                          </div>
+                          <input className="ldf" type="password" placeholder="Your password"
+                            value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
+                            disabled={loading} />
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Step 2: OTP input */}
+                  {/* Step 2: TOTP code */}
                   {staffStep === 2 && (
-                    <div style={{ animation:'otpReveal 0.35s ease forwards' }}>
-                      {/* Dev mode banner */}
-                      {devOtpBanner && (
-                        <div style={{
-                          marginBottom:12, padding:'8px 12px', borderRadius:8, fontSize:12,
-                          background:'rgba(234,179,8,0.12)', border:'1px solid rgba(234,179,8,0.35)',
-                          color:'#fbbf24', textAlign:'center', letterSpacing:'0.02em',
-                        }}>
-                          {devOtpBanner}
-                        </div>
-                      )}
-                      {/* OTP cells */}
+                    <div style={{ animation:'totpReveal 0.35s ease forwards' }}>
+                      {/* Authenticator hint */}
+                      <div style={{
+                        marginBottom:16, padding:'10px 14px', borderRadius:9, fontSize:12.5,
+                        background:'rgba(220,146,75,0.07)', border:'1px solid rgba(220,146,75,0.18)',
+                        color:'rgba(220,146,75,0.7)', display:'flex', alignItems:'center', gap:8,
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}>
+                          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+                        </svg>
+                        Open your authenticator app and enter the current code
+                      </div>
+
+                      {/* TOTP 6-cell input */}
                       <div style={{ display:'flex', gap:8, justifyContent:'center', marginBottom:6 }}
-                        onPaste={handleOtpPaste}>
-                        {otpDigits.map((digit, i) => (
+                        onPaste={handleTotpPaste}>
+                        {totpDigits.map((digit, i) => (
                           <input
                             key={i}
-                            ref={(el) => { otpRefs.current[i] = el; }}
+                            ref={(el) => { totpRefs.current[i] = el; }}
                             className={`otp-cell${digit ? ' filled' : ''}`}
                             type="text" inputMode="numeric" pattern="[0-9]*"
                             maxLength={1} value={digit} placeholder="·"
-                            onChange={(e) => handleOtpChange(i, e.target.value)}
-                            onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                            onChange={(e) => handleTotpChange(i, e.target.value)}
+                            onKeyDown={(e) => handleTotpKeyDown(i, e)}
                             disabled={loading}
                           />
                         ))}
                       </div>
 
-                      {/* Resend row */}
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-                        marginTop:14, marginBottom:2 }}>
+                      {/* Back link */}
+                      <div style={{ marginTop:14 }}>
                         <button type="button"
-                          onClick={() => { setStaffStep(1); setError(null); setOtpDigits(['','','','','','']); }}
+                          onClick={() => {
+                            setStaffStep(1);
+                            setTotpToken(null);
+                            setTotpDigits(['','','','','','']);
+                            setError(null);
+                          }}
                           style={{ fontSize:12, color:'rgba(174,112,64,0.5)', background:'none', border:'none',
                             cursor:'pointer', padding:0, display:'flex', alignItems:'center', gap:4 }}
                           onMouseEnter={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.8)')}
@@ -808,22 +766,8 @@ export default function LoginPage() {
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="15 18 9 12 15 6"/>
                           </svg>
-                          Change phone
+                          Back to login
                         </button>
-
-                        {resendCooldown > 0 ? (
-                          <span style={{ fontSize:12, color:'rgba(174,112,64,0.4)' }}>
-                            Resend in {resendCooldown}s
-                          </span>
-                        ) : (
-                          <button type="button" onClick={handleSendOtp} disabled={loading}
-                            style={{ fontSize:12, color:'rgba(220,146,75,0.65)', background:'none', border:'none',
-                              cursor:'pointer', padding:0 }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color='#f7c576')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.65)')}>
-                            Resend OTP
-                          </button>
-                        )}
                       </div>
                     </div>
                   )}
@@ -838,34 +782,7 @@ export default function LoginPage() {
 
                   {/* Action button */}
                   {staffStep === 1 ? (
-                    <button
-                      onClick={staffLoginMode === 'otp' ? handleSendOtp : handlePasswordLogin}
-                      disabled={loading} className="login-btn"
-                      style={{
-                        marginTop:18, width:'100%', padding:'12px',
-                        fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
-                        background: loading ? 'rgba(174,85,37,0.55)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
-                        color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)',
-                        boxShadow: loading ? 'none' : '0 2px 16px rgba(174,85,37,0.38)',
-                      }}>
-                      {loading ? (
-                        <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                          <svg style={{ width:16, height:16, animation:'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
-                          </svg>
-                          {staffLoginMode === 'otp' ? 'Sending OTP…' : 'Signing in…'}
-                        </span>
-                      ) : (
-                        <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                          {staffLoginMode === 'otp' ? 'Send OTP' : 'Sign In'}
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                          </svg>
-                        </span>
-                      )}
-                    </button>
-                  ) : (
-                    <button onClick={handleVerifyOtp} disabled={loading} className="login-btn"
+                    <button onClick={handleStaffLogin} disabled={loading} className="login-btn"
                       style={{
                         marginTop:18, width:'100%', padding:'12px',
                         fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
@@ -879,7 +796,43 @@ export default function LoginPage() {
                             <svg style={{ width:16, height:16, animation:'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
                               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
                             </svg>
-                            {loadStep === 1 && 'Verifying OTP…'}
+                            {loadStep === 1 && 'Verifying credentials…'}
+                            {loadStep === 2 && 'Authenticating…'}
+                            {loadStep === 3 && 'Logging you in…'}
+                          </span>
+                          <span style={{ display:'flex', gap:4 }}>
+                            {[1,2,3].map((s) => (
+                              <span key={s} style={{ display:'inline-block', borderRadius:999, transition:'all 0.3s',
+                                width: loadStep >= s ? 20 : 6, height:4,
+                                background: loadStep >= s ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)' }} />
+                            ))}
+                          </span>
+                        </span>
+                      ) : (
+                        <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                          Sign In
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                          </svg>
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <button onClick={handleTotpVerify} disabled={loading} className="login-btn"
+                      style={{
+                        marginTop:18, width:'100%', padding:'12px',
+                        fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
+                        background: loading ? 'rgba(174,85,37,0.55)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
+                        color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)',
+                        boxShadow: loading ? 'none' : '0 2px 16px rgba(174,85,37,0.38)',
+                      }}>
+                      {loading ? (
+                        <span style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                          <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <svg style={{ width:16, height:16, animation:'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
+                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
+                            </svg>
+                            {loadStep === 1 && 'Verifying code…'}
                             {loadStep === 2 && 'Authenticating…'}
                             {loadStep === 3 && 'Logging you in…'}
                           </span>
@@ -910,7 +863,7 @@ export default function LoginPage() {
                           background:'none', border:'none', cursor:'pointer', padding:0 }}
                         onMouseEnter={(e) => (e.currentTarget.style.color='#f7c576')}
                         onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.5)')}>
-                        Forgot password? Submit a reset request
+                        Forgot password?
                       </button>
                     </div>
                   )}
@@ -1030,7 +983,7 @@ export default function LoginPage() {
         }}
           onClick={(e) => e.target === e.currentTarget && setShowForgot(false)}>
           <div style={{
-            width:'100%', maxWidth:360, borderRadius:18, overflow:'hidden',
+            width:'100%', maxWidth:380, borderRadius:18, overflow:'hidden',
             background:'linear-gradient(160deg, rgba(28,14,6,0.98) 0%, rgba(18,9,3,0.99) 100%)',
             border:'1px solid rgba(220,146,75,0.18)',
             boxShadow:'0 32px 80px rgba(0,0,0,0.75)',
@@ -1041,11 +994,17 @@ export default function LoginPage() {
               borderBottom:'1px solid rgba(220,146,75,0.1)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ width:36, height:36, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center',
-                  background:'rgba(220,146,75,0.15)', border:'1px solid rgba(220,146,75,0.25)', fontSize:16 }}>🔐</div>
+                  background:'rgba(220,146,75,0.15)', border:'1px solid rgba(220,146,75,0.25)', fontSize:16 }}>🔑</div>
                 <div>
-                  <h2 style={{ margin:0, color:'#f5ede0', fontSize:14, fontWeight:600 }}>Reset Password</h2>
+                  <h2 style={{ margin:0, color:'#f5ede0', fontSize:14, fontWeight:600 }}>
+                    {fpSuccess ? 'Password Reset' : fpStep === 'otp' ? 'Enter Reset Code' : 'Reset Password'}
+                  </h2>
                   <p style={{ margin:'3px 0 0', color:'rgba(174,112,64,0.5)', fontSize:12 }}>
-                    School operator will set a new password
+                    {fpSuccess
+                      ? 'Your password has been updated'
+                      : fpStep === 'otp'
+                        ? `Code sent to ${fpEmail}`
+                        : 'A reset code will be sent to your email'}
                   </p>
                 </div>
               </div>
@@ -1063,7 +1022,8 @@ export default function LoginPage() {
                     border:'1px solid rgba(140,57,25,0.35)', boxShadow:'0 2px 8px rgba(174,85,37,0.3)',
                   }}>Back to Login</button>
                 </div>
-              ) : (
+              ) : fpStep === 'form' ? (
+                /* ── Step 1: enter school code + email ── */
                 <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
                   <div>
                     <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
@@ -1072,15 +1032,18 @@ export default function LoginPage() {
                     </label>
                     <input className="ldf-plain" type="text" placeholder="Your school code"
                       value={fpCode} onChange={(e) => setFpCode(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleForgotSendOtp()}
                       autoCapitalize="none" autoCorrect="off" />
                   </div>
                   <div>
                     <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
                       color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                      Phone or Email
+                      Email Address
                     </label>
-                    <input className="ldf-plain" type="text" placeholder="Your registered phone or email"
-                      value={fpIdentifier} onChange={(e) => setFpIdentifier(e.target.value)} />
+                    <input className="ldf-plain" type="email" placeholder="Your registered email"
+                      value={fpEmail} onChange={(e) => setFpEmail(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleForgotSendOtp()}
+                      autoCapitalize="none" autoCorrect="off" />
                   </div>
                   {fpError && (
                     <div style={{ padding:'9px 12px', borderRadius:8, fontSize:12.5,
@@ -1098,13 +1061,70 @@ export default function LoginPage() {
                       onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.05)')}>
                       Cancel
                     </button>
-                    <button onClick={handleForgotSubmit} disabled={fpLoading} style={{
+                    <button onClick={handleForgotSendOtp} disabled={fpLoading} style={{
                       flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:600, cursor:'pointer',
                       background:'linear-gradient(135deg,#ae5525,#8c3919)', color:'#fcfbf7',
                       border:'1px solid rgba(140,57,25,0.35)', boxShadow:'0 2px 8px rgba(174,85,37,0.25)',
                       opacity: fpLoading ? 0.55 : 1,
                     }}>
-                      {fpLoading ? 'Submitting…' : 'Submit Request'}
+                      {fpLoading ? 'Sending…' : 'Send Code'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Step 2: enter OTP + new password ── */
+                <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
+                  <div>
+                    <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
+                      color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      Verification Code
+                    </label>
+                    <input className="ldf-plain" type="text" placeholder="6-digit code from email"
+                      value={fpOtp} onChange={(e) => setFpOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onKeyDown={(e) => e.key === 'Enter' && handleForgotReset()}
+                      inputMode="numeric" autoComplete="one-time-code" />
+                  </div>
+                  <div>
+                    <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
+                      color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      New Password
+                    </label>
+                    <input className="ldf-plain" type="password" placeholder="At least 8 characters"
+                      value={fpNewPassword} onChange={(e) => setFpNewPassword(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleForgotReset()} />
+                  </div>
+                  {fpError && (
+                    <div style={{ padding:'9px 12px', borderRadius:8, fontSize:12.5,
+                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)', color:'#ff9090' }}>
+                      {fpError}
+                    </div>
+                  )}
+                  <div style={{ display:'flex', gap:8, paddingTop:4 }}>
+                    <button onClick={() => { setFpStep('form'); setFpError(null); }} style={{
+                      flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:500, cursor:'pointer',
+                      background:'rgba(255,255,255,0.05)', color:'rgba(240,230,211,0.7)',
+                      border:'1px solid rgba(220,146,75,0.18)', transition:'all 0.18s',
+                    }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.09)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.05)')}>
+                      Back
+                    </button>
+                    <button onClick={handleForgotReset} disabled={fpLoading} style={{
+                      flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:600, cursor:'pointer',
+                      background:'linear-gradient(135deg,#ae5525,#8c3919)', color:'#fcfbf7',
+                      border:'1px solid rgba(140,57,25,0.35)', boxShadow:'0 2px 8px rgba(174,85,37,0.25)',
+                      opacity: fpLoading ? 0.55 : 1,
+                    }}>
+                      {fpLoading ? 'Resetting…' : 'Reset Password'}
+                    </button>
+                  </div>
+                  <div style={{ textAlign:'center' }}>
+                    <button type="button" onClick={handleForgotSendOtp} disabled={fpLoading}
+                      style={{ fontSize:12, color:'rgba(220,146,75,0.45)', background:'none', border:'none',
+                        cursor:'pointer', padding:0 }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.8)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.45)')}>
+                      Resend code
                     </button>
                   </div>
                 </div>

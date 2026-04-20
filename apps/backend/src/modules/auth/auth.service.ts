@@ -8,21 +8,70 @@ import {
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
+import * as qrcode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
-import { SmsService } from './sms.service';
+import { EmailService } from './email.service';
 
 type RoleWithPermissions = {
-  role: {
-    code: string;
-    permissions: unknown;
-  };
+  role: { code: string; permissions: unknown };
 };
 
-// Maximum failed OTP verification attempts before the record is invalidated.
-const OTP_MAX_ATTEMPTS = 5;
-// OTP lifetime in milliseconds.
-const OTP_TTL_MS = 10 * 60 * 1000;
+// ── Inline TOTP (RFC 6238 + RFC 4226) — zero extra dependency ─────────────────
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function base32Decode(str: string): Buffer {
+  const input = str.replace(/=/g, '').toUpperCase();
+  const bytes: number[] = [];
+  let bits = 0,
+    value = 0;
+  for (const ch of input) {
+    const idx = BASE32_ALPHABET.indexOf(ch);
+    if (idx < 0) continue;
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push((value >>> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+function totpGenerate(secret: string, step: number): string {
+  const key = base32Decode(secret);
+  const counter = Buffer.alloc(8);
+  counter.writeBigInt64BE(BigInt(step));
+  const hmac = crypto.createHmac('sha1', key).update(counter).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code =
+    ((hmac[offset] & 0x7f) << 24) |
+    (hmac[offset + 1] << 16) |
+    (hmac[offset + 2] << 8) |
+    hmac[offset + 3];
+  return String(code % 1_000_000).padStart(6, '0');
+}
+
+function totpVerify(token: string, secret: string | null, window = 1): boolean {
+  if (!secret) return false;
+  const step = Math.floor(Date.now() / 1000 / 30);
+  for (let i = -window; i <= window; i++) {
+    if (totpGenerate(secret, step + i) === token) return true;
+  }
+  return false;
+}
+
+function totpGenerateSecret(bytes = 20): string {
+  const buf = crypto.randomBytes(bytes);
+  return Array.from(buf, (b) => BASE32_ALPHABET[b % 32]).join('');
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Password reset OTP lifetime: 10 minutes
+const RESET_OTP_TTL_MS = 10 * 60 * 1000;
+
+// How many TOTP backup codes to generate at setup
+const BACKUP_CODE_COUNT = 8;
 
 @Injectable()
 export class AuthService {
@@ -32,107 +81,303 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-    private readonly smsService: SmsService,
+    private readonly emailService: EmailService,
   ) {}
+
+  // ── Institution helpers ────────────────────────────────────────────────────
 
   async resolveInstitution(
     code: string,
   ): Promise<{ id: string; name: string }> {
-    const normalizedCode = code.toLowerCase().trim();
-
+    const normalized = code.toLowerCase().trim();
     const institution = await this.prisma.institution.findUnique({
-      where: { code: normalizedCode },
+      where: { code: normalized },
       select: { id: true, name: true, status: true, deletedAt: true },
     });
-
     if (!institution || institution.deletedAt) {
       throw new NotFoundException(
-        `No institution found with code "${normalizedCode}"`,
+        `No institution found with code "${normalized}"`,
       );
     }
-
     if (institution.status !== 'active') {
       throw new UnauthorizedException('This institution account is inactive');
     }
-
     return { id: institution.id, name: institution.name };
   }
 
-  /** @deprecated use resolveInstitution */
-  async resolveInstitutionCode(code: string): Promise<string> {
-    return (await this.resolveInstitution(code)).id;
-  }
+  // ── Email + Password login (staff / operators) ─────────────────────────────
 
+  /**
+   * Validates email+password. If TOTP is enabled on the account, returns a
+   * short-lived `totpToken` (5 min) instead of the full JWT so the client can
+   * complete the TOTP challenge before a full session is issued.
+   */
   async login(institutionCode: string, email: string, password: string) {
     const { id: institutionId, name: institutionName } =
       await this.resolveInstitution(institutionCode);
 
-    const user = await this.usersService.findByEmailOrPhone(
-      institutionId,
-      email,
-    );
+    const user = await this.prisma.user.findFirst({
+      where: {
+        institutionId,
+        deletedAt: null,
+        isActive: true,
+        OR: [
+          { email: { equals: email.trim(), mode: 'insensitive' } },
+          { phone: email.trim() },
+        ],
+      },
+      include: { roles: { include: { role: true } } },
+    });
 
-    if (!user || !user.passwordHash || !user.isActive || user.deletedAt) {
-      throw new UnauthorizedException('Invalid credentials');
+    // Generic error — never reveal whether email or password was wrong
+    const INVALID = new UnauthorizedException('Invalid credentials');
+
+    if (!user || !user.passwordHash) {
+      // Simulate bcrypt timing to prevent user enumeration
+      await bcrypt.compare(
+        password,
+        '$2b$12$invalidhashpaddinginvalid000000000000000000000000000000',
+      );
+      throw INVALID;
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    if (!isPasswordValid) throw INVALID;
 
     const roles = this.extractRoles(user.roles);
     const permissions = this.extractPermissions(user.roles);
 
-    const payload = {
-      sub: user.id,
-      userId: user.id,
-      institutionId: user.institutionId,
+    // TOTP challenge: issue a short-lived pending token — no full session yet
+    if (user.totpEnabled) {
+      const totpToken = await this.jwtService.signAsync(
+        { sub: user.id, institutionId, purpose: 'totp_pending' },
+        { expiresIn: '5m' },
+      );
+      this.logger.log(
+        `[login] TOTP required — userId=${user.id} institution=${institutionId}`,
+      );
+      return { requiresTOTP: true as const, totpToken, institutionName };
+    }
+
+    return this.issueFullSession(
+      user,
+      institutionId,
+      institutionName,
       roles,
       permissions,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload);
-
-    const refreshToken = await this.generateRefreshToken(
-      user.id,
-      user.institutionId,
     );
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        phone: user.phone,
-        institutionId: user.institutionId,
-        institutionName,
-        roles,
-        permissions,
-      },
-    };
   }
 
-  /** @deprecated use refreshByToken — institutionId no longer required */
-  async refresh(institutionId: string, refreshToken: string) {
-    return this.refreshByToken(refreshToken, institutionId);
+  // ── TOTP authentication (second factor) ────────────────────────────────────
+
+  /**
+   * Completes login when TOTP is enabled. Accepts the `totpToken` issued by
+   * `login()` plus the 6-digit TOTP code (or a one-time backup code).
+   */
+  async authenticateTotp(totpToken: string, code: string) {
+    // Verify the pending token
+    let pending: { sub: string; institutionId: string; purpose: string };
+    try {
+      pending = await this.jwtService.verifyAsync<typeof pending>(totpToken);
+    } catch {
+      throw new UnauthorizedException('Session expired. Please sign in again.');
+    }
+    if (pending.purpose !== 'totp_pending') {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: pending.sub, isActive: true, deletedAt: null },
+      include: { roles: { include: { role: true } } },
+    });
+
+    if (!user?.totpEnabled || !user.totpSecret) {
+      throw new UnauthorizedException('TOTP not configured');
+    }
+
+    const trimmedCode = code.replace(/\s/g, '');
+    const isValidTotp = totpVerify(trimmedCode, user.totpSecret);
+
+    if (!isValidTotp) {
+      // Try backup codes
+      const codeHash = crypto
+        .createHash('sha256')
+        .update(trimmedCode)
+        .digest('hex');
+      const backupIndex = user.totpBackupCodes.indexOf(codeHash);
+
+      if (backupIndex === -1) {
+        this.logger.warn(`[authenticateTotp] Invalid code — userId=${user.id}`);
+        throw new UnauthorizedException('Invalid authentication code');
+      }
+
+      // Consume backup code — remove it so it cannot be reused
+      const remaining = [...user.totpBackupCodes];
+      remaining.splice(backupIndex, 1);
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { totpBackupCodes: remaining },
+      });
+      this.logger.warn(
+        `[authenticateTotp] Backup code used — userId=${user.id} remaining=${remaining.length}`,
+      );
+    }
+
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: user.institutionId },
+      select: { name: true },
+    });
+
+    const roles = this.extractRoles(user.roles);
+    const permissions = this.extractPermissions(user.roles);
+    this.logger.log(
+      `[authenticateTotp] Login success — userId=${user.id} institution=${user.institutionId}`,
+    );
+    return this.issueFullSession(
+      user,
+      user.institutionId,
+      institution?.name ?? '',
+      roles,
+      permissions,
+    );
+  }
+
+  // ── TOTP setup ─────────────────────────────────────────────────────────────
+
+  /**
+   * Generates a new TOTP secret for the user and returns the QR code data URI
+   * and the raw secret (for manual entry). Does NOT enable TOTP yet — the user
+   * must call confirmTotp() first to prove their authenticator is working.
+   */
+  async setupTotp(
+    userId: string,
+  ): Promise<{ qrCodeDataUrl: string; secret: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, phone: true, totpEnabled: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.totpEnabled)
+      throw new BadRequestException('TOTP is already enabled');
+
+    const secret = totpGenerateSecret(32);
+    const label = encodeURIComponent(user.email ?? user.phone ?? userId);
+    const issuer = encodeURIComponent('Infovion');
+    const uri = `otpauth://totp/${issuer}:${label}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
+    const qrCodeDataUrl = await qrcode.toDataURL(uri);
+
+    // Store secret in DB (not yet enabled — user must confirm first)
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { totpSecret: secret, totpEnabled: false },
+    });
+
+    return { qrCodeDataUrl, secret };
   }
 
   /**
-   * Refresh by token hash alone — the token uniquely identifies the session,
-   * so the caller does not need to know the institutionId up-front. This
-   * enables the httpOnly-cookie flow where the browser cannot read the cookie.
-   *
-   * @param token   Raw refresh token (from cookie or body)
-   * @param institutionId  Optional — if provided, added as extra safety check
+   * Verifies the first code from the user's authenticator app, then enables
+   * TOTP and returns one-time backup codes (shown once, never retrievable again).
    */
+  async confirmTotp(
+    userId: string,
+    code: string,
+  ): Promise<{ backupCodes: string[] }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, totpSecret: true, totpEnabled: true },
+    });
+    if (!user?.totpSecret)
+      throw new BadRequestException('Run TOTP setup first');
+    if (user.totpEnabled)
+      throw new BadRequestException('TOTP is already active');
+
+    const isValid = totpVerify(code.replace(/\s/g, ''), user.totpSecret);
+    if (!isValid)
+      throw new UnauthorizedException(
+        'Invalid code — check your authenticator app',
+      );
+
+    // Generate backup codes: 8 × "XXXX-XXXX" format
+    const rawCodes: string[] = Array.from({ length: BACKUP_CODE_COUNT }, () => {
+      const bytes = crypto.randomBytes(5);
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const part = (start: number) =>
+        Array.from(
+          { length: 4 },
+          (_, i) => chars[bytes[start + i] % chars.length],
+        ).join('');
+      return `${part(0)}-${part(1)}`;
+    });
+    const hashedCodes = rawCodes.map((c) =>
+      crypto.createHash('sha256').update(c.replace('-', '')).digest('hex'),
+    );
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { totpEnabled: true, totpBackupCodes: hashedCodes },
+    });
+
+    this.logger.log(`[confirmTotp] TOTP enabled — userId=${userId}`);
+    return { backupCodes: rawCodes };
+  }
+
+  /**
+   * Disables TOTP after verifying the current TOTP code (or a backup code).
+   * Clears secret and all backup codes.
+   */
+  async disableTotp(userId: string, code: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        totpSecret: true,
+        totpEnabled: true,
+        totpBackupCodes: true,
+      },
+    });
+    if (!user?.totpEnabled || !user.totpSecret) {
+      throw new BadRequestException('TOTP is not enabled');
+    }
+
+    const trimmed = code.replace(/\s/g, '');
+    const isValidTotp = totpVerify(trimmed, user.totpSecret);
+
+    if (!isValidTotp) {
+      const codeHash = crypto
+        .createHash('sha256')
+        .update(trimmed)
+        .digest('hex');
+      if (!user.totpBackupCodes.includes(codeHash)) {
+        throw new UnauthorizedException('Invalid code');
+      }
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { totpSecret: null, totpEnabled: false, totpBackupCodes: [] },
+    });
+    this.logger.log(`[disableTotp] TOTP disabled — userId=${userId}`);
+  }
+
+  // ── TOTP status ─────────────────────────────────────────────────────────────
+
+  async getTotpStatus(
+    userId: string,
+  ): Promise<{ enabled: boolean; backupCodesRemaining: number }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { totpEnabled: true, totpBackupCodes: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return {
+      enabled: user.totpEnabled,
+      backupCodesRemaining: user.totpBackupCodes.length,
+    };
+  }
+
+  // ── Token refresh ───────────────────────────────────────────────────────────
+
   async refreshByToken(token: string, institutionId?: string) {
     const tokenHash = this.hashToken(token);
 
@@ -156,13 +401,7 @@ export class AuthService {
           deletedAt: null,
           isActive: true,
         },
-        include: {
-          roles: {
-            include: {
-              role: true,
-            },
-          },
-        },
+        include: { roles: { include: { role: true } } },
       }),
       this.prisma.institution.findUnique({
         where: { id: storedToken.institutionId },
@@ -170,32 +409,23 @@ export class AuthService {
       }),
     ]);
 
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
+    if (!user) throw new UnauthorizedException('User not found');
 
     const roles = this.extractRoles(user.roles);
     const permissions = this.extractPermissions(user.roles);
-
-    const payload = {
+    const newAccessToken = await this.jwtService.signAsync({
       sub: user.id,
       userId: user.id,
       institutionId: user.institutionId,
       roles,
       permissions,
-    };
+    });
 
-    // Sign new access token before the transaction so we don't hold a DB
-    // transaction open during the async JWT operation.
-    const newAccessToken = await this.jwtService.signAsync(payload);
-
-    // Generate raw refresh token and its hash before the transaction
     const rawToken = crypto.randomBytes(64).toString('hex');
     const newTokenHash = this.hashToken(rawToken);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // Revoke old token and create new one atomically — no window where both are valid
     await this.prisma.$transaction(async (tx) => {
       await tx.refreshToken.update({
         where: { id: storedToken.id },
@@ -226,78 +456,269 @@ export class AuthService {
     };
   }
 
+  // ── Logout ──────────────────────────────────────────────────────────────────
+
   async logout(userId: string, institutionId: string) {
     await this.prisma.refreshToken.updateMany({
-      where: {
-        userId,
-        institutionId,
-        isRevoked: false,
-      },
-      data: {
-        isRevoked: true,
-      },
+      where: { userId, institutionId, isRevoked: false },
+      data: { isRevoked: true },
     });
-
     return { message: 'Logged out successfully' };
   }
 
-  private async generateRefreshToken(userId: string, institutionId: string) {
-    const rawToken = crypto.randomBytes(64).toString('hex');
-    const tokenHash = this.hashToken(rawToken);
+  // ── Password reset (self-service via email OTP) ─────────────────────────────
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-
-    await this.prisma.refreshToken.create({
-      data: {
-        userId,
-        institutionId,
-        tokenHash,
-        expiresAt,
-      },
-    });
-
-    return rawToken;
-  }
-
-  // ── Forgot Password ────────────────────────────────────────────────────────
-
-  async requestPasswordReset(institutionCode: string, identifier: string) {
-    const institutionId = await this.resolveInstitutionCode(institutionCode);
-
-    // Always return the same success message regardless of whether the user exists.
-    // Returning a distinct error for unknown identifiers lets an attacker enumerate
-    // valid accounts by probing phone numbers / emails.
-    const CONSTANT_RESPONSE = {
+  /**
+   * Sends a 6-digit OTP to the user's registered email.
+   * Always returns the same constant response — never leaks whether the email exists.
+   */
+  async requestPasswordResetOtp(institutionCode: string, email: string) {
+    const CONSTANT = {
       message:
-        'If an account with these details exists, a reset request has been submitted. Your school operator will set a new password.',
+        'If an account with this email exists, a reset code has been sent.',
     };
 
-    const user = await this.usersService.findByEmailOrPhone(
-      institutionId,
-      identifier,
-    );
-    if (!user) return CONSTANT_RESPONSE;
+    let institutionId: string;
+    let institutionName: string | undefined;
+    try {
+      const inst = await this.resolveInstitution(institutionCode);
+      institutionId = inst.id;
+      institutionName = inst.name;
+    } catch {
+      return CONSTANT;
+    }
 
-    const existing = await this.prisma.passwordResetRequest.findFirst({
-      where: { institutionId, userId: user.id, status: 'pending' },
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: {
+        institutionId,
+        email: normalizedEmail,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true },
     });
-    // Silently skip duplicate — same constant response so caller can't infer state.
-    if (existing) return CONSTANT_RESPONSE;
+    if (!user) return CONSTANT;
 
-    await this.prisma.passwordResetRequest.create({
-      data: { institutionId, userId: user.id },
+    // Invalidate any previous unused reset OTPs for this email+institution
+    await this.prisma.passwordResetOtp.updateMany({
+      where: { institutionId, email: normalizedEmail, isUsed: false },
+      data: { isUsed: true },
     });
 
-    return CONSTANT_RESPONSE;
+    const otp = String(crypto.randomInt(100000, 999999));
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+    await this.prisma.passwordResetOtp.create({
+      data: {
+        institutionId,
+        email: normalizedEmail,
+        otpHash,
+        expiresAt: new Date(Date.now() + RESET_OTP_TTL_MS),
+      },
+    });
+
+    this.emailService
+      .sendPasswordResetOtp(normalizedEmail, otp, institutionName)
+      .catch((err: unknown) => {
+        this.logger.error(
+          `[requestPasswordResetOtp] Email threw: ${String(err)}`,
+        );
+      });
+
+    return CONSTANT;
   }
 
-  async getPendingResetRequests(institutionId: string) {
-    return await this.prisma.passwordResetRequest.findMany({
-      where: { institutionId, status: 'pending' },
-      include: {
-        user: { select: { id: true, email: true, phone: true } },
+  /**
+   * Verifies the reset OTP and sets the new password.
+   * Enforces the same password strength rules as user creation.
+   */
+  async resetPassword(
+    institutionCode: string,
+    email: string,
+    otp: string,
+    newPassword: string,
+  ) {
+    this.validatePasswordStrength(newPassword);
+
+    const { id: institutionId } =
+      await this.resolveInstitution(institutionCode);
+    const INVALID = new UnauthorizedException('Invalid or expired code.');
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const record = await this.prisma.passwordResetOtp.findFirst({
+      where: {
+        institutionId,
+        email: normalizedEmail,
+        isUsed: false,
+        expiresAt: { gt: new Date() },
       },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) throw INVALID;
+
+    const providedHash = crypto
+      .createHash('sha256')
+      .update(otp.trim())
+      .digest('hex');
+    const storedBuf = Buffer.from(record.otpHash, 'hex');
+    const providedBuf = Buffer.from(providedHash, 'hex');
+
+    const isMatch =
+      storedBuf.length === providedBuf.length &&
+      crypto.timingSafeEqual(storedBuf, providedBuf);
+
+    if (!isMatch) throw INVALID;
+
+    await this.prisma.passwordResetOtp.update({
+      where: { id: record.id },
+      data: { isUsed: true },
+    });
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        institutionId,
+        email: normalizedEmail,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (!user) throw INVALID;
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    this.logger.log(
+      `[resetPassword] Password reset — userId=${user.id} institution=${institutionId}`,
+    );
+    return { message: 'Password reset successfully.' };
+  }
+
+  // ── Parent login ────────────────────────────────────────────────────────────
+
+  /**
+   * Phone + password login for parents. No school code required — institution
+   * is auto-resolved from the phone number.
+   * Parents never get TOTP — too complex for non-technical users.
+   */
+  async parentLogin(phone: string, password: string) {
+    const INVALID = new UnauthorizedException(
+      'Invalid phone number or password.',
+    );
+
+    const candidates = await this.prisma.user.findMany({
+      where: {
+        phone,
+        isActive: true,
+        deletedAt: null,
+        roles: { some: { role: { code: 'parent' } } },
+      },
+      include: {
+        roles: { include: { role: true } },
+        institution: {
+          select: { id: true, name: true, status: true, deletedAt: true },
+        },
+      },
+    });
+
+    const active = candidates.filter(
+      (u) =>
+        u.institution &&
+        !u.institution.deletedAt &&
+        u.institution.status === 'active',
+    );
+
+    if (active.length === 0) {
+      await bcrypt.compare(
+        password,
+        '$2b$12$invalidhashpaddinginvalid000000000000000000000000000000',
+      );
+      throw INVALID;
+    }
+
+    if (active.length > 1) {
+      this.logger.warn(
+        `[parentLogin] Ambiguous phone across ${active.length} institutions — phone=${phone.slice(0, 5)}***`,
+      );
+      throw new BadRequestException(
+        'Multiple school accounts found for this number. Please contact your school administrator.',
+      );
+    }
+
+    const user = active[0];
+    if (!user.passwordHash) {
+      await bcrypt.compare(
+        password,
+        '$2b$12$invalidhashpaddinginvalid000000000000000000000000000000',
+      );
+      throw INVALID;
+    }
+
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isValid) throw INVALID;
+
+    const roles = this.extractRoles(user.roles);
+    const permissions = this.extractPermissions(user.roles);
+    this.logger.log(
+      `[parentLogin] Login success — userId=${user.id} institution=${user.institutionId}`,
+    );
+
+    return this.issueFullSession(
+      user,
+      user.institutionId,
+      user.institution.name,
+      roles,
+      permissions,
+    );
+  }
+
+  // ── Operator: reset parent password ────────────────────────────────────────
+
+  /**
+   * Operator directly sets a new random password for a parent account.
+   * Returns the new plain-text password to display once in the dashboard.
+   */
+  async resetParentPassword(
+    institutionId: string,
+    parentUserId: string,
+  ): Promise<{ newPassword: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: parentUserId,
+        institutionId,
+        isActive: true,
+        deletedAt: null,
+        roles: { some: { role: { code: 'parent' } } },
+      },
+      select: { id: true },
+    });
+    if (!user)
+      throw new NotFoundException('Parent user not found in this institution');
+
+    const newPassword = this.generatePassword();
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    this.logger.log(
+      `[resetParentPassword] Password reset by operator — userId=${user.id} institution=${institutionId}`,
+    );
+    return { newPassword };
+  }
+
+  // ── Operator: password reset request approval (kept for legacy/audit) ────────
+
+  async getPendingResetRequests(institutionId: string) {
+    return this.prisma.passwordResetRequest.findMany({
+      where: { institutionId, status: 'pending' },
+      include: { user: { select: { id: true, email: true, phone: true } } },
       orderBy: { createdAt: 'asc' },
     });
   }
@@ -321,7 +742,6 @@ export class AuthService {
         data: { status: 'approved' },
       });
     });
-
     return { newPassword };
   }
 
@@ -338,167 +758,20 @@ export class AuthService {
     return { message: 'Request rejected' };
   }
 
-  // ── OTP-BASED LOGIN (school management / staff) ───────────────────────────
+  // ── Private helpers ──────────────────────────────────────────────────────────
 
-  /**
-   * Step 1: Request a login OTP.
-   * Validates the institution and that the phone belongs to an active user.
-   * Always returns the same constant response so an attacker cannot infer
-   * whether the phone number is registered (prevents user enumeration).
-   */
-  async requestOtp(institutionCode: string, phone: string) {
-    const RESPONSE = {
-      message:
-        'If this number is registered, an OTP has been sent to your phone.',
-    };
-
-    let institutionId: string;
-    try {
-      ({ id: institutionId } = await this.resolveInstitution(institutionCode));
-    } catch {
-      // Don't reveal that the institution code is wrong — same constant response.
-      return RESPONSE;
-    }
-
-    const user = await this.prisma.user.findFirst({
-      where: { institutionId, phone, isActive: true, deletedAt: null },
-      select: { id: true },
-    });
-
-    // No user found → still return constant response.
-    if (!user) return RESPONSE;
-
-    // Invalidate all previous unused OTPs for this phone+institution to prevent
-    // replay of a prior unexpired OTP after a new one is requested.
-    await this.prisma.otpRecord.updateMany({
-      where: { institutionId, phone, purpose: 'login', isUsed: false },
-      data: { isUsed: true },
-    });
-
-    // Generate a cryptographically random 6-digit OTP.
-    const otp = String(crypto.randomInt(100000, 999999));
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-
-    await this.prisma.otpRecord.create({
-      data: { institutionId, phone, purpose: 'login', otpHash, expiresAt },
-    });
-
-    // SMS is fire-and-forget — the OTP is already persisted in the DB.
-    // SmsService catches its own errors and falls back to console logging,
-    // so a provider misconfiguration never blocks the login flow.
-    this.smsService.sendOtp(phone, otp).catch((err: unknown) => {
-      this.logger.error(
-        `[requestOtp] SMS dispatch threw unexpectedly: ${String(err)}`,
-      );
-    });
-    this.logger.log(
-      `[requestOtp] OTP issued — institution=${institutionId} phone=${phone.slice(0, 5)}***`,
-    );
-
-    // In non-production environments, expose the OTP in the response so
-    // developers/QA can test the full login flow without an SMS provider.
-    // This field is never present when NODE_ENV=production.
-    if (process.env.NODE_ENV !== 'production') {
-      return { ...RESPONSE, devOtp: otp };
-    }
-    return RESPONSE;
-  }
-
-  /**
-   * Step 2: Verify the OTP and issue JWT tokens.
-   * Tracks failed attempts per OTP record; after OTP_MAX_ATTEMPTS the record
-   * is invalidated so an attacker cannot brute-force the 6-digit space.
-   */
-  async verifyOtp(institutionCode: string, phone: string, otp: string) {
-    const INVALID = new UnauthorizedException('Invalid or expired OTP.');
-
-    const { id: institutionId, name: institutionName } =
-      await this.resolveInstitution(institutionCode);
-
-    // DEV_MASTER_OTP: a fixed bypass code for developers / QA.
-    // Only active outside production — never set this in prod.
-    const masterOtp =
-      process.env.NODE_ENV !== 'production'
-        ? (process.env.DEV_MASTER_OTP ?? '').trim()
-        : '';
-    const isMasterOtp = masterOtp.length > 0 && otp.trim() === masterOtp;
-
-    // Find the most-recently issued active OTP for this phone+institution.
-    const record = await this.prisma.otpRecord.findFirst({
-      where: {
-        institutionId,
-        phone,
-        purpose: 'login',
-        isUsed: false,
-        expiresAt: { gt: new Date() },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!record) throw INVALID;
-
-    if (isMasterOtp) {
-      // Master bypass — skip hash check but still require a valid record
-      // so the phone must have been registered and OTP requested first.
-      this.logger.warn(
-        `[verifyOtp] DEV master OTP used — phone=${phone.slice(0, 5)}*** institution=${institutionId}`,
-      );
-    } else {
-      // Guard: OTP already exceeded max allowed attempts — invalidate and reject.
-      if (record.attemptCount >= OTP_MAX_ATTEMPTS) {
-        await this.prisma.otpRecord.update({
-          where: { id: record.id },
-          data: { isUsed: true },
-        });
-        this.logger.warn(
-          `[verifyOtp] OTP locked after ${OTP_MAX_ATTEMPTS} attempts — phone=${phone.slice(0, 5)}***`,
-        );
-        throw INVALID;
-      }
-
-      // Increment attempt counter BEFORE comparing hashes so every failed guess
-      // is counted even if the request is retried concurrently.
-      await this.prisma.otpRecord.update({
-        where: { id: record.id },
-        data: { attemptCount: { increment: 1 } },
-      });
-
-      // Timing-safe hash comparison prevents timing-based OTP enumeration.
-      const providedHash = crypto
-        .createHash('sha256')
-        .update(otp.trim())
-        .digest('hex');
-      const storedBuf = Buffer.from(record.otpHash, 'hex');
-      const providedBuf = Buffer.from(providedHash, 'hex');
-
-      const isMatch =
-        storedBuf.length === providedBuf.length &&
-        crypto.timingSafeEqual(storedBuf, providedBuf);
-
-      if (!isMatch) {
-        this.logger.warn(
-          `[verifyOtp] Bad OTP attempt ${record.attemptCount + 1}/${OTP_MAX_ATTEMPTS} — phone=${phone.slice(0, 5)}***`,
-        );
-        throw INVALID;
-      }
-    }
-
-    // Mark OTP as consumed — single-use guarantee.
-    await this.prisma.otpRecord.update({
-      where: { id: record.id },
-      data: { isUsed: true },
-    });
-
-    const user = await this.prisma.user.findFirst({
-      where: { institutionId, phone, isActive: true, deletedAt: null },
-      include: { roles: { include: { role: true } } },
-    });
-
-    if (!user) throw INVALID;
-
-    const roles = this.extractRoles(user.roles);
-    const permissions = this.extractPermissions(user.roles);
+  private async issueFullSession(
+    user: {
+      id: string;
+      email: string | null;
+      phone: string | null;
+      institutionId: string;
+    },
+    institutionId: string,
+    institutionName: string,
+    roles: string[],
+    permissions: string[],
+  ) {
     const payload = {
       sub: user.id,
       userId: user.id,
@@ -507,19 +780,15 @@ export class AuthService {
       permissions,
     };
 
-    const accessToken = await this.jwtService.signAsync(payload);
-    const refreshToken = await this.generateRefreshToken(
-      user.id,
-      institutionId,
-    );
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload),
+      this.generateRefreshToken(user.id, institutionId),
+    ]);
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
-    this.logger.log(
-      `[verifyOtp] Login success — userId=${user.id} institution=${institutionId}`,
-    );
 
     return {
       accessToken,
@@ -536,119 +805,33 @@ export class AuthService {
     };
   }
 
-  // ── PARENT LOGIN (password-based, no institution code) ────────────────────
+  private async generateRefreshToken(userId: string, institutionId: string) {
+    const rawToken = crypto.randomBytes(64).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
-  /**
-   * Parent login flow: phone + password only, no school code required.
-   *
-   * The system automatically determines the parent's institution from their
-   * phone number. Parents are never exposed to institution identifiers.
-   *
-   * Security notes:
-   * - Constant response timing regardless of phone/password validity.
-   * - If the same phone exists in multiple active institutions, login is
-   *   rejected with a prompt to contact the school admin (no school details leaked).
-   * - Only users with the 'parent' role are matched — staff cannot use this flow.
-   */
-  async parentLogin(phone: string, password: string) {
-    const INVALID = new UnauthorizedException(
-      'Invalid phone number or password.',
-    );
-
-    // Cross-institution lookup: find all parent-role users with this phone.
-    const candidates = await this.prisma.user.findMany({
-      where: {
-        phone,
-        isActive: true,
-        deletedAt: null,
-        roles: { some: { role: { code: 'parent' } } },
-      },
-      include: {
-        roles: { include: { role: true } },
-        institution: {
-          select: { id: true, name: true, status: true, deletedAt: true },
-        },
-      },
+    await this.prisma.refreshToken.create({
+      data: { userId, institutionId, tokenHash, expiresAt },
     });
+    return rawToken;
+  }
 
-    // Filter to users in live active institutions only.
-    const active = candidates.filter(
-      (u) =>
-        u.institution &&
-        !u.institution.deletedAt &&
-        u.institution.status === 'active',
-    );
-
-    if (active.length === 0) {
-      // Simulate bcrypt timing even when no user exists to prevent timing attacks.
-      await bcrypt.compare(
-        password,
-        '$2b$12$invalidhashpadding000000000000000000000000000000000000000',
-      );
-      throw INVALID;
-    }
-
-    if (active.length > 1) {
-      // Phone found in multiple schools — ambiguous, cannot auto-bind.
-      // Do NOT reveal which schools exist; just ask them to contact admin.
-      this.logger.warn(
-        `[parentLogin] Ambiguous phone across ${active.length} institutions — phone=${phone.slice(0, 5)}***`,
-      );
+  private validatePasswordStrength(password: string) {
+    if (password.length < 8)
+      throw new BadRequestException('Password must be at least 8 characters');
+    if (!/[A-Z]/.test(password))
       throw new BadRequestException(
-        'Multiple school accounts found for this number. Please contact your school administrator.',
+        'Password must contain at least one uppercase letter',
       );
-    }
-
-    const user = active[0];
-    if (!user.passwordHash) {
-      await bcrypt.compare(
-        password,
-        '$2b$12$invalidhashpadding000000000000000000000000000000000000000',
+    if (!/[a-z]/.test(password))
+      throw new BadRequestException(
+        'Password must contain at least one lowercase letter',
       );
-      throw INVALID;
-    }
-
-    const isValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isValid) throw INVALID;
-
-    const roles = this.extractRoles(user.roles);
-    const permissions = this.extractPermissions(user.roles);
-    const institutionId = user.institutionId;
-    const payload = {
-      sub: user.id,
-      userId: user.id,
-      institutionId,
-      roles,
-      permissions,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload);
-    const refreshToken = await this.generateRefreshToken(
-      user.id,
-      institutionId,
-    );
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
-    this.logger.log(
-      `[parentLogin] Login success — userId=${user.id} institution=${institutionId}`,
-    );
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        phone: user.phone,
-        institutionId,
-        institutionName: user.institution.name,
-        roles,
-        permissions,
-      },
-    };
+    if (!/[0-9]/.test(password))
+      throw new BadRequestException(
+        'Password must contain at least one number',
+      );
   }
 
   private generatePassword(): string {
@@ -662,22 +845,16 @@ export class AuthService {
   }
 
   private extractRoles(userRoles: RoleWithPermissions[]): string[] {
-    return userRoles.map((userRole) => userRole.role.code);
+    return userRoles.map((ur) => ur.role.code);
   }
 
   private extractPermissions(userRoles: RoleWithPermissions[]): string[] {
-    const permissions = userRoles.flatMap((userRole) => {
-      const rawPermissions = userRole.role.permissions;
-
-      if (Array.isArray(rawPermissions)) {
-        return rawPermissions.filter(
-          (permission): permission is string => typeof permission === 'string',
-        );
-      }
-
-      return [];
+    const all = userRoles.flatMap((ur) => {
+      const raw = ur.role.permissions;
+      return Array.isArray(raw)
+        ? raw.filter((p): p is string => typeof p === 'string')
+        : [];
     });
-
-    return [...new Set(permissions)];
+    return [...new Set(all)];
   }
 }

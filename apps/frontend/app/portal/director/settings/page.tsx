@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { TotpSetupCard } from '@/components/totp-setup-card';
 
 type Institution = {
   id: string; name: string; code: string; institutionType: string;
@@ -12,7 +13,7 @@ type AcademicUnit = { id: string; name: string; displayName?: string; level: num
 type FeeHead = { id: string; name: string; isCustom: boolean };
 type Subject = { id: string; name: string };
 
-type Tab = 'profile' | 'years' | 'classes' | 'fees' | 'subjects';
+type Tab = 'profile' | 'years' | 'classes' | 'fees' | 'subjects' | 'security';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'profile',  label: 'Institution Profile' },
@@ -20,6 +21,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'classes',  label: 'Class Structure' },
   { id: 'fees',     label: 'Fee Heads' },
   { id: 'subjects', label: 'Subject Master' },
+  { id: 'security', label: 'Security' },
 ];
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -51,6 +53,13 @@ export default function DirectorSchoolInfoPage() {
       {tab === 'classes'  && <ClassesTab showError={setError} />}
       {tab === 'fees'     && <FeeHeadsTab showError={setError} />}
       {tab === 'subjects' && <SubjectsTab showError={setError} />}
+      {tab === 'security' && (
+        <div className="max-w-xl">
+          <h2 className="text-base font-semibold text-ds-text1 mb-1">Account Security</h2>
+          <p className="text-sm text-ds-text3 mb-4">Manage two-factor authentication for your account</p>
+          <TotpSetupCard />
+        </div>
+      )}
     </div>
   );
 }

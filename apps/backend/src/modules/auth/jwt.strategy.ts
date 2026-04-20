@@ -56,10 +56,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       this.cache.set(cacheKey, isActive, USER_ACTIVE_CACHE_TTL_MS);
 
       if (!isActive) {
-        throw new UnauthorizedException('Account is inactive or has been removed');
+        throw new UnauthorizedException(
+          'Account is inactive or has been removed',
+        );
       }
     } else if (!cached) {
-      throw new UnauthorizedException('Account is inactive or has been removed');
+      throw new UnauthorizedException(
+        'Account is inactive or has been removed',
+      );
     }
 
     return {

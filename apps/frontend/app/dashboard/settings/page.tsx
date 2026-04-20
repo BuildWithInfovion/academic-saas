@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
+import { TotpSetupCard } from '@/components/totp-setup-card';
 
 interface ResetRequest {
   id: string;
@@ -200,6 +201,9 @@ export default function OperatorSettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Two-Factor Authentication */}
+      <TotpSetupCard />
 
       {/* Change Password */}
       <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">

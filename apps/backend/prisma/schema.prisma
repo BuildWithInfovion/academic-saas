@@ -48,7 +48,7 @@ model Institution {
   transferCertificates   TransferCertificate[]
   supportTickets         SupportTicket[]
   calendarEvents         CalendarEvent[]
-  otpRecords             OtpRecord[]
+  passwordResetOtps      PasswordResetOtp[]
 
   @@map("institutions")
 }
@@ -213,15 +213,20 @@ model Inquiry {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  institutionId  String
-  email          String?
-  phone          String?
-  passwordHash   String?
-  isActive       Boolean   @default(true)
-  lastLoginAt    DateTime?
-  deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
+  id               String    @id @default(cuid())
+  institutionId    String
+  email            String?
+  phone            String?
+  passwordHash     String?
+  isActive         Boolean   @default(true)
+  lastLoginAt      DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  // TOTP (Authenticator App) — optional second factor
+  totpSecret       String?               // base32 secret; null when TOTP not set up
+  totpEnabled      Boolean  @default(false)
+  totpBackupCodes  String[]              // SHA-256 hashes of one-time backup codes
 
   institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 
@@ -839,25 +844,23 @@ model CalendarEvent {
   @@map("calendar_events")
 }
 
-// ── OTP RECORDS ───────────────────────────────────────────────────────────────
-// Stores time-limited one-time passwords for phone-based authentication.
-// Each record is single-use; expired or exhausted records are left for cleanup.
+// ── PASSWORD RESET OTP ────────────────────────────────────────────────────────
+// Short-lived 6-digit OTP sent to staff/operator email for self-service reset.
+// Single-use, 10-minute TTL. Parents cannot self-reset — operator resets directly.
 
-model OtpRecord {
+model PasswordResetOtp {
   id            String   @id @default(cuid())
   institutionId String
-  phone         String
-  purpose       String   @default("login")  // login | verify_phone
+  email         String
   otpHash       String   // SHA-256 hex of the raw 6-digit OTP
   expiresAt     DateTime
   isUsed        Boolean  @default(false)
-  attemptCount  Int      @default(0)         // failed verification attempts
   createdAt     DateTime @default(now())
 
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 
   @@index([institutionId])
-  @@index([phone, institutionId, purpose])   // OTP lookup by phone+institution
-  @@index([expiresAt])                       // cleanup job index
-  @@map("otp_records")
+  @@index([email, institutionId])  // reset OTP lookup
+  @@index([expiresAt])             // cleanup job index
+  @@map("password_reset_otps")
 }
