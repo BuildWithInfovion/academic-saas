@@ -34,6 +34,8 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   // 🔐 LOGIN — institution code in body, no header needed
+  // Operators (admin role) get a separate cookie (auth_rt_op) so their session
+  // never collides with portal users (parent, teacher, etc.) who share auth_rt.
   @Post('login')
   @UseGuards(LoginRateLimitGuard)
   async login(
@@ -45,7 +47,10 @@ export class AuthController {
       dto.email,
       dto.password,
     );
-    res.cookie('auth_rt', result.refreshToken, {
+    const roles: string[] =
+      (result.user as { roles?: string[] } | undefined)?.roles ?? [];
+    const cookieName = roles.includes('admin') ? 'auth_rt_op' : 'auth_rt';
+    res.cookie(cookieName, result.refreshToken, {
       ...RT_COOKIE_OPTIONS,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -55,7 +60,7 @@ export class AuthController {
     return safeResult;
   }
 
-  // 🔄 REFRESH TOKEN — no tenant header needed; token hash identifies the session
+  // 🔄 REFRESH TOKEN — portal users (parent, teacher, principal, etc.)
   @Post('refresh')
   async refresh(
     @Req() req: any,
@@ -75,7 +80,26 @@ export class AuthController {
     return { accessToken: result.accessToken, user: result.user };
   }
 
-  // 🚪 LOGOUT
+  // 🔄 REFRESH TOKEN — operators only (reads auth_rt_op cookie)
+  @Post('refresh-op')
+  async refreshOp(
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const reqCookies = req.cookies as Record<string, string> | undefined;
+    const refreshToken = reqCookies?.auth_rt_op;
+    if (!refreshToken) throw new UnauthorizedException('No refresh token');
+
+    const result = await this.authService.refreshByToken(refreshToken);
+
+    res.cookie('auth_rt_op', result.refreshToken, {
+      ...RT_COOKIE_OPTIONS,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return { accessToken: result.accessToken, user: result.user };
+  }
+
+  // 🚪 LOGOUT — clears both cookie variants so either portal type is covered
   @UseGuards(AuthGuard)
   @Post('logout')
   async logout(
@@ -84,6 +108,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     res.clearCookie('auth_rt', RT_COOKIE_OPTIONS);
+    res.clearCookie('auth_rt_op', RT_COOKIE_OPTIONS);
     return this.authService.logout(req.user.userId, tenant.institutionId);
   }
 

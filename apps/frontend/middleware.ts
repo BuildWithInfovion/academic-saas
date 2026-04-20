@@ -9,8 +9,9 @@ import type { NextRequest } from 'next/server';
  * browser includes them on requests to ALL *.buildwithinfovion.com subdomains —
  * which means this Edge middleware can read them here on the Vercel domain.
  *
- * auth_rt      — school/portal users (7-day refresh token)
- * platform_rt  — platform admin (24-hour access token used as session cookie)
+ * auth_rt_op   — operator/admin (7-day refresh token, dashboard only)
+ * auth_rt      — portal users: parent, teacher, principal, etc. (7-day refresh token)
+ * platform_rt  — platform admin / Infovion internal (8-hour access token)
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,7 +23,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/dashboard')) {
-    if (!request.cookies.get('auth_rt')) {
+    if (!request.cookies.get('auth_rt_op')) {
       return NextResponse.redirect(new URL('/', request.url));
     }
   }

@@ -28,12 +28,15 @@ type RefreshResult =
   | { status: 'expired' }
   | { status: 'unavailable' };
 
-// Track in-flight refresh to avoid concurrent refresh storms
-let refreshingPromise: Promise<RefreshResult> | null = null;
+// Singleton guards to prevent concurrent refresh storms.
+// Separate per portal type: operators use /auth/refresh-op (auth_rt_op cookie),
+// portal users use /auth/refresh (auth_rt cookie).
+let refreshingOpPromise: Promise<RefreshResult> | null = null;
+let refreshingPortalPromise: Promise<RefreshResult> | null = null;
 
-// Singleton guard for silentRefresh — prevents concurrent calls from racing
-// (both would send the same auth_rt cookie; the first revokes it, the second gets 401)
-let silentRefreshPromise: Promise<'ok' | 'expired' | 'error'> | null = null;
+// Singleton guards for silentRefresh — same separation
+let silentRefreshOpPromise: Promise<'ok' | 'expired' | 'error'> | null = null;
+let silentRefreshPortalPromise: Promise<'ok' | 'expired' | 'error'> | null = null;
 
 function buildRequestHeaders(
   headers: HeadersInit | undefined,
@@ -61,83 +64,117 @@ function buildRequestHeaders(
   return merged;
 }
 
-/**
- * Silently refresh the access token using the httpOnly auth_rt cookie.
- * No body token needed — the browser sends the cookie automatically.
- * Used inside apiFetch on 401, and exported for layout-level session restore.
- */
-async function tryRefreshToken(): Promise<RefreshResult> {
-  const { user, setAuth } = getActiveAuthState();
-
-  if (refreshingPromise) return refreshingPromise;
-
-  refreshingPromise = (async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        body: '{}',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      // A definitive 401 from the refresh endpoint means the cookie is invalid/expired.
-      // Any other failure (network, 5xx) is transient — don't clear the session.
-      if (res.status === 401) {
-        getActiveAuthState().logout();
-        if (typeof window !== 'undefined') window.location.href = '/';
-        return { status: 'expired' };
-      }
-      if (!res.ok) return { status: 'unavailable' };
-      const data = (await res.json()) as {
-        accessToken: string;
-        user?: { roles?: string[] } & Record<string, unknown>;
-      };
-      setAuth({
-        accessToken: data.accessToken,
-        user: (data.user as Parameters<typeof setAuth>[0]['user']) ?? user!,
-      });
-      return { status: 'success', accessToken: data.accessToken };
-    } catch {
-      return { status: 'unavailable' };
-    } finally {
-      refreshingPromise = null;
+async function doRefresh(endpoint: string): Promise<RefreshResult> {
+  try {
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'POST',
+      credentials: 'include',
+      body: '{}',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (res.status === 401) {
+      getActiveAuthState().logout();
+      if (typeof window !== 'undefined') window.location.href = '/';
+      return { status: 'expired' };
     }
-  })();
-
-  return refreshingPromise;
+    if (!res.ok) return { status: 'unavailable' };
+    const data = (await res.json()) as {
+      accessToken: string;
+      user?: { roles?: string[] } & Record<string, unknown>;
+    };
+    const roles: string[] = data.user?.roles ?? [];
+    const isDashboard = roles.some((r) => DASHBOARD_ROLES.includes(r));
+    const store = isDashboard ? useAuthStore.getState() : usePortalAuthStore.getState();
+    store.setAuth({
+      accessToken: data.accessToken,
+      user: (data.user as Parameters<typeof store.setAuth>[0]['user']) ?? useAuthStore.getState().user!,
+    });
+    return { status: 'success', accessToken: data.accessToken };
+  } catch {
+    return { status: 'unavailable' };
+  }
 }
 
 /**
- * Restore the in-memory session on page load by calling the refresh endpoint.
- * The httpOnly auth_rt cookie is sent automatically — no institutionId needed.
- *
- * Returns:
- *   'ok'      — session restored successfully
- *   'expired' — server confirmed the token is invalid/expired (→ redirect to login)
- *   'error'   — transient failure (network, CORS, 5xx) — do NOT redirect; just retry
- *
- * Protected by a singleton promise so that concurrent callers (e.g. two layouts
- * mounting simultaneously in React StrictMode) share one in-flight request instead
- * of each sending an independent refresh — which would cause the first to revoke
- * the token and the second to receive a 401.
+ * Attempt one silent token refresh on 401, using the correct endpoint based on
+ * which store holds the current user (operator → /auth/refresh-op, portal → /auth/refresh).
  */
-export async function silentRefresh(): Promise<'ok' | 'expired' | 'error'> {
-  // If a refresh is already in flight, piggyback on it
-  if (silentRefreshPromise) return silentRefreshPromise;
+async function tryRefreshToken(): Promise<RefreshResult> {
+  const isOperator = !!useAuthStore.getState().user;
+  const endpoint = isOperator ? '/auth/refresh-op' : '/auth/refresh';
 
-  silentRefreshPromise = (async (): Promise<'ok' | 'expired' | 'error'> => {
+  if (isOperator) {
+    if (refreshingOpPromise) return refreshingOpPromise;
+    refreshingOpPromise = doRefresh(endpoint).finally(() => { refreshingOpPromise = null; });
+    return refreshingOpPromise;
+  } else {
+    if (refreshingPortalPromise) return refreshingPortalPromise;
+    refreshingPortalPromise = doRefresh(endpoint).finally(() => { refreshingPortalPromise = null; });
+    return refreshingPortalPromise;
+  }
+}
+
+/**
+ * Restore the operator (admin) session on page load via the httpOnly auth_rt_op cookie.
+ * The /auth/refresh-op endpoint reads that cookie — no body token needed.
+ */
+export async function silentRefreshOp(): Promise<'ok' | 'expired' | 'error'> {
+  if (silentRefreshOpPromise) return silentRefreshOpPromise;
+
+  silentRefreshOpPromise = (async (): Promise<'ok' | 'expired' | 'error'> => {
     try {
-      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      const res = await fetch(`${BASE_URL}/auth/refresh-op`, {
         method: 'POST',
         credentials: 'include',
-        // Send an explicit empty JSON body so body-parser never tries to
-        // parse a zero-byte stream as JSON (avoids potential 400 on strict servers)
         body: '{}',
         headers: { 'Content-Type': 'application/json' },
       });
 
-      // 401 = server definitively rejected the token (expired, revoked, or missing)
       if (res.status === 401) return 'expired';
-      // Any other non-OK response is a server/infra issue — treat as transient
+      if (!res.ok) {
+        console.warn('[silentRefreshOp] refresh failed with status', res.status);
+        return 'error';
+      }
+
+      const data = (await res.json()) as {
+        accessToken: string;
+        user: { roles?: string[] } & Record<string, unknown>;
+      };
+      if (!data.user) return 'error';
+
+      useAuthStore.getState().setAuth({
+        accessToken: data.accessToken,
+        user: data.user as Parameters<ReturnType<typeof useAuthStore.getState>['setAuth']>[0]['user'],
+      });
+      return 'ok';
+    } catch (err) {
+      console.warn('[silentRefreshOp] network/CORS error during refresh:', err);
+      return 'error';
+    } finally {
+      silentRefreshOpPromise = null;
+    }
+  })();
+
+  return silentRefreshOpPromise;
+}
+
+/**
+ * Restore the portal user session on page load via the httpOnly auth_rt cookie.
+ * Used by portal layouts (parent, teacher, principal, etc.).
+ */
+export async function silentRefresh(): Promise<'ok' | 'expired' | 'error'> {
+  if (silentRefreshPortalPromise) return silentRefreshPortalPromise;
+
+  silentRefreshPortalPromise = (async (): Promise<'ok' | 'expired' | 'error'> => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        body: '{}',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (res.status === 401) return 'expired';
       if (!res.ok) {
         console.warn('[silentRefresh] refresh failed with status', res.status);
         return 'error';
@@ -158,22 +195,18 @@ export async function silentRefresh(): Promise<'ok' | 'expired' | 'error'> {
       if (isDashboard) {
         useAuthStore.getState().setAuth({ accessToken: data.accessToken, user });
       } else {
-        usePortalAuthStore
-          .getState()
-          .setAuth({ accessToken: data.accessToken, user });
+        usePortalAuthStore.getState().setAuth({ accessToken: data.accessToken, user });
       }
       return 'ok';
     } catch (err) {
-      // Network error, CORS block, timeout — log for debugging, but don't kick the user out
       console.warn('[silentRefresh] network/CORS error during refresh:', err);
       return 'error';
     } finally {
-      // Clear so the next deliberate call (e.g. after a retry) starts fresh
-      silentRefreshPromise = null;
+      silentRefreshPortalPromise = null;
     }
   })();
 
-  return silentRefreshPromise;
+  return silentRefreshPortalPromise;
 }
 
 /**

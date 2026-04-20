@@ -74,14 +74,14 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
     } finally { setSupportSending(false); }
   };
 
-  // On mount: restore session from httpOnly cookie if token not in memory.
+  // On mount: effects run after zustand's sessionStorage hydration, so getState()
+  // already has the cached token. Avoids a network round-trip on every page refresh.
   useEffect(() => {
-    if (accessToken) { setReady(true); return; }
+    const cached = usePortalAuthStore.getState().accessToken;
+    if (cached) { setReady(true); return; }
     silentRefresh().then((status) => {
       if (status === 'ok') { setReady(true); }
       else if (status === 'expired') { router.replace('/'); }
-      // 'error' = transient network/server issue — show a retry prompt rather
-      // than a blank page or a forced logout.
       else { setConnError(true); }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps

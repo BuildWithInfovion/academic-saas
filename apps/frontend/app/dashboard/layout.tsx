@@ -4,7 +4,7 @@ import { ReactNode, ReactElement, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
-import { silentRefresh, apiFetch } from '@/lib/api';
+import { silentRefreshOp, apiFetch } from '@/lib/api';
 import { getRoleRoute, getRoleLabel, DASHBOARD_ROLES } from '@/lib/auth-utils';
 
 // Most-specific match wins — prevents parent paths staying active on child pages
@@ -134,8 +134,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   // Middleware already redirects to / when the cookie is absent, so failure
   // here is an edge case (cookie valid but server unreachable).
   useEffect(() => {
-    if (accessToken) { setReady(true); return; }
-    silentRefresh().then((status) => {
+    // Read getState() here — React effects run after all microtasks including
+    // zustand's sessionStorage hydration, so the token is already restored.
+    const cached = useAuthStore.getState().accessToken;
+    if (cached) { setReady(true); return; }
+    silentRefreshOp().then((status) => {
       if (status === 'ok') {
         setReady(true);
       } else if (status === 'expired') {
