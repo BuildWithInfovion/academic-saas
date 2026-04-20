@@ -64,15 +64,15 @@ export default function PrincipalTimetablePage() {
 
   return (
     <div className="p-8 max-w-6xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Timetable</h1>
-      <p className="text-sm text-gray-400 mb-6">View class schedules and teacher assignments</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Timetable</h1>
+      <p className="text-sm text-ds-text3 mb-6">View class schedules and teacher assignments</p>
 
       {/* Mode toggle */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-5">
+      <div className="flex gap-1 p-1 bg-ds-bg2 rounded-lg w-fit mb-5">
         {(['class', 'teacher'] as const).map((m) => (
           <button key={m} onClick={() => { setViewMode(m); setSlots([]); }}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all capitalize ${
-              viewMode === m ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              viewMode === m ? 'bg-ds-surface text-ds-text1 shadow-sm' : 'text-ds-text2 hover:text-ds-text1'
             }`}>
             {m === 'class' ? 'Class Timetable' : 'Teacher Periods'}
           </button>
@@ -80,12 +80,12 @@ export default function PrincipalTimetablePage() {
       </div>
 
       {/* Selector */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6">
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 mb-6">
         {viewMode === 'class' ? (
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Select Class</label>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Select Class</label>
             <select
-              className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black w-64"
+              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand w-64"
               value={selectedUnit}
               onChange={(e) => setSelectedUnit(e.target.value)}
             >
@@ -95,9 +95,9 @@ export default function PrincipalTimetablePage() {
           </div>
         ) : (
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Select Teacher</label>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Select Teacher</label>
             <select
-              className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black w-72"
+              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand w-72"
               value={selectedTeacher}
               onChange={(e) => setSelectedTeacher(e.target.value)}
             >
@@ -110,20 +110,20 @@ export default function PrincipalTimetablePage() {
 
       {/* Grid */}
       {loading ? (
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-ds-text3">Loading…</p>
       ) : ((viewMode === 'class' && selectedUnit) || (viewMode === 'teacher' && selectedTeacher)) ? (
         slots.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center text-sm text-gray-400">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-10 text-center text-sm text-ds-text3">
             No timetable configured yet.
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 w-16 border-b border-gray-100">Period</th>
+                <tr className="bg-ds-bg2">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-ds-text2 w-16 border-b border-ds-border">Period</th>
                   {displayDays.map((d) => (
-                    <th key={d.no} className="px-3 py-3 text-center text-xs font-semibold text-gray-600 border-b border-gray-100 min-w-[160px]">
+                    <th key={d.no} className="px-3 py-3 text-center text-xs font-semibold text-ds-text2 border-b border-ds-border min-w-[160px]">
                       {d.label}
                     </th>
                   ))}
@@ -131,21 +131,21 @@ export default function PrincipalTimetablePage() {
               </thead>
               <tbody>
                 {periods.map((p) => (
-                  <tr key={p} className="border-b border-gray-50 last:border-0">
-                    <td className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50 text-center">P{p}</td>
+                  <tr key={p} className="border-b border-ds-border last:border-0">
+                    <td className="px-4 py-3 text-xs font-bold text-ds-text3 bg-ds-bg2 text-center">P{p}</td>
                     {displayDays.map((d) => {
                       const slot = slotMap.get(`${d.no}-${p}`);
                       return (
-                        <td key={d.no} className="px-3 py-2 border-l border-gray-50 align-top">
+                        <td key={d.no} className="px-3 py-2 border-l border-ds-border align-top">
                           {slot?.subject ? (
                             <div>
-                              <p className="text-xs font-semibold text-gray-800">{slot.subject.name}</p>
+                              <p className="text-xs font-semibold text-ds-text1">{slot.subject.name}</p>
                               {viewMode === 'class' && slot.teacher && (
-                                <p className="text-[10px] text-gray-400 mt-0.5">{teacherLabel(slot.teacher)}</p>
+                                <p className="text-[10px] text-ds-text3 mt-0.5">{teacherLabel(slot.teacher)}</p>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-300">— Free —</span>
+                            <span className="text-xs text-ds-text3">— Free —</span>
                           )}
                         </td>
                       );
@@ -157,7 +157,7 @@ export default function PrincipalTimetablePage() {
           </div>
         )
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center text-sm text-gray-400">
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-10 text-center text-sm text-ds-text3">
           {viewMode === 'class' ? 'Select a class to view its timetable.' : 'Select a teacher to view their periods.'}
         </div>
       )}

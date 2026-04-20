@@ -74,22 +74,22 @@ export default function DirectorOverviewPage() {
       label: 'Attendance Alerts',
       value: attendanceAlerts,
       desc: 'Students below 75% this month',
-      color: attendanceAlerts > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200',
-      textColor: attendanceAlerts > 0 ? 'text-amber-700' : 'text-green-700',
+      color: attendanceAlerts > 0 ? 'bg-ds-warning-bg border-ds-warning-border' : 'bg-ds-success-bg border-ds-success-border',
+      textColor: attendanceAlerts > 0 ? 'text-ds-warning-text' : 'text-ds-success-text',
     },
     {
       label: 'Fee Defaulters',
       value: feeDefaultersCount,
       desc: 'Outstanding balances this year',
-      color: feeDefaultersCount > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200',
-      textColor: feeDefaultersCount > 0 ? 'text-red-700' : 'text-green-700',
+      color: feeDefaultersCount > 0 ? 'bg-ds-error-bg border-ds-error-border' : 'bg-ds-success-bg border-ds-success-border',
+      textColor: feeDefaultersCount > 0 ? 'text-ds-error-text' : 'text-ds-success-text',
     },
     {
       label: 'Active Exams',
       value: activeExams.length,
       desc: activeExams.length > 0 ? activeExams.map((e) => e.name).join(', ') : 'No exams running',
-      color: 'bg-blue-50 border-blue-200',
-      textColor: 'text-blue-700',
+      color: 'bg-ds-info-bg border-ds-info-border',
+      textColor: 'text-ds-info-text',
     },
   ];
 
@@ -127,14 +127,15 @@ export default function DirectorOverviewPage() {
         <h2 className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Quick Access</h2>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Detailed Reports', desc: 'Attendance, fees & exam breakdown by class', path: '/portal/director/reports', bg: 'btn-brand' },
-            { label: 'Staff Directory', desc: 'View all staff accounts and roles', path: '/portal/director/staff', bg: 'btn-brand' },
-            { label: 'Institution Settings', desc: 'Configure academic structure & preferences', path: '/portal/director/settings', bg: 'btn-brand' },
+            { label: 'Detailed Reports', desc: 'Attendance, fees & exam breakdown by class', path: '/portal/director/reports', gradient: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)' },
+            { label: 'Staff Directory', desc: 'View all staff accounts and roles', path: '/portal/director/staff', gradient: 'linear-gradient(135deg, #6b432f 0%, #3a1f0c 100%)' },
+            { label: 'Institution Settings', desc: 'Configure academic structure & preferences', path: '/portal/director/settings', gradient: 'linear-gradient(135deg, #dc924b 0%, #ae7040 100%)' },
           ].map((item) => (
             <button
               key={item.label}
               onClick={() => router.push(item.path)}
-              className={`rounded-xl p-4 text-left hover:opacity-90 transition-opacity ${item.bg}`}
+              className="rounded-xl p-4 text-left hover:opacity-90 transition-opacity"
+              style={{ background: item.gradient, color: '#fcfbf7', border: '1px solid rgba(140,57,25,0.25)' }}
             >
               <p className="font-semibold text-sm">{item.label}</p>
               <p className="text-xs mt-1 opacity-70">{item.desc}</p>
@@ -153,7 +154,7 @@ export default function DirectorOverviewPage() {
             {activeExams.map((e) => (
               <div key={e.id} className="px-5 py-3 flex items-center justify-between">
                 <span className="text-sm text-ds-text1 font-medium">{e.name}</span>
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Active</span>
+                <span className="badge badge-blue">Active</span>
               </div>
             ))}
           </div>

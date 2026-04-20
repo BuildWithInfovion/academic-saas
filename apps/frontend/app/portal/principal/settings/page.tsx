@@ -22,7 +22,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'subjects', label: 'Subject Master' },
 ];
 
-const inp = 'w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white';
+const inp = 'w-full p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
 
 function validateAcademicYearForm(form: { name: string; startDate: string; endDate: string }): string | null {
   const name = form.name.trim();
@@ -59,17 +59,17 @@ export default function PrincipalSettingsPage() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">School Settings</h1>
-      <p className="text-sm text-gray-400 mb-6">Manage academic structure, fee heads, subjects and institution profile</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">School Settings</h1>
+      <p className="text-sm text-ds-text3 mb-6">Manage academic structure, fee heads, subjects and institution profile</p>
 
-      {error   && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error   && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 overflow-x-auto">
+      <div className="flex gap-1 bg-ds-bg2 rounded-xl p-1 mb-6 overflow-x-auto">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => { setTab(t.id); setError(null); setSuccess(null); }}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-              tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              tab === t.id ? 'bg-ds-surface text-ds-text1 shadow-sm' : 'text-ds-text2 hover:text-ds-text1'
             }`}>
             {t.label}
           </button>
@@ -112,17 +112,17 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
     finally { setSaving(false); }
   };
 
-  if (loading) return <p className="text-sm text-gray-400">Loading...</p>;
+  if (loading) return <p className="text-sm text-ds-text3">Loading...</p>;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <label className="text-xs font-medium text-gray-600 block mb-1">Institution Name *</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Institution Name *</label>
           <input className={inp} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Type</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Type</label>
           <select className={inp} value={form.institutionType} onChange={(e) => setForm((f) => ({ ...f, institutionType: e.target.value }))}>
             <option value="school">School</option>
             <option value="college">College</option>
@@ -130,33 +130,33 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Affiliation Board</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Affiliation Board</label>
           <input className={inp} placeholder="e.g. CBSE, ICSE, SSC" value={form.board} onChange={(e) => setForm((f) => ({ ...f, board: e.target.value }))} />
         </div>
         <div className="col-span-2">
-          <label className="text-xs font-medium text-gray-600 block mb-1">Address</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Address</label>
           <input className={inp} placeholder="Full address" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Phone</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Phone</label>
           <input className={inp} placeholder="Contact number" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Email</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Email</label>
           <input type="email" className={inp} placeholder="institution@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Website</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Website</label>
           <input className={inp} placeholder="https://yourschool.edu.in" value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Login Code</label>
-          <input className={inp + ' bg-gray-50 text-gray-400'} value={inst?.code ?? ''} readOnly />
-          <p className="text-[10px] text-gray-400 mt-1">Contact platform admin to change the login code.</p>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Login Code</label>
+          <input className={inp + ' bg-ds-bg2 text-ds-text3'} value={inst?.code ?? ''} readOnly />
+          <p className="text-[10px] text-ds-text3 mt-1">Contact platform admin to change the login code.</p>
         </div>
       </div>
       <button onClick={handleSave} disabled={saving}
-        className="mt-6 bg-black text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+        className="btn-brand mt-6 px-6 py-2.5 rounded-lg">
         {saving ? 'Saving...' : 'Save Changes'}
       </button>
     </div>
@@ -222,82 +222,82 @@ function YearsTab({ showSuccess, showError }: { showSuccess: (m: string) => void
   return (
     <div className="space-y-4">
       {!currentYear && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+        <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-4 text-sm text-ds-warning-text">
           No current academic year set. Create one below so the system knows the active session.
         </div>
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ds-text2">
           Suggested for this session: <strong>{suggestedName}</strong>
         </p>
         <button onClick={() => setShowForm(!showForm)}
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+          className="btn-brand px-4 py-2 rounded-lg">
           + New Academic Year
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-800 text-sm mb-4">Create Academic Year</h3>
+        <div className="bg-ds-surface rounded-xl border border-ds-border p-5 shadow-sm">
+          <h3 className="font-semibold text-ds-text1 text-sm mb-4">Create Academic Year</h3>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Start Date *</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Start Date *</label>
               <input type="date" className={inp} value={form.startDate}
                 onChange={(e) => { setForm((f) => ({ ...f, startDate: e.target.value })); updateYearName(e.target.value, form.endDate); }} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">End Date *</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">End Date *</label>
               <input type="date" className={inp} value={form.endDate}
                 onChange={(e) => { setForm((f) => ({ ...f, endDate: e.target.value })); updateYearName(form.startDate, e.target.value); }} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Name (auto-filled) *</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Name (auto-filled) *</label>
               <input className={inp} placeholder="e.g. 2026-27" value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={() => setShowForm(false)}
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+              className="border border-ds-border-strong text-ds-text1 px-4 py-2 rounded-lg text-sm hover:bg-ds-bg2">Cancel</button>
             <button onClick={handleCreate} disabled={submitting}
-              className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+              className="btn-brand px-4 py-2 rounded-lg">
               {submitting ? 'Creating...' : 'Create Year'}
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {loading ? <p className="p-6 text-sm text-gray-400">Loading...</p> : years.length === 0 ? (
-          <p className="p-6 text-sm text-gray-400">No academic years yet. Create one above.</p>
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+        {loading ? <p className="p-6 text-sm text-ds-text3">Loading...</p> : years.length === 0 ? (
+          <p className="p-6 text-sm text-ds-text3">No academic years yet. Create one above.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-ds-bg2">
               <tr>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Name</th>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Period</th>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Status</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Name</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Period</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-ds-border">
               {years.map((y) => (
-                <tr key={y.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 font-medium text-gray-800">{y.name}</td>
-                  <td className="px-5 py-3 text-gray-500 text-xs">
+                <tr key={y.id} className="hover:bg-ds-bg2">
+                  <td className="px-5 py-3 font-medium text-ds-text1">{y.name}</td>
+                  <td className="px-5 py-3 text-ds-text2 text-xs">
                     {new Date(y.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} —{' '}
                     {new Date(y.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>
                   <td className="px-5 py-3">
                     {y.isCurrent
-                      ? <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Current</span>
-                      : <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">Inactive</span>}
+                      ? <span className="px-2 py-0.5 bg-ds-success-bg text-ds-success-text rounded-full text-xs font-medium">Current</span>
+                      : <span className="px-2 py-0.5 bg-ds-bg2 text-ds-text2 rounded-full text-xs">Inactive</span>}
                   </td>
                   <td className="px-5 py-3 text-right">
                     {!y.isCurrent && (
                       <button onClick={() => handleSetCurrent(y.id)} disabled={settingCurrent === y.id}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50">
+                        className="text-xs text-ds-brand hover:text-blue-800 font-medium disabled:opacity-50">
                         {settingCurrent === y.id ? 'Setting...' : 'Set Current'}
                       </button>
                     )}
@@ -371,39 +371,39 @@ function ClassesTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
     <div className="space-y-4">
       <div className="flex justify-end">
         <button onClick={() => setShowForm(!showForm)}
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+          className="btn-brand px-4 py-2 rounded-lg">
           + Add Class / Section
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-800 text-sm mb-4">Create Class or Section</h3>
+        <div className="bg-ds-surface rounded-xl border border-ds-border p-5 shadow-sm">
+          <h3 className="font-semibold text-ds-text1 text-sm mb-4">Create Class or Section</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Name *</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Name *</label>
               <input className={inp} placeholder="e.g. Class 10" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Display Name (optional)</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Display Name (optional)</label>
               <input className={inp} placeholder="10th Standard" value={form.displayName} onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Level</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Level</label>
               <select className={inp} value={form.level} onChange={(e) => setForm((f) => ({ ...f, level: e.target.value }))}>
                 <option value="1">1 — Class / Grade</option>
                 <option value="2">2 — Section / Division</option>
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Parent Class (for sections)</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Parent Class (for sections)</label>
               <select className={inp} value={form.parentId} onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}>
                 <option value="">None (top-level)</option>
                 {rootUnits.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Academic Year</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Academic Year</label>
               <select className={inp} value={form.academicYearId} onChange={(e) => setForm((f) => ({ ...f, academicYearId: e.target.value }))}>
                 <option value="">None</option>
                 {years.map((y) => <option key={y.id} value={y.id}>{y.name}{y.isCurrent ? ' (Current)' : ''}</option>)}
@@ -411,39 +411,39 @@ function ClassesTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
             </div>
           </div>
           <div className="flex gap-3 mt-4">
-            <button onClick={() => setShowForm(false)} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button onClick={handleCreate} disabled={submitting} className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+            <button onClick={() => setShowForm(false)} className="border border-ds-border-strong text-ds-text1 px-4 py-2 rounded-lg text-sm hover:bg-ds-bg2">Cancel</button>
+            <button onClick={handleCreate} disabled={submitting} className="btn-brand px-4 py-2 rounded-lg">
               {submitting ? 'Creating...' : 'Create'}
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {loading ? <p className="p-6 text-sm text-gray-400">Loading...</p> : units.length === 0 ? (
-          <p className="p-6 text-sm text-gray-400">No classes yet.</p>
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+        {loading ? <p className="p-6 text-sm text-ds-text3">Loading...</p> : units.length === 0 ? (
+          <p className="p-6 text-sm text-ds-text3">No classes yet.</p>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-ds-border">
             {rootUnits.map((unit) => (
               <div key={unit.id}>
-                <div className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
+                <div className="flex items-center justify-between px-5 py-3 hover:bg-ds-bg2">
                   <div>
-                    <span className="font-medium text-gray-800 text-sm">{unit.displayName || unit.name}</span>
-                    <span className="ml-2 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]">Level {unit.level}</span>
+                    <span className="font-medium text-ds-text1 text-sm">{unit.displayName || unit.name}</span>
+                    <span className="ml-2 px-1.5 py-0.5 bg-ds-bg2 text-ds-text2 rounded text-[10px]">Level {unit.level}</span>
                   </div>
                   <button onClick={() => handleDelete(unit.id, unit.displayName || unit.name)} disabled={deleting === unit.id}
-                    className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50">
+                    className="text-xs text-red-500 hover:text-ds-error-text font-medium disabled:opacity-50">
                     {deleting === unit.id ? '...' : 'Delete'}
                   </button>
                 </div>
                 {childUnits(unit.id).map((child) => (
-                  <div key={child.id} className="flex items-center justify-between px-5 py-2.5 pl-10 bg-gray-50/50 border-t border-gray-50 hover:bg-gray-100/50">
+                  <div key={child.id} className="flex items-center justify-between px-5 py-2.5 pl-10 bg-ds-bg2/50 border-t border-ds-border hover:bg-ds-bg2/50">
                     <div>
-                      <span className="text-sm text-gray-700">{child.displayName || child.name}</span>
-                      <span className="ml-2 px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[10px]">Section</span>
+                      <span className="text-sm text-ds-text1">{child.displayName || child.name}</span>
+                      <span className="ml-2 px-1.5 py-0.5 bg-blue-50 text-ds-info-text rounded text-[10px]">Section</span>
                     </div>
                     <button onClick={() => handleDelete(child.id, child.displayName || child.name)} disabled={deleting === child.id}
-                      className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50">
+                      className="text-xs text-red-500 hover:text-ds-error-text font-medium disabled:opacity-50">
                       {deleting === child.id ? '...' : 'Delete'}
                     </button>
                   </div>
@@ -493,28 +493,28 @@ function FeeHeadsTab({ showSuccess, showError }: { showSuccess: (m: string) => v
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex gap-3">
+      <div className="bg-ds-surface rounded-xl border border-ds-border p-4 shadow-sm flex gap-3">
         <input className={inp} placeholder="e.g. Hostel Fee, Bus Fee" value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
         <button onClick={handleAdd} disabled={adding}
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 shrink-0">
+          className="btn-brand px-4 py-2 rounded-lg shrink-0">
           {adding ? 'Adding...' : '+ Add'}
         </button>
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {loading ? <p className="p-6 text-sm text-gray-400">Loading...</p> : heads.length === 0 ? (
-          <p className="p-6 text-sm text-gray-400">No fee heads yet.</p>
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+        {loading ? <p className="p-6 text-sm text-ds-text3">Loading...</p> : heads.length === 0 ? (
+          <p className="p-6 text-sm text-ds-text3">No fee heads yet.</p>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-ds-border">
             {heads.map((h) => (
-              <div key={h.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
+              <div key={h.id} className="flex items-center justify-between px-5 py-3 hover:bg-ds-bg2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-800">{h.name}</span>
-                  {!h.isCustom && <span className="px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded text-[10px]">Default</span>}
+                  <span className="text-sm text-ds-text1">{h.name}</span>
+                  {!h.isCustom && <span className="px-1.5 py-0.5 bg-ds-bg2 text-ds-text3 rounded text-[10px]">Default</span>}
                 </div>
                 <button onClick={() => handleDelete(h.id, h.name)} disabled={deleting === h.id}
-                  className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50">
+                  className="text-xs text-red-500 hover:text-ds-error-text font-medium disabled:opacity-50">
                   {deleting === h.id ? '...' : 'Delete'}
                 </button>
               </div>
@@ -562,25 +562,25 @@ function SubjectsTab({ showSuccess, showError }: { showSuccess: (m: string) => v
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex gap-3">
+      <div className="bg-ds-surface rounded-xl border border-ds-border p-4 shadow-sm flex gap-3">
         <input className={inp} placeholder="e.g. Environmental Science, Economics" value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
         <button onClick={handleAdd} disabled={adding}
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 shrink-0">
+          className="btn-brand px-4 py-2 rounded-lg shrink-0">
           {adding ? 'Adding...' : '+ Add'}
         </button>
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {loading ? <p className="p-6 text-sm text-gray-400">Loading...</p> : subjects.length === 0 ? (
-          <p className="p-6 text-sm text-gray-400">No subjects yet.</p>
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+        {loading ? <p className="p-6 text-sm text-ds-text3">Loading...</p> : subjects.length === 0 ? (
+          <p className="p-6 text-sm text-ds-text3">No subjects yet.</p>
         ) : (
-          <div className="grid grid-cols-3 gap-0 divide-y divide-gray-50">
+          <div className="grid grid-cols-3 gap-0 divide-y divide-ds-border">
             {subjects.map((s) => (
-              <div key={s.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50">
-                <span className="text-sm text-gray-800">{s.name}</span>
+              <div key={s.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-ds-bg2">
+                <span className="text-sm text-ds-text1">{s.name}</span>
                 <button onClick={() => handleDelete(s.id, s.name)} disabled={deleting === s.id}
-                  className="text-xs text-red-400 hover:text-red-600 font-medium disabled:opacity-50 ml-2">
+                  className="text-xs text-red-400 hover:text-ds-error-text font-medium disabled:opacity-50 ml-2">
                   {deleting === s.id ? '...' : '×'}
                 </button>
               </div>

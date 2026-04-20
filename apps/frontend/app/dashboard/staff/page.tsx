@@ -17,9 +17,9 @@ const ASSIGNABLE_ROLE_CODES = ['admin', 'principal', 'teacher', 'receptionist', 
 
 const ROLE_BADGE: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
-  admin: 'bg-blue-100 text-blue-700',
+  admin: 'bg-ds-info-bg text-ds-info-text',
   principal: 'bg-indigo-100 text-indigo-700',
-  teacher: 'bg-green-100 text-green-700',
+  teacher: 'bg-ds-success-bg text-ds-success-text',
   receptionist: 'bg-pink-100 text-pink-700',
   non_teaching_staff: 'bg-orange-100 text-orange-700',
   accountant: 'bg-teal-100 text-teal-700',
@@ -116,57 +116,57 @@ export default function StaffPage() {
     } catch (e: any) { setError(e.message); }
   };
 
-  const inp = 'w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black';
+  const inp = 'w-full p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand';
 
   return (
     <div className="p-8 overflow-auto h-full">
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-bold text-gray-800">Staff Management</h1>
+        <h1 className="text-2xl font-bold text-ds-text1">Staff Management</h1>
         <button onClick={() => { setShowCreate(true); setCreatedCredentials(null); setError(null); }}
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+          className="btn-brand px-4 py-2 rounded-lg">
           + Add Staff
         </button>
       </div>
-      <p className="text-sm text-gray-400 mb-6">All staff accounts for this institution</p>
+      <p className="text-sm text-ds-text3 mb-6">All staff accounts for this institution</p>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <p className="text-sm font-semibold text-gray-700">All Staff <span className="text-gray-400 font-normal">({staff.length})</span></p>
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-ds-border">
+          <p className="text-sm font-semibold text-ds-text1">All Staff <span className="text-ds-text3 font-normal">({staff.length})</span></p>
         </div>
         {loading ? (
-          <p className="p-6 text-sm text-gray-400">Loading...</p>
+          <p className="p-6 text-sm text-ds-text3">Loading...</p>
         ) : staff.length === 0 ? (
-          <p className="p-6 text-sm text-gray-400">No staff members yet. Add one above.</p>
+          <p className="p-6 text-sm text-ds-text3">No staff members yet. Add one above.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-ds-bg2">
               <tr>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Email / Phone</th>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Role</th>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Status</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Email / Phone</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Role</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-ds-border">
               {staff.map((u) => (
                 <tr key={u.id}
                   onClick={() => router.push(`/dashboard/staff/${u.id}`)}
-                  className="cursor-pointer hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 text-gray-800 font-medium">
+                  className="cursor-pointer hover:bg-ds-bg2 transition-colors">
+                  <td className="px-5 py-3 text-ds-text1 font-medium">
                     <div>{u.email || '—'}</div>
-                    {u.phone && <div className="text-xs text-gray-400">{u.phone}</div>}
+                    {u.phone && <div className="text-xs text-ds-text3">{u.phone}</div>}
                   </td>
                   <td className="px-5 py-3">
                     {u.roles.length === 0 ? (
-                      <span className="text-gray-400 italic text-xs">No role assigned</span>
+                      <span className="text-ds-text3 italic text-xs">No role assigned</span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {u.roles.map((ur) => (
                           <span key={ur.role.id}
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE[ur.role.code] ?? 'bg-gray-100 text-gray-600'}`}>
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE[ur.role.code] ?? 'bg-ds-bg2 text-ds-text2'}`}>
                             {ur.role.label}
                           </span>
                         ))}
@@ -174,13 +174,13 @@ export default function StaffPage() {
                     )}
                   </td>
                   <td className="px-5 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-ds-success-bg text-ds-success-text' : 'bg-ds-bg2 text-ds-text2'}`}>
                       {u.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => handleDelete(u.id, u.email || u.phone || u.id)}
-                      className="text-xs text-red-500 hover:text-red-700 font-medium">
+                      className="text-xs text-red-500 hover:text-ds-error-text font-medium">
                       Delete
                     </button>
                   </td>
@@ -194,64 +194,64 @@ export default function StaffPage() {
       {/* Create modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <div className="bg-ds-surface rounded-2xl shadow-xl w-full max-w-md p-6">
             {createdCredentials ? (
               <div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-ds-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-lg font-bold text-gray-800 mb-1 text-center">Staff Account Created</h2>
-                <p className="text-xs text-gray-400 text-center mb-5">Share these credentials. Password will not be shown again.</p>
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
+                <h2 className="text-lg font-bold text-ds-text1 mb-1 text-center">Staff Account Created</h2>
+                <p className="text-xs text-ds-text3 text-center mb-5">Share these credentials. Password will not be shown again.</p>
+                <div className="bg-ds-bg2 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
                   {createdCredentials.email && (
                     <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Email</p>
-                      <p className="text-gray-800 font-medium">{createdCredentials.email}</p>
+                      <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Email</p>
+                      <p className="text-ds-text1 font-medium">{createdCredentials.email}</p>
                     </div>
                   )}
                   {createdCredentials.phone && (
                     <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Phone</p>
-                      <p className="text-gray-800 font-medium">{createdCredentials.phone}</p>
+                      <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Phone</p>
+                      <p className="text-ds-text1 font-medium">{createdCredentials.phone}</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Password</p>
-                    <p className="text-gray-800 font-bold tracking-wider">{createdCredentials.password}</p>
+                    <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Password</p>
+                    <p className="text-ds-text1 font-bold tracking-wider">{createdCredentials.password}</p>
                   </div>
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                  <p className="text-xs font-semibold text-amber-700 mb-1">Next Steps</p>
-                  <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
+                <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 mb-4">
+                  <p className="text-xs font-semibold text-ds-warning-text mb-1">Next Steps</p>
+                  <ul className="text-xs text-ds-warning-text space-y-1 list-disc list-inside">
                     <li>Go to <strong>Classes</strong> to assign this staff member to a class as teacher</li>
                     <li>Go to <strong>Subjects</strong> to assign subjects they will teach</li>
                   </ul>
                 </div>
                 <button onClick={() => { setShowCreate(false); setCreatedCredentials(null); }}
-                  className="w-full bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800">
+                  className="btn-brand w-full py-2.5 rounded-lg">
                   Done
                 </button>
               </div>
             ) : (
               <>
-                <h2 className="text-lg font-bold text-gray-800 mb-1">Add Staff Member</h2>
-                <p className="text-xs text-gray-400 mb-5">Staff logs in with institution code + email/phone + password</p>
-                {error && <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-xs">{error}</div>}
+                <h2 className="text-lg font-bold text-ds-text1 mb-1">Add Staff Member</h2>
+                <p className="text-xs text-ds-text3 mb-5">Staff logs in with institution code + email/phone + password</p>
+                {error && <div className="mb-3 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-xs">{error}</div>}
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Email</label>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Email</label>
                     <input type="email" className={inp} placeholder="teacher@school.com"
                       value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Phone (if no email)</label>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Phone (if no email)</label>
                     <input type="tel" className={inp} placeholder="9876543210"
                       value={phone} onChange={(e) => setPhone(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Password *</label>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Password *</label>
                     <div className="flex gap-2">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -261,7 +261,7 @@ export default function StaffPage() {
                         onChange={(e) => setPassword(e.target.value)}
                       />
                       <button type="button" onClick={generateCredentials}
-                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium whitespace-nowrap shrink-0">
+                        className="px-3 py-2 bg-ds-bg2 hover:bg-ds-bg2 text-ds-text1 rounded-lg text-xs font-medium whitespace-nowrap shrink-0">
                         Generate
                       </button>
                     </div>
@@ -270,8 +270,8 @@ export default function StaffPage() {
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Role <span className="text-red-500">*</span></label>
-                    <select className={inp + ' bg-white'} value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)}>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Role <span className="text-red-500">*</span></label>
+                    <select className={inp + ' bg-ds-surface'} value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)}>
                       <option value="">Select role...</option>
                       {roles.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                     </select>
@@ -279,11 +279,11 @@ export default function StaffPage() {
                 </div>
                 <div className="flex gap-3 mt-6">
                   <button onClick={() => { setShowCreate(false); setError(null); setEmail(''); setPhone(''); setPassword(''); setSelectedRoleId(''); }}
-                    className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+                    className="flex-1 border border-ds-border-strong text-ds-text1 py-2.5 rounded-lg text-sm font-medium hover:bg-ds-bg2">
                     Cancel
                   </button>
                   <button onClick={handleCreate} disabled={submitting}
-                    className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                    className="btn-brand flex-1 py-2.5 rounded-lg">
                     {submitting ? 'Creating...' : 'Create Account'}
                   </button>
                 </div>

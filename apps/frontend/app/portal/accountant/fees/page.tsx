@@ -223,7 +223,7 @@ export default function AccountantFeesPage() {
               <button
                 key={s.id}
                 onClick={() => selectStudent(s)}
-                className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 border-b last:border-0 flex items-center justify-between"
+                className="w-full text-left px-4 py-3 text-sm hover:bg-ds-bg2 border-b last:border-0 flex items-center justify-between"
                 style={{ borderColor: 'var(--border)' }}
               >
                 <span className="font-medium" style={{ color: 'var(--text-1)' }}>{s.firstName} {s.lastName}</span>
@@ -317,14 +317,14 @@ export default function AccountantFeesPage() {
                     <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>Total Due</p>
                   </div>
                   <div className="rounded-xl border border-green-200 bg-green-50 p-5">
-                    <p className="text-2xl font-bold text-green-700">₹{(balance.totalPaid ?? 0).toLocaleString('en-IN')}</p>
-                    <p className="text-sm mt-1 text-green-700 font-medium">Total Paid</p>
+                    <p className="text-2xl font-bold text-ds-success-text">₹{(balance.totalPaid ?? 0).toLocaleString('en-IN')}</p>
+                    <p className="text-sm mt-1 text-ds-success-text font-medium">Total Paid</p>
                   </div>
-                  <div className={`rounded-xl border p-5 ${(balance.balance ?? 0) > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                    <p className={`text-2xl font-bold ${(balance.balance ?? 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                  <div className={`rounded-xl border p-5 ${(balance.balance ?? 0) > 0 ? 'bg-ds-error-bg border-ds-error-border' : 'bg-ds-success-bg border-ds-success-border'}`}>
+                    <p className={`text-2xl font-bold ${(balance.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
                       ₹{(balance.balance ?? 0).toLocaleString('en-IN')}
                     </p>
-                    <p className={`text-sm font-medium mt-1 ${(balance.balance ?? 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                    <p className={`text-sm font-medium mt-1 ${(balance.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
                       {(balance.balance ?? 0) > 0 ? 'Outstanding' : 'No Dues'}
                     </p>
                   </div>
@@ -345,7 +345,7 @@ export default function AccountantFeesPage() {
                           <td>{b.feeHeadName}</td>
                           <td className="text-right">₹{(b.due ?? 0).toLocaleString('en-IN')}</td>
                           <td className="text-right">₹{(b.paid ?? 0).toLocaleString('en-IN')}</td>
-                          <td className={`text-right font-semibold ${(b.balance ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          <td className={`text-right font-semibold ${(b.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
                             ₹{(b.balance ?? 0).toLocaleString('en-IN')}
                           </td>
                         </tr>

@@ -60,7 +60,7 @@ export default function ParentMarksPage() {
   if (notLinked) {
     return (
       <div className="p-8">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-700">
+        <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-5 text-sm text-ds-warning-text">
           Your child's record has not been linked yet. Please contact the school admin.
         </div>
       </div>
@@ -68,35 +68,35 @@ export default function ParentMarksPage() {
   }
 
   const GRADE_COLORS: Record<string, string> = {
-    'A+': 'text-green-700', A: 'text-green-600', B: 'text-blue-600', C: 'text-amber-600', D: 'text-orange-600', F: 'text-red-600',
+    'A+': 'text-ds-success-text', A: 'text-ds-success-text', B: 'text-ds-brand', C: 'text-ds-warning-text', D: 'text-orange-600', F: 'text-ds-error-text',
   };
 
   return (
     <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Child's Marks & Results</h1>
-      <p className="text-sm text-gray-400 mb-6">Exam scorecards</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Child's Marks & Results</h1>
+      <p className="text-sm text-ds-text3 mb-6">Exam scorecards</p>
 
       <div className="flex flex-wrap gap-4 mb-6">
         {children.length > 1 && (
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Child</label>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Child</label>
             <select value={selectedChildId} onChange={(e) => { setSelectedChildId(e.target.value); setScorecard(null); }}
-              className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none">
+              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
               {children.map((c) => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
             </select>
           </div>
         )}
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Academic Year</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Academic Year</label>
           <select value={currentYearId} onChange={(e) => setCurrentYearId(e.target.value)}
-            className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none">
+            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
             {years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Examination</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Examination</label>
           <select value={selectedExamId} onChange={(e) => setSelectedExamId(e.target.value)}
-            className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none">
+            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
             <option value="">Select exam...</option>
             {exams.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
           </select>
@@ -104,58 +104,58 @@ export default function ParentMarksPage() {
       </div>
 
       {exams.length === 0 && currentYearId && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
-          <p className="text-gray-400 text-sm">No completed exams for this year.</p>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-8 text-center">
+          <p className="text-ds-text3 text-sm">No completed exams for this year.</p>
         </div>
       )}
 
-      {loading && <p className="text-sm text-gray-400">Loading scorecard...</p>}
+      {loading && <p className="text-sm text-ds-text3">Loading scorecard...</p>}
 
       {scorecard && !loading && (
         <>
-          <div className="bg-black text-white rounded-xl p-5 mb-5 grid grid-cols-3 gap-4">
+          <div className="rounded-xl p-5 mb-5 grid grid-cols-3 gap-4" style={{ background: 'linear-gradient(135deg, var(--brand-dark) 0%, #2d1a0e 100%)', color: '#fcfbf7' }}>
             <div>
-              <p className="text-xs text-gray-400">Total Marks</p>
+              <p className="text-xs" style={{ color: 'rgba(247,197,118,0.7)' }}>Total Marks</p>
               <p className="text-xl font-bold mt-0.5">{scorecard.summary.total} / {scorecard.summary.maxTotal}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Percentage</p>
+              <p className="text-xs" style={{ color: 'rgba(247,197,118,0.7)' }}>Percentage</p>
               <p className="text-xl font-bold mt-0.5">{scorecard.summary.percentage?.toFixed(1)}%</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Class Rank</p>
+              <p className="text-xs" style={{ color: 'rgba(247,197,118,0.7)' }}>Class Rank</p>
               <p className="text-xl font-bold mt-0.5">#{scorecard.summary.rank ?? '—'}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-ds-bg2">
                 <tr>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Subject</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Marks</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Max</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">%</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Grade</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Status</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Subject</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Marks</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Max</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">%</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Grade</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-ds-border">
                 {scorecard.entries.map((e, i) => (
                   <tr key={i}>
-                    <td className="px-5 py-3 text-gray-800 font-medium">{e.subject.name}</td>
-                    <td className="px-5 py-3 text-center text-gray-700">
-                      {e.isAbsent ? <span className="text-xs text-gray-400">Absent</span> : (e.marksObtained ?? '—')}
+                    <td className="px-5 py-3 text-ds-text1 font-medium">{e.subject.name}</td>
+                    <td className="px-5 py-3 text-center text-ds-text1">
+                      {e.isAbsent ? <span className="text-xs text-ds-text3">Absent</span> : (e.marksObtained ?? '—')}
                     </td>
-                    <td className="px-5 py-3 text-center text-gray-500">{e.maxMarks}</td>
-                    <td className="px-5 py-3 text-center text-gray-600">{e.isAbsent ? '—' : `${e.percentage?.toFixed(0)}%`}</td>
-                    <td className={`px-5 py-3 text-center font-bold ${GRADE_COLORS[e.grade] ?? 'text-gray-600'}`}>{e.isAbsent ? '—' : e.grade}</td>
+                    <td className="px-5 py-3 text-center text-ds-text2">{e.maxMarks}</td>
+                    <td className="px-5 py-3 text-center text-ds-text2">{e.isAbsent ? '—' : `${e.percentage?.toFixed(0)}%`}</td>
+                    <td className={`px-5 py-3 text-center font-bold ${GRADE_COLORS[e.grade] ?? 'text-ds-text2'}`}>{e.isAbsent ? '—' : e.grade}</td>
                     <td className="px-5 py-3 text-center">
                       {e.isAbsent
-                        ? <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Absent</span>
+                        ? <span className="text-xs bg-ds-bg2 text-ds-text2 px-2 py-0.5 rounded-full">Absent</span>
                         : e.isPassed
-                          ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Pass</span>
-                          : <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Fail</span>}
+                          ? <span className="text-xs bg-ds-success-bg text-ds-success-text px-2 py-0.5 rounded-full">Pass</span>
+                          : <span className="text-xs bg-ds-error-bg text-ds-error-text px-2 py-0.5 rounded-full">Fail</span>}
                     </td>
                   </tr>
                 ))}

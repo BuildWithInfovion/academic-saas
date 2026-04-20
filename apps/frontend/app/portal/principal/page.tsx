@@ -73,14 +73,15 @@ export default function PrincipalDashboard() {
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         {[
-          { label: 'Attendance Reports', desc: 'Class-wise defaulter list', path: '/portal/principal/attendance', color: 'btn-brand' },
-          { label: 'Fee Reports', desc: 'Outstanding dues overview', path: '/portal/principal/fees', color: 'btn-brand' },
-          { label: 'Announcements', desc: 'School-wide notices', path: '/portal/principal/announcements', color: 'btn-brand' },
+          { label: 'Attendance Reports', desc: 'Class-wise defaulter list', path: '/portal/principal/attendance', gradient: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)' },
+          { label: 'Fee Reports', desc: 'Outstanding dues overview', path: '/portal/principal/fees', gradient: 'linear-gradient(135deg, #6b432f 0%, #3a1f0c 100%)' },
+          { label: 'Announcements', desc: 'School-wide notices', path: '/portal/principal/announcements', gradient: 'linear-gradient(135deg, #dc924b 0%, #ae7040 100%)' },
         ].map((a) => (
           <button
             key={a.label}
             onClick={() => router.push(a.path)}
-            className={`rounded-xl p-5 text-left hover:opacity-90 transition-opacity ${a.color}`}
+            className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity"
+            style={{ background: a.gradient, color: '#fcfbf7', border: '1px solid rgba(140,57,25,0.25)' }}
           >
             <p className="font-semibold text-sm">{a.label}</p>
             <p className="text-xs mt-1 opacity-70">{a.desc}</p>
@@ -102,7 +103,7 @@ export default function PrincipalDashboard() {
             ) : attendanceDefaulters.map((d) => (
               <div key={d.id} className="px-5 py-3 flex items-center justify-between">
                 <span className="text-sm text-ds-text1">{d.firstName} {d.lastName}</span>
-                <span className="text-xs font-semibold text-red-600">{d.percentage}%</span>
+                <span className="text-xs font-semibold text-ds-error-text">{d.percentage}%</span>
               </div>
             ))}
           </div>
@@ -120,7 +121,7 @@ export default function PrincipalDashboard() {
             ) : feeDefaulters.map((d) => (
               <div key={d.id} className="px-5 py-3 flex items-center justify-between">
                 <span className="text-sm text-ds-text1">{d.firstName} {d.lastName}</span>
-                <span className="text-xs font-semibold text-red-600">₹{d.balance?.toLocaleString('en-IN')}</span>
+                <span className="text-xs font-semibold text-ds-error-text">₹{d.balance?.toLocaleString('en-IN')}</span>
               </div>
             ))}
           </div>

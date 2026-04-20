@@ -46,22 +46,22 @@ export default function PrincipalFeesPage() {
 
   return (
     <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Fee Reports</h1>
-      <p className="text-sm text-gray-400 mb-6">Monitor fee collection and outstanding balances</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Fee Reports</h1>
+      <p className="text-sm text-ds-text3 mb-6">Monitor fee collection and outstanding balances</p>
 
       {/* Filters */}
       <div className="flex gap-4 mb-6 flex-wrap">
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Academic Year</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Academic Year</label>
           <select value={selectedYearId} onChange={(e) => setSelectedYearId(e.target.value)}
-            className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none">
+            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
             {years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Filter by Class</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Filter by Class</label>
           <select value={selectedUnitId} onChange={(e) => setSelectedUnitId(e.target.value)}
-            className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none">
+            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
             <option value="">All classes</option>
             {units.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
           </select>
@@ -70,60 +70,60 @@ export default function PrincipalFeesPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-2xl font-bold text-red-700">{defaulters.length}</p>
-          <p className="text-sm text-red-700 font-medium mt-1">Fee Defaulters</p>
-          <p className="text-xs text-gray-500 mt-0.5">Outstanding balance</p>
+        <div className="bg-ds-error-bg border border-ds-error-border rounded-xl p-4">
+          <p className="text-2xl font-bold text-ds-error-text">{defaulters.length}</p>
+          <p className="text-sm text-ds-error-text font-medium mt-1">Fee Defaulters</p>
+          <p className="text-xs text-ds-text2 mt-0.5">Outstanding balance</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-2xl font-bold text-red-700">₹{totalDue.toLocaleString('en-IN')}</p>
-          <p className="text-sm text-red-700 font-medium mt-1">Total Outstanding</p>
-          <p className="text-xs text-gray-500 mt-0.5">Across all defaulters</p>
+        <div className="bg-ds-error-bg border border-ds-error-border rounded-xl p-4">
+          <p className="text-2xl font-bold text-ds-error-text">₹{totalDue.toLocaleString('en-IN')}</p>
+          <p className="text-sm text-ds-error-text font-medium mt-1">Total Outstanding</p>
+          <p className="text-xs text-ds-text2 mt-0.5">Across all defaulters</p>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-          <p className="text-2xl font-bold text-green-700">₹{todayTotal.toLocaleString('en-IN')}</p>
-          <p className="text-sm text-green-700 font-medium mt-1">Today's Collection</p>
-          <p className="text-xs text-gray-500 mt-0.5">{todayDate}</p>
+        <div className="bg-ds-success-bg border border-ds-success-border rounded-xl p-4">
+          <p className="text-2xl font-bold text-ds-success-text">₹{todayTotal.toLocaleString('en-IN')}</p>
+          <p className="text-sm text-ds-success-text font-medium mt-1">Today's Collection</p>
+          <p className="text-xs text-ds-text2 mt-0.5">{todayDate}</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-5 bg-ds-bg2 rounded-xl p-1 w-fit">
         {[{ id: 'defaulters', label: 'Defaulters' }, { id: 'daily', label: "Today's Collection" }].map((t) => (
           <button key={t.id} onClick={() => setActiveTab(t.id as any)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-ds-surface text-ds-text1 shadow-sm' : 'text-ds-text2 hover:text-ds-text1'}`}>
             {t.label}
           </button>
         ))}
       </div>
 
       {activeTab === 'defaulters' && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800 text-sm">Fee Defaulters</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{defaulters.length} student(s) with outstanding balance</p>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-ds-border">
+            <h2 className="font-semibold text-ds-text1 text-sm">Fee Defaulters</h2>
+            <p className="text-xs text-ds-text3 mt-0.5">{defaulters.length} student(s) with outstanding balance</p>
           </div>
-          {loading ? <p className="p-5 text-sm text-gray-400">Loading...</p>
-            : defaulters.length === 0 ? <p className="p-5 text-sm text-gray-400">No defaulters found.</p>
+          {loading ? <p className="p-5 text-sm text-ds-text3">Loading...</p>
+            : defaulters.length === 0 ? <p className="p-5 text-sm text-ds-text3">No defaulters found.</p>
             : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-ds-bg2">
                   <tr>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">#</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Student</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Total Due</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Paid</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Balance</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">#</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Student</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Total Due</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Paid</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Balance</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-ds-border">
                   {defaulters.map((d, i) => (
                     <tr key={d.id}>
-                      <td className="px-5 py-3 text-gray-400 text-xs">{i + 1}</td>
-                      <td className="px-5 py-3 text-gray-800 font-medium">{d.firstName} {d.lastName}</td>
-                      <td className="px-5 py-3 text-right text-gray-600">₹{(d.totalDue ?? 0).toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right text-gray-600">₹{(d.totalPaid ?? 0).toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-red-600">₹{(d.balance ?? 0).toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-ds-text3 text-xs">{i + 1}</td>
+                      <td className="px-5 py-3 text-ds-text1 font-medium">{d.firstName} {d.lastName}</td>
+                      <td className="px-5 py-3 text-right text-ds-text2">₹{(d.totalDue ?? 0).toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-right text-ds-text2">₹{(d.totalPaid ?? 0).toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-ds-error-text">₹{(d.balance ?? 0).toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -133,29 +133,29 @@ export default function PrincipalFeesPage() {
       )}
 
       {activeTab === 'daily' && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800 text-sm">Today's Collection</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{dailyCollection.length} payment(s) recorded today</p>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-ds-border">
+            <h2 className="font-semibold text-ds-text1 text-sm">Today's Collection</h2>
+            <p className="text-xs text-ds-text3 mt-0.5">{dailyCollection.length} payment(s) recorded today</p>
           </div>
-          {dailyCollection.length === 0 ? <p className="p-5 text-sm text-gray-400">No payments recorded today.</p>
+          {dailyCollection.length === 0 ? <p className="p-5 text-sm text-ds-text3">No payments recorded today.</p>
             : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-ds-bg2">
                   <tr>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Receipt No</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Student</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Mode</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Amount</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Receipt No</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Student</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Mode</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-ds-border">
                   {dailyCollection.map((r) => (
                     <tr key={r.receiptNo}>
-                      <td className="px-5 py-3 text-gray-500 font-mono text-xs">{r.receiptNo}</td>
-                      <td className="px-5 py-3 text-gray-800">{r.student?.firstName} {r.student?.lastName}</td>
-                      <td className="px-5 py-3 text-gray-500 capitalize">{r.paymentMode}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-gray-800">₹{r.amount.toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-ds-text2 font-mono text-xs">{r.receiptNo}</td>
+                      <td className="px-5 py-3 text-ds-text1">{r.student?.firstName} {r.student?.lastName}</td>
+                      <td className="px-5 py-3 text-ds-text2 capitalize">{r.paymentMode}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-ds-text1">₹{r.amount.toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>

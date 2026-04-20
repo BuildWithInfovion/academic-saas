@@ -62,7 +62,7 @@ const INITIAL_FORM: TcFormState = {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6 first:mt-0">
+    <h2 className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3 mt-6 first:mt-0">
       {children}
     </h2>
   );
@@ -80,7 +80,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-xs font-medium text-gray-500 block mb-1">
+      <label className="text-xs font-medium text-ds-text2 block mb-1">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <input
@@ -88,7 +88,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="border border-gray-300 p-2 rounded-lg w-full text-sm focus:outline-none focus:ring-2 focus:ring-black"
+        className="border border-ds-border-strong p-2 rounded-lg w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand"
       />
     </div>
   );
@@ -105,13 +105,13 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className="text-xs font-medium text-gray-500 block mb-1">
+      <label className="text-xs font-medium text-ds-text2 block mb-1">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border border-gray-300 p-2 rounded-lg w-full text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+        className="border border-ds-border-strong p-2 rounded-lg w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface"
       >
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
@@ -122,8 +122,8 @@ function SelectField({
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex items-start gap-3 py-1.5">
-      <span className="text-xs text-gray-400 w-36 shrink-0 pt-0.5">{label}</span>
-      <span className="text-sm text-gray-800">{value || '—'}</span>
+      <span className="text-xs text-ds-text3 w-36 shrink-0 pt-0.5">{label}</span>
+      <span className="text-sm text-ds-text1">{value || '—'}</span>
     </div>
   );
 }
@@ -194,9 +194,9 @@ export default function NewTcPage() {
 
   if (!studentId) {
     return (
-      <div className="p-10 text-center text-gray-500">
+      <div className="p-10 text-center text-ds-text2">
         <p className="text-sm">No student selected.</p>
-        <button onClick={() => router.back()} className="mt-4 text-xs underline text-gray-400 hover:text-gray-600">
+        <button onClick={() => router.back()} className="mt-4 text-xs underline text-ds-text3 hover:text-ds-text2">
           Go back
         </button>
       </div>
@@ -204,7 +204,7 @@ export default function NewTcPage() {
   }
 
   if (loadingStudent) {
-    return <div className="p-10 text-center text-gray-400 text-sm">Loading student details…</div>;
+    return <div className="p-10 text-center text-ds-text3 text-sm">Loading student details…</div>;
   }
 
   if (!student) {
@@ -222,38 +222,38 @@ export default function NewTcPage() {
       {/* Back */}
       <button
         onClick={() => router.push(`/dashboard/students/${student.id}`)}
-        className="text-sm text-gray-500 hover:text-gray-700 mb-6 flex items-center gap-1"
+        className="text-sm text-ds-text2 hover:text-ds-text1 mb-6 flex items-center gap-1"
       >
         ← Back to Student Profile
       </button>
 
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Request Transfer Certificate</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-semibold text-ds-text1">Request Transfer Certificate</h1>
+        <p className="text-sm text-ds-text2 mt-0.5">
           Fill in all TC fields for <strong>{student.firstName} {student.lastName}</strong> — an approver must review before the TC can be issued.
         </p>
       </div>
 
       {error && (
-        <div className="mb-5 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>
+        <div className="mb-5 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>
       )}
 
       <div className="grid grid-cols-3 gap-5">
         {/* Left column — student snapshot (read-only) */}
-        <div className="col-span-1 bg-gray-50 rounded-xl border border-gray-100 p-4 self-start">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Student Snapshot</p>
+        <div className="col-span-1 bg-ds-bg2 rounded-xl border border-ds-border p-4 self-start">
+          <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Student Snapshot</p>
           <InfoRow label="Name"          value={`${student.firstName} ${student.lastName}`} />
           <InfoRow label="Admission No"  value={student.admissionNo} />
           <InfoRow label="Class"         value={className} />
           <InfoRow label="Date of Birth" value={fmt(student.dateOfBirth)} />
           <InfoRow label="Admission Date" value={fmt(student.admissionDate)} />
-          <p className="text-[10px] text-gray-400 mt-4">
+          <p className="text-[10px] text-ds-text3 mt-4">
             Attendance, subjects, exam results &amp; fee dues are computed automatically by the system at submission time.
           </p>
         </div>
 
         {/* Right column — editable form */}
-        <div className="col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-5">
+        <div className="col-span-2 bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 space-y-5">
 
           {/* Personal Details */}
           <div>
@@ -286,7 +286,7 @@ export default function NewTcPage() {
           {/* Academic Details */}
           <div>
             <SectionTitle>Academic Details</SectionTitle>
-            <p className="text-xs text-gray-400 mb-3">
+            <p className="text-xs text-ds-text3 mb-3">
               Leave blank to auto-compute from records. Fill only if you need to override.
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -341,30 +341,30 @@ export default function NewTcPage() {
                 options={[['Excellent','Excellent'], ['Good','Good'], ['Satisfactory','Satisfactory'], ['Poor','Poor']]}
               />
               <div className="col-span-2">
-                <label className="text-xs font-medium text-gray-500 block mb-1">Reason for Leaving</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Reason for Leaving</label>
                 <textarea
                   value={form.reason}
                   onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
                   placeholder="e.g. Family relocation, admission to another school…"
                   rows={2}
-                  className="border border-gray-300 p-2 rounded-lg w-full text-sm focus:outline-none focus:ring-2 focus:ring-black resize-none"
+                  className="border border-ds-border-strong p-2 rounded-lg w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand resize-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2 border-t border-gray-100">
+          <div className="flex gap-3 pt-2 border-t border-ds-border">
             <button
               onClick={() => router.push(`/dashboard/students/${student.id}`)}
-              className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50"
+              className="px-5 py-2.5 border border-ds-border-strong text-ds-text1 rounded-lg text-sm hover:bg-ds-bg2"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting || !form.gender || !form.nationality || !form.religion || !form.casteCategory}
-              className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+              className="btn-brand flex-1 py-2.5 rounded-lg"
             >
               {submitting ? 'Submitting…' : 'Submit TC Request →'}
             </button>

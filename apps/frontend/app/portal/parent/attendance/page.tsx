@@ -45,7 +45,7 @@ export default function ParentAttendancePage() {
   if (notLinked) {
     return (
       <div className="p-8">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-700">
+        <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-5 text-sm text-ds-warning-text">
           Your child's record has not been linked yet. Please contact the school admin.
         </div>
       </div>
@@ -56,27 +56,27 @@ export default function ParentAttendancePage() {
   const monthLabel = new Date(Number(year), Number(month) - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
   const STATUS_COLORS: Record<string, string> = {
-    present: 'bg-green-100 text-green-700',
-    absent: 'bg-red-100 text-red-700',
-    late: 'bg-amber-100 text-amber-700',
-    leave: 'bg-blue-100 text-blue-700',
+    present: 'bg-ds-success-bg text-ds-success-text',
+    absent: 'bg-ds-error-bg text-ds-error-text',
+    late: 'bg-ds-warning-bg text-ds-warning-text',
+    leave: 'bg-ds-info-bg text-ds-info-text',
   };
 
   const child = children.find((c) => c.id === selectedChildId);
 
   return (
     <div className="p-8 max-w-3xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Child's Attendance</h1>
-      <p className="text-sm text-gray-400 mb-6">Monthly attendance record</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Child's Attendance</h1>
+      <p className="text-sm text-ds-text3 mb-6">Monthly attendance record</p>
 
       <div className="flex flex-wrap gap-4 mb-6">
         {children.length > 1 && (
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Child</label>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Child</label>
             <select
               value={selectedChildId}
               onChange={(e) => setSelectedChildId(e.target.value)}
-              className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand"
             >
               {children.map((c) => (
                 <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
@@ -85,24 +85,24 @@ export default function ParentAttendancePage() {
           </div>
         )}
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Month</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Month</label>
           <input
             type="month"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+            className="border border-ds-border-strong rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand"
           />
         </div>
       </div>
 
       {child && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-semibold text-sm">
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4 mb-5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-ds-bg2 flex items-center justify-center text-ds-text2 font-semibold text-sm">
             {child.firstName[0]}{child.lastName[0]}
           </div>
           <div>
-            <p className="font-semibold text-gray-800 text-sm">{child.firstName} {child.lastName}</p>
-            <p className="text-xs text-gray-400">
+            <p className="font-semibold text-ds-text1 text-sm">{child.firstName} {child.lastName}</p>
+            <p className="text-xs text-ds-text3">
               {child.academicUnit?.displayName ?? child.academicUnit?.name ?? 'Class not assigned'} · {child.admissionNo}
             </p>
           </div>
@@ -110,52 +110,52 @@ export default function ParentAttendancePage() {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading...</p>
+        <p className="text-sm text-ds-text3">Loading...</p>
       ) : !summary ? (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
-          <p className="text-gray-400 text-sm">No attendance data for {monthLabel}.</p>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-8 text-center">
+          <p className="text-ds-text3 text-sm">No attendance data for {monthLabel}.</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-4 gap-3 mb-6">
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-green-700">{summary.present}</p>
-              <p className="text-xs text-green-600 mt-1">Present</p>
+            <div className="bg-ds-success-bg border border-ds-success-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-ds-success-text">{summary.present}</p>
+              <p className="text-xs text-ds-success-text mt-1">Present</p>
             </div>
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-red-700">{summary.absent}</p>
-              <p className="text-xs text-red-600 mt-1">Absent</p>
+            <div className="bg-ds-error-bg border border-ds-error-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-ds-error-text">{summary.absent}</p>
+              <p className="text-xs text-ds-error-text mt-1">Absent</p>
             </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-amber-700">{summary.late}</p>
-              <p className="text-xs text-amber-600 mt-1">Late</p>
+            <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-ds-warning-text">{summary.late}</p>
+              <p className="text-xs text-ds-warning-text mt-1">Late</p>
             </div>
-            <div className="bg-white border border-gray-100 rounded-xl p-4 text-center shadow-sm">
-              <p className={`text-2xl font-bold ${summary.percentage < 75 ? 'text-red-600' : 'text-gray-800'}`}>
+            <div className="bg-ds-surface border border-ds-border rounded-xl p-4 text-center shadow-sm">
+              <p className={`text-2xl font-bold ${summary.percentage < 75 ? 'text-ds-error-text' : 'text-ds-text1'}`}>
                 {summary.percentage}%
               </p>
-              <p className="text-xs text-gray-500 mt-1">Overall</p>
+              <p className="text-xs text-ds-text2 mt-1">Overall</p>
             </div>
           </div>
 
           {summary.percentage < 75 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700">
+            <div className="bg-ds-error-bg border border-ds-error-border rounded-lg p-3 mb-4 text-sm text-ds-error-text">
               Attendance is below 75%. Please speak to the class teacher.
             </div>
           )}
 
           {summary.records && summary.records.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-800 text-sm">Day-by-Day Record — {monthLabel}</h2>
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-ds-border">
+                <h2 className="font-semibold text-ds-text1 text-sm">Day-by-Day Record — {monthLabel}</h2>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-ds-border">
                 {summary.records.map((r) => (
                   <div key={r.date} className="px-5 py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-ds-text1">
                       {new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_COLORS[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_COLORS[r.status] ?? 'bg-ds-bg2 text-ds-text2'}`}>
                       {r.status}
                     </span>
                   </div>

@@ -207,13 +207,13 @@ export default function YearEndPage() {
                       ? 'bg-green-500 text-white'
                       : i === stepIndex
                       ? 'text-white'
-                      : 'text-gray-400'
+                      : 'text-ds-text3'
                   }`}
                   style={i === stepIndex ? { background: 'var(--brand)' } : i < stepIndex ? {} : { background: 'var(--border)', color: 'var(--text-3)' }}
                 >
                   {i < stepIndex ? '✓' : i + 1}
                 </div>
-                <span className={`text-xs font-medium ${i === stepIndex ? 'text-gray-800' : 'text-gray-400'}`}
+                <span className={`text-xs font-medium ${i === stepIndex ? 'text-ds-text1' : 'text-ds-text3'}`}
                   style={i === stepIndex ? { color: 'var(--text-1)' } : { color: 'var(--text-3)' }}>
                   {label}
                 </span>
@@ -287,11 +287,11 @@ export default function YearEndPage() {
                       </td>
                       <td className="px-4 py-3 font-semibold" style={{ color: 'var(--text-1)' }}>{u.totalStudents}</td>
                       <td className="px-4 py-3">
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">{u.activeStudents}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-ds-success-bg text-ds-success-text">{u.activeStudents}</span>
                       </td>
                       <td className="px-4 py-3">
                         {u.heldBackStudents > 0
-                          ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">{u.heldBackStudents}</span>
+                          ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-ds-warning-bg text-ds-warning-text">{u.heldBackStudents}</span>
                           : <span style={{ color: 'var(--text-3)' }}>—</span>}
                       </td>
                       <td className="px-4 py-3 text-xs" style={{ color: u.classTeacher ? 'var(--text-2)' : 'var(--text-3)' }}>

@@ -68,10 +68,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending_approval: 'bg-amber-100 text-amber-700',
-  approved:         'bg-blue-100 text-blue-700',
-  rejected:         'bg-red-100 text-red-700',
-  issued:           'bg-green-100 text-green-700',
+  pending_approval: 'bg-ds-warning-bg text-ds-warning-text',
+  approved:         'bg-ds-info-bg text-ds-info-text',
+  rejected:         'bg-ds-error-bg text-ds-error-text',
+  issued:           'bg-ds-success-bg text-ds-success-text',
 };
 
 const TABS = ['all', 'pending_approval', 'approved', 'rejected', 'issued'] as const;
@@ -143,19 +143,19 @@ function TcDocument({ tc }: { tc: TC }) {
   return (
     <div
       id="tc-print-area"
-      className="bg-white text-gray-900"
+      className="bg-ds-surface text-ds-text1"
       style={{ fontFamily: 'Georgia, serif', fontSize: 13, lineHeight: 1.7 }}
     >
       {/* School letterhead */}
       <div className="text-center border-b-2 border-gray-800 pb-4 mb-5">
         <p className="text-2xl font-bold uppercase tracking-wide">{institution?.name ?? '—'}</p>
         {institution?.board && (
-          <p className="text-sm text-gray-600 mt-0.5">Affiliated to {institution.board}</p>
+          <p className="text-sm text-ds-text2 mt-0.5">Affiliated to {institution.board}</p>
         )}
         {institution?.address && (
-          <p className="text-xs text-gray-500 mt-0.5">{institution.address}</p>
+          <p className="text-xs text-ds-text2 mt-0.5">{institution.address}</p>
         )}
-        <div className="flex justify-center gap-6 text-xs text-gray-500 mt-1">
+        <div className="flex justify-center gap-6 text-xs text-ds-text2 mt-1">
           {institution?.phone && <span>Ph: {institution.phone}</span>}
           {institution?.email && <span>Email: {institution.email}</span>}
         </div>
@@ -180,9 +180,9 @@ function TcDocument({ tc }: { tc: TC }) {
         <tbody>
           {rows.map(([no, label, value]) => (
             <tr key={no} style={{ borderBottom: '1px solid #e5e7eb' }}>
-              <td className="py-2 pr-2 align-top text-gray-500" style={{ width: 28, whiteSpace: 'nowrap' }}>{no}</td>
-              <td className="py-2 pr-6 align-top font-medium text-gray-700" style={{ width: 290 }}>{label}</td>
-              <td className="py-2 align-top text-gray-900">: &nbsp;{value}</td>
+              <td className="py-2 pr-2 align-top text-ds-text2" style={{ width: 28, whiteSpace: 'nowrap' }}>{no}</td>
+              <td className="py-2 pr-6 align-top font-medium text-ds-text1" style={{ width: 290 }}>{label}</td>
+              <td className="py-2 align-top text-ds-text1">: &nbsp;{value}</td>
             </tr>
           ))}
         </tbody>
@@ -190,11 +190,11 @@ function TcDocument({ tc }: { tc: TC }) {
 
       {/* Signature lines */}
       <div className="flex justify-between mt-12 pt-2">
-        <div className="text-center text-xs text-gray-600">
+        <div className="text-center text-xs text-ds-text2">
           <div style={{ borderTop: '1px solid #6b7280', width: 160, marginBottom: 4 }} />
           Signature of Class Teacher
         </div>
-        <div className="text-center text-xs text-gray-600">
+        <div className="text-center text-xs text-ds-text2">
           <div style={{ borderTop: '1px solid #6b7280', width: 200, marginBottom: 4 }} />
           Principal / Manager — Sign &amp; Seal
         </div>
@@ -329,24 +329,24 @@ export default function TcPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Transfer Certificates</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage outgoing TC requests for departing students</p>
+          <h1 className="text-xl font-semibold text-ds-text1">Transfer Certificates</h1>
+          <p className="text-sm text-ds-text2 mt-0.5">Manage outgoing TC requests for departing students</p>
         </div>
       </div>
 
-      {error   && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error   && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
       {/* Status tabs */}
-      <div className="flex gap-1 mb-5 border-b border-gray-200">
+      <div className="flex gap-1 mb-5 border-b border-ds-border">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
               tab === t
-                ? 'border-black text-gray-900'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-ds-brand text-ds-text1'
+                : 'border-transparent text-ds-text2 hover:text-ds-text1'
             }`}
           >
             {TAB_LABELS[t]}
@@ -356,24 +356,24 @@ export default function TcPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-16 text-gray-400">Loading...</div>
+        <div className="text-center py-16 text-ds-text3">Loading...</div>
       ) : displayed.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-ds-text3">
           <p className="text-sm">No transfer certificates {tab !== 'all' ? `with status "${TAB_LABELS[tab]}"` : ''}.</p>
           <p className="text-xs mt-1">To request a TC, go to a student's profile page.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Student</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Class</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Requested</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Conduct</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Dues</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+              <tr className="bg-ds-bg2 border-b border-ds-border">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Student</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Class</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Requested</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Conduct</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Dues</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -385,30 +385,30 @@ export default function TcPage() {
                 return (
                   <tr
                     key={tc.id}
-                    className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                    className="border-b border-ds-border hover:bg-ds-bg2 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{tc.studentName}</p>
-                      <p className="text-xs text-gray-400 font-mono">{tc.admissionNo}</p>
+                      <p className="font-medium text-ds-text1">{tc.studentName}</p>
+                      <p className="text-xs text-ds-text3 font-mono">{tc.admissionNo}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{className}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
+                    <td className="px-4 py-3 text-ds-text2">{className}</td>
+                    <td className="px-4 py-3 text-ds-text2 text-xs">
                       {new Date(tc.requestedAt).toLocaleDateString('en-IN')}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{tc.conductGrade}</td>
+                    <td className="px-4 py-3 text-ds-text2">{tc.conductGrade}</td>
                     <td className="px-4 py-3">
                       {tc.hasDues ? (
-                        <span className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">Has Dues</span>
+                        <span className="text-xs text-ds-error-text bg-ds-error-bg border border-ds-error-border rounded-full px-2 py-0.5">Has Dues</span>
                       ) : (
-                        <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">Clear</span>
+                        <span className="text-xs text-ds-success-text bg-ds-success-bg border border-ds-success-border rounded-full px-2 py-0.5">Clear</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[tc.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[tc.status] ?? 'bg-ds-bg2 text-ds-text2'}`}>
                         {STATUS_LABELS[tc.status] ?? tc.status}
                       </span>
                       {tc.tcNumber && (
-                        <p className="text-[10px] text-gray-400 font-mono mt-0.5">{tc.tcNumber}</p>
+                        <p className="text-[10px] text-ds-text3 font-mono mt-0.5">{tc.tcNumber}</p>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -416,7 +416,7 @@ export default function TcPage() {
                         {/* Go to student profile */}
                         <button
                           onClick={() => router.push(`/dashboard/students/${tc.studentId}`)}
-                          className="text-xs text-gray-500 hover:text-gray-800 underline"
+                          className="text-xs text-ds-text2 hover:text-ds-text1 underline"
                         >
                           Profile
                         </button>
@@ -431,7 +431,7 @@ export default function TcPage() {
                             </button>
                             <button
                               onClick={() => { setRejectTarget(tc.id); setRejectRemark(''); }}
-                              className="text-xs border border-red-300 text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-50 font-medium"
+                              className="text-xs border border-red-300 text-ds-error-text px-2.5 py-1 rounded-lg hover:bg-ds-error-bg font-medium"
                             >
                               Reject
                             </button>
@@ -451,7 +451,7 @@ export default function TcPage() {
                           <button
                             onClick={() => openPrint(tc.id)}
                             disabled={printLoading}
-                            className="text-xs bg-black text-white px-2.5 py-1 rounded-lg hover:bg-gray-800 font-medium disabled:opacity-50"
+                            className="btn-brand text-xs px-2.5 py-1 rounded-lg"
                           >
                             View / Print
                           </button>
@@ -478,13 +478,13 @@ export default function TcPage() {
       {/* ── Reject modal ── */}
       {rejectTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-            <h2 className="text-base font-bold text-gray-900 mb-1">Reject TC Request</h2>
-            <p className="text-xs text-gray-500 mb-4">
+          <div className="bg-ds-surface rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-base font-bold text-ds-text1 mb-1">Reject TC Request</h2>
+            <p className="text-xs text-ds-text2 mb-4">
               Provide a reason — the operator who raised the request will see this.
             </p>
             <textarea
-              className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full border border-ds-border-strong rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ds-brand"
               rows={3}
               placeholder="e.g. Outstanding fees not cleared, re-submit after payment"
               value={rejectRemark}
@@ -493,7 +493,7 @@ export default function TcPage() {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={() => setRejectTarget(null)}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50"
+                className="flex-1 border border-ds-border-strong text-ds-text1 py-2 rounded-lg text-sm hover:bg-ds-bg2"
               >
                 Cancel
               </button>
@@ -512,25 +512,25 @@ export default function TcPage() {
       {/* ── TC Document modal ── */}
       {printTc && (
         <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8">
+          <div className="bg-ds-surface rounded-2xl shadow-2xl w-full max-w-2xl my-8">
             {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-ds-border">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Transfer Certificate</h2>
+                <h2 className="text-base font-bold text-ds-text1">Transfer Certificate</h2>
                 {printTc.tcNumber && (
-                  <p className="text-xs text-gray-400 font-mono mt-0.5">{printTc.tcNumber}</p>
+                  <p className="text-xs text-ds-text3 font-mono mt-0.5">{printTc.tcNumber}</p>
                 )}
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={doPrint}
-                  className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800"
+                  className="btn-brand px-4 py-2 rounded-lg"
                 >
                   Print
                 </button>
                 <button
                   onClick={() => setPrintTc(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                  className="text-ds-text3 hover:text-ds-text2 text-xl leading-none"
                 >
                   ×
                 </button>

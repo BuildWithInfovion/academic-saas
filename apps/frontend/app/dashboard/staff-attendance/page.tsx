@@ -33,13 +33,13 @@ type LeaveRequest = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  present:  'bg-green-100 text-green-700 border-green-200',
+  present:  'bg-ds-success-bg text-ds-success-text border-green-200',
   late:     'bg-yellow-100 text-yellow-700 border-yellow-200',
-  half_day: 'bg-blue-100 text-blue-700 border-blue-200',
-  absent:   'bg-red-100 text-red-700 border-red-200',
-  pending:  'bg-amber-100 text-amber-700 border-amber-200',
-  approved: 'bg-green-100 text-green-700 border-green-200',
-  rejected: 'bg-red-100 text-red-700 border-red-200',
+  half_day: 'bg-ds-info-bg text-ds-info-text border-blue-200',
+  absent:   'bg-ds-error-bg text-ds-error-text border-red-200',
+  pending:  'bg-ds-warning-bg text-ds-warning-text border-amber-200',
+  approved: 'bg-ds-success-bg text-ds-success-text border-green-200',
+  rejected: 'bg-ds-error-bg text-ds-error-text border-red-200',
 };
 
 function userLabel(u: { email: string | null; phone: string | null }) {
@@ -206,10 +206,10 @@ export default function StaffAttendanceDashboardPage() {
                     {monthly.map((m) => (
                       <tr key={m.user.id}>
                         <td>{userLabel(m.user)}</td>
-                        <td><span className="text-green-700 font-semibold">{m.present}</span></td>
+                        <td><span className="text-ds-success-text font-semibold">{m.present}</span></td>
                         <td><span className="text-yellow-700 font-semibold">{m.late}</span></td>
-                        <td><span className="text-blue-700 font-semibold">{m.halfDay}</span></td>
-                        <td><span className="text-red-700 font-semibold">{m.absent}</span></td>
+                        <td><span className="text-ds-info-text font-semibold">{m.halfDay}</span></td>
+                        <td><span className="text-ds-error-text font-semibold">{m.absent}</span></td>
                         <td style={{ color: 'var(--text-3)' }}>{m.total}</td>
                       </tr>
                     ))}
@@ -224,7 +224,7 @@ export default function StaffAttendanceDashboardPage() {
       {/* Leave requests — view only for Operator/Director; approval is done by Principal */}
       {tab === 'leave' && (
         <>
-          <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+          <div className="mb-3 text-xs text-ds-warning-text bg-ds-warning-bg border border-ds-warning-border rounded-lg px-4 py-2">
             Leave approval is managed by the Principal. This view is read-only.
           </div>
           {loading ? <p className="text-sm" style={{ color: 'var(--text-3)' }}>Loading…</p> : (

@@ -485,8 +485,8 @@ export default function StudentsPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-semibold mb-6">Admission</h1>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
       {/* ── Step 1: Admission Form ── */}
       <div className="bg-ds-surface shadow-sm rounded-xl p-6 mb-6 border border-ds-border">
@@ -595,7 +595,7 @@ export default function StudentsPage() {
         <div className="mt-4 p-4 rounded-lg border border-ds-border bg-ds-bg2">
           <label className="flex items-center gap-3 cursor-pointer select-none">
             <div
-              className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${form.hasDisability ? 'bg-gray-900 border-gray-900' : 'border-ds-border-strong bg-ds-surface'}`}
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${form.hasDisability ? 'bg-ds-brand border-ds-brand' : 'border-ds-border-strong bg-ds-surface'}`}
               onClick={() => setForm({ ...form, hasDisability: !form.hasDisability, disabilityDetails: !form.hasDisability ? form.disabilityDetails : '' })}
             >
               {form.hasDisability && (
@@ -684,12 +684,12 @@ export default function StudentsPage() {
                       <td className="px-4 py-3 text-ds-text2 text-xs">{s.parentPhone || '—'}</td>
                       <td className="px-4 py-3">
                         {hasParent ? (
-                          <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5">
+                          <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-ds-success-text border border-green-200 rounded-full px-2 py-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
                             Parent linked
                           </span>
                         ) : (
-                          <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                          <span className="text-xs text-ds-warning-text bg-ds-warning-bg border border-ds-warning-border rounded-full px-2 py-0.5">
                             No portal
                           </span>
                         )}
@@ -767,7 +767,7 @@ export default function StudentsPage() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 text-xs text-ds-warning-text">
                   No fee structure configured for this class yet. You can set it up in the Fees section. Admission will proceed without fee collection.
                 </div>
               )}
@@ -807,7 +807,7 @@ export default function StudentsPage() {
                               ))}
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${item.checked ? 'bg-gray-900 border-gray-900' : 'border-ds-border-strong'}`}>
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${item.checked ? 'bg-ds-brand border-ds-brand' : 'border-ds-border-strong'}`}>
                                   {item.checked && (
                                     <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
                                       <polyline points="1.5,6 4.5,9 10.5,3" />
@@ -864,15 +864,15 @@ export default function StudentsPage() {
               </div>
 
               {/* Parent portal note */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs font-semibold text-blue-700 mb-0.5">Parent Portal Account</p>
-                <p className="text-xs text-blue-600">
+              <div className="bg-ds-info-bg border border-ds-info-border rounded-lg p-3">
+                <p className="text-xs font-semibold text-ds-info-text mb-0.5">Parent Portal Account</p>
+                <p className="text-xs text-ds-brand">
                   A parent portal account will be auto-created using the parent phone number <strong>{form.parentPhone}</strong>.
                   The system will generate a one-time password for you to share with the parent.
                 </p>
               </div>
 
-              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {error && <p className="text-ds-error-text text-sm">{error}</p>}
             </div>
 
             <div className="px-6 py-4 border-t border-ds-border flex gap-3">
@@ -914,8 +914,8 @@ export default function StudentsPage() {
               </div>
 
               {credentials.parentCredentials.isNew ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-xs font-semibold text-green-700 mb-2 uppercase tracking-wider">Parent Portal Credentials (share with parent)</p>
+                <div className="bg-ds-success-bg border border-ds-success-border rounded-lg p-4">
+                  <p className="text-xs font-semibold text-ds-success-text mb-2 uppercase tracking-wider">Parent Portal Credentials (share with parent)</p>
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-ds-text2">Email or Phone field</span>
@@ -928,13 +928,13 @@ export default function StudentsPage() {
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-green-600 mt-2">
+                  <p className="text-xs text-ds-success-text mt-2">
                     On the login page, enter the school code, use the phone number above in the &quot;Email or Phone&quot; field, and the password shown. Parent can change their password after first login.
                   </p>
                 </div>
               ) : (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-xs text-blue-700">
+                <div className="bg-ds-info-bg border border-ds-info-border rounded-lg p-3">
+                  <p className="text-xs text-ds-info-text">
                     A parent account with phone <strong>{credentials.parentCredentials.phone}</strong> already existed and has been linked to this student.
                   </p>
                 </div>
@@ -958,9 +958,9 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-xs font-semibold text-amber-700 mb-1">Next Steps</p>
-                <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
+              <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3">
+                <p className="text-xs font-semibold text-ds-warning-text mb-1">Next Steps</p>
+                <ul className="text-xs text-ds-warning-text space-y-1 list-disc list-inside">
                   <li>Go to <strong>Fees → Fee Structures</strong> to set up the full fee plan for this student&apos;s class</li>
                   <li>Go to <strong>Fees → Payments</strong> to record any outstanding dues</li>
                   {(!credentials.feePayments || credentials.feePayments.length === 0) && <li>No admission fee was recorded — you can add it from the Fees page</li>}
@@ -1004,23 +1004,23 @@ export default function StudentsPage() {
               <div>
                 <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-2">Parent Portal Access</p>
                 {profileStudent.parentUser ? (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="bg-ds-success-bg border border-ds-success-border rounded-lg p-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-semibold text-green-700">Linked & Active</p>
-                        <p className="text-xs text-green-600 mt-0.5">
+                        <p className="text-xs font-semibold text-ds-success-text">Linked & Active</p>
+                        <p className="text-xs text-ds-success-text mt-0.5">
                           {profileStudent.parentUser.email || profileStudent.parentUser.phone || profileStudent.parentUser.id.slice(-8)}
                         </p>
                       </div>
                       <button onClick={() => handleUnlink(profileStudent.id, 'parent')} disabled={unlinking}
-                        className="text-xs text-red-500 hover:text-red-700 font-medium">
+                        className="text-xs text-red-500 hover:text-ds-error-text font-medium">
                         Unlink
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-xs text-amber-700">No parent portal account linked.</p>
+                  <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3">
+                    <p className="text-xs text-ds-warning-text">No parent portal account linked.</p>
                     <button onClick={() => { setProfileStudent(null); openLinkModal(profileStudent); }}
                       className="text-xs text-indigo-600 hover:underline mt-1">
                       Link manually →
@@ -1033,13 +1033,13 @@ export default function StudentsPage() {
               <div>
                 <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-2">Student Portal Access</p>
                 {profileStudent.userAccount ? (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
+                  <div className="bg-ds-success-bg border border-ds-success-border rounded-lg p-3 flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold text-green-700">Linked</p>
-                      <p className="text-xs text-green-600">{profileStudent.userAccount.email || profileStudent.userAccount.phone}</p>
+                      <p className="text-xs font-semibold text-ds-success-text">Linked</p>
+                      <p className="text-xs text-ds-success-text">{profileStudent.userAccount.email || profileStudent.userAccount.phone}</p>
                     </div>
                     <button onClick={() => handleUnlink(profileStudent.id, 'student')} disabled={unlinking}
-                      className="text-xs text-red-500 hover:text-red-700 font-medium">
+                      className="text-xs text-red-500 hover:text-ds-error-text font-medium">
                       Unlink
                     </button>
                   </div>
@@ -1089,7 +1089,7 @@ export default function StudentsPage() {
                   <button
                     onClick={() => searchUserByIdentifier(linkSearch)}
                     disabled={searchingUser || !linkSearch.trim()}
-                    className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+                    className="px-4 py-2 btn-brand rounded-lg text-sm font-medium disabled:opacity-50"
                   >
                     {searchingUser ? '...' : 'Search'}
                   </button>
@@ -1103,7 +1103,7 @@ export default function StudentsPage() {
 
               {/* Search result */}
               {foundUser === 'not_found' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700 space-y-2">
+                <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 text-xs text-ds-warning-text space-y-2">
                   <p>No account found. You can auto-create one using the phone number above.</p>
                   {linkType === 'parent' && (
                     <button
@@ -1117,16 +1117,16 @@ export default function StudentsPage() {
                 </div>
               )}
               {foundUser && foundUser !== 'not_found' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
+                <div className="bg-ds-success-bg border border-ds-success-border rounded-lg p-3 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-green-700">Account found</p>
-                    <p className="text-xs text-green-600 mt-0.5">{foundUser.email || foundUser.phone}</p>
+                    <p className="text-xs font-semibold text-ds-success-text">Account found</p>
+                    <p className="text-xs text-ds-success-text mt-0.5">{foundUser.email || foundUser.phone}</p>
                   </div>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Ready to link</span>
+                  <span className="text-xs bg-ds-success-bg text-ds-success-text px-2 py-0.5 rounded-full font-medium">Ready to link</span>
                 </div>
               )}
             </div>
-            {error && <p className="text-red-600 text-xs mt-3">{error}</p>}
+            {error && <p className="text-ds-error-text text-xs mt-3">{error}</p>}
             <div className="flex gap-2 mt-5">
               <button onClick={handleLink} disabled={linking || !linkUserId}
                 className="flex-1 py-2.5 btn-brand rounded-lg disabled:opacity-50">

@@ -112,10 +112,10 @@ export default function TeacherMarksPage() {
   if (noAssignments) {
     return (
       <div className="p-8 max-w-3xl">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Mark Entry</h1>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-          <p className="text-sm font-medium text-amber-800 mb-1">No active exams assigned to you</p>
-          <p className="text-xs text-amber-600">
+        <h1 className="text-2xl font-bold text-ds-text1 mb-6">Mark Entry</h1>
+        <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-6">
+          <p className="text-sm font-medium text-ds-warning-text mb-1">No active exams assigned to you</p>
+          <p className="text-xs text-ds-warning-text">
             The operator needs to: 1) assign subjects to you in the Subjects page, and 2) activate an exam that includes those subjects.
           </p>
         </div>
@@ -125,18 +125,18 @@ export default function TeacherMarksPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1">Mark Entry</h1>
-      <p className="text-sm text-gray-500 mb-6">You can only enter marks for subjects assigned to you</p>
+      <h1 className="text-xl sm:text-2xl font-bold text-ds-text1 mb-1">Mark Entry</h1>
+      <p className="text-sm text-ds-text2 mb-6">You can only enter marks for subjects assigned to you</p>
 
       {/* Selectors */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6 space-y-4">
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 mb-6 space-y-4">
         {/* Exam selector */}
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Examination</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Examination</label>
           <select
             value={selectedExamId}
             onChange={(e) => { setSelectedExamId(e.target.value); setSelectedAssignment(null); }}
-            className="w-full max-w-xs p-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+            className="w-full max-w-xs p-2.5 border border-ds-border-strong rounded-lg text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand"
           >
             <option value="">Select exam...</option>
             {assignedExams.map((e) => (
@@ -148,7 +148,7 @@ export default function TeacherMarksPage() {
         {/* Assignment selector — class + subject combinations assigned to this teacher */}
         {selectedExam && (
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">
+            <label className="text-xs font-medium text-ds-text2 block mb-1">
               Class &amp; Subject (your assignments only)
             </label>
             <div className="flex flex-wrap gap-2">
@@ -160,8 +160,8 @@ export default function TeacherMarksPage() {
                     onClick={() => setSelectedAssignment(a)}
                     className={`px-4 py-2 rounded-lg text-xs font-medium border transition-colors ${
                       isSelected
-                        ? 'bg-black text-white border-black'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
+                        ? 'bg-ds-brand text-white border-ds-brand-dark'
+                        : 'bg-ds-surface text-ds-text1 border-ds-border-strong hover:border-gray-500'
                     }`}
                   >
                     {a.academicUnit.displayName || a.academicUnit.name} — {a.subject.name}
@@ -177,41 +177,41 @@ export default function TeacherMarksPage() {
       {/* Mark entry table */}
       {selectedAssignment && (
         loading ? (
-          <p className="text-sm text-gray-500">Loading students...</p>
+          <p className="text-sm text-ds-text2">Loading students...</p>
         ) : students.length === 0 ? (
-          <p className="text-sm text-gray-500">No students in this class.</p>
+          <p className="text-sm text-ds-text2">No students in this class.</p>
         ) : (
           <>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-4">
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-700">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden mb-4">
+              <div className="px-5 py-3 border-b border-ds-border flex items-center justify-between">
+                <p className="text-sm font-medium text-ds-text1">
                   {selectedAssignment.academicUnit.displayName || selectedAssignment.academicUnit.name}
                   {' — '}{selectedAssignment.subject.name}
                   {' · '}{students.length} students · Max: {maxMarks}
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-ds-text3">
                   {enteredCount}/{students.length} entered
-                  {enteredCount === students.length && <span className="ml-2 text-green-600 font-medium">Complete ✓</span>}
+                  {enteredCount === students.length && <span className="ml-2 text-ds-success-text font-medium">Complete ✓</span>}
                 </p>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-ds-bg2">
                   <tr>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">#</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Student</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Roll No</th>
-                    <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Absent</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Marks / {maxMarks}</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">#</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Student</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Roll No</th>
+                    <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Absent</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Marks / {maxMarks}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-ds-border">
                   {students.map((s, i) => {
                     const m = marks[s.id] ?? { value: '', absent: false };
                     return (
-                      <tr key={s.id} className={m.absent ? 'bg-gray-50' : ''}>
-                        <td className="px-5 py-2.5 text-gray-400 text-xs">{i + 1}</td>
-                        <td className="px-5 py-2.5 text-gray-800 font-medium">{s.firstName} {s.lastName}</td>
-                        <td className="px-5 py-2.5 text-gray-500 text-xs">{s.rollNo ?? s.admissionNo}</td>
+                      <tr key={s.id} className={m.absent ? 'bg-ds-bg2' : ''}>
+                        <td className="px-5 py-2.5 text-ds-text3 text-xs">{i + 1}</td>
+                        <td className="px-5 py-2.5 text-ds-text1 font-medium">{s.firstName} {s.lastName}</td>
+                        <td className="px-5 py-2.5 text-ds-text2 text-xs">{s.rollNo ?? s.admissionNo}</td>
                         <td className="px-5 py-2.5 text-center">
                           <input
                             type="checkbox"
@@ -231,7 +231,7 @@ export default function TeacherMarksPage() {
                               setMarks((prev) => ({ ...prev, [s.id]: { ...m, value: e.target.value } }))
                             }
                             placeholder="—"
-                            className="w-20 p-1.5 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:text-gray-400"
+                            className="w-20 p-1.5 border border-ds-border rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-ds-brand disabled:bg-ds-bg2 disabled:text-ds-text3"
                           />
                         </td>
                       </tr>
@@ -242,12 +242,12 @@ export default function TeacherMarksPage() {
             </div>
 
             {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
-            {saved && <p className="text-sm text-green-600 mb-3">Marks saved successfully.</p>}
+            {saved && <p className="text-sm text-ds-success-text mb-3">Marks saved successfully.</p>}
 
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+              className="btn-brand px-6 py-2.5 rounded-lg"
             >
               {saving ? 'Saving...' : 'Save Marks'}
             </button>

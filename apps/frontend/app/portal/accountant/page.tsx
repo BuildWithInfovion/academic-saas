@@ -35,8 +35,8 @@ export default function AccountantOverviewPage() {
   }, []);
 
   const quickActions = [
-    { label: 'Fee Collection', desc: 'View & record payments', path: '/portal/accountant/fees', color: 'bg-black text-white' },
-    { label: 'My Attendance',  desc: 'Mark your daily attendance', path: '/portal/accountant/staff-attendance', color: 'bg-gray-800 text-white' },
+    { label: 'Fee Collection', desc: 'View & record payments', path: '/portal/accountant/fees', gradient: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)' },
+    { label: 'My Attendance',  desc: 'Mark your daily attendance', path: '/portal/accountant/staff-attendance', gradient: 'linear-gradient(135deg, #6b432f 0%, #3a1f0c 100%)' },
   ];
 
   return (
@@ -50,7 +50,8 @@ export default function AccountantOverviewPage() {
           <button
             key={a.label}
             onClick={() => router.push(a.path)}
-            className={`rounded-xl p-5 text-left hover:opacity-90 transition-opacity ${a.color}`}
+            className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity"
+            style={{ background: a.gradient, color: '#fcfbf7', border: '1px solid rgba(140,57,25,0.25)' }}
           >
             <p className="font-semibold">{a.label}</p>
             <p className="text-sm mt-1 opacity-70">{a.desc}</p>
@@ -64,9 +65,9 @@ export default function AccountantOverviewPage() {
       ) : stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Today's Collection", value: `₹${stats.totalCollectedToday.toLocaleString('en-IN')}`, color: 'text-green-700' },
-            { label: "This Month", value: `₹${stats.totalCollectedMonth.toLocaleString('en-IN')}`, color: 'text-blue-700' },
-            { label: "Total Due", value: `₹${stats.totalDue.toLocaleString('en-IN')}`, color: 'text-red-600' },
+            { label: "Today's Collection", value: `₹${stats.totalCollectedToday.toLocaleString('en-IN')}`, color: 'text-ds-success-text' },
+            { label: "This Month", value: `₹${stats.totalCollectedMonth.toLocaleString('en-IN')}`, color: 'text-ds-info-text' },
+            { label: "Total Due", value: `₹${stats.totalDue.toLocaleString('en-IN')}`, color: 'text-ds-error-text' },
             { label: "Total Students", value: String(stats.totalStudents), color: 'var(--text-1)' },
           ].map((s) => (
             <div key={s.label} className="rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>

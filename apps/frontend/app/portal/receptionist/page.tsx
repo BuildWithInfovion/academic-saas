@@ -10,11 +10,11 @@ interface Inquiry {
 
 const STATUS_OPTIONS = ['new', 'contacted', 'visited', 'enrolled', 'dropped'];
 const STATUS_COLORS: Record<string, string> = {
-  new: 'bg-blue-100 text-blue-700',
+  new: 'bg-ds-info-bg text-ds-info-text',
   contacted: 'bg-yellow-100 text-yellow-700',
   visited: 'bg-purple-100 text-purple-700',
-  enrolled: 'bg-green-100 text-green-700',
-  dropped: 'bg-gray-100 text-gray-500',
+  enrolled: 'bg-ds-success-bg text-ds-success-text',
+  dropped: 'bg-ds-bg2 text-ds-text2',
 };
 
 const emptyForm = { firstName: '', lastName: '', phone: '', email: '', classInterest: '', notes: '' };
@@ -74,7 +74,7 @@ export default function ReceptionistInquiriesPage() {
   };
 
   const filtered = filterStatus === 'all' ? inquiries : inquiries.filter((i) => i.status === filterStatus);
-  const inp = 'border border-gray-300 rounded-lg p-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-black';
+  const inp = 'border border-ds-border-strong rounded-lg p-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ds-brand';
 
   // Stats
   const stats = STATUS_OPTIONS.map((s) => ({ label: s, count: inquiries.filter((i) => i.status === s).length }));
@@ -83,11 +83,11 @@ export default function ReceptionistInquiriesPage() {
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-1">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Admission Inquiries</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Log and manage parent/student inquiries</p>
+          <h1 className="text-2xl font-bold text-ds-text1">Admission Inquiries</h1>
+          <p className="text-sm text-ds-text3 mt-0.5">Log and manage parent/student inquiries</p>
         </div>
         <button onClick={() => { setForm(emptyForm); setEditId(null); setShowForm(true); }}
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+          className="btn-brand px-4 py-2 rounded-lg">
           + New Inquiry
         </button>
       </div>
@@ -98,68 +98,68 @@ export default function ReceptionistInquiriesPage() {
           <div key={s.label}
             onClick={() => setFilterStatus(filterStatus === s.label ? 'all' : s.label)}
             className={`rounded-xl border p-4 text-center cursor-pointer transition-all
-              ${filterStatus === s.label ? 'border-black bg-black text-white' : 'border-gray-100 bg-white shadow-sm hover:border-gray-300'}`}>
+              ${filterStatus === s.label ? 'border-ds-brand-dark bg-ds-brand text-white' : 'border-ds-border bg-ds-surface shadow-sm hover:border-ds-border-strong'}`}>
             <p className="text-2xl font-bold">{s.count}</p>
-            <p className={`text-xs mt-1 capitalize font-medium ${filterStatus === s.label ? 'text-gray-300' : 'text-gray-500'}`}>{s.label}</p>
+            <p className={`text-xs mt-1 capitalize font-medium ${filterStatus === s.label ? 'text-ds-text3' : 'text-ds-text2'}`}>{s.label}</p>
           </div>
         ))}
       </div>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
       {/* Filter */}
       <div className="flex gap-2 mb-4 flex-wrap">
         {['all', ...STATUS_OPTIONS].map((s) => (
           <button key={s} onClick={() => setFilterStatus(s)}
             className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors
-              ${filterStatus === s ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              ${filterStatus === s ? 'btn-brand' : 'bg-ds-bg2 text-ds-text2 hover:bg-ds-bg2'}`}>
             {s === 'all' ? `All (${inquiries.length})` : s}
           </button>
         ))}
       </div>
 
       {/* Inquiry list */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
         {loading ? (
-          <p className="p-8 text-center text-sm text-gray-400">Loading...</p>
+          <p className="p-8 text-center text-sm text-ds-text3">Loading...</p>
         ) : filtered.length === 0 ? (
-          <p className="p-8 text-center text-sm text-gray-400">No inquiries yet.</p>
+          <p className="p-8 text-center text-sm text-ds-text3">No inquiries yet.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-ds-bg2">
               <tr>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Name</th>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Phone</th>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Class Interest</th>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Status</th>
-                <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Date</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Name</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Phone</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Class Interest</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
+                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Date</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-ds-border">
               {filtered.map((inq) => (
-                <tr key={inq.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 font-medium text-gray-800">
+                <tr key={inq.id} className="hover:bg-ds-bg2">
+                  <td className="px-5 py-3 font-medium text-ds-text1">
                     {inq.firstName} {inq.lastName}
-                    {inq.notes && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[160px]">{inq.notes}</p>}
+                    {inq.notes && <p className="text-xs text-ds-text3 mt-0.5 truncate max-w-[160px]">{inq.notes}</p>}
                   </td>
-                  <td className="px-5 py-3 text-gray-600">{inq.phone}</td>
-                  <td className="px-5 py-3 text-gray-600">{inq.classInterest || '—'}</td>
+                  <td className="px-5 py-3 text-ds-text2">{inq.phone}</td>
+                  <td className="px-5 py-3 text-ds-text2">{inq.classInterest || '—'}</td>
                   <td className="px-5 py-3">
                     <select
                       value={inq.status}
                       onChange={(e) => updateStatus(inq.id, e.target.value)}
-                      className={`text-xs font-medium px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer ${STATUS_COLORS[inq.status] ?? 'bg-gray-100 text-gray-600'}`}
+                      className={`text-xs font-medium px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer ${STATUS_COLORS[inq.status] ?? 'bg-ds-bg2 text-ds-text2'}`}
                     >
                       {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </td>
-                  <td className="px-5 py-3 text-gray-500 text-xs">
+                  <td className="px-5 py-3 text-ds-text2 text-xs">
                     {new Date(inq.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <button onClick={() => openEdit(inq)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                    <button onClick={() => openEdit(inq)} className="text-xs text-ds-brand hover:text-blue-800 font-medium">Edit</button>
                   </td>
                 </tr>
               ))}
@@ -171,42 +171,42 @@ export default function ReceptionistInquiriesPage() {
       {/* Form modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-gray-800 mb-5">{editId ? 'Edit Inquiry' : 'Log New Inquiry'}</h2>
+          <div className="bg-ds-surface rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-ds-text1 mb-5">{editId ? 'Edit Inquiry' : 'Log New Inquiry'}</h2>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">First Name *</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">First Name *</label>
                 <input className={inp} value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Last Name</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Last Name</label>
                 <input className={inp} value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Phone *</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Phone *</label>
                 <input className={inp} type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Email</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Email</label>
                 <input className={inp} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="col-span-2">
-                <label className="text-xs font-medium text-gray-600 block mb-1">Class Interest</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Class Interest</label>
                 <input className={inp} placeholder="e.g. Class 5, Nursery" value={form.classInterest} onChange={(e) => setForm((f) => ({ ...f, classInterest: e.target.value }))} />
               </div>
               <div className="col-span-2">
-                <label className="text-xs font-medium text-gray-600 block mb-1">Notes</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Notes</label>
                 <textarea className={inp + ' h-20 resize-none'} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
               </div>
             </div>
-            {error && <p className="text-red-600 text-sm mt-3">{error}</p>}
+            {error && <p className="text-ds-error-text text-sm mt-3">{error}</p>}
             <div className="flex gap-3 mt-5">
               <button onClick={() => { setShowForm(false); setEditId(null); setError(null); }}
-                className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+                className="flex-1 border border-ds-border-strong text-ds-text1 py-2.5 rounded-lg text-sm font-medium hover:bg-ds-bg2">
                 Cancel
               </button>
               <button onClick={handleSubmit} disabled={submitting}
-                className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                className="btn-brand flex-1 py-2.5 rounded-lg">
                 {submitting ? 'Saving...' : editId ? 'Update' : 'Log Inquiry'}
               </button>
             </div>

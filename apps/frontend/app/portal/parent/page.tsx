@@ -70,16 +70,16 @@ export default function ParentDashboard() {
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Parent Portal</h1>
-        <p className="text-sm text-gray-400 mt-1">{user?.email || user?.phone}</p>
+        <h1 className="text-2xl font-bold text-ds-text1">Parent Portal</h1>
+        <p className="text-sm text-ds-text3 mt-1">{user?.email || user?.phone}</p>
       </div>
 
       {/* Absent today — high priority banner */}
       {hasAbsent && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl px-5 py-4">
+        <div className="mb-6 bg-ds-error-bg border border-ds-error-border rounded-xl px-5 py-4">
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse inline-block" />
-            <p className="text-sm font-semibold text-red-800">
+            <span className="w-2.5 h-2.5 rounded-full animate-pulse inline-block" style={{ background: 'var(--error)' }} />
+            <p className="text-sm font-semibold text-ds-error-text">
               {notifications!.absentToday.length === 1
                 ? 'Your child was marked absent today'
                 : `${notifications!.absentToday.length} absences recorded today`}
@@ -87,7 +87,7 @@ export default function ParentDashboard() {
           </div>
           <ul className="space-y-1.5 mt-1">
             {notifications!.absentToday.map((r) => (
-              <li key={r.id} className="flex items-center gap-2 text-sm text-red-700">
+              <li key={r.id} className="flex items-center gap-2 text-sm text-ds-error-text">
                 <span className="font-medium">
                   {r.student.firstName} {r.student.lastName}
                 </span>
@@ -99,7 +99,7 @@ export default function ParentDashboard() {
           </ul>
           <button
             onClick={() => router.push('/portal/parent/attendance')}
-            className="mt-3 text-xs text-red-600 font-medium hover:underline"
+            className="mt-3 text-xs text-ds-error-text font-medium hover:underline"
           >
             View attendance details →
           </button>
@@ -108,10 +108,10 @@ export default function ParentDashboard() {
 
       {/* All present today — only shown after attendance is marked */}
       {showPresentBanner && notifications && (
-        <div className="mb-6 bg-green-50 border border-green-200 rounded-xl px-5 py-4">
+        <div className="mb-6 bg-ds-success-bg border border-ds-success-border rounded-xl px-5 py-4">
           <div className="flex items-center gap-2">
-            <span className="text-green-500 font-bold text-base">✓</span>
-            <p className="text-sm font-medium text-green-800">
+            <span className="font-bold text-base" style={{ color: 'var(--success)' }}>✓</span>
+            <p className="text-sm font-medium text-ds-success-text">
               {notifications.students.length === 1
                 ? `${notifications.students[0].firstName} is present today`
                 : 'All children are present today'}
@@ -122,11 +122,11 @@ export default function ParentDashboard() {
 
       {/* Not linked yet */}
       {notifications && !isLinked && (
-        <div className="mb-6 bg-amber-50 border border-amber-100 rounded-xl px-5 py-4">
-          <p className="text-sm font-medium text-amber-800">
+        <div className="mb-6 bg-ds-warning-bg border border-ds-warning-border rounded-xl px-5 py-4">
+          <p className="text-sm font-medium text-ds-warning-text">
             Your child's record is being linked by the school admin.
           </p>
-          <p className="text-xs text-amber-600 mt-1">
+          <p className="text-xs text-ds-warning-text mt-1">
             Once linked, you can monitor attendance, marks, and fee dues from here.
           </p>
         </div>
@@ -135,17 +135,17 @@ export default function ParentDashboard() {
       {/* Linked children */}
       {isLinked && notifications && notifications.students.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">
             Your Children
           </h2>
           <div className="flex flex-wrap gap-3">
             {notifications.students.map((s) => (
-              <div key={s.id} className="bg-white border border-gray-100 shadow-sm rounded-xl px-4 py-3">
-                <p className="font-semibold text-gray-800 text-sm">
+              <div key={s.id} className="bg-ds-surface border border-ds-border shadow-sm rounded-xl px-4 py-3">
+                <p className="font-semibold text-ds-text1 text-sm">
                   {s.firstName} {s.lastName}
                 </p>
                 {s.academicUnit && (
-                  <p className="text-xs text-gray-400 mt-0.5">{unitLabel(s.academicUnit)}</p>
+                  <p className="text-xs text-ds-text3 mt-0.5">{unitLabel(s.academicUnit)}</p>
                 )}
               </div>
             ))}
@@ -159,10 +159,10 @@ export default function ParentDashboard() {
           <button
             key={c.label}
             onClick={() => router.push(c.path)}
-            className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-left hover:shadow-md transition-shadow"
+            className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 text-left hover:shadow-md transition-shadow"
           >
-            <h3 className="font-semibold text-gray-800 text-sm">{c.label}</h3>
-            <p className="text-xs text-gray-500 mt-1">{c.desc}</p>
+            <h3 className="font-semibold text-ds-text1 text-sm">{c.label}</h3>
+            <p className="text-xs text-ds-text2 mt-1">{c.desc}</p>
           </button>
         ))}
       </div>

@@ -20,9 +20,9 @@ const ALL_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'recepti
 
 const ROLE_BADGE: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
-  admin: 'bg-blue-100 text-blue-700',
+  admin: 'bg-ds-info-bg text-ds-info-text',
   principal: 'bg-indigo-100 text-indigo-700',
-  teacher: 'bg-green-100 text-green-700',
+  teacher: 'bg-ds-success-bg text-ds-success-text',
   receptionist: 'bg-pink-100 text-pink-700',
   non_teaching_staff: 'bg-orange-100 text-orange-700',
   accountant: 'bg-teal-100 text-teal-700',
@@ -169,79 +169,79 @@ export default function DirectorStaffPage() {
     return acc;
   }, {}) ?? {};
 
-  const inp = 'w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black';
+  const inp = 'w-full p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand';
 
   return (
     <div className="flex h-full">
       {/* Main content */}
       <div className={`flex-1 p-8 overflow-auto transition-all ${profile ? 'max-w-3xl' : ''}`}>
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-2xl font-bold text-gray-800">Staff Management</h1>
+          <h1 className="text-2xl font-bold text-ds-text1">Staff Management</h1>
           <button onClick={() => { setShowCreate(true); setCreatedCredentials(null); setError(null); }}
-            className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+            className="btn-brand px-4 py-2 rounded-lg">
             + Add Staff
           </button>
         </div>
-        <p className="text-sm text-gray-400 mb-6">All staff accounts for this institution</p>
+        <p className="text-sm text-ds-text3 mb-6">All staff accounts for this institution</p>
 
-        {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-        {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+        {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+        {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
         {/* Role summary cards */}
         <div className="grid grid-cols-5 gap-3 mb-6">
           {roles.map((r) => (
-            <div key={r.code} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
+            <div key={r.code} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4 text-center cursor-pointer hover:border-ds-border-strong transition-colors"
               onClick={() => setFilterRole(filterRole === r.code ? 'all' : r.code)}>
-              <p className="text-2xl font-bold text-gray-800">{roleCounts[r.code] ?? 0}</p>
-              <p className="text-xs font-medium text-gray-500 mt-1">{r.label}s</p>
-              {filterRole === r.code && <div className="w-1.5 h-1.5 bg-black rounded-full mx-auto mt-1.5" />}
+              <p className="text-2xl font-bold text-ds-text1">{roleCounts[r.code] ?? 0}</p>
+              <p className="text-xs font-medium text-ds-text2 mt-1">{r.label}s</p>
+              {filterRole === r.code && <div className="w-1.5 h-1.5 rounded-full mx-auto mt-1.5" />}
             </div>
           ))}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <p className="text-sm font-semibold text-gray-700">
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
+            <p className="text-sm font-semibold text-ds-text1">
               {filterRole === 'all' ? 'All Staff' : roles.find(r => r.code === filterRole)?.label + 's'}{' '}
-              <span className="text-gray-400 font-normal">({filteredStaff.length})</span>
+              <span className="text-ds-text3 font-normal">({filteredStaff.length})</span>
             </p>
             <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none">
+              className="text-xs border border-ds-border rounded-lg px-2.5 py-1.5 bg-ds-surface focus:outline-none">
               <option value="all">All roles</option>
               {roles.map((r) => <option key={r.code} value={r.code}>{r.label}</option>)}
             </select>
           </div>
           {loading ? (
-            <p className="p-6 text-sm text-gray-400">Loading...</p>
+            <p className="p-6 text-sm text-ds-text3">Loading...</p>
           ) : filteredStaff.length === 0 ? (
-            <p className="p-6 text-sm text-gray-400">No staff members yet. Add one above.</p>
+            <p className="p-6 text-sm text-ds-text3">No staff members yet. Add one above.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-ds-bg2">
                 <tr>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Email / Phone</th>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Role</th>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Status</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Email / Phone</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Role</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
                   <th className="px-5 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-ds-border">
                 {filteredStaff.map((u) => (
                   <tr key={u.id}
                     onClick={() => openProfile(u)}
-                    className={`cursor-pointer hover:bg-gray-50 transition-colors ${profile?.id === u.id ? 'bg-blue-50' : ''}`}>
-                    <td className="px-5 py-3 text-gray-800 font-medium">
+                    className={`cursor-pointer hover:bg-ds-bg2 transition-colors ${profile?.id === u.id ? 'bg-blue-50' : ''}`}>
+                    <td className="px-5 py-3 text-ds-text1 font-medium">
                       <div>{u.email || '—'}</div>
-                      {u.phone && <div className="text-xs text-gray-400">{u.phone}</div>}
+                      {u.phone && <div className="text-xs text-ds-text3">{u.phone}</div>}
                     </td>
                     <td className="px-5 py-3">
                       {u.roles.length === 0 ? (
-                        <span className="text-gray-400 italic text-xs">No role assigned</span>
+                        <span className="text-ds-text3 italic text-xs">No role assigned</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {u.roles.map((ur) => (
                             <span key={ur.role.id}
-                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE[ur.role.code] ?? 'bg-gray-100 text-gray-600'}`}>
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE[ur.role.code] ?? 'bg-ds-bg2 text-ds-text2'}`}>
                               {ur.role.label}
                             </span>
                           ))}
@@ -249,13 +249,13 @@ export default function DirectorStaffPage() {
                       )}
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-ds-success-bg text-ds-success-text' : 'bg-ds-bg2 text-ds-text2'}`}>
                         {u.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => handleDelete(u.id, u.email || u.phone || u.id)}
-                        className="text-xs text-red-500 hover:text-red-700 font-medium">
+                        className="text-xs text-red-500 hover:text-ds-error-text font-medium">
                         Delete
                       </button>
                     </td>
@@ -269,38 +269,38 @@ export default function DirectorStaffPage() {
 
       {/* Profile panel */}
       {profile && (
-        <div className="w-96 border-l border-gray-200 bg-white p-6 overflow-auto shrink-0">
+        <div className="w-96 border-l border-ds-border bg-ds-surface p-6 overflow-auto shrink-0">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="font-bold text-gray-800">Staff Profile</h2>
-            <button onClick={() => setProfile(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+            <h2 className="font-bold text-ds-text1">Staff Profile</h2>
+            <button onClick={() => setProfile(null)} className="text-ds-text3 hover:text-ds-text2 text-lg leading-none">×</button>
           </div>
 
           <div className="flex flex-col items-center text-center mb-5">
-            <div className="w-16 h-16 rounded-full bg-gray-900 flex items-center justify-center text-white text-xl font-bold mb-3">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold mb-3">
               {(profile.email || profile.phone || '?')[0].toUpperCase()}
             </div>
-            <p className="font-semibold text-gray-800 text-sm break-all">{profile.email || '—'}</p>
-            {profile.phone && <p className="text-xs text-gray-400 mt-0.5">{profile.phone}</p>}
-            <span className={`mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${profile.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+            <p className="font-semibold text-ds-text1 text-sm break-all">{profile.email || '—'}</p>
+            {profile.phone && <p className="text-xs text-ds-text3 mt-0.5">{profile.phone}</p>}
+            <span className={`mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${profile.isActive ? 'bg-ds-success-bg text-ds-success-text' : 'bg-ds-bg2 text-ds-text2'}`}>
               {profile.isActive ? 'Active' : 'Inactive'}
             </span>
           </div>
 
           <div className="space-y-4 text-sm">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs font-medium text-gray-400 mb-1">Member Since</p>
-              <p className="text-gray-700">{new Date(profile.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <div className="bg-ds-bg2 rounded-lg p-3">
+              <p className="text-xs font-medium text-ds-text3 mb-1">Member Since</p>
+              <p className="text-ds-text1">{new Date(profile.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs font-medium text-gray-400 mb-2">Assigned Roles</p>
+            <div className="bg-ds-bg2 rounded-lg p-3">
+              <p className="text-xs font-medium text-ds-text3 mb-2">Assigned Roles</p>
               {profile.roles.length === 0 ? (
-                <p className="text-gray-400 italic text-xs">No roles assigned</p>
+                <p className="text-ds-text3 italic text-xs">No roles assigned</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {profile.roles.map((ur) => (
                     <span key={ur.role.id}
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE[ur.role.code] ?? 'bg-gray-100 text-gray-600'}`}>
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE[ur.role.code] ?? 'bg-ds-bg2 text-ds-text2'}`}>
                       {ur.role.label}
                     </span>
                   ))}
@@ -308,12 +308,12 @@ export default function DirectorStaffPage() {
               )}
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs font-medium text-gray-400 mb-2">Class Teacher Of</p>
+            <div className="bg-ds-bg2 rounded-lg p-3">
+              <p className="text-xs font-medium text-ds-text3 mb-2">Class Teacher Of</p>
               {loadingAssignments ? (
-                <p className="text-xs text-gray-400">Loading...</p>
+                <p className="text-xs text-ds-text3">Loading...</p>
               ) : assignments?.classTeacherOf.length === 0 ? (
-                <p className="text-gray-400 italic text-xs">No class assigned</p>
+                <p className="text-ds-text3 italic text-xs">No class assigned</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {assignments?.classTeacherOf.map((u) => (
@@ -325,20 +325,20 @@ export default function DirectorStaffPage() {
               )}
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs font-medium text-gray-400 mb-2">Teaching Subjects</p>
+            <div className="bg-ds-bg2 rounded-lg p-3">
+              <p className="text-xs font-medium text-ds-text3 mb-2">Teaching Subjects</p>
               {loadingAssignments ? (
-                <p className="text-xs text-gray-400">Loading...</p>
+                <p className="text-xs text-ds-text3">Loading...</p>
               ) : Object.keys(subjectsByUnit).length === 0 ? (
-                <p className="text-gray-400 italic text-xs">No subjects assigned</p>
+                <p className="text-ds-text3 italic text-xs">No subjects assigned</p>
               ) : (
                 <div className="space-y-2">
                   {Object.values(subjectsByUnit).map((entry) => (
                     <div key={entry.unitName}>
-                      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{entry.unitName}</p>
+                      <p className="text-[10px] font-semibold text-ds-text2 uppercase tracking-wider">{entry.unitName}</p>
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {entry.subjects.map((sub) => (
-                          <span key={sub} className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">{sub}</span>
+                          <span key={sub} className="px-2 py-0.5 bg-ds-success-bg text-ds-success-text rounded text-xs">{sub}</span>
                         ))}
                       </div>
                     </div>
@@ -348,24 +348,24 @@ export default function DirectorStaffPage() {
             </div>
 
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-2">Assign Additional Role</p>
+              <p className="text-xs font-medium text-ds-text2 mb-2">Assign Additional Role</p>
               <div className="flex gap-2">
                 <select value={newRoleId} onChange={(e) => setNewRoleId(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg p-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-black">
+                  className="flex-1 border border-ds-border-strong rounded-lg p-2 text-xs bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand">
                   <option value="">Select role...</option>
                   {roles
                     .filter((r) => !profile.roles.some((ur) => ur.role.id === r.id))
                     .map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                 </select>
                 <button onClick={handleAddRole} disabled={addingRole || !newRoleId}
-                  className="bg-black text-white px-3 py-2 rounded-lg text-xs font-medium disabled:opacity-50">
+                  className="btn-brand px-3 py-2 rounded-lg text-xs">
                   {addingRole ? '...' : 'Add'}
                 </button>
               </div>
             </div>
 
             <button onClick={() => handleDelete(profile.id, profile.email || profile.phone || profile.id)}
-              className="w-full border border-red-200 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-50 mt-2">
+              className="w-full border border-ds-error-border text-ds-error-text py-2 rounded-lg text-sm font-medium hover:bg-ds-error-bg mt-2">
               Delete User
             </button>
           </div>
@@ -375,57 +375,57 @@ export default function DirectorStaffPage() {
       {/* Create modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <div className="bg-ds-surface rounded-2xl shadow-xl w-full max-w-md p-6">
             {createdCredentials ? (
               <div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-ds-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-lg font-bold text-gray-800 mb-1 text-center">Staff Account Created</h2>
-                <p className="text-xs text-gray-400 text-center mb-5">Share these credentials. Password will not be shown again.</p>
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
+                <h2 className="text-lg font-bold text-ds-text1 mb-1 text-center">Staff Account Created</h2>
+                <p className="text-xs text-ds-text3 text-center mb-5">Share these credentials. Password will not be shown again.</p>
+                <div className="bg-ds-bg2 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
                   {createdCredentials.email && (
                     <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Email</p>
-                      <p className="text-gray-800 font-medium">{createdCredentials.email}</p>
+                      <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Email</p>
+                      <p className="text-ds-text1 font-medium">{createdCredentials.email}</p>
                     </div>
                   )}
                   {createdCredentials.phone && (
                     <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Phone</p>
-                      <p className="text-gray-800 font-medium">{createdCredentials.phone}</p>
+                      <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Phone</p>
+                      <p className="text-ds-text1 font-medium">{createdCredentials.phone}</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Password</p>
-                    <p className="text-gray-800 font-bold tracking-wider">{createdCredentials.password}</p>
+                    <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Password</p>
+                    <p className="text-ds-text1 font-bold tracking-wider">{createdCredentials.password}</p>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreate(false); setCreatedCredentials(null); }}
-                  className="w-full bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800">
+                  className="btn-brand w-full py-2.5 rounded-lg">
                   Done
                 </button>
               </div>
             ) : (
               <>
-                <h2 className="text-lg font-bold text-gray-800 mb-1">Add Staff Member</h2>
-                <p className="text-xs text-gray-400 mb-5">Staff logs in with institution code + email/phone + password</p>
-                {error && <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-xs">{error}</div>}
+                <h2 className="text-lg font-bold text-ds-text1 mb-1">Add Staff Member</h2>
+                <p className="text-xs text-ds-text3 mb-5">Staff logs in with institution code + email/phone + password</p>
+                {error && <div className="mb-3 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-xs">{error}</div>}
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Email</label>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Email</label>
                     <input type="email" className={inp} placeholder="teacher@school.com"
                       value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Phone (if no email)</label>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Phone (if no email)</label>
                     <input type="tel" className={inp} placeholder="9876543210"
                       value={phone} onChange={(e) => setPhone(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Password *</label>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Password *</label>
                     <div className="flex gap-2">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -435,7 +435,7 @@ export default function DirectorStaffPage() {
                         onChange={(e) => setPassword(e.target.value)}
                       />
                       <button type="button" onClick={() => { setPassword(generatePassword()); setShowPassword(true); }}
-                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium whitespace-nowrap shrink-0">
+                        className="px-3 py-2 bg-ds-bg2 hover:bg-ds-bg2 text-ds-text1 rounded-lg text-xs font-medium whitespace-nowrap shrink-0">
                         Generate
                       </button>
                     </div>
@@ -444,8 +444,8 @@ export default function DirectorStaffPage() {
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Role <span className="text-red-500">*</span></label>
-                    <select className={inp + ' bg-white'} value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)}>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Role <span className="text-red-500">*</span></label>
+                    <select className={inp + ' bg-ds-surface'} value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)}>
                       <option value="">Select role...</option>
                       {roles.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                     </select>
@@ -453,11 +453,11 @@ export default function DirectorStaffPage() {
                 </div>
                 <div className="flex gap-3 mt-6">
                   <button onClick={() => { setShowCreate(false); setError(null); setEmail(''); setPhone(''); setPassword(''); setSelectedRoleId(''); }}
-                    className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+                    className="flex-1 border border-ds-border-strong text-ds-text1 py-2.5 rounded-lg text-sm font-medium hover:bg-ds-bg2">
                     Cancel
                   </button>
                   <button onClick={handleCreate} disabled={submitting}
-                    className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                    className="btn-brand flex-1 py-2.5 rounded-lg">
                     {submitting ? 'Creating...' : 'Create Account'}
                   </button>
                 </div>

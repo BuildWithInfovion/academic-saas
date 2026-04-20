@@ -56,10 +56,10 @@ const TC_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  inactive: 'bg-gray-100 text-gray-600',
+  active: 'bg-ds-success-bg text-ds-success-text',
+  inactive: 'bg-ds-bg2 text-ds-text2',
   transferred: 'bg-yellow-100 text-yellow-700',
-  alumni: 'bg-blue-100 text-blue-700',
+  alumni: 'bg-ds-info-bg text-ds-info-text',
 };
 
 function generatePassword(): string {
@@ -197,10 +197,10 @@ export default function StudentProfilePage() {
     }
   };
 
-  const inp = 'border border-gray-300 p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-black';
-  const lbl = 'text-xs font-medium text-gray-500 block mb-1';
+  const inp = 'border border-ds-border-strong p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand';
+  const lbl = 'text-xs font-medium text-ds-text2 block mb-1';
 
-  if (loading) return <div className="p-10 text-gray-400">Loading...</div>;
+  if (loading) return <div className="p-10 text-ds-text3">Loading...</div>;
   if (error && !student) return <div className="p-10 text-red-500">{error}</div>;
   if (!student) return null;
 
@@ -209,35 +209,35 @@ export default function StudentProfilePage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <button onClick={() => router.push('/dashboard/students/directory')}
-        className="text-sm text-gray-500 hover:text-gray-700 mb-6 flex items-center gap-1">
+        className="text-sm text-ds-text2 hover:text-ds-text1 mb-6 flex items-center gap-1">
         ← Back to Directory
       </button>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-4">
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6 mb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-xl font-bold text-indigo-700 shrink-0">
               {student.firstName[0]}{student.lastName[0]}
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">{student.firstName} {student.lastName}</h1>
+              <h1 className="text-2xl font-semibold text-ds-text1">{student.firstName} {student.lastName}</h1>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <span className="text-sm text-gray-500 font-mono">{student.admissionNo}</span>
-                {student.rollNo && <span className="text-sm text-gray-500">Roll: {student.rollNo}</span>}
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[student.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                <span className="text-sm text-ds-text2 font-mono">{student.admissionNo}</span>
+                {student.rollNo && <span className="text-sm text-ds-text2">Roll: {student.rollNo}</span>}
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[student.status] ?? 'bg-ds-bg2 text-ds-text2'}`}>
                   {student.status}
                 </span>
               </div>
-              <div className="mt-1 text-sm text-gray-500">{unit?.displayName || unit?.name || 'No class assigned'}</div>
+              <div className="mt-1 text-sm text-ds-text2">{unit?.displayName || unit?.name || 'No class assigned'}</div>
             </div>
           </div>
           {!editing && (
             <button onClick={startEdit}
-              className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+              className="btn-brand px-4 py-2 rounded-lg">
               Edit
             </button>
           )}
@@ -245,7 +245,7 @@ export default function StudentProfilePage() {
       </div>
 
       {editing ? (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-6">
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6 space-y-6">
           <h2 className="text-base font-medium">Edit Details</h2>
 
           <Section title="Basic Information">
@@ -313,11 +313,11 @@ export default function StudentProfilePage() {
 
           <div className="flex gap-3 pt-2">
             <button onClick={handleSave} disabled={saving}
-              className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+              className="btn-brand px-6 py-2.5 rounded-lg">
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
             <button onClick={() => setEditing(false)}
-              className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+              className="px-6 py-2.5 border border-ds-border-strong rounded-lg text-sm hover:bg-ds-bg2">
               Cancel
             </button>
           </div>
@@ -356,36 +356,36 @@ export default function StudentProfilePage() {
             <Row label="Previous Institution" value={student.tcPreviousInstitution ?? '—'} />
 
             {/* ── Outgoing TC section ── */}
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Outgoing TC</p>
+            <div className="mt-3 pt-3 border-t border-ds-border">
+              <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-2">Outgoing TC</p>
               {tcLoading ? (
-                <p className="text-xs text-gray-400">Loading…</p>
+                <p className="text-xs text-ds-text3">Loading…</p>
               ) : tc ? (
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      tc.status === 'issued'           ? 'bg-green-100 text-green-700' :
-                      tc.status === 'approved'         ? 'bg-blue-100 text-blue-700'  :
-                      tc.status === 'pending_approval' ? 'bg-amber-100 text-amber-700':
-                                                         'bg-red-100 text-red-700'
+                      tc.status === 'issued'           ? 'bg-ds-success-bg text-ds-success-text' :
+                      tc.status === 'approved'         ? 'bg-ds-info-bg text-ds-info-text'  :
+                      tc.status === 'pending_approval' ? 'bg-ds-warning-bg text-ds-warning-text':
+                                                         'bg-ds-error-bg text-ds-error-text'
                     }`}>
                       {tc.status === 'pending_approval' ? 'Pending Approval' :
                        tc.status === 'approved'         ? 'Approved'         :
                        tc.status === 'issued'           ? 'Issued'           : 'Rejected'}
                     </span>
                     {tc.tcNumber && (
-                      <span className="text-xs font-mono text-gray-500">{tc.tcNumber}</span>
+                      <span className="text-xs font-mono text-ds-text2">{tc.tcNumber}</span>
                     )}
                   </div>
                   {tc.rejectionRemark && (
                     <p className="text-xs text-red-500">Reason: {tc.rejectionRemark}</p>
                   )}
                   {tc.hasDues && (
-                    <p className="text-xs text-amber-600">{tc.duesRemark}</p>
+                    <p className="text-xs text-ds-warning-text">{tc.duesRemark}</p>
                   )}
                   <Link
                     href="/dashboard/tc"
-                    className="text-xs text-gray-500 underline hover:text-gray-800"
+                    className="text-xs text-ds-text2 underline hover:text-ds-text1"
                   >
                     Manage in TC registry →
                   </Link>
@@ -393,12 +393,12 @@ export default function StudentProfilePage() {
               ) : student.status === 'active' ? (
                 <button
                   onClick={() => router.push(`/dashboard/tc/new?studentId=${id}`)}
-                  className="mt-1 text-xs bg-gray-900 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 font-medium"
+                  className="mt-1 text-xs btn-brand px-3 py-1.5 rounded-lg font-medium"
                 >
                   Request Transfer Certificate
                 </button>
               ) : (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-ds-text3">
                   {student.status === 'transferred' ? 'Student already transferred.' : 'TC not applicable.'}
                 </p>
               )}
@@ -407,8 +407,8 @@ export default function StudentProfilePage() {
 
           {/* Portal Access Card — spans full width */}
           <div className="col-span-2">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Portal Access &amp; Credentials</h3>
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-ds-text1 mb-4">Portal Access &amp; Credentials</h3>
               <div className="grid grid-cols-2 gap-4">
                 {/* Parent Portal */}
                 <CredentialCard
@@ -431,64 +431,64 @@ export default function StudentProfilePage() {
       {/* ── Reset Password Modal ── */}
       {resettingUserId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <div className="bg-ds-surface rounded-2xl shadow-xl w-full max-w-sm p-6">
             {resetDone ? (
               /* Success — show credentials */
               <div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-ds-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-lg font-bold text-gray-800 text-center mb-1">Password Reset</h2>
-                <p className="text-xs text-gray-400 text-center mb-5">Share these credentials. Password will not be shown again.</p>
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
+                <h2 className="text-lg font-bold text-ds-text1 text-center mb-1">Password Reset</h2>
+                <p className="text-xs text-ds-text3 text-center mb-5">Share these credentials. Password will not be shown again.</p>
+                <div className="bg-ds-bg2 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Portal</p>
-                    <p className="text-gray-700 font-medium font-sans">{resetDone.label}</p>
+                    <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Portal</p>
+                    <p className="text-ds-text1 font-medium font-sans">{resetDone.label}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Username</p>
-                    <p className="text-gray-800 font-medium">{resetDone.username}</p>
+                    <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Username</p>
+                    <p className="text-ds-text1 font-medium">{resetDone.username}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">New Password</p>
-                    <p className="text-gray-800 font-bold tracking-wider text-base">{resetDone.password}</p>
+                    <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">New Password</p>
+                    <p className="text-ds-text1 font-bold tracking-wider text-base">{resetDone.password}</p>
                   </div>
                 </div>
                 <button onClick={() => { setResettingUserId(null); setResetDone(null); }}
-                  className="w-full bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800">
+                  className="btn-brand w-full py-2.5 rounded-lg">
                   Done
                 </button>
               </div>
             ) : (
               /* Confirm reset */
               <div>
-                <h2 className="text-lg font-bold text-gray-800 mb-1">Reset Password</h2>
-                <p className="text-xs text-gray-400 mb-4">{resetLabel} — a new password will be generated and set immediately.</p>
-                {error && <p className="text-red-600 text-xs mb-3">{error}</p>}
+                <h2 className="text-lg font-bold text-ds-text1 mb-1">Reset Password</h2>
+                <p className="text-xs text-ds-text3 mb-4">{resetLabel} — a new password will be generated and set immediately.</p>
+                {error && <p className="text-ds-error-text text-xs mb-3">{error}</p>}
                 <div className="mb-4">
-                  <label className="text-xs font-medium text-gray-600 block mb-1">New Password</label>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">New Password</label>
                   <div className="flex gap-2">
                     <input type="text"
-                      className="flex-1 border border-gray-300 rounded-lg p-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-black"
+                      className="flex-1 border border-ds-border-strong rounded-lg p-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ds-brand"
                       value={newPwd}
                       onChange={(e) => setNewPwd(e.target.value)}
                     />
                     <button type="button"
                       onClick={() => setNewPwd(generatePassword())}
-                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium whitespace-nowrap">
+                      className="px-3 py-2 bg-ds-bg2 hover:bg-ds-bg2 text-ds-text1 rounded-lg text-xs font-medium whitespace-nowrap">
                       Regenerate
                     </button>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => { setResettingUserId(null); setError(null); }}
-                    className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm hover:bg-gray-50">
+                    className="flex-1 border border-ds-border-strong text-ds-text1 py-2.5 rounded-lg text-sm hover:bg-ds-bg2">
                     Cancel
                   </button>
                   <button onClick={handleReset} disabled={resetting || !newPwd}
-                    className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                    className="btn-brand flex-1 py-2.5 rounded-lg">
                     {resetting ? 'Resetting...' : 'Reset Password'}
                   </button>
                 </div>
@@ -511,34 +511,34 @@ function CredentialCard({
 }) {
   if (!user) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-200 p-4">
-        <p className="text-xs font-semibold text-gray-500 mb-2">{label}</p>
-        <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Not linked</span>
+      <div className="rounded-lg border border-dashed border-ds-border p-4">
+        <p className="text-xs font-semibold text-ds-text2 mb-2">{label}</p>
+        <span className="text-xs text-ds-warning-text bg-ds-warning-bg border border-ds-warning-border rounded-full px-2 py-0.5">Not linked</span>
       </div>
     );
   }
   const username = user.email || user.phone || 'No username';
   return (
-    <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+    <div className="rounded-lg border border-ds-border p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-gray-700">{label}</p>
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+        <p className="text-xs font-semibold text-ds-text1">{label}</p>
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.isActive ? 'bg-ds-success-bg text-ds-success-text' : 'bg-ds-bg2 text-ds-text2'}`}>
           {user.isActive ? 'Active' : 'Inactive'}
         </span>
       </div>
-      <div className="bg-gray-50 rounded-lg p-3 space-y-2 font-mono text-xs">
+      <div className="bg-ds-bg2 rounded-lg p-3 space-y-2 font-mono text-xs">
         <div>
-          <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Username</p>
-          <p className="text-gray-800 font-medium">{username}</p>
+          <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Username</p>
+          <p className="text-ds-text1 font-medium">{username}</p>
         </div>
         <div>
-          <p className="text-[10px] text-gray-400 uppercase font-sans mb-0.5">Password</p>
-          <p className="text-gray-400 italic font-sans text-xs">Hidden — use Reset to set a new one</p>
+          <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Password</p>
+          <p className="text-ds-text3 italic font-sans text-xs">Hidden — use Reset to set a new one</p>
         </div>
       </div>
       <button
         onClick={() => onReset(user.id, username)}
-        className="w-full text-xs bg-gray-800 text-white py-1.5 rounded-lg hover:bg-gray-700 font-medium"
+        className="w-full text-xs btn-brand py-1.5 rounded-lg font-medium"
       >
         Reset Password
       </button>
@@ -550,16 +550,16 @@ function CredentialCard({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between text-sm">
-      <dt className="text-gray-500">{label}</dt>
-      <dd className="text-gray-800 font-medium text-right max-w-[60%]">{value}</dd>
+      <dt className="text-ds-text2">{label}</dt>
+      <dd className="text-ds-text1 font-medium text-right max-w-[60%]">{value}</dd>
     </div>
   );
 }
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">{title}</h3>
+    <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+      <h3 className="text-sm font-semibold text-ds-text1 mb-4">{title}</h3>
       <dl className="space-y-3">{children}</dl>
     </div>
   );
@@ -568,7 +568,7 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{title}</p>
+      <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">{title}</p>
       {children}
     </div>
   );

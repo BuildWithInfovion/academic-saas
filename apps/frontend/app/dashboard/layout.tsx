@@ -263,9 +263,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             window.location.href = '/';
           }}
           className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-          style={{ color: '#6b7280' }}
+          style={{ color: 'var(--text-3)' }}
           onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)'; }}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>

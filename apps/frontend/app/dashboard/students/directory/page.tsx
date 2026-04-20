@@ -232,35 +232,35 @@ export default function StudentDirectoryPage() {
     <tr
       key={s.id}
       onClick={() => router.push(`/dashboard/students/${s.id}`)}
-      className="cursor-pointer hover:bg-gray-50 transition-colors"
+      className="cursor-pointer hover:bg-ds-bg2 transition-colors"
     >
-      <td className="px-4 py-3 text-xs text-gray-500 font-mono">{s.rollNo || '—'}</td>
-      <td className="px-4 py-3 font-mono text-xs text-gray-500">{s.admissionNo}</td>
+      <td className="px-4 py-3 text-xs text-ds-text2 font-mono">{s.rollNo || '—'}</td>
+      <td className="px-4 py-3 font-mono text-xs text-ds-text2">{s.admissionNo}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0">
+          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-ds-text2 shrink-0">
             {initials(s)}
           </div>
           <div>
-            <p className="font-medium text-gray-800">{s.firstName} {s.lastName}</p>
-            {s.gender && <p className="text-xs text-gray-400 capitalize">{s.gender}</p>}
+            <p className="font-medium text-ds-text1">{s.firstName} {s.lastName}</p>
+            {s.gender && <p className="text-xs text-ds-text3 capitalize">{s.gender}</p>}
           </div>
         </div>
       </td>
       {isGlobalMode && (
-        <td className="px-4 py-3 text-xs text-gray-500">
+        <td className="px-4 py-3 text-xs text-ds-text2">
           {s.academicUnit?.displayName || s.academicUnit?.name || '—'}
         </td>
       )}
-      <td className="px-4 py-3 text-gray-600 text-xs">{s.parentPhone || '—'}</td>
+      <td className="px-4 py-3 text-ds-text2 text-xs">{s.parentPhone || '—'}</td>
       <td className="px-4 py-3">
         {s.parentUser ? (
-          <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5">
+          <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-ds-success-text border border-green-200 rounded-full px-2 py-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
             Linked
           </span>
         ) : (
-          <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+          <span className="text-xs text-ds-warning-text bg-ds-warning-bg border border-ds-warning-border rounded-full px-2 py-0.5">
             No portal
           </span>
         )}
@@ -276,25 +276,25 @@ export default function StudentDirectoryPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Student Directory</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Search students or select a class to browse</p>
+          <h1 className="text-2xl font-bold text-ds-text1">Student Directory</h1>
+          <p className="text-sm text-ds-text3 mt-0.5">Search students or select a class to browse</p>
         </div>
         <Link href="/dashboard/students"
-          className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+          className="btn-brand px-4 py-2 rounded-lg">
           + New Admission
         </Link>
       </div>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
 
       {/* ── Global search bar ── */}
       <div className="mb-6">
         <div className="relative">
-          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ds-text3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
-            className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black shadow-sm"
+            className="w-full border border-ds-border-strong rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand shadow-sm"
             placeholder="Search all students by name, admission no., or parent phone…"
             value={globalSearch}
             onChange={(e) => handleGlobalSearch(e.target.value)}
@@ -302,7 +302,7 @@ export default function StudentDirectoryPage() {
           {globalSearch && (
             <button
               onClick={() => { setGlobalSearch(''); setGlobalResults([]); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ds-text3 hover:text-ds-text2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -316,27 +316,27 @@ export default function StudentDirectoryPage() {
       {isGlobalMode && (
         <div className="mb-6">
           {globalLoading ? (
-            <p className="text-sm text-gray-400 px-1">Searching…</p>
+            <p className="text-sm text-ds-text3 px-1">Searching…</p>
           ) : (
             <>
-              <p className="text-xs text-gray-400 mb-2 px-1">
+              <p className="text-xs text-ds-text3 mb-2 px-1">
                 {globalResults.length === 0 ? 'No students found' : `${globalResults.length} result${globalResults.length !== 1 ? 's' : ''} for "${globalSearch}"`}
               </p>
               {globalResults.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-ds-bg2">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roll</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adm. No</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parent Phone</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Portal</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Roll</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Adm. No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Class</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Parent Phone</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Portal</th>
                         <th className="px-4 py-3"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-ds-border">
                       {globalResults.map((s) => <StudentRow key={s.id} s={s} />)}
                     </tbody>
                   </table>
@@ -351,10 +351,10 @@ export default function StudentDirectoryPage() {
       {!isGlobalMode && (
         <>
           {unitsLoading ? (
-            <div className="flex items-center justify-center h-24 text-gray-400 text-sm">Loading classes…</div>
+            <div className="flex items-center justify-center h-24 text-ds-text3 text-sm">Loading classes…</div>
           ) : (
             <div className="mb-6">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Browse by Class</p>
+              <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Browse by Class</p>
               <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10 xl:grid-cols-15">
                 {academicUnits.map((unit) => {
                   const count = unit._count?.students ?? 0;
@@ -365,12 +365,13 @@ export default function StudentDirectoryPage() {
                       onClick={() => handleClassSelect(unit.id)}
                       className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl border text-center transition-all ${
                         isSelected
-                          ? 'bg-gray-900 border-gray-900 text-white shadow-md'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400 hover:shadow-sm'
+                          ? 'border-transparent text-white shadow-md'
+                          : 'bg-ds-surface border-ds-border text-ds-text1 hover:border-ds-border-strong hover:shadow-sm'
                       }`}
+                      style={isSelected ? { background: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)' } : undefined}
                     >
                       <span className="text-xs font-semibold leading-tight">{unit.displayName || unit.name}</span>
-                      <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-gray-300' : 'text-gray-400'}`}>{count} students</span>
+                      <span className={`text-[10px] mt-0.5 ${isSelected ? 'opacity-70' : 'text-ds-text3'}`}>{count} students</span>
                     </button>
                   );
                 })}
@@ -380,15 +381,15 @@ export default function StudentDirectoryPage() {
 
           {/* ── No class selected ── */}
           {!selectedClassId && !unitsLoading && (
-            <div className="bg-white rounded-xl border border-dashed border-gray-200 p-16 text-center">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-ds-surface rounded-xl border border-dashed border-ds-border p-16 text-center">
+              <div className="w-12 h-12 bg-ds-bg2 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-ds-text3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                     d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <p className="text-gray-500 font-medium">Select a class above to view students</p>
-              <p className="text-gray-400 text-sm mt-1">or use the search bar to find any student</p>
+              <p className="text-ds-text2 font-medium">Select a class above to view students</p>
+              <p className="text-ds-text3 text-sm mt-1">or use the search bar to find any student</p>
             </div>
           )}
 
@@ -398,11 +399,11 @@ export default function StudentDirectoryPage() {
               {/* Toolbar */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ds-text3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
-                    className="w-full border border-gray-300 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full border border-ds-border-strong rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand"
                     placeholder={`Search within ${selectedClassName}…`}
                     value={classSearch}
                     onChange={(e) => {
@@ -426,8 +427,8 @@ export default function StudentDirectoryPage() {
               </div>
 
               {/* Count */}
-              <div className="flex items-center gap-2 mb-3 text-sm text-gray-500">
-                <span className="font-medium text-gray-800">{selectedClassName}</span>
+              <div className="flex items-center gap-2 mb-3 text-sm text-ds-text2">
+                <span className="font-medium text-ds-text1">{selectedClassName}</span>
                 <span>·</span>
                 <span>{classTotal} student{classTotal !== 1 ? 's' : ''}</span>
                 <span>·</span>
@@ -440,28 +441,28 @@ export default function StudentDirectoryPage() {
               </div>
 
               {/* Table */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
                 {classLoading ? (
-                  <div className="p-10 text-center text-gray-400 text-sm">Loading students…</div>
+                  <div className="p-10 text-center text-ds-text3 text-sm">Loading students…</div>
                 ) : classStudents.length === 0 ? (
-                  <div className="p-10 text-center text-gray-400 text-sm">
+                  <div className="p-10 text-center text-ds-text3 text-sm">
                     {classSearch
                       ? 'No students match your search.'
                       : `No students in ${selectedClassName} yet.`}
                   </div>
                 ) : (
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-ds-bg2">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roll</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adm. No</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parent Phone</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Portal</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Roll</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Adm. No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Parent Phone</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Portal</th>
                         <th className="px-4 py-3"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-ds-border">
                       {classStudents.map((s) => <StudentRow key={s.id} s={s} />)}
                     </tbody>
                   </table>
@@ -469,7 +470,7 @@ export default function StudentDirectoryPage() {
               </div>
 
               {!classLoading && classTotal > 0 && (
-                <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
+                <div className="flex items-center justify-between mt-3 text-sm text-ds-text2">
                   <span>
                     Showing {(classPage - 1) * CLASS_PAGE_SIZE + 1}
                     {' '}to {Math.min(classPage * CLASS_PAGE_SIZE, classTotal)}
@@ -479,14 +480,14 @@ export default function StudentDirectoryPage() {
                     <button
                       onClick={() => setClassPage((page) => Math.max(1, page - 1))}
                       disabled={classPage === 1}
-                      className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                      className="px-3 py-1 rounded border border-ds-border disabled:opacity-40 hover:bg-ds-bg2"
                     >
                       Prev
                     </button>
                     <button
                       onClick={() => setClassPage((page) => Math.min(classTotalPages, page + 1))}
                       disabled={classPage >= classTotalPages}
-                      className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                      className="px-3 py-1 rounded border border-ds-border disabled:opacity-40 hover:bg-ds-bg2"
                     >
                       Next
                     </button>

@@ -29,9 +29,9 @@ interface Completeness {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600',
-  active: 'bg-green-100 text-green-700',
-  completed: 'bg-blue-100 text-blue-700',
+  draft: 'bg-ds-bg2 text-ds-text2',
+  active: 'bg-ds-success-bg text-ds-success-text',
+  completed: 'bg-ds-info-bg text-ds-info-text',
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -234,7 +234,7 @@ export default function ExamsPage() {
     return acc;
   }, {});
 
-  const inp = 'border border-gray-300 p-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white';
+  const inp = 'border border-ds-border-strong p-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
   const openProgress = async (exam: Exam) => {
     setSelectedExam(exam);
     setTab('progress');
@@ -244,16 +244,16 @@ export default function ExamsPage() {
   };
 
   const tabBtn = (t: typeof tab) =>
-    `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`;
+    `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-black text-black' : 'border-transparent text-ds-text2 hover:text-ds-text1'}`;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-semibold mb-4">Examinations</h1>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
+      <div className="flex gap-1 border-b border-ds-border mb-6">
         <button className={tabBtn('list')} onClick={() => setTab('list')}>All Exams</button>
         {selectedExam && (
           <button className={tabBtn('configure')} onClick={() => setTab('configure')}>
@@ -271,79 +271,79 @@ export default function ExamsPage() {
       {tab === 'list' && (
         <div className="space-y-5">
           {/* Create exam */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Create New Exam</p>
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Create New Exam</p>
             <div className="grid grid-cols-4 gap-3 items-end">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Academic Year *</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Academic Year *</label>
                 <select className={inp + ' w-full'} value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
                   <option value="">Select Year</option>
                   {years.map((y) => <option key={y.id} value={y.id}>{y.name}{y.isCurrent ? ' ✓' : ''}</option>)}
                 </select>
               </div>
               <div className="col-span-1">
-                <label className="text-xs font-medium text-gray-600 block mb-1">Exam Name *</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Exam Name *</label>
                 <input className={inp + ' w-full'} placeholder="e.g. Unit Test 1, Half Yearly, Final"
                   value={newExamName} onChange={(e) => setNewExamName(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Start Date</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Start Date</label>
                 <input type="date" className={inp + ' w-full'} value={newExamStart}
                   onChange={(e) => setNewExamStart(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">End Date</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">End Date</label>
                 <input type="date" className={inp + ' w-full'} value={newExamEnd}
                   onChange={(e) => setNewExamEnd(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Exam Center <span className="text-gray-400 font-normal">(for admit cards)</span></label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Exam Center <span className="text-ds-text3 font-normal">(for admit cards)</span></label>
                 <input className={inp + ' w-full'} placeholder="e.g. Main Block — Room 101"
                   value={newExamCenter} onChange={(e) => setNewExamCenter(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Reporting Time <span className="text-gray-400 font-normal">(for admit cards)</span></label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Reporting Time <span className="text-ds-text3 font-normal">(for admit cards)</span></label>
                 <input className={inp + ' w-full'} placeholder="e.g. 30 minutes before exam"
                   value={newExamReportingTime} onChange={(e) => setNewExamReportingTime(e.target.value)} />
               </div>
             </div>
             <button onClick={createExam}
               disabled={creating || !newExamName.trim() || !selectedYear}
-              className="mt-3 bg-black text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+              className="mt-3 btn-brand px-5 py-2 rounded-lg">
               {creating ? 'Creating...' : '+ Create Exam'}
             </button>
           </div>
 
           {/* Exam cards */}
           {exams.length === 0 ? (
-            <div className="text-center py-16 text-gray-400 text-sm">No exams for this year. Create one above.</div>
+            <div className="text-center py-16 text-ds-text3 text-sm">No exams for this year. Create one above.</div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
               {exams.map((e) => (
-                <div key={e.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+                <div key={e.id} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-800">{e.name}</h3>
+                    <h3 className="font-semibold text-ds-text1">{e.name}</h3>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[e.status]}`}>
                       {e.status}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400 mb-1">{e.academicYear.name}</p>
+                  <p className="text-xs text-ds-text3 mb-1">{e.academicYear.name}</p>
                   {(e.startDate || e.endDate) && (
-                    <p className="text-xs text-gray-500 mb-2">
+                    <p className="text-xs text-ds-text2 mb-2">
                       {e.startDate && new Date(e.startDate).toLocaleDateString('en-IN')}
                       {e.startDate && e.endDate && ' – '}
                       {e.endDate && new Date(e.endDate).toLocaleDateString('en-IN')}
                     </p>
                   )}
-                  <p className="text-xs text-gray-400 mb-3">{e._count?.subjects ?? 0} subject(s) configured</p>
+                  <p className="text-xs text-ds-text3 mb-3">{e._count?.subjects ?? 0} subject(s) configured</p>
 
-                  <p className="text-xs text-gray-500 italic mb-3">{STATUS_LABEL[e.status]}</p>
+                  <p className="text-xs text-ds-text2 italic mb-3">{STATUS_LABEL[e.status]}</p>
 
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={() => openConfigure(e)}
-                      className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800">
+                      className="btn-brand px-3 py-1.5 rounded-lg text-xs">
                       Configure
                     </button>
                     {e.status === 'active' && (
@@ -366,12 +366,12 @@ export default function ExamsPage() {
                     )}
                     {e.status === 'completed' && (
                       <button onClick={() => updateStatus(e.id, 'active')}
-                        className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50">
+                        className="px-3 py-1.5 border border-ds-border-strong text-ds-text2 rounded-lg text-xs font-medium hover:bg-ds-bg2">
                         Reopen
                       </button>
                     )}
                     <button onClick={() => deleteExam(e.id)}
-                      className="px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-medium hover:bg-red-50 ml-auto">
+                      className="px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-medium hover:bg-ds-error-bg ml-auto">
                       Delete
                     </button>
                   </div>
@@ -385,17 +385,17 @@ export default function ExamsPage() {
       {/* ── Mark Entry Progress ── */}
       {tab === 'progress' && selectedExam && (
         <div className="space-y-5">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-gray-800 text-lg">{selectedExam.name} — Mark Entry Progress</h2>
-              <p className="text-sm text-gray-400">How many students have marks entered per class & subject</p>
+              <h2 className="font-semibold text-ds-text1 text-lg">{selectedExam.name} — Mark Entry Progress</h2>
+              <p className="text-sm text-ds-text3">How many students have marks entered per class & subject</p>
             </div>
             {completeness && (
               <div className="text-right">
-                <p className="text-2xl font-bold text-gray-800">{completeness.completeSlots}/{completeness.totalSlots}</p>
-                <p className="text-xs text-gray-400">subject slots complete</p>
+                <p className="text-2xl font-bold text-ds-text1">{completeness.completeSlots}/{completeness.totalSlots}</p>
+                <p className="text-xs text-ds-text3">subject slots complete</p>
                 {completeness.allComplete && (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium mt-1 inline-block">
+                  <span className="text-xs bg-ds-success-bg text-ds-success-text px-2 py-0.5 rounded-full font-medium mt-1 inline-block">
                     All marks entered — ready to complete
                   </span>
                 )}
@@ -404,9 +404,9 @@ export default function ExamsPage() {
           </div>
 
           {!completeness ? (
-            <p className="text-sm text-gray-400">Loading...</p>
+            <p className="text-sm text-ds-text3">Loading...</p>
           ) : completeness.entries.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center text-gray-400 text-sm">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-10 text-center text-ds-text3 text-sm">
               No subjects configured for this exam yet.
             </div>
           ) : (
@@ -422,16 +422,16 @@ export default function ExamsPage() {
               ).map(([, entries]) => {
                 const unit = entries[0].academicUnit;
                 return (
-                  <div key={unit.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                      <span className="font-medium text-gray-800 text-sm">{unit.displayName || unit.name}</span>
-                      <span className="text-xs text-gray-400">
+                  <div key={unit.id} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+                    <div className="px-5 py-3 border-b border-ds-border bg-ds-bg2 flex items-center justify-between">
+                      <span className="font-medium text-ds-text1 text-sm">{unit.displayName || unit.name}</span>
+                      <span className="text-xs text-ds-text3">
                         {entries.filter((e) => e.complete).length}/{entries.length} complete
                       </span>
                     </div>
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-xs text-gray-500">
+                        <tr className="text-xs text-ds-text2">
                           <th className="px-5 py-2 text-left">Subject</th>
                           <th className="px-5 py-2 text-center">Max Marks</th>
                           <th className="px-5 py-2 text-center">Entered</th>
@@ -440,32 +440,32 @@ export default function ExamsPage() {
                           <th className="px-5 py-2 text-center">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-ds-border">
                         {entries.map((e) => {
                           const pct = e.totalStudents > 0 ? Math.round((e.enteredCount / e.totalStudents) * 100) : 0;
                           return (
-                            <tr key={e.examSubjectId} className="hover:bg-gray-50">
-                              <td className="px-5 py-3 font-medium text-gray-800">{e.subject.name}</td>
-                              <td className="px-5 py-3 text-center text-gray-600">{e.maxMarks}</td>
-                              <td className="px-5 py-3 text-center text-gray-600">{e.enteredCount}</td>
-                              <td className="px-5 py-3 text-center text-gray-600">{e.totalStudents}</td>
+                            <tr key={e.examSubjectId} className="hover:bg-ds-bg2">
+                              <td className="px-5 py-3 font-medium text-ds-text1">{e.subject.name}</td>
+                              <td className="px-5 py-3 text-center text-ds-text2">{e.maxMarks}</td>
+                              <td className="px-5 py-3 text-center text-ds-text2">{e.enteredCount}</td>
+                              <td className="px-5 py-3 text-center text-ds-text2">{e.totalStudents}</td>
                               <td className="px-5 py-3 text-center">
                                 <div className="w-24 mx-auto">
-                                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-1.5 bg-ds-bg2 rounded-full overflow-hidden">
                                     <div
                                       className={`h-full rounded-full transition-all ${e.complete ? 'bg-green-500' : 'bg-indigo-500'}`}
                                       style={{ width: `${pct}%` }}
                                     />
                                   </div>
-                                  <p className="text-[10px] text-gray-400 mt-0.5">{pct}%</p>
+                                  <p className="text-[10px] text-ds-text3 mt-0.5">{pct}%</p>
                                 </div>
                               </td>
                               <td className="px-5 py-3 text-center">
                                 {e.complete
-                                  ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Complete</span>
+                                  ? <span className="text-xs bg-ds-success-bg text-ds-success-text px-2 py-0.5 rounded-full font-medium">Complete</span>
                                   : e.totalStudents === 0
-                                    ? <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">No students</span>
-                                    : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Pending</span>}
+                                    ? <span className="text-xs bg-ds-bg2 text-ds-text2 px-2 py-0.5 rounded-full">No students</span>
+                                    : <span className="text-xs bg-ds-warning-bg text-ds-warning-text px-2 py-0.5 rounded-full">Pending</span>}
                               </td>
                             </tr>
                           );
@@ -477,10 +477,10 @@ export default function ExamsPage() {
               })}
 
               {completeness.allComplete && selectedExam.status === 'active' && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+                <div className="bg-ds-success-bg border border-ds-success-border rounded-xl p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-green-800">All marks entered for every class & subject</p>
-                    <p className="text-xs text-green-600 mt-0.5">You can now complete this exam to release scorecards to students.</p>
+                    <p className="text-sm font-semibold text-ds-success-text">All marks entered for every class & subject</p>
+                    <p className="text-xs text-ds-success-text mt-0.5">You can now complete this exam to release scorecards to students.</p>
                   </div>
                   <button
                     onClick={() => { void updateStatus(selectedExam.id, 'completed'); setTab('list'); }}
@@ -494,7 +494,7 @@ export default function ExamsPage() {
           )}
 
           <button onClick={() => setTab('list')}
-            className="px-5 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+            className="px-5 py-2 border border-ds-border-strong rounded-lg text-sm text-ds-text2 hover:bg-ds-bg2">
             Back to All Exams
           </button>
         </div>
@@ -504,10 +504,10 @@ export default function ExamsPage() {
       {tab === 'configure' && selectedExam && (
         <div className="space-y-5">
           {/* Exam header */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-gray-800 text-lg">{selectedExam.name}</h2>
-              <p className="text-sm text-gray-400">Configure which subjects each class will be tested on</p>
+              <h2 className="font-semibold text-ds-text1 text-lg">{selectedExam.name}</h2>
+              <p className="text-sm text-ds-text3">Configure which subjects each class will be tested on</p>
             </div>
             <span className={`text-xs px-3 py-1 rounded-full font-medium ${STATUS_COLOR[selectedExam.status]}`}>
               {selectedExam.status}
@@ -515,9 +515,9 @@ export default function ExamsPage() {
           </div>
 
           {/* Workflow guide */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-blue-700 mb-1">Exam Workflow</p>
-            <ol className="text-xs text-blue-600 space-y-0.5 list-decimal list-inside">
+          <div className="bg-ds-info-bg border border-ds-info-border rounded-lg p-4">
+            <p className="text-xs font-semibold text-ds-info-text mb-1">Exam Workflow</p>
+            <ol className="text-xs text-ds-brand space-y-0.5 list-decimal list-inside">
               <li>Add subjects for each class below (class + subject + max marks is mandatory)</li>
               <li>Go back to All Exams and click <strong>Activate</strong> — teachers can then enter marks from their portal</li>
               <li>Once all marks are entered, click <strong>Mark Complete</strong> — score cards become visible to students</li>
@@ -525,13 +525,13 @@ export default function ExamsPage() {
           </div>
 
           {/* Add subject form */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">
               Add Subject to Class *
             </p>
             <div className="grid grid-cols-3 gap-3 items-end">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Class *</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Class *</label>
                 <select className={inp + ' w-full'} value={addSubUnit}
                   onChange={(e) => { setAddSubUnit(e.target.value); setAddSubSubject(''); setUnitSubjects([]); }}>
                   <option value="">Select Class</option>
@@ -539,7 +539,7 @@ export default function ExamsPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Subject *</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Subject *</label>
                 <select className={inp + ' w-full'} value={addSubSubject}
                   onChange={(e) => setAddSubSubject(e.target.value)}
                   disabled={!addSubUnit || loadingUnitSubjects}>
@@ -550,41 +550,41 @@ export default function ExamsPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Exam Date</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Exam Date</label>
                 <input type="date" className={inp + ' w-full'} value={addSubDate}
                   onChange={(e) => setAddSubDate(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3 items-end mt-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Exam Time <span className="text-gray-400 font-normal">(for admit cards)</span></label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Exam Time <span className="text-ds-text3 font-normal">(for admit cards)</span></label>
                 <input className={inp + ' w-full'} placeholder="e.g. 10:00 AM – 12:00 PM"
                   value={addSubTime} onChange={(e) => setAddSubTime(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Max Marks</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Max Marks</label>
                 <input type="number" className={inp + ' w-full'} value={addSubMax}
                   onChange={(e) => setAddSubMax(e.target.value)} min="1" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Pass Marks</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Pass Marks</label>
                 <input type="number" className={inp + ' w-full'} value={addSubPass}
                   onChange={(e) => setAddSubPass(e.target.value)} min="1" />
               </div>
             </div>
             <button onClick={addExamSubject}
               disabled={addingSubject || !addSubUnit || !addSubSubject}
-              className="mt-3 bg-black text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+              className="mt-3 btn-brand px-5 py-2 rounded-lg">
               {addingSubject ? 'Adding...' : '+ Add'}
             </button>
             {!addSubUnit && (
-              <p className="text-xs text-amber-600 mt-2">Select a class first — subjects are configured per class.</p>
+              <p className="text-xs text-ds-warning-text mt-2">Select a class first — subjects are configured per class.</p>
             )}
           </div>
 
           {/* Configured subjects grouped by class */}
           {examSubjects.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center text-gray-400 text-sm">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-10 text-center text-ds-text3 text-sm">
               No subjects configured yet. Select class and subject above to get started.
             </div>
           ) : (
@@ -592,16 +592,16 @@ export default function ExamsPage() {
               {Object.entries(subjectsByClass).map(([unitId, subjects]) => {
                 const unit = units.find((u) => u.id === unitId);
                 return (
-                  <div key={unitId} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                      <span className="font-medium text-gray-800 text-sm">
+                  <div key={unitId} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+                    <div className="px-5 py-3 border-b border-ds-border bg-ds-bg2">
+                      <span className="font-medium text-ds-text1 text-sm">
                         {unit?.displayName || unit?.name || unitId}
                       </span>
-                      <span className="ml-2 text-xs text-gray-400">{subjects.length} subject(s)</span>
+                      <span className="ml-2 text-xs text-ds-text3">{subjects.length} subject(s)</span>
                     </div>
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-xs text-gray-500">
+                        <tr className="text-xs text-ds-text2">
                           <th className="px-5 py-2 text-left">Subject</th>
                           <th className="px-5 py-2 text-center">Max Marks</th>
                           <th className="px-5 py-2 text-center">Pass Marks</th>
@@ -610,21 +610,21 @@ export default function ExamsPage() {
                           <th className="px-5 py-2"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-ds-border">
                         {subjects.map((es) => (
-                          <tr key={es.id} className="hover:bg-gray-50">
-                            <td className="px-5 py-2.5 font-medium text-gray-800">{es.subject.name}</td>
-                            <td className="px-5 py-2.5 text-center text-gray-600">{es.maxMarks}</td>
-                            <td className="px-5 py-2.5 text-center text-gray-600">{es.passingMarks}</td>
-                            <td className="px-5 py-2.5 text-center text-gray-500 text-xs">
+                          <tr key={es.id} className="hover:bg-ds-bg2">
+                            <td className="px-5 py-2.5 font-medium text-ds-text1">{es.subject.name}</td>
+                            <td className="px-5 py-2.5 text-center text-ds-text2">{es.maxMarks}</td>
+                            <td className="px-5 py-2.5 text-center text-ds-text2">{es.passingMarks}</td>
+                            <td className="px-5 py-2.5 text-center text-ds-text2 text-xs">
                               {es.examDate ? new Date(es.examDate).toLocaleDateString('en-IN') : '—'}
                             </td>
-                            <td className="px-5 py-2.5 text-center text-gray-500 text-xs">
+                            <td className="px-5 py-2.5 text-center text-ds-text2 text-xs">
                               {es.examTime ?? '—'}
                             </td>
                             <td className="px-5 py-2.5 text-right">
                               <button onClick={() => removeExamSubject(es.id)}
-                                className="text-xs text-red-400 hover:text-red-600">Remove</button>
+                                className="text-xs text-red-400 hover:text-ds-error-text">Remove</button>
                             </td>
                           </tr>
                         ))}
@@ -639,7 +639,7 @@ export default function ExamsPage() {
           {/* Action bar */}
           <div className="flex gap-3">
             <button onClick={() => setTab('list')}
-              className="px-5 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+              className="px-5 py-2 border border-ds-border-strong rounded-lg text-sm text-ds-text2 hover:bg-ds-bg2">
               Back to All Exams
             </button>
             {selectedExam.status === 'draft' && examSubjects.length > 0 && (

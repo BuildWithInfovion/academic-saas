@@ -229,14 +229,14 @@ function printAdmitCard(ac: AdmitCard) {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-500',
-  active: 'bg-blue-100 text-blue-700',
-  completed: 'bg-green-100 text-green-700',
+  draft: 'bg-ds-bg2 text-ds-text2',
+  active: 'bg-ds-info-bg text-ds-info-text',
+  completed: 'bg-ds-success-bg text-ds-success-text',
 };
 
 const GRADE_COLORS: Record<string, string> = {
-  'A+': 'text-green-700', A: 'text-green-600', B: 'text-blue-600',
-  C: 'text-amber-600', D: 'text-orange-600', F: 'text-red-600',
+  'A+': 'text-ds-success-text', A: 'text-ds-success-text', B: 'text-ds-brand',
+  C: 'text-ds-warning-text', D: 'text-orange-600', F: 'text-ds-error-text',
 };
 
 export default function ParentExamsPage() {
@@ -301,7 +301,7 @@ export default function ParentExamsPage() {
   if (notLinked) {
     return (
       <div className="p-8">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-700">
+        <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-5 text-sm text-ds-warning-text">
           Your child's record has not been linked yet. Please contact the school admin.
         </div>
       </div>
@@ -316,18 +316,18 @@ export default function ParentExamsPage() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Exam Schedule & Results</h1>
-      <p className="text-sm text-gray-400 mb-6">View exams and your child's scorecards</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Exam Schedule & Results</h1>
+      <p className="text-sm text-ds-text3 mb-6">View exams and your child's scorecards</p>
 
       {/* Child + Year selectors */}
       <div className="flex flex-wrap gap-4 mb-6">
         {children.length > 1 && (
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Child</label>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Child</label>
             <select
               value={selectedChildId}
               onChange={(e) => { setSelectedChildId(e.target.value); setScorecard(null); }}
-              className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand"
             >
               {children.map((c) => (
                 <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
@@ -336,11 +336,11 @@ export default function ParentExamsPage() {
           </div>
         )}
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Academic Year</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Academic Year</label>
           <select
             value={selectedYearId}
             onChange={(e) => setSelectedYearId(e.target.value)}
-            className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand"
           >
             {years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
           </select>
@@ -350,39 +350,39 @@ export default function ParentExamsPage() {
       {/* Exam status overview */}
       {exams.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-2xl font-bold text-blue-700">{activeExams.length}</p>
-            <p className="text-sm text-blue-700 font-medium mt-1">In Progress</p>
+          <div className="bg-ds-info-bg border border-ds-info-border rounded-xl p-4">
+            <p className="text-2xl font-bold text-ds-info-text">{activeExams.length}</p>
+            <p className="text-sm text-ds-info-text font-medium mt-1">In Progress</p>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <p className="text-2xl font-bold text-green-700">{completedExams.length}</p>
-            <p className="text-sm text-green-700 font-medium mt-1">Completed</p>
+          <div className="bg-ds-success-bg border border-ds-success-border rounded-xl p-4">
+            <p className="text-2xl font-bold text-ds-success-text">{completedExams.length}</p>
+            <p className="text-sm text-ds-success-text font-medium mt-1">Completed</p>
           </div>
-          <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4">
-            <p className="text-2xl font-bold text-gray-700">{upcomingExams.length}</p>
-            <p className="text-sm text-gray-600 font-medium mt-1">Upcoming</p>
+          <div className="bg-ds-surface border border-ds-border shadow-sm rounded-xl p-4">
+            <p className="text-2xl font-bold text-ds-text1">{upcomingExams.length}</p>
+            <p className="text-sm text-ds-text2 font-medium mt-1">Upcoming</p>
           </div>
         </div>
       )}
 
       {/* All exams list */}
       {exams.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800 text-sm">All Examinations</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden mb-6">
+          <div className="px-5 py-4 border-b border-ds-border">
+            <h2 className="font-semibold text-ds-text1 text-sm">All Examinations</h2>
+            <p className="text-xs text-ds-text3 mt-0.5">
               Click a completed exam to view {selectedChild?.firstName}'s scorecard
             </p>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-ds-border">
             {exams.map((e) => (
               <div
                 key={e.id}
                 className={`px-5 py-3 flex items-center justify-between ${selectedExamId === e.id ? 'bg-blue-50' : ''}`}
               >
-                <p className="text-sm font-medium text-gray-800">{e.name}</p>
+                <p className="text-sm font-medium text-ds-text1">{e.name}</p>
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[e.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[e.status] ?? 'bg-ds-bg2 text-ds-text2'}`}>
                     {e.status === 'active' ? 'In Progress' : e.status === 'completed' ? 'Completed' : 'Upcoming'}
                   </span>
                   {/* Admit Card — available for upcoming and active exams */}
@@ -411,57 +411,57 @@ export default function ParentExamsPage() {
       )}
 
       {exams.length === 0 && selectedYearId && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-10 text-center">
-          <p className="text-gray-400 text-sm">No examinations scheduled for this academic year.</p>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-10 text-center">
+          <p className="text-ds-text3 text-sm">No examinations scheduled for this academic year.</p>
         </div>
       )}
 
       {/* Scorecard */}
       {selectedExamId && (
         loadingScorecard ? (
-          <p className="text-sm text-gray-400">Loading scorecard...</p>
+          <p className="text-sm text-ds-text3">Loading scorecard...</p>
         ) : !scorecard ? (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
-            <p className="text-gray-400 text-sm">No marks recorded yet for {selectedChild?.firstName} in {selectedExam?.name}.</p>
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-8 text-center">
+            <p className="text-ds-text3 text-sm">No marks recorded yet for {selectedChild?.firstName} in {selectedExam?.name}.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="bg-black text-white px-5 py-4">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+            <div className="px-5 py-4">
               <div className="flex items-start justify-between mb-2">
-                <p className="text-xs text-gray-400">{selectedExam?.name}</p>
+                <p className="text-xs text-ds-text3">{selectedExam?.name}</p>
                 <button
                   onClick={() => scorecard && printReportCard(scorecard)}
-                  className="text-xs bg-white text-black px-3 py-1 rounded-lg font-semibold hover:bg-gray-100"
+                  className="text-xs bg-ds-surface text-ds-text1 px-3 py-1 rounded-lg font-semibold hover:bg-ds-bg2"
                 >
                   Print Report Card
                 </button>
               </div>
               <div className="flex gap-8">
                 <div>
-                  <p className="text-xs text-gray-400">Total</p>
+                  <p className="text-xs text-ds-text3">Total</p>
                   <p className="text-xl font-bold">{scorecard.totalObtained} / {scorecard.totalMax}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Percentage</p>
+                  <p className="text-xs text-ds-text3">Percentage</p>
                   <p className="text-xl font-bold">{scorecard.percentage?.toFixed(1)}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Class Rank</p>
+                  <p className="text-xs text-ds-text3">Class Rank</p>
                   <p className="text-xl font-bold">#{scorecard.rank ?? '—'}</p>
                 </div>
               </div>
             </div>
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-ds-bg2">
                 <tr>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Subject</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Marks</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Max</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">%</th>
-                  <th className="text-center px-5 py-3 text-gray-500 font-medium text-xs">Result</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Subject</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Marks</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Max</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">%</th>
+                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Result</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-ds-border">
                 {scorecard.rows.map((r, i) => {
                   const isAbsent = r.marksObtained === 'AB';
                   const pct = !isAbsent && r.maxMarks > 0 && typeof r.marksObtained === 'number'
@@ -469,18 +469,18 @@ export default function ParentExamsPage() {
                     : '—';
                   return (
                     <tr key={i}>
-                      <td className="px-5 py-3 text-gray-800 font-medium">{r.subject}</td>
-                      <td className="px-5 py-3 text-center text-gray-700">
-                        {isAbsent ? <span className="text-xs text-gray-400">Absent</span> : (r.marksObtained ?? '—')}
+                      <td className="px-5 py-3 text-ds-text1 font-medium">{r.subject}</td>
+                      <td className="px-5 py-3 text-center text-ds-text1">
+                        {isAbsent ? <span className="text-xs text-ds-text3">Absent</span> : (r.marksObtained ?? '—')}
                       </td>
-                      <td className="px-5 py-3 text-center text-gray-500">{r.maxMarks}</td>
-                      <td className="px-5 py-3 text-center text-gray-600">{pct}</td>
+                      <td className="px-5 py-3 text-center text-ds-text2">{r.maxMarks}</td>
+                      <td className="px-5 py-3 text-center text-ds-text2">{pct}</td>
                       <td className="px-5 py-3 text-center">
                         {isAbsent
-                          ? <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Absent</span>
+                          ? <span className="text-xs bg-ds-bg2 text-ds-text2 px-2 py-0.5 rounded-full">Absent</span>
                           : r.passed
-                            ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Pass</span>
-                            : <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Fail</span>}
+                            ? <span className="text-xs bg-ds-success-bg text-ds-success-text px-2 py-0.5 rounded-full">Pass</span>
+                            : <span className="text-xs bg-ds-error-bg text-ds-error-text px-2 py-0.5 rounded-full">Fail</span>}
                       </td>
                     </tr>
                   );

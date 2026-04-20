@@ -17,14 +17,16 @@ export default function NonTeachingStaffOverviewPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button
           onClick={() => router.push('/portal/non-teaching-staff/staff-attendance')}
-          className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity bg-black text-white"
+          className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity"
+          style={{ background: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)', color: '#fcfbf7', border: '1px solid rgba(140,57,25,0.25)' }}
         >
           <p className="font-semibold">My Attendance</p>
           <p className="text-sm mt-1 opacity-70">Mark your daily attendance &amp; apply for leave</p>
         </button>
         <button
           onClick={() => router.push('/portal/non-teaching-staff/announcements')}
-          className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity bg-gray-800 text-white"
+          className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity"
+          style={{ background: 'linear-gradient(135deg, #6b432f 0%, #3a1f0c 100%)', color: '#fcfbf7', border: '1px solid rgba(140,57,25,0.25)' }}
         >
           <p className="font-semibold">Announcements</p>
           <p className="text-sm mt-1 opacity-70">Notices from school management</p>

@@ -118,24 +118,24 @@ export default function TimetablePage() {
     );
   };
 
-  const inp = 'border border-gray-200 rounded-lg p-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-black w-full';
+  const inp = 'border border-ds-border rounded-lg p-1.5 text-xs bg-ds-surface focus:outline-none focus:ring-1 focus:ring-ds-brand w-full';
 
   return (
     <div className="p-8 max-w-6xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Timetable</h1>
-      <p className="text-sm text-gray-400 mb-6">Configure weekly class schedules and assign subject teachers per period</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Timetable</h1>
+      <p className="text-sm text-ds-text3 mb-6">Configure weekly class schedules and assign subject teachers per period</p>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
       {/* Controls */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6">
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 mb-6">
         <div className="flex flex-wrap gap-6 items-end">
           {/* Class selector */}
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Class</label>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Class</label>
             <select
-              className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand"
               value={selectedUnit}
               onChange={(e) => { setSelectedUnit(e.target.value); setSlots([]); }}
             >
@@ -146,9 +146,9 @@ export default function TimetablePage() {
 
           {/* Periods per day */}
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Periods / Day</label>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Periods / Day</label>
             <select
-              className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand"
               value={periodsPerDay}
               onChange={(e) => setPeriodsPerDay(Number(e.target.value))}
             >
@@ -158,7 +158,7 @@ export default function TimetablePage() {
 
           {/* Working days */}
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-2">Working Days</label>
+            <label className="text-xs font-medium text-ds-text2 block mb-2">Working Days</label>
             <div className="flex gap-1.5">
               {DAYS.map((d) => (
                 <button
@@ -166,8 +166,8 @@ export default function TimetablePage() {
                   onClick={() => toggleDay(d.no)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                     workingDays.includes(d.no)
-                      ? 'bg-black text-white border-black'
-                      : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'
+                      ? 'bg-ds-brand text-white border-ds-brand-dark'
+                      : 'bg-ds-surface text-ds-text2 border-ds-border-strong hover:border-gray-500'
                   }`}
                 >
                   {d.label}
@@ -187,12 +187,12 @@ export default function TimetablePage() {
         </div>
 
         {selectedUnit && unitSubjects.length > 0 && (
-          <p className="text-xs text-gray-400 mt-3">
+          <p className="text-xs text-ds-text3 mt-3">
             {unitSubjects.length} subject(s) available · Auto-generate distributes them evenly across the week
           </p>
         )}
         {selectedUnit && unitSubjects.length === 0 && (
-          <p className="text-xs text-amber-600 mt-3">
+          <p className="text-xs text-ds-warning-text mt-3">
             No subjects assigned to this class yet. Go to the Subjects page to assign subjects first.
           </p>
         )}
@@ -200,13 +200,13 @@ export default function TimetablePage() {
 
       {/* Timetable grid */}
       {selectedUnit && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 w-20 border-b border-gray-100">Period</th>
+              <tr className="bg-ds-bg2">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ds-text2 w-20 border-b border-ds-border">Period</th>
                 {activeDays.map((d) => (
-                  <th key={d.no} className="px-3 py-3 text-center text-xs font-semibold text-gray-600 border-b border-gray-100 min-w-[160px]">
+                  <th key={d.no} className="px-3 py-3 text-center text-xs font-semibold text-ds-text2 border-b border-ds-border min-w-[160px]">
                     {d.label}
                   </th>
                 ))}
@@ -214,15 +214,15 @@ export default function TimetablePage() {
             </thead>
             <tbody>
               {periods.map((p) => (
-                <tr key={p} className="border-b border-gray-50 last:border-0">
-                  <td className="px-4 py-3 text-xs font-semibold text-gray-400 bg-gray-50 text-center">P{p}</td>
+                <tr key={p} className="border-b border-ds-border last:border-0">
+                  <td className="px-4 py-3 text-xs font-semibold text-ds-text3 bg-ds-bg2 text-center">P{p}</td>
                   {activeDays.map((d) => {
                     const slot = slotMap.get(`${d.no}-${p}`);
                     const key = `${d.no}-${p}`;
                     const isSaving = saving === key;
 
                     return (
-                      <td key={d.no} className="px-3 py-2 align-top border-l border-gray-50">
+                      <td key={d.no} className="px-3 py-2 align-top border-l border-ds-border">
                         <div className="space-y-1.5">
                           {/* Subject picker */}
                           <select
@@ -240,7 +240,7 @@ export default function TimetablePage() {
                           {/* Teacher picker — only shown if subject selected */}
                           {slot?.subjectId && (
                             <select
-                              className={inp + ' text-gray-500'}
+                              className={inp + ' text-ds-text2'}
                               value={slot?.teacherUserId ?? ''}
                               disabled={isSaving}
                               onChange={(e) => saveSlot(d.no, p, slot?.subjectId ?? '', e.target.value)}
@@ -252,7 +252,7 @@ export default function TimetablePage() {
                             </select>
                           )}
 
-                          {isSaving && <p className="text-[10px] text-gray-400">Saving…</p>}
+                          {isSaving && <p className="text-[10px] text-ds-text3">Saving…</p>}
                         </div>
                       </td>
                     );
@@ -265,8 +265,8 @@ export default function TimetablePage() {
       )}
 
       {!selectedUnit && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
-          <p className="text-gray-400 text-sm">Select a class to view or edit its timetable.</p>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-12 text-center">
+          <p className="text-ds-text3 text-sm">Select a class to view or edit its timetable.</p>
         </div>
       )}
     </div>

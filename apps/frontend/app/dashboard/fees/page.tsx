@@ -356,20 +356,20 @@ export default function FeesPage() {
     }
   };
 
-  const inp = 'border border-gray-300 p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white';
-  const lbl = 'text-xs font-medium text-gray-600 block mb-1';
+  const inp = 'border border-ds-border-strong p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
+  const lbl = 'text-xs font-medium text-ds-text2 block mb-1';
   const tabBtn = (t: typeof tab) =>
-    `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === t ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`;
+    `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === t ? 'border-black text-black' : 'border-transparent text-ds-text2 hover:text-ds-text1'}`;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-semibold mb-4">Fee Management</h1>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
+      <div className="flex gap-1 border-b border-ds-border mb-6 overflow-x-auto">
         <button className={tabBtn('collect')} onClick={() => setTab('collect')}>Collect Fee</button>
         <button className={tabBtn('structure')} onClick={() => setTab('structure')}>Fee Structure</button>
         <button className={tabBtn('defaulters')} onClick={() => { setTab('defaulters'); }}>Defaulters</button>
@@ -389,35 +389,35 @@ export default function FeesPage() {
       {tab === 'collect' && (
         <div className="grid grid-cols-5 gap-5">
           <div className="col-span-3 space-y-5">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Student</p>
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+              <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Student</p>
               <div className="relative">
                 <input className={inp} placeholder="Search by name or admission no..."
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setSelectedStudent(null); }}
                 />
                 {searchQuery.trim().length === 1 && !selectedStudent && (
-                  <p className="mt-2 text-xs text-gray-400">Type at least 2 characters to search.</p>
+                  <p className="mt-2 text-xs text-ds-text3">Type at least 2 characters to search.</p>
                 )}
                 {filteredStudents.length > 0 && !selectedStudent && (
-                  <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 w-full bg-ds-surface border border-ds-border rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
                     {filteredStudents.map((s) => (
                       <button key={s.id} onClick={() => selectStudent(s)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm border-b border-gray-50 last:border-0">
+                        className="w-full text-left px-4 py-2.5 hover:bg-ds-bg2 text-sm border-b border-ds-border last:border-0">
                         <span className="font-medium">{s.firstName} {s.lastName}</span>
-                        <span className="text-gray-400 text-xs ml-2 font-mono">{s.admissionNo}</span>
+                        <span className="text-ds-text3 text-xs ml-2 font-mono">{s.admissionNo}</span>
                       </button>
                     ))}
                   </div>
                 )}
                 {debouncedSearchQuery.length >= 2 && filteredStudents.length === 0 && !selectedStudent && (
-                  <p className="mt-2 text-xs text-gray-400">No matching students found.</p>
+                  <p className="mt-2 text-xs text-ds-text3">No matching students found.</p>
                 )}
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Record Payment</p>
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+              <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Record Payment</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className={lbl}>Fee Head *</label>
@@ -449,38 +449,38 @@ export default function FeesPage() {
                 </div>
               </div>
               <button onClick={recordPayment} disabled={paying || !selectedStudent}
-                className="mt-4 w-full bg-black text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                className="mt-4 w-full btn-brand px-4 py-2.5 rounded-lg">
                 {paying ? 'Recording...' : '+ Record Payment'}
               </button>
-              {!selectedStudent && <p className="text-xs text-gray-400 mt-2 text-center">Select a student above first</p>}
+              {!selectedStudent && <p className="text-xs text-ds-text3 mt-2 text-center">Select a student above first</p>}
             </div>
           </div>
 
           <div className="col-span-2">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 sticky top-6">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 sticky top-6">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider">
                   {selectedStudent ? `${selectedStudent.firstName}'s Payments` : 'Payment History'}
                 </p>
                 {paymentTotal > 0 && (
-                  <span className="text-sm font-semibold text-green-700">₹{paymentTotal.toLocaleString('en-IN')}</span>
+                  <span className="text-sm font-semibold text-ds-success-text">₹{paymentTotal.toLocaleString('en-IN')}</span>
                 )}
               </div>
               {!selectedStudent ? (
-                <p className="text-sm text-gray-400 text-center py-6">Select a student to view history</p>
+                <p className="text-sm text-ds-text3 text-center py-6">Select a student to view history</p>
               ) : studentPayments.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No payments recorded</p>
+                <p className="text-sm text-ds-text3 text-center py-6">No payments recorded</p>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {studentPayments.map((p) => (
-                    <div key={p.id} className="bg-gray-50 rounded-lg p-3">
+                    <div key={p.id} className="bg-ds-bg2 rounded-lg p-3">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="text-sm font-medium text-gray-800">{p.feeHead.name}</p>
-                          <p className="text-xs text-gray-500 font-mono mt-0.5">{p.receiptNo}</p>
+                          <p className="text-sm font-medium text-ds-text1">{p.feeHead.name}</p>
+                          <p className="text-xs text-ds-text2 font-mono mt-0.5">{p.receiptNo}</p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-semibold text-gray-800">₹{p.amount.toLocaleString('en-IN')}</span>
+                          <span className="text-sm font-semibold text-ds-text1">₹{p.amount.toLocaleString('en-IN')}</span>
                           <button
                             onClick={() => printFeeReceipt(p, selectedStudent!, institution ?? { name: user?.institutionName ?? 'School' })}
                             className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
@@ -489,8 +489,8 @@ export default function FeesPage() {
                         </div>
                       </div>
                       <div className="flex gap-3 mt-1">
-                        <span className="text-xs text-gray-400">{new Date(p.paidOn).toLocaleDateString('en-IN')}</span>
-                        <span className="text-xs text-gray-400 uppercase">{p.paymentMode}</span>
+                        <span className="text-xs text-ds-text3">{new Date(p.paidOn).toLocaleDateString('en-IN')}</span>
+                        <span className="text-xs text-ds-text3 uppercase">{p.paymentMode}</span>
                       </div>
                     </div>
                   ))}
@@ -504,12 +504,12 @@ export default function FeesPage() {
       {/* ── Fee Structure ── */}
       {tab === 'structure' && (
         <div className="space-y-5">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
+          <div className="bg-ds-info-bg border border-ds-info-border rounded-lg p-4 text-sm text-ds-info-text">
             Set the annual fee amount per fee head for each class. This defines what each student in a class owes.
           </div>
 
           {/* Controls */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
             <div className="flex gap-4 items-end flex-wrap mb-4">
               <div className="flex-1 min-w-[200px]">
                 <label className={lbl}>Class *</label>
@@ -528,7 +528,7 @@ export default function FeesPage() {
 
             {structUnit && (
               <>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Add Fee Entry</p>
+                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Add Fee Entry</p>
                 <div className="grid grid-cols-4 gap-3 items-end">
                   <div>
                     <label className={lbl}>Fee Head *</label>
@@ -558,7 +558,7 @@ export default function FeesPage() {
                   </div>
                 </div>
                 <button onClick={saveStructure} disabled={savingStruct || !structForm.feeHeadId || !structForm.amount}
-                  className="mt-3 bg-black text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                  className="mt-3 btn-brand px-5 py-2 rounded-lg">
                   {savingStruct ? 'Saving...' : '+ Add to Structure'}
                 </button>
               </>
@@ -567,55 +567,55 @@ export default function FeesPage() {
 
           {/* Structure table */}
           {structUnit && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <span className="font-medium text-gray-800">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
+                <span className="font-medium text-ds-text1">
                   Fee Structure — {units.find((u) => u.id === structUnit)?.displayName || units.find((u) => u.id === structUnit)?.name}
                 </span>
                 {totalFeeForClass > 0 && (
-                  <span className="text-sm font-semibold text-gray-700">
+                  <span className="text-sm font-semibold text-ds-text1">
                     Total Annual: ₹{totalFeeForClass.toLocaleString('en-IN')}
                   </span>
                 )}
               </div>
 
               {loadingStructures ? (
-                <div className="p-6 text-center text-gray-400 text-sm">Loading...</div>
+                <div className="p-6 text-center text-ds-text3 text-sm">Loading...</div>
               ) : structures.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 text-sm">
+                <div className="p-8 text-center text-ds-text3 text-sm">
                   No fee structure defined for this class yet. Add fee entries above.
                 </div>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-ds-bg2">
                     <tr>
-                      <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Fee Head</th>
-                      <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Installment</th>
-                      <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Due Date</th>
-                      <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Amount (₹)</th>
+                      <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Fee Head</th>
+                      <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Installment</th>
+                      <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Due Date</th>
+                      <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Amount (₹)</th>
                       <th className="px-5 py-3"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-ds-border">
                     {structures.map((s) => (
-                      <tr key={s.id} className="hover:bg-gray-50">
-                        <td className="px-5 py-3 font-medium text-gray-800">{s.feeHead.name}</td>
-                        <td className="px-5 py-3 text-gray-500 text-xs">{s.installmentName || 'Annual'}</td>
-                        <td className="px-5 py-3 text-gray-500 text-xs">
+                      <tr key={s.id} className="hover:bg-ds-bg2">
+                        <td className="px-5 py-3 font-medium text-ds-text1">{s.feeHead.name}</td>
+                        <td className="px-5 py-3 text-ds-text2 text-xs">{s.installmentName || 'Annual'}</td>
+                        <td className="px-5 py-3 text-ds-text2 text-xs">
                           {s.dueDate ? new Date(s.dueDate).toLocaleDateString('en-IN') : '—'}
                         </td>
-                        <td className="px-5 py-3 text-right font-semibold text-gray-800">
+                        <td className="px-5 py-3 text-right font-semibold text-ds-text1">
                           ₹{s.amount.toLocaleString('en-IN')}
                         </td>
                         <td className="px-5 py-3 text-right">
                           <button onClick={() => deleteStructure(s.id)}
-                            className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                            className="text-xs text-red-500 hover:text-ds-error-text">Remove</button>
                         </td>
                       </tr>
                     ))}
-                    <tr className="bg-gray-50 font-semibold">
-                      <td className="px-5 py-3 text-gray-700" colSpan={3}>Total</td>
-                      <td className="px-5 py-3 text-right text-gray-800">₹{totalFeeForClass.toLocaleString('en-IN')}</td>
+                    <tr className="bg-ds-bg2 font-semibold">
+                      <td className="px-5 py-3 text-ds-text1" colSpan={3}>Total</td>
+                      <td className="px-5 py-3 text-right text-ds-text1">₹{totalFeeForClass.toLocaleString('en-IN')}</td>
                       <td></td>
                     </tr>
                   </tbody>
@@ -629,7 +629,7 @@ export default function FeesPage() {
       {/* ── Defaulters ── */}
       {tab === 'defaulters' && (
         <div className="space-y-5">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
             <div className="flex gap-4 items-end flex-wrap">
               <div>
                 <label className={lbl}>Academic Year</label>
@@ -645,43 +645,43 @@ export default function FeesPage() {
                 </select>
               </div>
               <button onClick={loadDefaulters} disabled={loadingDef || !currentYearId}
-                className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                className="btn-brand px-4 py-2 rounded-lg">
                 {loadingDef ? 'Loading...' : 'Load Defaulters'}
               </button>
             </div>
           </div>
 
           {defaulters.length === 0 && !loadingDef ? (
-            <div className="text-center py-16 text-gray-400 text-sm">
+            <div className="text-center py-16 text-ds-text3 text-sm">
               Click &ldquo;Load Defaulters&rdquo; to see students with outstanding balance.
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <span className="font-medium text-gray-800">{defaulters.length} student(s) with outstanding balance</span>
-                <span className="text-sm font-semibold text-red-600">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
+                <span className="font-medium text-ds-text1">{defaulters.length} student(s) with outstanding balance</span>
+                <span className="text-sm font-semibold text-ds-error-text">
                   Total Due: ₹{defaulters.reduce((s, d) => s + d.balance, 0).toLocaleString('en-IN')}
                 </span>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-ds-bg2">
                   <tr>
-                    <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Student</th>
-                    <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Total Due (₹)</th>
-                    <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Paid (₹)</th>
-                    <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Balance (₹)</th>
+                    <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Student</th>
+                    <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Total Due (₹)</th>
+                    <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Paid (₹)</th>
+                    <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Balance (₹)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-ds-border">
                   {defaulters.map((d) => (
-                    <tr key={d.id} className="hover:bg-gray-50">
+                    <tr key={d.id} className="hover:bg-ds-bg2">
                       <td className="px-5 py-3">
-                        <div className="font-medium text-gray-800">{d.firstName} {d.lastName}</div>
-                        <div className="text-xs text-gray-400 font-mono">{d.admissionNo}</div>
+                        <div className="font-medium text-ds-text1">{d.firstName} {d.lastName}</div>
+                        <div className="text-xs text-ds-text3 font-mono">{d.admissionNo}</div>
                       </td>
-                      <td className="px-5 py-3 text-right text-gray-700">₹{d.due.toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right text-green-700">₹{d.paid.toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-red-600">₹{d.balance.toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-right text-ds-text1">₹{d.due.toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-right text-ds-success-text">₹{d.paid.toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-ds-error-text">₹{d.balance.toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -700,37 +700,37 @@ export default function FeesPage() {
               <input type="date" className={inp} value={dailyDate} onChange={(e) => setDailyDate(e.target.value)} />
             </div>
             <button onClick={loadDailyCollection}
-              className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+              className="btn-brand px-4 py-2 rounded-lg">
               Load
             </button>
           </div>
           {dailyData && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex justify-between">
-                <span className="font-medium text-gray-800">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-ds-border flex justify-between">
+                <span className="font-medium text-ds-text1">
                   {new Date(dailyDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </span>
-                <span className="font-semibold text-green-700">Total: ₹{dailyData.total.toLocaleString('en-IN')}</span>
+                <span className="font-semibold text-ds-success-text">Total: ₹{dailyData.total.toLocaleString('en-IN')}</span>
               </div>
               {dailyData.payments.length === 0 ? (
-                <p className="p-8 text-center text-gray-400 text-sm">No collections on this date</p>
+                <p className="p-8 text-center text-ds-text3 text-sm">No collections on this date</p>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-ds-bg2">
                     <tr>
                       {['Receipt No', 'Student', 'Fee Head', 'Amount', 'Mode'].map((h) => (
-                        <th key={h} className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">{h}</th>
+                        <th key={h} className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-ds-border">
                     {dailyData.payments.map((p: any) => (
                       <tr key={p.id}>
-                        <td className="px-5 py-3 font-mono text-xs text-gray-600">{p.receiptNo}</td>
+                        <td className="px-5 py-3 font-mono text-xs text-ds-text2">{p.receiptNo}</td>
                         <td className="px-5 py-3 font-medium">{p.student.firstName} {p.student.lastName}</td>
-                        <td className="px-5 py-3 text-gray-600">{p.feeHead.name}</td>
+                        <td className="px-5 py-3 text-ds-text2">{p.feeHead.name}</td>
                         <td className="px-5 py-3 font-semibold">₹{p.amount.toLocaleString('en-IN')}</td>
-                        <td className="px-5 py-3 text-gray-500 uppercase text-xs">{p.paymentMode}</td>
+                        <td className="px-5 py-3 text-ds-text2 uppercase text-xs">{p.paymentMode}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -745,32 +745,32 @@ export default function FeesPage() {
       {tab === 'alerts' && (
         <div className="space-y-5">
           {loadingAlerts ? (
-            <p className="text-sm text-gray-400">Loading...</p>
+            <p className="text-sm text-ds-text3">Loading...</p>
           ) : !alertData ? (
-            <p className="text-sm text-gray-400">Click the tab to load alerts.</p>
+            <p className="text-sm text-ds-text3">Click the tab to load alerts.</p>
           ) : (
             <>
               {/* Summary strip */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                  <p className="text-2xl font-bold text-red-700">{alertData.summary.overdueCount}</p>
-                  <p className="text-xs text-red-600 font-medium mt-1">Overdue Installments</p>
+                <div className="bg-ds-error-bg border border-ds-error-border rounded-xl p-4">
+                  <p className="text-2xl font-bold text-ds-error-text">{alertData.summary.overdueCount}</p>
+                  <p className="text-xs text-ds-error-text font-medium mt-1">Overdue Installments</p>
                   {alertData.summary.overdueAmount > 0 && (
                     <p className="text-xs text-red-500 mt-0.5">₹{alertData.summary.overdueAmount.toLocaleString('en-IN')} outstanding</p>
                   )}
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-2xl font-bold text-amber-700">{alertData.summary.thisWeekCount}</p>
-                  <p className="text-xs text-amber-600 font-medium mt-1">Due This Week</p>
+                <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-4">
+                  <p className="text-2xl font-bold text-ds-warning-text">{alertData.summary.thisWeekCount}</p>
+                  <p className="text-xs text-ds-warning-text font-medium mt-1">Due This Week</p>
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <p className="text-2xl font-bold text-blue-700">{alertData.summary.thisMonthCount}</p>
-                  <p className="text-xs text-blue-600 font-medium mt-1">Due This Month</p>
+                <div className="bg-ds-info-bg border border-ds-info-border rounded-xl p-4">
+                  <p className="text-2xl font-bold text-ds-info-text">{alertData.summary.thisMonthCount}</p>
+                  <p className="text-xs text-ds-brand font-medium mt-1">Due This Month</p>
                 </div>
               </div>
 
               {alertData.summary.overdueCount === 0 && alertData.summary.thisWeekCount === 0 && alertData.summary.thisMonthCount === 0 && (
-                <div className="text-center py-12 text-gray-400 text-sm">
+                <div className="text-center py-12 text-ds-text3 text-sm">
                   No upcoming fee due dates in the next 30 days.
                   <br />
                   <span className="text-xs">Set due dates on fee structures to see alerts here.</span>
@@ -782,36 +782,36 @@ export default function FeesPage() {
                 const items = alertData[section];
                 if (items.length === 0) return null;
                 const config = {
-                  overdue:   { label: 'Overdue', headerCls: 'bg-red-600',   badgeCls: 'bg-red-100 text-red-700',   dayLabel: (d: number) => `${Math.abs(d)}d overdue` },
-                  thisWeek:  { label: 'Due This Week',  headerCls: 'bg-amber-500', badgeCls: 'bg-amber-100 text-amber-700', dayLabel: (d: number) => d === 0 ? 'Today' : `In ${d}d` },
-                  thisMonth: { label: 'Due This Month', headerCls: 'bg-blue-600',  badgeCls: 'bg-blue-100 text-blue-700',  dayLabel: (d: number) => `In ${d}d` },
+                  overdue:   { label: 'Overdue', headerCls: 'bg-red-600',   badgeCls: 'bg-ds-error-bg text-ds-error-text',   dayLabel: (d: number) => `${Math.abs(d)}d overdue` },
+                  thisWeek:  { label: 'Due This Week',  headerCls: 'bg-amber-500', badgeCls: 'bg-ds-warning-bg text-ds-warning-text', dayLabel: (d: number) => d === 0 ? 'Today' : `In ${d}d` },
+                  thisMonth: { label: 'Due This Month', headerCls: 'bg-blue-600',  badgeCls: 'bg-ds-info-bg text-ds-info-text',  dayLabel: (d: number) => `In ${d}d` },
                 }[section];
 
                 return (
-                  <div key={section} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div key={section} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
                     <div className={`px-5 py-3 text-white text-sm font-semibold ${config.headerCls}`}>
                       {config.label} — {items.length} installment{items.length !== 1 ? 's' : ''}
                     </div>
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-ds-bg2">
                         <tr>
-                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Class</th>
-                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Fee Head</th>
-                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Installment</th>
-                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Due Date</th>
-                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Timing</th>
-                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Amount / Student</th>
-                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Students</th>
-                          <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Total Due</th>
+                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Class</th>
+                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Fee Head</th>
+                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Installment</th>
+                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Due Date</th>
+                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-center">Timing</th>
+                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Amount / Student</th>
+                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Students</th>
+                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Total Due</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-ds-border">
                         {items.map((item) => (
-                          <tr key={item.feeStructureId} className="hover:bg-gray-50">
-                            <td className="px-5 py-3 font-medium text-gray-800">{item.className}</td>
-                            <td className="px-5 py-3 text-gray-700">{item.feeHeadName}</td>
-                            <td className="px-5 py-3 text-gray-500 text-xs">{item.installmentName || 'Annual'}</td>
-                            <td className="px-5 py-3 text-gray-600 text-xs">
+                          <tr key={item.feeStructureId} className="hover:bg-ds-bg2">
+                            <td className="px-5 py-3 font-medium text-ds-text1">{item.className}</td>
+                            <td className="px-5 py-3 text-ds-text1">{item.feeHeadName}</td>
+                            <td className="px-5 py-3 text-ds-text2 text-xs">{item.installmentName || 'Annual'}</td>
+                            <td className="px-5 py-3 text-ds-text2 text-xs">
                               {new Date(item.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </td>
                             <td className="px-5 py-3 text-center">
@@ -819,9 +819,9 @@ export default function FeesPage() {
                                 {config.dayLabel(item.daysFromToday)}
                               </span>
                             </td>
-                            <td className="px-5 py-3 text-right text-gray-700">₹{item.amount.toLocaleString('en-IN')}</td>
-                            <td className="px-5 py-3 text-right text-gray-600">{item.studentsInClass}</td>
-                            <td className="px-5 py-3 text-right font-semibold text-gray-800">₹{item.totalAmount.toLocaleString('en-IN')}</td>
+                            <td className="px-5 py-3 text-right text-ds-text1">₹{item.amount.toLocaleString('en-IN')}</td>
+                            <td className="px-5 py-3 text-right text-ds-text2">{item.studentsInClass}</td>
+                            <td className="px-5 py-3 text-right font-semibold text-ds-text1">₹{item.totalAmount.toLocaleString('en-IN')}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -845,49 +845,49 @@ export default function FeesPage() {
       {tab === 'heads' && (
         <div className="max-w-lg space-y-4">
           {/* Quick-add standard heads */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Standard Fee Heads</p>
-            <p className="text-xs text-gray-500 mb-3">Click to add any that are not already in your list:</p>
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Standard Fee Heads</p>
+            <p className="text-xs text-ds-text2 mb-3">Click to add any that are not already in your list:</p>
             <div className="flex flex-wrap gap-2">
               {STANDARD_FEE_HEADS.filter((name) => !feeHeads.some((h) => h.name === name)).map((name) => (
                 <button key={name} onClick={() => addFeeHead(name)} disabled={addingHead}
-                  className="px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-600 hover:border-black hover:text-black transition-colors disabled:opacity-50">
+                  className="px-3 py-1.5 border border-dashed border-ds-border-strong rounded-lg text-xs text-ds-text2 hover:border-black hover:text-black transition-colors disabled:opacity-50">
                   + {name}
                 </button>
               ))}
               {STANDARD_FEE_HEADS.every((name) => feeHeads.some((h) => h.name === name)) && (
-                <p className="text-xs text-gray-400">All standard heads added.</p>
+                <p className="text-xs text-ds-text3">All standard heads added.</p>
               )}
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Add Custom Head</p>
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Add Custom Head</p>
             <div className="flex gap-2">
               <input className={inp + ' flex-1'} placeholder="e.g. Uniform Fee, Computer Fee"
                 value={newHeadName} onChange={(e) => setNewHeadName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') addFeeHead(newHeadName); }} />
               <button onClick={() => addFeeHead(newHeadName)} disabled={addingHead || !newHeadName.trim()}
-                className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                className="btn-brand px-4 py-2 rounded-lg">
                 {addingHead ? '...' : 'Add'}
               </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100">
-              <span className="text-sm font-medium text-gray-800">All Fee Heads ({feeHeads.length})</span>
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-ds-border">
+              <span className="text-sm font-medium text-ds-text1">All Fee Heads ({feeHeads.length})</span>
             </div>
             {feeHeads.length === 0 ? (
-              <p className="p-6 text-center text-gray-400 text-sm">No fee heads configured. Add standard heads above.</p>
+              <p className="p-6 text-center text-ds-text3 text-sm">No fee heads configured. Add standard heads above.</p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-ds-border">
                 {feeHeads.map((h) => (
-                  <li key={h.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
-                    <span className="text-sm font-medium text-gray-800">{h.name}</span>
+                  <li key={h.id} className="flex items-center justify-between px-5 py-3 hover:bg-ds-bg2">
+                    <span className="text-sm font-medium text-ds-text1">{h.name}</span>
                     <div className="flex items-center gap-3">
-                      {h.isCustom && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Custom</span>}
-                      <button onClick={() => deleteFeeHead(h.id)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                      {h.isCustom && <span className="text-xs text-ds-text3 bg-ds-bg2 px-2 py-0.5 rounded">Custom</span>}
+                      <button onClick={() => deleteFeeHead(h.id)} className="text-xs text-red-500 hover:text-ds-error-text">Delete</button>
                     </div>
                   </li>
                 ))}

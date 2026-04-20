@@ -18,13 +18,13 @@ type LeaveRequest = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  present:  'bg-green-100 text-green-700 border-green-200',
+  present:  'bg-ds-success-bg text-ds-success-text border-green-200',
   late:     'bg-yellow-100 text-yellow-700 border-yellow-200',
-  half_day: 'bg-blue-100 text-blue-700 border-blue-200',
-  absent:   'bg-red-100 text-red-700 border-red-200',
-  pending:  'bg-amber-100 text-amber-700 border-amber-200',
-  approved: 'bg-green-100 text-green-700 border-green-200',
-  rejected: 'bg-red-100 text-red-700 border-red-200',
+  half_day: 'bg-ds-info-bg text-ds-info-text border-blue-200',
+  absent:   'bg-ds-error-bg text-ds-error-text border-red-200',
+  pending:  'bg-ds-warning-bg text-ds-warning-text border-amber-200',
+  approved: 'bg-ds-success-bg text-ds-success-text border-green-200',
+  rejected: 'bg-ds-error-bg text-ds-error-text border-red-200',
 };
 
 function userLabel(u: { email: string | null; phone: string | null }) {
@@ -96,14 +96,14 @@ export default function PrincipalStaffAttendancePage() {
 
   return (
     <div className="p-6 max-w-6xl">
-      <h1 className="text-2xl font-bold mb-1 text-gray-800">Staff Attendance</h1>
-      <p className="text-sm text-gray-400 mb-6">View attendance, monthly reports, and approve leave requests</p>
+      <h1 className="text-2xl font-bold mb-1 text-ds-text1">Staff Attendance</h1>
+      <p className="text-sm text-ds-text3 mb-6">View attendance, monthly reports, and approve leave requests</p>
 
-      {error   && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error   && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 p-1 rounded-xl w-fit bg-gray-100 border border-gray-200">
+      <div className="flex gap-1 mb-5 p-1 rounded-xl w-fit bg-ds-bg2 border border-ds-border">
         {([
           ['leave', `Leave Requests${pendingCount > 0 ? ` (${pendingCount})` : ''}`],
           ['daily', 'Daily View'],
@@ -111,7 +111,7 @@ export default function PrincipalStaffAttendancePage() {
         ] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              tab === t ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              tab === t ? 'bg-ds-surface text-ds-text1 shadow-sm' : 'text-ds-text2 hover:text-ds-text1'
             }`}>
             {label}
           </button>
@@ -120,27 +120,27 @@ export default function PrincipalStaffAttendancePage() {
 
       {/* Leave Requests — Principal approves */}
       {tab === 'leave' && (
-        loading ? <p className="text-sm text-gray-400">Loading…</p> : (
-          <div className="rounded-xl overflow-hidden bg-white border border-gray-100 shadow-sm">
+        loading ? <p className="text-sm text-ds-text3">Loading…</p> : (
+          <div className="rounded-xl overflow-hidden bg-ds-surface border border-ds-border shadow-sm">
             {leaves.length === 0 ? (
-              <p className="p-8 text-sm text-center text-gray-400">No leave requests.</p>
+              <p className="p-8 text-sm text-center text-ds-text3">No leave requests.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-ds-bg2">
                   <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Staff</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Period</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Reason</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Status</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Actions</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Staff</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Period</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Reason</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Status</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-ds-border">
                   {leaves.map((l) => (
                     <tr key={l.id}>
-                      <td className="px-5 py-3 text-sm text-gray-800">{userLabel(l.user)}</td>
-                      <td className="px-5 py-3 text-xs text-gray-500">{fmt(l.startDate)} – {fmt(l.endDate)}</td>
-                      <td className="px-5 py-3 text-xs text-gray-600 max-w-[200px] truncate">{l.reason}</td>
+                      <td className="px-5 py-3 text-sm text-ds-text1">{userLabel(l.user)}</td>
+                      <td className="px-5 py-3 text-xs text-ds-text2">{fmt(l.startDate)} – {fmt(l.endDate)}</td>
+                      <td className="px-5 py-3 text-xs text-ds-text2 max-w-[200px] truncate">{l.reason}</td>
                       <td className="px-5 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_STYLE[l.status]}`}>
                           {l.status}
@@ -150,16 +150,16 @@ export default function PrincipalStaffAttendancePage() {
                         {l.status === 'pending' ? (
                           <div className="flex gap-2">
                             <button onClick={() => handleLeaveReview(l.id, 'approved')}
-                              className="px-3 py-1.5 text-xs rounded-lg font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100">
+                              className="px-3 py-1.5 text-xs rounded-lg font-medium bg-green-50 text-ds-success-text border border-green-200 hover:bg-green-100">
                               Approve
                             </button>
                             <button onClick={() => handleLeaveReview(l.id, 'rejected')}
-                              className="px-3 py-1.5 text-xs rounded-lg font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">
+                              className="px-3 py-1.5 text-xs rounded-lg font-medium bg-red-50 text-ds-error-text border border-red-200 hover:bg-red-100">
                               Reject
                             </button>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400">{l.reviewNote || '—'}</span>
+                          <span className="text-xs text-ds-text3">{l.reviewNote || '—'}</span>
                         )}
                       </td>
                     </tr>
@@ -175,29 +175,29 @@ export default function PrincipalStaffAttendancePage() {
       {tab === 'daily' && (
         <>
           <div className="flex items-center gap-3 mb-4">
-            <input type="date" className="border border-gray-300 rounded-lg p-2 text-sm"
+            <input type="date" className="border border-ds-border-strong rounded-lg p-2 text-sm"
               value={dailyDate} onChange={(e) => setDailyDate(e.target.value)} />
           </div>
-          {loading ? <p className="text-sm text-gray-400">Loading…</p> : (
-            <div className="rounded-xl overflow-hidden bg-white border border-gray-100 shadow-sm">
+          {loading ? <p className="text-sm text-ds-text3">Loading…</p> : (
+            <div className="rounded-xl overflow-hidden bg-ds-surface border border-ds-border shadow-sm">
               {dailyRecords.length === 0 ? (
-                <p className="p-8 text-sm text-center text-gray-400">No staff attendance records for this date.</p>
+                <p className="p-8 text-sm text-center text-ds-text3">No staff attendance records for this date.</p>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-ds-bg2">
                     <tr>
-                      <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Staff</th>
-                      <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Role</th>
-                      <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Status</th>
-                      <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Clock In</th>
-                      <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Clock Out</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Staff</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Role</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Status</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Clock In</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Clock Out</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-ds-border">
                     {dailyRecords.map((r) => (
                       <tr key={r.id}>
-                        <td className="px-5 py-3 text-sm text-gray-800">{userLabel(r.user)}</td>
-                        <td className="px-5 py-3 text-xs text-gray-500">
+                        <td className="px-5 py-3 text-sm text-ds-text1">{userLabel(r.user)}</td>
+                        <td className="px-5 py-3 text-xs text-ds-text2">
                           {r.user.roles.map((ur) => ur.role.label).join(', ')}
                         </td>
                         <td className="px-5 py-3">
@@ -205,8 +205,8 @@ export default function PrincipalStaffAttendancePage() {
                             {r.status.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className="px-5 py-3 text-xs text-gray-500">{fmtTime(r.clockIn)}</td>
-                        <td className="px-5 py-3 text-xs text-gray-500">{fmtTime(r.clockOut)}</td>
+                        <td className="px-5 py-3 text-xs text-ds-text2">{fmtTime(r.clockIn)}</td>
+                        <td className="px-5 py-3 text-xs text-ds-text2">{fmtTime(r.clockOut)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -221,40 +221,40 @@ export default function PrincipalStaffAttendancePage() {
       {tab === 'monthly' && (
         <>
           <div className="flex items-center gap-3 mb-4">
-            <select className="border border-gray-300 rounded-lg p-2 text-sm"
+            <select className="border border-ds-border-strong rounded-lg p-2 text-sm"
               value={month} onChange={(e) => setMonth(Number(e.target.value))}>
               {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
-            <select className="border border-gray-300 rounded-lg p-2 text-sm"
+            <select className="border border-ds-border-strong rounded-lg p-2 text-sm"
               value={year} onChange={(e) => setYear(Number(e.target.value))}>
               {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
-          {loading ? <p className="text-sm text-gray-400">Loading…</p> : (
-            <div className="rounded-xl overflow-hidden bg-white border border-gray-100 shadow-sm">
+          {loading ? <p className="text-sm text-ds-text3">Loading…</p> : (
+            <div className="rounded-xl overflow-hidden bg-ds-surface border border-ds-border shadow-sm">
               {monthly.length === 0 ? (
-                <p className="p-8 text-sm text-center text-gray-400">No records for this month.</p>
+                <p className="p-8 text-sm text-center text-ds-text3">No records for this month.</p>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-ds-bg2">
                     <tr>
-                      <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Staff</th>
-                      <th className="text-center px-5 py-3 text-xs font-medium text-gray-500">Present</th>
-                      <th className="text-center px-5 py-3 text-xs font-medium text-gray-500">Late</th>
-                      <th className="text-center px-5 py-3 text-xs font-medium text-gray-500">Half Day</th>
-                      <th className="text-center px-5 py-3 text-xs font-medium text-gray-500">Absent</th>
-                      <th className="text-center px-5 py-3 text-xs font-medium text-gray-500">Days Marked</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-ds-text2">Staff</th>
+                      <th className="text-center px-5 py-3 text-xs font-medium text-ds-text2">Present</th>
+                      <th className="text-center px-5 py-3 text-xs font-medium text-ds-text2">Late</th>
+                      <th className="text-center px-5 py-3 text-xs font-medium text-ds-text2">Half Day</th>
+                      <th className="text-center px-5 py-3 text-xs font-medium text-ds-text2">Absent</th>
+                      <th className="text-center px-5 py-3 text-xs font-medium text-ds-text2">Days Marked</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-ds-border">
                     {monthly.map((m) => (
                       <tr key={m.user.id}>
-                        <td className="px-5 py-3 text-sm text-gray-800">{userLabel(m.user)}</td>
-                        <td className="px-5 py-3 text-center font-semibold text-green-700">{m.present}</td>
+                        <td className="px-5 py-3 text-sm text-ds-text1">{userLabel(m.user)}</td>
+                        <td className="px-5 py-3 text-center font-semibold text-ds-success-text">{m.present}</td>
                         <td className="px-5 py-3 text-center font-semibold text-yellow-700">{m.late}</td>
-                        <td className="px-5 py-3 text-center font-semibold text-blue-700">{m.halfDay}</td>
-                        <td className="px-5 py-3 text-center font-semibold text-red-700">{m.absent}</td>
-                        <td className="px-5 py-3 text-center text-gray-500">{m.total}</td>
+                        <td className="px-5 py-3 text-center font-semibold text-ds-info-text">{m.halfDay}</td>
+                        <td className="px-5 py-3 text-center font-semibold text-ds-error-text">{m.absent}</td>
+                        <td className="px-5 py-3 text-center text-ds-text2">{m.total}</td>
                       </tr>
                     ))}
                   </tbody>

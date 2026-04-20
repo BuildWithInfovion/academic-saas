@@ -191,21 +191,21 @@ export default function SubjectsPage() {
   const unassignedSubjects = subjects.filter((s) => !assignedSubjectIds.has(s.id));
   const selectedUnitName = units.find((u) => u.id === selectedUnit)?.displayName || units.find((u) => u.id === selectedUnit)?.name || '';
 
-  const inp = 'border border-gray-300 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black';
+  const inp = 'border border-ds-border-strong p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand';
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-semibold mb-1">Subjects</h1>
-      <p className="text-sm text-gray-400 mb-6">Manage subject catalogue and assign subjects + teachers to classes</p>
+      <p className="text-sm text-ds-text3 mb-6">Manage subject catalogue and assign subjects + teachers to classes</p>
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
+      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-ds-bg2 rounded-xl p-1 w-fit">
         {[{ id: 'assign', label: 'Assign to Class' }, { id: 'manage', label: 'Subject Catalogue' }].map((t) => (
           <button key={t.id} onClick={() => setActiveTab(t.id as 'assign' | 'manage')}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-ds-surface text-ds-text1 shadow-sm' : 'text-ds-text2 hover:text-ds-text1'}`}
           >{t.label}</button>
         ))}
       </div>
@@ -213,15 +213,15 @@ export default function SubjectsPage() {
       {/* ── ASSIGN TAB ── */}
       {activeTab === 'assign' && (
         <div className="space-y-5">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-2">Select Class</label>
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+            <label className="text-xs font-semibold text-ds-text3 uppercase tracking-wider block mb-2">Select Class</label>
             <select className={inp + ' w-64'} value={selectedUnit} onChange={(e) => setSelectedUnit(e.target.value)}>
               <option value="">Choose class...</option>
               {units.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
             </select>
             {selectedUnit && (
-              <p className="text-xs text-gray-400 mt-2">
-                {unitSubjects.length} subject(s) assigned to <span className="font-medium text-gray-600">{selectedUnitName}</span>
+              <p className="text-xs text-ds-text3 mt-2">
+                {unitSubjects.length} subject(s) assigned to <span className="font-medium text-ds-text2">{selectedUnitName}</span>
               </p>
             )}
           </div>
@@ -229,9 +229,9 @@ export default function SubjectsPage() {
           {selectedUnit && (
             <>
               {/* Quick-select */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Quick Add Subject</p>
-                <p className="text-xs text-gray-400 mb-4">Click to add &amp; assign to <span className="font-medium text-gray-600">{selectedUnitName}</span> (teacher can be set below)</p>
+              <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-1">Quick Add Subject</p>
+                <p className="text-xs text-ds-text3 mb-4">Click to add &amp; assign to <span className="font-medium text-ds-text2">{selectedUnitName}</span> (teacher can be set below)</p>
                 <div className="space-y-4">
                   {SUBJECT_CATALOGUE.map((group) => (
                     <div key={group.group}>
@@ -258,11 +258,11 @@ export default function SubjectsPage() {
               </div>
 
               {/* Assigned subjects with teacher column */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
                   <div>
-                    <h2 className="font-semibold text-gray-800 text-sm">Assigned to {selectedUnitName}</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">{unitSubjects.length} subject(s)</p>
+                    <h2 className="font-semibold text-ds-text1 text-sm">Assigned to {selectedUnitName}</h2>
+                    <p className="text-xs text-ds-text3 mt-0.5">{unitSubjects.length} subject(s)</p>
                   </div>
                   {unassignedSubjects.length > 0 && (
                     <div className="flex gap-2 items-center">
@@ -275,31 +275,31 @@ export default function SubjectsPage() {
                         {teachers.map((t) => <option key={t.id} value={t.id}>{teacherLabel(t)}</option>)}
                       </select>
                       <button onClick={() => assignSubject()} disabled={assigning || !assignSubjectId}
-                        className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium disabled:opacity-50">Assign</button>
+                        className="btn-brand px-3 py-1.5 rounded-lg text-xs disabled:opacity-50">Assign</button>
                     </div>
                   )}
                 </div>
                 {unitSubjects.length === 0 ? (
-                  <p className="p-5 text-center text-gray-400 text-sm">No subjects assigned yet.</p>
+                  <p className="p-5 text-center text-ds-text3 text-sm">No subjects assigned yet.</p>
                 ) : (
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-ds-bg2">
                       <tr>
-                        <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Subject</th>
-                        <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Teacher</th>
+                        <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Subject</th>
+                        <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Teacher</th>
                         <th className="w-16 px-5 py-3" />
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-ds-border">
                       {unitSubjects.map((us) => (
                         <tr key={us.id}>
-                          <td className="px-5 py-3 font-medium text-gray-800">
+                          <td className="px-5 py-3 font-medium text-ds-text1">
                             {us.subject.name}
-                            {us.subject.code && <span className="ml-2 text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{us.subject.code}</span>}
+                            {us.subject.code && <span className="ml-2 text-xs text-ds-text3 bg-ds-bg2 px-1.5 py-0.5 rounded">{us.subject.code}</span>}
                           </td>
                           <td className="px-5 py-3">
                             <select
-                              className="border border-gray-200 rounded-lg p-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-black"
+                              className="border border-ds-border rounded-lg p-1.5 text-xs bg-ds-surface focus:outline-none focus:ring-1 focus:ring-ds-brand"
                               value={us.teacherUserId ?? ''}
                               onChange={(e) => updateTeacher(us, e.target.value)}
                             >
@@ -308,7 +308,7 @@ export default function SubjectsPage() {
                             </select>
                           </td>
                           <td className="px-5 py-3 text-right">
-                            <button onClick={() => unassign(us.subjectId)} className="text-xs text-red-400 hover:text-red-600">Remove</button>
+                            <button onClick={() => unassign(us.subjectId)} className="text-xs text-red-400 hover:text-ds-error-text">Remove</button>
                           </td>
                         </tr>
                       ))}
@@ -325,13 +325,13 @@ export default function SubjectsPage() {
       {activeTab === 'manage' && (
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Add Custom Subject</p>
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 mb-4">
+              <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Add Custom Subject</p>
               <div className="space-y-2">
                 <input className={inp + ' w-full'} placeholder="Subject name e.g. Robotics" value={newName} onChange={(e) => setNewName(e.target.value)} />
                 <input className={inp + ' w-full'} placeholder="Short code (optional) e.g. ROB" value={newCode} onChange={(e) => setNewCode(e.target.value)} />
                 <button onClick={() => addSubject()} disabled={adding || !newName.trim()}
-                  className="w-full bg-black text-white py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                  className="btn-brand w-full py-2 rounded-lg">
                   {adding ? 'Adding...' : 'Add to Catalogue'}
                 </button>
               </div>
@@ -362,21 +362,21 @@ export default function SubjectsPage() {
             </div>
           </div>
           <div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-ds-border text-xs font-semibold text-ds-text3 uppercase tracking-wider">
                 Catalogue ({subjects.length} subjects)
               </div>
               {subjects.length === 0 ? (
-                <p className="p-6 text-center text-gray-400 text-sm">No subjects yet.</p>
+                <p className="p-6 text-center text-ds-text3 text-sm">No subjects yet.</p>
               ) : (
-                <ul className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                <ul className="divide-y divide-ds-border max-h-[600px] overflow-y-auto">
                   {subjects.map((s) => (
-                    <li key={s.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
+                    <li key={s.id} className="flex items-center justify-between px-5 py-3 hover:bg-ds-bg2">
                       <div>
-                        <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                        {s.code && <span className="ml-2 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{s.code}</span>}
+                        <span className="text-sm font-medium text-ds-text1">{s.name}</span>
+                        {s.code && <span className="ml-2 text-xs text-ds-text3 bg-ds-bg2 px-2 py-0.5 rounded">{s.code}</span>}
                       </div>
-                      <button onClick={() => deleteSubject(s.id)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
+                      <button onClick={() => deleteSubject(s.id)} className="text-xs text-red-400 hover:text-ds-error-text">Delete</button>
                     </li>
                   ))}
                 </ul>

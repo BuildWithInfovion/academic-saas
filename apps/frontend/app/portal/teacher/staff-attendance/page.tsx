@@ -22,13 +22,13 @@ type LeaveRequest = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  present:  'bg-green-100 text-green-700 border-green-200',
+  present:  'bg-ds-success-bg text-ds-success-text border-green-200',
   late:     'bg-yellow-100 text-yellow-700 border-yellow-200',
-  half_day: 'bg-blue-100 text-blue-700 border-blue-200',
-  absent:   'bg-red-100 text-red-700 border-red-200',
-  pending:  'bg-amber-100 text-amber-700 border-amber-200',
-  approved: 'bg-green-100 text-green-700 border-green-200',
-  rejected: 'bg-red-100 text-red-700 border-red-200',
+  half_day: 'bg-ds-info-bg text-ds-info-text border-blue-200',
+  absent:   'bg-ds-error-bg text-ds-error-text border-red-200',
+  pending:  'bg-ds-warning-bg text-ds-warning-text border-amber-200',
+  approved: 'bg-ds-success-bg text-ds-success-text border-green-200',
+  rejected: 'bg-ds-error-bg text-ds-error-text border-red-200',
 };
 
 export default function StaffSelfAttendancePage() {
@@ -153,7 +153,7 @@ export default function StaffSelfAttendancePage() {
               <button
                 onClick={handleClockOut}
                 disabled={clockingOut}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-ds-error-text hover:bg-red-100 disabled:opacity-50"
               >
                 {clockingOut ? 'Clocking out…' : 'Clock Out'}
               </button>
@@ -167,7 +167,7 @@ export default function StaffSelfAttendancePage() {
                   key={s}
                   onClick={() => setMarkStatus(s)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all capitalize ${
-                    markStatus === s ? STATUS_STYLE[s] : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    markStatus === s ? STATUS_STYLE[s] : 'border-ds-border text-ds-text2 hover:border-ds-border-strong'
                   }`}
                 >
                   {s.replace('_', ' ')}

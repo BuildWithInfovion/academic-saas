@@ -59,16 +59,16 @@ export default function TeacherTimetablePage() {
   const periods = Array.from({ length: maxPeriod }, (_, i) => i + 1);
 
   if (loading) {
-    return <div className="p-8 text-sm text-gray-400">Loading timetable…</div>;
+    return <div className="p-8 text-sm text-ds-text3">Loading timetable…</div>;
   }
 
   if (slots.length === 0) {
     return (
       <div className="p-8 max-w-2xl">
-        <h1 className="text-2xl font-bold text-gray-800 mb-1">My Timetable</h1>
-        <div className="mt-8 bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
-          <p className="text-sm font-medium text-amber-800">No timetable assigned yet</p>
-          <p className="text-xs text-amber-600 mt-1">
+        <h1 className="text-2xl font-bold text-ds-text1 mb-1">My Timetable</h1>
+        <div className="mt-8 bg-ds-warning-bg border border-ds-warning-border rounded-xl p-8 text-center">
+          <p className="text-sm font-medium text-ds-warning-text">No timetable assigned yet</p>
+          <p className="text-xs text-ds-warning-text mt-1">
             The operator needs to create and assign a timetable for your classes first.
           </p>
         </div>
@@ -80,14 +80,14 @@ export default function TeacherTimetablePage() {
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-1">My Timetable</h1>
-          <p className="text-sm text-gray-400">Your assigned periods across all classes</p>
+          <h1 className="text-2xl font-bold text-ds-text1 mb-1">My Timetable</h1>
+          <p className="text-sm text-ds-text3">Your assigned periods across all classes</p>
         </div>
-        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+        <div className="flex gap-1 p-1 bg-ds-bg2 rounded-lg">
           {(['day', 'week'] as const).map((m) => (
             <button key={m} onClick={() => setViewMode(m)}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize ${
-                viewMode === m ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                viewMode === m ? 'bg-ds-surface text-ds-text1 shadow-sm' : 'text-ds-text2 hover:text-ds-text1'
               }`}>
               {m === 'day' ? 'Day View' : 'Week View'}
             </button>
@@ -105,8 +105,8 @@ export default function TeacherTimetablePage() {
                 onClick={() => setActiveDay(d.no)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                   activeDay === d.no
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                    ? 'btn-brand border-transparent'
+                    : 'bg-ds-surface text-ds-text2 border-ds-border hover:border-ds-border-strong'
                 }`}
               >
                 {d.label}
@@ -120,16 +120,16 @@ export default function TeacherTimetablePage() {
           {/* Period cards for selected day */}
           <div className="space-y-3">
             {daySlots.length === 0 ? (
-              <p className="text-sm text-gray-400 p-4">No periods assigned for this day.</p>
+              <p className="text-sm text-ds-text3 p-4">No periods assigned for this day.</p>
             ) : (
               daySlots.map((slot) => (
-                <div key={slot.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 shrink-0">
+                <div key={slot.id} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-ds-bg2 flex items-center justify-center text-sm font-bold text-ds-text2 shrink-0">
                     P{slot.periodNo}
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-800">{slot.subject?.name ?? 'No subject'}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{unitLabel(slot.academicUnit)}</p>
+                    <p className="font-semibold text-ds-text1">{slot.subject?.name ?? 'No subject'}</p>
+                    <p className="text-xs text-ds-text2 mt-0.5">{unitLabel(slot.academicUnit)}</p>
                   </div>
                   {slot.subject?.code && (
                     <span className="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded-full font-mono">
@@ -143,14 +143,14 @@ export default function TeacherTimetablePage() {
         </>
       ) : (
         /* Week view — grid */
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 w-16 border-b border-gray-100">Period</th>
+              <tr className="bg-ds-bg2">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ds-text2 w-16 border-b border-ds-border">Period</th>
                 {activeDays.map((d) => (
-                  <th key={d.no} className={`px-3 py-3 text-center text-xs font-semibold border-b border-gray-100 min-w-[150px] ${
-                    d.no === TODAY_DAY ? 'text-indigo-600 bg-indigo-50' : 'text-gray-600'
+                  <th key={d.no} className={`px-3 py-3 text-center text-xs font-semibold border-b border-ds-border min-w-[150px] ${
+                    d.no === TODAY_DAY ? 'text-indigo-600 bg-indigo-50' : 'text-ds-text2'
                   }`}>
                     {d.label}
                     {d.no === TODAY_DAY && <span className="ml-1 text-[9px] bg-indigo-500 text-white px-1 rounded">Today</span>}
@@ -160,19 +160,19 @@ export default function TeacherTimetablePage() {
             </thead>
             <tbody>
               {periods.map((p) => (
-                <tr key={p} className="border-b border-gray-50 last:border-0">
-                  <td className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50 text-center">P{p}</td>
+                <tr key={p} className="border-b border-ds-border last:border-0">
+                  <td className="px-4 py-3 text-xs font-bold text-ds-text3 bg-ds-bg2 text-center">P{p}</td>
                   {activeDays.map((d) => {
                     const slot = byDay.get(d.no)?.find((s) => s.periodNo === p);
                     return (
-                      <td key={d.no} className={`px-3 py-2 border-l border-gray-50 ${d.no === TODAY_DAY ? 'bg-indigo-50/30' : ''}`}>
+                      <td key={d.no} className={`px-3 py-2 border-l border-ds-border ${d.no === TODAY_DAY ? 'bg-indigo-50/30' : ''}`}>
                         {slot ? (
                           <div>
-                            <p className="text-xs font-semibold text-gray-800">{slot.subject?.name}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{unitLabel(slot.academicUnit)}</p>
+                            <p className="text-xs font-semibold text-ds-text1">{slot.subject?.name}</p>
+                            <p className="text-[10px] text-ds-text3 mt-0.5">{unitLabel(slot.academicUnit)}</p>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-300">—</span>
+                          <span className="text-xs text-ds-text3">—</span>
                         )}
                       </td>
                     );

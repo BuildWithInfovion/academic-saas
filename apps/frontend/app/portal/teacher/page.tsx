@@ -101,13 +101,13 @@ export default function TeacherDashboard() {
       label: 'Mark Attendance',
       desc: "Today's class attendance",
       path: '/portal/teacher/attendance',
-      color: 'btn-brand',
+      gradient: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
     },
     {
       label: 'Enter Marks',
       desc: 'Exam score entry',
       path: '/portal/teacher/marks',
-      color: 'btn-brand',
+      gradient: 'linear-gradient(135deg, #6b432f 0%, #3a1f0c 100%)',
     },
   ];
 
@@ -150,7 +150,8 @@ export default function TeacherDashboard() {
           <button
             key={a.label}
             onClick={() => router.push(a.path)}
-            className={`rounded-xl p-5 text-left hover:opacity-90 transition-opacity ${a.color}`}
+            className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity"
+            style={{ background: a.gradient, color: '#fcfbf7', border: '1px solid rgba(140,57,25,0.25)' }}
           >
             <p className="font-semibold">{a.label}</p>
             <p className="text-sm mt-1 opacity-70">{a.desc}</p>
@@ -193,7 +194,7 @@ export default function TeacherDashboard() {
                           <span className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>
                             Total: <strong style={{ color: 'var(--text-1)' }}>{cnt.total}</strong>
                           </span>
-                          <span className="text-xs font-medium text-blue-600">
+                          <span className="text-xs font-medium text-ds-brand">
                             Boys: <strong>{cnt.boys}</strong>
                           </span>
                           <span className="text-xs font-medium text-pink-600">

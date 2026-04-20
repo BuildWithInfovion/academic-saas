@@ -153,7 +153,7 @@ export default function ParentFeesPage() {
   if (notLinked) {
     return (
       <div className="p-8">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-700">
+        <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-5 text-sm text-ds-warning-text">
           Your child's record has not been linked yet. Please contact the school admin.
         </div>
       </div>
@@ -169,21 +169,21 @@ export default function ParentFeesPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Child's Fee Status</h1>
-      <p className="text-sm text-gray-400 mb-6">Fee dues and payment history</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Child's Fee Status</h1>
+      <p className="text-sm text-ds-text3 mb-6">Fee dues and payment history</p>
 
       {/* Upcoming Due Dates Alert Panel */}
       {unpaidDues.length > 0 && (
-        <div className="mb-6 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
-            <span className="font-semibold text-gray-800 text-sm">Upcoming Fee Dues</span>
+        <div className="mb-6 bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-ds-border flex items-center gap-2">
+            <span className="font-semibold text-ds-text1 text-sm">Upcoming Fee Dues</span>
             {unpaidDues.some((d) => d.daysFromToday < 0) && (
-              <span className="text-xs bg-red-100 text-red-700 font-medium px-2 py-0.5 rounded-full">
+              <span className="text-xs bg-ds-error-bg text-ds-error-text font-medium px-2 py-0.5 rounded-full">
                 {unpaidDues.filter((d) => d.daysFromToday < 0).length} overdue
               </span>
             )}
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-ds-border">
             {unpaidDues.map((d, i) => {
               const overdue = d.daysFromToday < 0;
               const today   = d.daysFromToday === 0;
@@ -193,24 +193,24 @@ export default function ParentFeesPage() {
                 : today ? 'Due today'
                 : `Due in ${d.daysFromToday} day${d.daysFromToday !== 1 ? 's' : ''}`;
               const timingCls = overdue
-                ? 'bg-red-100 text-red-700'
-                : urgent ? 'bg-amber-100 text-amber-700'
-                : 'bg-blue-100 text-blue-700';
+                ? 'bg-ds-error-bg text-ds-error-text'
+                : urgent ? 'bg-ds-warning-bg text-ds-warning-text'
+                : 'bg-ds-info-bg text-ds-info-text';
 
               return (
                 <div key={i} className={`px-5 py-3 flex items-center justify-between ${overdue ? 'bg-red-50/40' : ''}`}>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-sm font-medium text-ds-text1">
                       {d.feeHeadName}
-                      {d.installmentName && <span className="text-gray-400 font-normal"> · {d.installmentName}</span>}
+                      {d.installmentName && <span className="text-ds-text3 font-normal"> · {d.installmentName}</span>}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-ds-text2 mt-0.5">
                       {d.studentName} · {d.className} · Due {new Date(d.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${timingCls}`}>{timingLabel}</span>
-                    <span className="text-sm font-semibold text-gray-800">₹{d.amount.toLocaleString('en-IN')}</span>
+                    <span className="text-sm font-semibold text-ds-text1">₹{d.amount.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               );
@@ -221,33 +221,33 @@ export default function ParentFeesPage() {
 
       {children.length > 1 && (
         <div className="mb-5">
-          <label className="text-xs font-medium text-gray-600 block mb-1">Child</label>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Child</label>
           <select value={selectedChildId} onChange={(e) => setSelectedChildId(e.target.value)}
-            className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none">
+            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
             {children.map((c) => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
           </select>
         </div>
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading...</p>
+        <p className="text-sm text-ds-text3">Loading...</p>
       ) : (
         <>
           {balance && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <p className="text-2xl font-bold text-gray-800">₹{(balance.totalDue ?? 0).toLocaleString('en-IN')}</p>
-                <p className="text-sm text-gray-600 mt-1">Total Due</p>
+              <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+                <p className="text-2xl font-bold text-ds-text1">₹{(balance.totalDue ?? 0).toLocaleString('en-IN')}</p>
+                <p className="text-sm text-ds-text2 mt-1">Total Due</p>
               </div>
-              <div className="bg-green-50 border border-green-200 rounded-xl p-5">
-                <p className="text-2xl font-bold text-green-700">₹{(balance.totalPaid ?? 0).toLocaleString('en-IN')}</p>
-                <p className="text-sm text-green-700 font-medium mt-1">Total Paid</p>
+              <div className="bg-ds-success-bg border border-ds-success-border rounded-xl p-5">
+                <p className="text-2xl font-bold text-ds-success-text">₹{(balance.totalPaid ?? 0).toLocaleString('en-IN')}</p>
+                <p className="text-sm text-ds-success-text font-medium mt-1">Total Paid</p>
               </div>
-              <div className={`rounded-xl border p-5 ${(balance.balance ?? 0) > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                <p className={`text-2xl font-bold ${(balance.balance ?? 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>
+              <div className={`rounded-xl border p-5 ${(balance.balance ?? 0) > 0 ? 'bg-ds-error-bg border-ds-error-border' : 'bg-ds-success-bg border-ds-success-border'}`}>
+                <p className={`text-2xl font-bold ${(balance.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
                   ₹{(balance.balance ?? 0).toLocaleString('en-IN')}
                 </p>
-                <p className={`text-sm font-medium mt-1 ${(balance.balance ?? 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                <p className={`text-sm font-medium mt-1 ${(balance.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
                   {(balance.balance ?? 0) > 0 ? 'Outstanding' : 'No Dues'}
                 </p>
               </div>
@@ -255,26 +255,26 @@ export default function ParentFeesPage() {
           )}
 
           {balance?.breakdown && balance.breakdown.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-800 text-sm">Fee Breakdown</h2>
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden mb-6">
+              <div className="px-5 py-4 border-b border-ds-border">
+                <h2 className="font-semibold text-ds-text1 text-sm">Fee Breakdown</h2>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-ds-bg2">
                   <tr>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Fee Head</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Due</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Paid</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Balance</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Fee Head</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Due</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Paid</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Balance</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-ds-border">
                   {balance.breakdown.map((b, i) => (
                     <tr key={i}>
-                      <td className="px-5 py-3 text-gray-800 font-medium">{b.feeHeadName}</td>
-                      <td className="px-5 py-3 text-right text-gray-600">₹{(b.due ?? 0).toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right text-gray-600">₹{(b.paid ?? 0).toLocaleString('en-IN')}</td>
-                      <td className={`px-5 py-3 text-right font-semibold ${(b.balance ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <td className="px-5 py-3 text-ds-text1 font-medium">{b.feeHeadName}</td>
+                      <td className="px-5 py-3 text-right text-ds-text2">₹{(b.due ?? 0).toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-right text-ds-text2">₹{(b.paid ?? 0).toLocaleString('en-IN')}</td>
+                      <td className={`px-5 py-3 text-right font-semibold ${(b.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
                         ₹{(b.balance ?? 0).toLocaleString('en-IN')}
                       </td>
                     </tr>
@@ -284,37 +284,37 @@ export default function ParentFeesPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-800 text-sm">Payment History</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{payments.length} payment(s)</p>
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-ds-border">
+              <h2 className="font-semibold text-ds-text1 text-sm">Payment History</h2>
+              <p className="text-xs text-ds-text3 mt-0.5">{payments.length} payment(s)</p>
             </div>
             {payments.length === 0 ? (
-              <p className="p-8 text-center text-sm text-gray-400">No payments recorded.</p>
+              <p className="p-8 text-center text-sm text-ds-text3">No payments recorded.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-ds-bg2">
                   <tr>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Receipt No</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Fee Head</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Date</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Mode</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Amount</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Receipt No</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Fee Head</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Date</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Mode</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Amount</th>
                     <th className="px-5 py-3"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-ds-border">
                   {payments.map((p) => {
                     const child = children.find((c) => c.id === selectedChildId) ?? children[0];
                     return (
                     <tr key={p.id}>
-                      <td className="px-5 py-3 text-gray-500 font-mono text-xs">{p.receiptNo}</td>
-                      <td className="px-5 py-3 text-gray-800">{p.feeHead?.name ?? '—'}</td>
-                      <td className="px-5 py-3 text-gray-600">
+                      <td className="px-5 py-3 text-ds-text2 font-mono text-xs">{p.receiptNo}</td>
+                      <td className="px-5 py-3 text-ds-text1">{p.feeHead?.name ?? '—'}</td>
+                      <td className="px-5 py-3 text-ds-text2">
                         {new Date(p.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
-                      <td className="px-5 py-3 text-gray-600 capitalize">{p.paymentMode}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-gray-800">₹{p.amount.toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-ds-text2 capitalize">{p.paymentMode}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-ds-text1">₹{p.amount.toLocaleString('en-IN')}</td>
                       <td className="px-5 py-3 text-right">
                         <button
                           onClick={() => child && printFeeReceipt(p, child, institution)}

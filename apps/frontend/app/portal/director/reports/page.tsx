@@ -77,22 +77,22 @@ export default function DirectorReportsPage() {
 
   return (
     <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Reports</h1>
-      <p className="text-sm text-gray-400 mb-6">Institution-wide monitoring for {currentYear?.name ?? '—'}</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Reports</h1>
+      <p className="text-sm text-ds-text3 mb-6">Institution-wide monitoring for {currentYear?.name ?? '—'}</p>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-ds-bg2 rounded-xl p-1 w-fit">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === t.id ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              activeTab === t.id ? 'bg-ds-surface text-ds-text1 shadow-sm' : 'text-ds-text2 hover:text-ds-text1'
             }`}
           >
             {t.label}
             {t.count > 0 && (
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === t.id ? 'bg-black text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === t.id ? 'btn-brand' : 'bg-gray-300 text-ds-text2'}`}>
                 {t.count}
               </span>
             )}
@@ -105,47 +105,47 @@ export default function DirectorReportsPage() {
         <div>
           <div className="flex items-center gap-4 mb-4">
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Select Class</label>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Select Class</label>
               <select
                 value={selectedUnitId}
                 onChange={(e) => setSelectedUnitId(e.target.value)}
-                className="border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black"
+                className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand"
               >
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>{u.displayName || u.name}</option>
                 ))}
               </select>
             </div>
-            <p className="text-sm text-gray-400 mt-4">Defaulters below 75% — {monthName}</p>
+            <p className="text-sm text-ds-text3 mt-4">Defaulters below 75% — {monthName}</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-800 text-sm">
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-ds-border">
+              <h2 className="font-semibold text-ds-text1 text-sm">
                 Attendance Defaulters — {units.find((u) => u.id === selectedUnitId)?.displayName ?? ''}
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">{attendanceDefaulters.length} student(s) below 75%</p>
+              <p className="text-xs text-ds-text3 mt-0.5">{attendanceDefaulters.length} student(s) below 75%</p>
             </div>
             {loading ? (
-              <p className="text-sm text-gray-400 p-5">Loading...</p>
+              <p className="text-sm text-ds-text3 p-5">Loading...</p>
             ) : attendanceDefaulters.length === 0 ? (
-              <p className="text-sm text-gray-400 p-5">No defaulters for this class this month.</p>
+              <p className="text-sm text-ds-text3 p-5">No defaulters for this class this month.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-ds-bg2">
                   <tr>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">#</th>
-                    <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Student</th>
-                    <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Attendance %</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">#</th>
+                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Student</th>
+                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Attendance %</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-ds-border">
                   {attendanceDefaulters.map((d, i) => (
                     <tr key={d.id}>
-                      <td className="px-5 py-3 text-gray-400 text-xs">{i + 1}</td>
-                      <td className="px-5 py-3 text-gray-800">{d.firstName} {d.lastName}</td>
+                      <td className="px-5 py-3 text-ds-text3 text-xs">{i + 1}</td>
+                      <td className="px-5 py-3 text-ds-text1">{d.firstName} {d.lastName}</td>
                       <td className="px-5 py-3 text-right">
-                        <span className="font-semibold text-red-600">{d.percentage}%</span>
+                        <span className="font-semibold text-ds-error-text">{d.percentage}%</span>
                       </td>
                     </tr>
                   ))}
@@ -158,28 +158,28 @@ export default function DirectorReportsPage() {
 
       {/* Fees Tab */}
       {activeTab === 'fees' && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800 text-sm">Fee Defaulters — {currentYear?.name}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{feeDefaulters.length} student(s) with outstanding balance</p>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-ds-border">
+            <h2 className="font-semibold text-ds-text1 text-sm">Fee Defaulters — {currentYear?.name}</h2>
+            <p className="text-xs text-ds-text3 mt-0.5">{feeDefaulters.length} student(s) with outstanding balance</p>
           </div>
           {feeDefaulters.length === 0 ? (
-            <p className="text-sm text-gray-400 p-5">No fee defaulters for this year.</p>
+            <p className="text-sm text-ds-text3 p-5">No fee defaulters for this year.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-ds-bg2">
                 <tr>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">#</th>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Student</th>
-                  <th className="text-right px-5 py-3 text-gray-500 font-medium text-xs">Balance Due</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">#</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Student</th>
+                  <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Balance Due</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-ds-border">
                 {feeDefaulters.map((d, i) => (
                   <tr key={d.id}>
-                    <td className="px-5 py-3 text-gray-400 text-xs">{i + 1}</td>
-                    <td className="px-5 py-3 text-gray-800">{d.firstName} {d.lastName}</td>
-                    <td className="px-5 py-3 text-right font-semibold text-red-600">
+                    <td className="px-5 py-3 text-ds-text3 text-xs">{i + 1}</td>
+                    <td className="px-5 py-3 text-ds-text1">{d.firstName} {d.lastName}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-ds-error-text">
                       ₹{d.balance?.toLocaleString('en-IN')}
                     </td>
                   </tr>
@@ -192,30 +192,30 @@ export default function DirectorReportsPage() {
 
       {/* Exams Tab */}
       {activeTab === 'exams' && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800 text-sm">All Examinations — {currentYear?.name}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{exams.length} exam(s) configured</p>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-ds-border">
+            <h2 className="font-semibold text-ds-text1 text-sm">All Examinations — {currentYear?.name}</h2>
+            <p className="text-xs text-ds-text3 mt-0.5">{exams.length} exam(s) configured</p>
           </div>
           {exams.length === 0 ? (
-            <p className="text-sm text-gray-400 p-5">No exams for this year.</p>
+            <p className="text-sm text-ds-text3 p-5">No exams for this year.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-ds-bg2">
                 <tr>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Exam Name</th>
-                  <th className="text-left px-5 py-3 text-gray-500 font-medium text-xs">Status</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Exam Name</th>
+                  <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-ds-border">
                 {exams.map((e) => (
                   <tr key={e.id}>
-                    <td className="px-5 py-3 text-gray-800 font-medium">{e.name}</td>
+                    <td className="px-5 py-3 text-ds-text1 font-medium">{e.name}</td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        e.status === 'active' ? 'bg-blue-100 text-blue-700'
-                        : e.status === 'completed' ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
+                        e.status === 'active' ? 'bg-ds-info-bg text-ds-info-text'
+                        : e.status === 'completed' ? 'bg-ds-success-bg text-ds-success-text'
+                        : 'bg-ds-bg2 text-ds-text2'
                       }`}>
                         {e.status.charAt(0).toUpperCase() + e.status.slice(1)}
                       </span>
