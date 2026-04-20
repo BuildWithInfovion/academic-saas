@@ -190,6 +190,8 @@ export class StudentService {
             religion: dto.religion,
             casteCategory: dto.casteCategory,
             aadharNumber: dto.aadharNumber,
+            hasDisability: dto.hasDisability ?? false,
+            disabilityDetails: dto.disabilityDetails,
             tcFromPrevious,
             tcReceivedDate: dto.tcReceivedDate ? new Date(dto.tcReceivedDate) : undefined,
             tcPreviousInstitution: dto.tcPreviousInstitution,
@@ -306,6 +308,8 @@ export class StudentService {
           religion: dto.religion,
           casteCategory: dto.casteCategory,
           aadharNumber: dto.aadharNumber,
+          hasDisability: dto.hasDisability ?? false,
+          disabilityDetails: dto.disabilityDetails,
           tcFromPrevious,
           tcReceivedDate: dto.tcReceivedDate
             ? new Date(dto.tcReceivedDate)
@@ -447,6 +451,10 @@ export class StudentService {
       ...(dto.tcPreviousInstitution !== undefined && {
         tcPreviousInstitution: dto.tcPreviousInstitution || null,
       }),
+      ...(dto.hasDisability !== undefined && { hasDisability: dto.hasDisability }),
+      ...(dto.disabilityDetails !== undefined && {
+        disabilityDetails: dto.disabilityDetails || null,
+      }),
     };
 
     // H-04: If parentPhone changed, also update the linked parent user's phone
@@ -479,12 +487,15 @@ export class StudentService {
     });
   }
 
-  async count(institutionId: string) {
-    const [totalStudents, unlinkedParents] = await Promise.all([
-      this.prisma.student.count({ where: { institutionId, deletedAt: null } }),
-      this.prisma.student.count({ where: { institutionId, deletedAt: null, status: 'active', parentUserId: null } }),
+  async count(institutionId: string, unitId?: string) {
+    const base = { institutionId, deletedAt: null, ...(unitId ? { academicUnitId: unitId } : {}) };
+    const [totalStudents, unlinkedParents, boys, girls] = await Promise.all([
+      this.prisma.student.count({ where: base }),
+      this.prisma.student.count({ where: { ...base, status: 'active', parentUserId: null } }),
+      this.prisma.student.count({ where: { ...base, gender: 'male' } }),
+      this.prisma.student.count({ where: { ...base, gender: 'female' } }),
     ]);
-    return { totalStudents, unlinkedParents };
+    return { totalStudents, unlinkedParents, boys, girls };
   }
 
   async findUnlinkedParents(institutionId: string, limit = 100) {

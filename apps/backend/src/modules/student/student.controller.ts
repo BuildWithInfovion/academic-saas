@@ -42,8 +42,8 @@ export class StudentController {
 
   @Get('count')
   @Permissions('students.read')
-  count(@Tenant() tenant: TenantContext) {
-    return this.studentService.count(tenant.institutionId);
+  count(@Tenant() tenant: TenantContext, @Query('unitId') unitId?: string) {
+    return this.studentService.count(tenant.institutionId, unitId);
   }
 
   @Get('unlinked-parents')

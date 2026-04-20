@@ -81,6 +81,10 @@ model Student {
   aadharNumber          String?
   secondaryPhone        String?   // secondary contact number
 
+  // DISABILITY
+  hasDisability         Boolean   @default(false)
+  disabilityDetails     String?
+
   // SIBLING LINKING
   siblingGroupId        String?
 

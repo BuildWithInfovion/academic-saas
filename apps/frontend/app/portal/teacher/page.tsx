@@ -19,6 +19,13 @@ interface ClassUnit {
   parent: ParentUnit | null;
 }
 
+interface ClassCount {
+  unitId: string;
+  total: number;
+  boys: number;
+  girls: number;
+}
+
 interface SubjectUnit {
   academicUnit: { id: string; name: string; displayName: string | null };
   subject: { id: string; name: string; code: string };
@@ -36,6 +43,7 @@ export default function TeacherDashboard() {
   const router = useRouter();
   const [myClasses, setMyClasses] = useState<ClassUnit[]>([]);
   const [subjectUnits, setSubjectUnits] = useState<SubjectUnit[]>([]);
+  const [classCounts, setClassCounts] = useState<ClassCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [todayDate] = useState(
     new Date().toLocaleDateString('en-IN', {
@@ -50,14 +58,27 @@ export default function TeacherDashboard() {
     ])
       .then(([owned, subjects]) => {
         const classes = Array.isArray(owned) ? (owned as ClassUnit[]) : [];
-        setMyClasses([...classes].sort((a, b) => naturalSort(unitLabel(a), unitLabel(b))));
+        const sorted = [...classes].sort((a, b) => naturalSort(unitLabel(a), unitLabel(b)));
+        setMyClasses(sorted);
         setSubjectUnits(Array.isArray(subjects) ? (subjects as SubjectUnit[]) : []);
+
+        // Fetch boys/girls count for each assigned class
+        if (sorted.length > 0) {
+          Promise.all(
+            sorted.map((c) =>
+              apiFetch(`/students/count?unitId=${c.id}`)
+                .then((r: any) => ({ unitId: c.id, total: r.totalStudents ?? 0, boys: r.boys ?? 0, girls: r.girls ?? 0 }))
+                .catch(() => ({ unitId: c.id, total: 0, boys: 0, girls: 0 }))
+            )
+          ).then(setClassCounts).catch(() => {});
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const isClassTeacher = myClasses.length > 0;
+  const getCount = (unitId: string) => classCounts.find((c) => c.unitId === unitId);
 
   // Unique classes from subject assignments not already in myClasses
   const subjectOnlyUnits = subjectUnits
@@ -80,13 +101,13 @@ export default function TeacherDashboard() {
       label: 'Mark Attendance',
       desc: "Today's class attendance",
       path: '/portal/teacher/attendance',
-      color: 'bg-black text-white',
+      color: 'btn-brand',
     },
     {
       label: 'Enter Marks',
       desc: 'Exam score entry',
       path: '/portal/teacher/marks',
-      color: 'bg-gray-800 text-white',
+      color: 'btn-brand',
     },
   ];
 
@@ -155,25 +176,41 @@ export default function TeacherDashboard() {
                 My Classes — Class Teacher ({myClasses.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {myClasses.map((u) => (
-                  <div
-                    key={u.id}
-                    className="rounded-xl p-4"
-                    style={{ background: 'rgba(174,85,37,0.06)', border: '1px solid rgba(174,85,37,0.18)' }}
-                  >
-                    <p className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{unitLabel(u)}</p>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
-                      Class Teacher
-                    </span>
-                    <button
-                      onClick={() => router.push('/portal/teacher/attendance')}
-                      className="block text-xs mt-2 hover:underline"
-                      style={{ color: 'var(--brand)' }}
+                {myClasses.map((u) => {
+                  const cnt = getCount(u.id);
+                  return (
+                    <div
+                      key={u.id}
+                      className="rounded-xl p-4"
+                      style={{ background: 'rgba(174,85,37,0.06)', border: '1px solid rgba(174,85,37,0.18)' }}
                     >
-                      Mark attendance →
-                    </button>
-                  </div>
-                ))}
+                      <p className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{unitLabel(u)}</p>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+                        Class Teacher
+                      </span>
+                      {cnt && (
+                        <div className="flex gap-3 mt-2">
+                          <span className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>
+                            Total: <strong style={{ color: 'var(--text-1)' }}>{cnt.total}</strong>
+                          </span>
+                          <span className="text-xs font-medium text-blue-600">
+                            Boys: <strong>{cnt.boys}</strong>
+                          </span>
+                          <span className="text-xs font-medium text-pink-600">
+                            Girls: <strong>{cnt.girls}</strong>
+                          </span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => router.push('/portal/teacher/attendance')}
+                        className="block text-xs mt-2 hover:underline"
+                        style={{ color: 'var(--brand)' }}
+                      >
+                        Mark attendance →
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -191,7 +228,7 @@ export default function TeacherDashboard() {
                     className="rounded-xl p-4"
                     style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
                   >
-                    <p className="font-semibold text-gray-800 text-sm">{u.displayName || u.name}</p>
+                    <p className="font-semibold text-ds-text1 text-sm">{u.displayName || u.name}</p>
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {u.subjects.map((s) => (
                         <span key={s} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }}>

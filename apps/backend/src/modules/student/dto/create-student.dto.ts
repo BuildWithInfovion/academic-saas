@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsDateString,
   IsEmail,
+  IsBoolean,
   Matches,
 } from 'class-validator';
 
@@ -96,4 +97,12 @@ export class CreateStudentDto {
   @IsOptional()
   @IsString()
   tcPreviousInstitution?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  hasDisability?: boolean;
+
+  @IsOptional()
+  @IsString()
+  disabilityDetails?: string;
 }

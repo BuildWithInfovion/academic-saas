@@ -84,6 +84,7 @@ const emptyForm = {
   academicUnitId: '', admissionDate: new Date().toISOString().split('T')[0],
   tcFromPrevious: '', tcPreviousInstitution: '',
   bloodGroup: '', nationality: 'Indian', religion: '', casteCategory: '', aadharNumber: '',
+  hasDisability: false, disabilityDetails: '',
 };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -270,6 +271,8 @@ export default function StudentsPage() {
         casteCategory: form.casteCategory || undefined,
         aadharNumber: form.aadharNumber.trim() || undefined,
         tcPreviousInstitution: form.tcPreviousInstitution.trim() || undefined,
+        hasDisability: form.hasDisability,
+        disabilityDetails: form.hasDisability ? form.disabilityDetails.trim() || undefined : undefined,
       };
 
       // Multi-fee: collect all checked items with a valid amount
@@ -322,6 +325,8 @@ export default function StudentsPage() {
       religion: student.religion || '', casteCategory: student.casteCategory || '',
       aadharNumber: student.aadharNumber || '', tcFromPrevious: student.tcFromPrevious || '',
       tcPreviousInstitution: student.tcPreviousInstitution || '',
+      hasDisability: (student as any).hasDisability ?? false,
+      disabilityDetails: (student as any).disabilityDetails || '',
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -347,6 +352,8 @@ export default function StudentsPage() {
           aadharNumber: form.aadharNumber.trim() || undefined,
           tcFromPrevious: form.tcFromPrevious || undefined,
           tcPreviousInstitution: form.tcPreviousInstitution.trim() || undefined,
+          hasDisability: form.hasDisability,
+          disabilityDetails: form.hasDisability ? form.disabilityDetails.trim() || undefined : undefined,
         }),
       });
       resetForm();
@@ -470,9 +477,9 @@ export default function StudentsPage() {
     : students;
 
   const totalFeeStructure = feeStructures.reduce((sum, s) => sum + s.amount, 0);
-  const inp = 'border border-gray-300 p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white';
-  const lbl = 'text-xs font-medium text-gray-600 block mb-1';
-  const sec = 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 mt-1 pb-1 border-b border-gray-100';
+  const inp = 'border border-ds-border-strong p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
+  const lbl = 'text-xs font-medium text-ds-text2 block mb-1';
+  const sec = 'text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3 mt-1 pb-1 border-b border-ds-border';
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -482,13 +489,13 @@ export default function StudentsPage() {
       {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">{success}</div>}
 
       {/* ── Step 1: Admission Form ── */}
-      <div className="bg-white shadow-sm rounded-xl p-6 mb-6 border border-gray-100">
+      <div className="bg-ds-surface shadow-sm rounded-xl p-6 mb-6 border border-ds-border">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-lg font-medium">{editingId ? 'Edit Student Record' : 'Admission Form'}</h2>
-            {!editingId && <p className="text-xs text-gray-400 mt-0.5">Step 1 of 2 — Fill details, then confirm with fee info</p>}
+            {!editingId && <p className="text-xs text-ds-text3 mt-0.5">Step 1 of 2 — Fill details, then confirm with fee info</p>}
           </div>
-          {editingId && <button onClick={resetForm} className="text-sm text-gray-500 hover:text-gray-700 underline">Cancel Edit</button>}
+          {editingId && <button onClick={resetForm} className="text-sm text-ds-text2 hover:text-ds-text1 underline">Cancel Edit</button>}
         </div>
 
         <p className={sec}>Admission Details</p>
@@ -584,18 +591,49 @@ export default function StudentsPage() {
           </div>
         </div>
 
+        {/* Disability */}
+        <div className="mt-4 p-4 rounded-lg border border-ds-border bg-ds-bg2">
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${form.hasDisability ? 'bg-gray-900 border-gray-900' : 'border-ds-border-strong bg-ds-surface'}`}
+              onClick={() => setForm({ ...form, hasDisability: !form.hasDisability, disabilityDetails: !form.hasDisability ? form.disabilityDetails : '' })}
+            >
+              {form.hasDisability && (
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
+                  <polyline points="1.5,6 4.5,9 10.5,3" />
+                </svg>
+              )}
+            </div>
+            <div>
+              <span className="text-sm font-medium text-ds-text1">Student has a disability</span>
+              <p className="text-xs text-ds-text3 mt-0.5">Check if the student has any physical, cognitive, or learning disability</p>
+            </div>
+          </label>
+          {form.hasDisability && (
+            <div className="mt-3">
+              <label className={lbl}>Disability Details</label>
+              <input
+                className={inp}
+                placeholder="e.g. Visual impairment, Hearing loss, Dyslexia, Locomotor disability"
+                value={form.disabilityDetails}
+                onChange={(e) => setForm({ ...form, disabilityDetails: e.target.value })}
+              />
+            </div>
+          )}
+        </div>
+
         <div className="mt-2">
           {editingId ? (
             <div className="flex gap-3">
               <button onClick={handleUpdate} disabled={updating}
-                className="flex-1 bg-black text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                className="flex-1 btn-brand px-4 py-2.5 rounded-lg">
                 {updating ? 'Updating...' : 'Update Student'}
               </button>
-              <button onClick={resetForm} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+              <button onClick={resetForm} className="px-6 py-2.5 border border-ds-border-strong rounded-lg text-sm hover:bg-ds-bg2">Cancel</button>
             </div>
           ) : (
             <button onClick={openFeeStep}
-              className="w-full bg-black text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800">
+              className="btn-brand w-full px-4 py-2.5 rounded-lg">
               Next: Fee &amp; Confirm Admission →
             </button>
           )}
@@ -603,11 +641,11 @@ export default function StudentsPage() {
       </div>
 
       {/* ── Recently Admitted ── */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-ds-surface shadow-sm rounded-xl border border-ds-border overflow-hidden">
+        <div className="px-6 py-4 border-b border-ds-border flex items-center justify-between">
           <div>
-            <h2 className="font-medium text-gray-800">Recently Admitted</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Last 10 admissions — link parent portal access from here</p>
+            <h2 className="font-medium text-ds-text1">Recently Admitted</h2>
+            <p className="text-xs text-ds-text3 mt-0.5">Last 10 admissions — link parent portal access from here</p>
           </div>
           <Link href="/dashboard/students/directory"
             className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
@@ -615,35 +653,35 @@ export default function StudentsPage() {
           </Link>
         </div>
         {loading ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Loading...</div>
+          <div className="p-8 text-center text-ds-text3 text-sm">Loading...</div>
         ) : students.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 text-sm">No students admitted yet.</div>
+          <div className="p-8 text-center text-ds-text3 text-sm">No students admitted yet.</div>
         ) : (
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-ds-bg2">
               <tr>
                 {['Adm. No', 'Name', 'Class', 'Parent Phone', 'Portal Status', 'Actions'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                  <th key={h} className="px-4 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-ds-border">
               {[...students].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 10)
                 .map((s) => {
                   const unit = academicUnits.find((u) => u.id === s.academicUnitId) || s.academicUnit;
                   const hasParent = !!s.parentUser;
                   return (
-                    <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-600">{s.admissionNo}</td>
-                      <td className="px-4 py-3 font-medium text-gray-800">
+                    <tr key={s.id} className="hover:bg-ds-bg2 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs text-ds-text2">{s.admissionNo}</td>
+                      <td className="px-4 py-3 font-medium text-ds-text1">
                         <button onClick={() => setProfileStudent(s)} className="hover:underline text-left">
                           {s.firstName} {s.lastName}
                         </button>
-                        {s.gender && <div className="text-xs text-gray-400 capitalize">{s.gender}</div>}
+                        {s.gender && <div className="text-xs text-ds-text3 capitalize">{s.gender}</div>}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 text-xs">{(unit as any)?.displayName || (unit as any)?.name || '—'}</td>
-                      <td className="px-4 py-3 text-gray-600 text-xs">{s.parentPhone || '—'}</td>
+                      <td className="px-4 py-3 text-ds-text2 text-xs">{(unit as any)?.displayName || (unit as any)?.name || '—'}</td>
+                      <td className="px-4 py-3 text-ds-text2 text-xs">{s.parentPhone || '—'}</td>
                       <td className="px-4 py-3">
                         {hasParent ? (
                           <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5">
@@ -671,7 +709,7 @@ export default function StudentsPage() {
 
         {/* Pagination */}
         {!loading && students.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-ds-border text-sm text-ds-text2">
             <span>
               Page {page}
               {totalStudents > 0 && ` · ${totalStudents} total students`}
@@ -680,14 +718,14 @@ export default function StudentsPage() {
               <button
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                className="px-3 py-1 rounded border border-ds-border disabled:opacity-40 hover:bg-ds-bg2"
               >
                 ← Prev
               </button>
               <button
                 disabled={students.length < PAGE_SIZE}
                 onClick={() => setPage((p) => p + 1)}
-                className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                className="px-3 py-1 rounded border border-ds-border disabled:opacity-40 hover:bg-ds-bg2"
               >
                 Next →
               </button>
@@ -699,11 +737,11 @@ export default function StudentsPage() {
       {/* ── Step 2: Fee & Confirmation Modal ── */}
       {showFeeStep && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-800">Step 2 — Fee & Admission Confirmation</h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Admitting: <span className="font-medium text-gray-700">{form.firstName} {form.lastName}</span>
+          <div className="bg-ds-surface rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
+            <div className="px-6 py-5 border-b border-ds-border">
+              <h2 className="font-semibold text-ds-text1">Step 2 — Fee & Admission Confirmation</h2>
+              <p className="text-xs text-ds-text3 mt-0.5">
+                Admitting: <span className="font-medium text-ds-text1">{form.firstName} {form.lastName}</span>
                 {form.academicUnitId && ` → ${academicUnits.find((u) => u.id === form.academicUnitId)?.displayName || ''}`}
               </p>
             </div>
@@ -711,15 +749,15 @@ export default function StudentsPage() {
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               {/* Fee structure for class */}
               {loadingFees ? (
-                <p className="text-sm text-gray-400">Loading fee structure...</p>
+                <p className="text-sm text-ds-text3">Loading fee structure...</p>
               ) : feeStructures.length > 0 ? (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Class Fee Structure</p>
-                  <div className="bg-gray-50 rounded-lg divide-y divide-gray-100 text-sm">
+                  <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-2">Class Fee Structure</p>
+                  <div className="bg-ds-bg2 rounded-lg divide-y divide-ds-border text-sm">
                     {feeStructures.map((s) => (
                       <div key={s.id} className="flex justify-between px-4 py-2.5">
-                        <span className="text-gray-700">{s.feeHead.name}{s.installmentName ? ` (${s.installmentName})` : ''}</span>
-                        <span className="font-medium text-gray-800">₹{s.amount.toLocaleString('en-IN')}</span>
+                        <span className="text-ds-text1">{s.feeHead.name}{s.installmentName ? ` (${s.installmentName})` : ''}</span>
+                        <span className="font-medium text-ds-text1">₹{s.amount.toLocaleString('en-IN')}</span>
                       </div>
                     ))}
                     <div className="flex justify-between px-4 py-2.5 font-semibold">
@@ -736,7 +774,7 @@ export default function StudentsPage() {
 
               {/* Fee payment section */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Admission Fee Payment</p>
+                <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3">Admission Fee Payment</p>
                 <div className="flex gap-2 mb-4">
                   {[
                     { val: 'yes', label: 'Paid in Full' },
@@ -745,7 +783,7 @@ export default function StudentsPage() {
                   ].map((opt) => (
                     <button key={opt.val} onClick={() => setFeesPaid(opt.val as any)}
                       className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                        feesPaid === opt.val ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                        feesPaid === opt.val ? 'bg-ds-brand text-white border-ds-brand-dark' : 'bg-ds-surface text-ds-text2 border-ds-border-strong hover:border-gray-400'
                       }`}>
                       {opt.label}
                     </button>
@@ -758,7 +796,7 @@ export default function StudentsPage() {
                       <label className={lbl}>Select Fees Being Paid</label>
                       <div className="space-y-2 mt-1">
                         {feeItems.map((item, idx) => (
-                          <div key={item.feeHeadId} className={`rounded-lg border transition-colors ${item.checked ? 'border-gray-800 bg-gray-50' : 'border-gray-200 bg-white'}`}>
+                          <div key={item.feeHeadId} className={`rounded-lg border transition-colors ${item.checked ? 'border-gray-800 bg-ds-bg2' : 'border-ds-border bg-ds-surface'}`}>
                             {/* Checkbox row */}
                             <div
                               className="flex items-center justify-between px-4 py-3 cursor-pointer"
@@ -769,17 +807,17 @@ export default function StudentsPage() {
                               ))}
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${item.checked ? 'bg-gray-900 border-gray-900' : 'border-gray-300'}`}>
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${item.checked ? 'bg-gray-900 border-gray-900' : 'border-ds-border-strong'}`}>
                                   {item.checked && (
                                     <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
                                       <polyline points="1.5,6 4.5,9 10.5,3" />
                                     </svg>
                                   )}
                                 </div>
-                                <span className="text-sm font-medium text-gray-800">{item.name}</span>
+                                <span className="text-sm font-medium text-ds-text1">{item.name}</span>
                               </div>
                               {item.structureAmount > 0 && (
-                                <span className="text-sm text-gray-500">₹{item.structureAmount.toLocaleString('en-IN')}</span>
+                                <span className="text-sm text-ds-text2">₹{item.structureAmount.toLocaleString('en-IN')}</span>
                               )}
                             </div>
                             {/* Amount input — only when checked */}
@@ -799,7 +837,7 @@ export default function StudentsPage() {
                         ))}
                       </div>
                       {feeItems.some((i) => i.checked) && (
-                        <div className="mt-2 flex justify-between text-sm font-semibold text-gray-700 px-1">
+                        <div className="mt-2 flex justify-between text-sm font-semibold text-ds-text1 px-1">
                           <span>Total collecting now</span>
                           <span>₹{feeItems.filter((i) => i.checked).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0).toLocaleString('en-IN')}</span>
                         </div>
@@ -820,7 +858,7 @@ export default function StudentsPage() {
                   <div>
                     <label className={lbl}>Fee Due Date</label>
                     <input className={inp} type="date" value={feeDueDate} onChange={(e) => setFeeDueDate(e.target.value)} />
-                    <p className="text-xs text-gray-400 mt-1">Admission will proceed. Fee must be collected by this date.</p>
+                    <p className="text-xs text-ds-text3 mt-1">Admission will proceed. Fee must be collected by this date.</p>
                   </div>
                 )}
               </div>
@@ -837,13 +875,13 @@ export default function StudentsPage() {
               {error && <p className="text-red-600 text-sm">{error}</p>}
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+            <div className="px-6 py-4 border-t border-ds-border flex gap-3">
               <button onClick={confirmAdmission} disabled={confirming}
-                className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-50">
+                className="btn-brand flex-1 py-2.5 rounded-lg">
                 {confirming ? 'Confirming...' : 'Confirm Admission & Create Portal Access'}
               </button>
               <button onClick={() => { setShowFeeStep(false); setError(null); }}
-                className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                className="px-5 py-2.5 border border-ds-border-strong rounded-lg text-sm hover:bg-ds-bg2">
                 Back
               </button>
             </div>
@@ -854,23 +892,23 @@ export default function StudentsPage() {
       {/* ── Credentials Modal ── */}
       {credentials && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="px-6 py-5 border-b border-gray-100">
+          <div className="bg-ds-surface rounded-xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-5 border-b border-ds-border">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🎉</span>
-                <h2 className="font-semibold text-gray-800">Admission Confirmed!</h2>
+                <h2 className="font-semibold text-ds-text1">Admission Confirmed!</h2>
               </div>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 mb-0.5">Admission No</p>
-                  <p className="font-mono font-semibold text-gray-800">{credentials.admissionNo}</p>
+                <div className="bg-ds-bg2 rounded-lg p-3">
+                  <p className="text-xs text-ds-text2 mb-0.5">Admission No</p>
+                  <p className="font-mono font-semibold text-ds-text1">{credentials.admissionNo}</p>
                 </div>
                 {credentials.rollNo && (
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-0.5">Roll No</p>
-                    <p className="font-mono font-semibold text-gray-800">{credentials.rollNo}</p>
+                  <div className="bg-ds-bg2 rounded-lg p-3">
+                    <p className="text-xs text-ds-text2 mb-0.5">Roll No</p>
+                    <p className="font-mono font-semibold text-ds-text1">{credentials.rollNo}</p>
                   </div>
                 )}
               </div>
@@ -880,11 +918,11 @@ export default function StudentsPage() {
                   <p className="text-xs font-semibold text-green-700 mb-2 uppercase tracking-wider">Parent Portal Credentials (share with parent)</p>
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Email or Phone field</span>
-                      <span className="font-mono font-medium text-gray-800">{credentials.parentCredentials.phone}</span>
+                      <span className="text-ds-text2">Email or Phone field</span>
+                      <span className="font-mono font-medium text-ds-text1">{credentials.parentCredentials.phone}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Password (one-time)</span>
+                      <span className="text-ds-text2">Password (one-time)</span>
                       <span className="font-mono font-bold text-indigo-700 text-base tracking-widest">
                         {credentials.parentCredentials.generatedPassword}
                       </span>
@@ -903,16 +941,16 @@ export default function StudentsPage() {
               )}
 
               {credentials.feePayments && credentials.feePayments.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-gray-600 mb-2">Fee Payments Recorded</p>
+                <div className="bg-ds-bg2 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-ds-text2 mb-2">Fee Payments Recorded</p>
                   <div className="space-y-1.5">
                     {credentials.feePayments.map((fp, i) => (
                       <div key={i} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{fp.feeHead?.name ?? 'Fee'}</span>
-                        <span className="font-semibold text-gray-800">₹{fp.amount?.toLocaleString('en-IN')}</span>
+                        <span className="text-ds-text2">{fp.feeHead?.name ?? 'Fee'}</span>
+                        <span className="font-semibold text-ds-text1">₹{fp.amount?.toLocaleString('en-IN')}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between text-sm font-bold pt-1 border-t border-gray-200 mt-1">
+                    <div className="flex justify-between text-sm font-bold pt-1 border-t border-ds-border mt-1">
                       <span>Total collected</span>
                       <span>₹{credentials.feePayments.reduce((s, fp) => s + (fp.amount || 0), 0).toLocaleString('en-IN')}</span>
                     </div>
@@ -929,9 +967,9 @@ export default function StudentsPage() {
                 </ul>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-100">
+            <div className="px-6 py-4 border-t border-ds-border">
               <button onClick={() => setCredentials(null)}
-                className="w-full bg-black text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800">
+                className="btn-brand w-full py-2.5 rounded-lg">
                 Done
               </button>
             </div>
@@ -943,28 +981,28 @@ export default function StudentsPage() {
       {profileStudent && (
         <div className="fixed inset-0 z-50 flex">
           <div className="flex-1 bg-black/30" onClick={() => setProfileStudent(null)} />
-          <div className="w-96 bg-white h-full shadow-xl flex flex-col overflow-y-auto">
-            <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
+          <div className="w-96 bg-ds-surface h-full shadow-xl flex flex-col overflow-y-auto">
+            <div className="px-6 py-5 border-b border-ds-border flex items-start justify-between">
               <div>
-                <h2 className="font-semibold text-gray-800">{profileStudent.firstName} {profileStudent.lastName}</h2>
-                <p className="text-xs text-gray-400 font-mono">{profileStudent.admissionNo}</p>
+                <h2 className="font-semibold text-ds-text1">{profileStudent.firstName} {profileStudent.lastName}</h2>
+                <p className="text-xs text-ds-text3 font-mono">{profileStudent.admissionNo}</p>
               </div>
-              <button onClick={() => setProfileStudent(null)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              <button onClick={() => setProfileStudent(null)} className="text-ds-text3 hover:text-ds-text2 text-xl">×</button>
             </div>
             <div className="flex-1 px-6 py-5 space-y-4 text-sm">
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Class</p>
-                <p className="text-gray-700">{(profileStudent.academicUnit as any)?.displayName || (profileStudent.academicUnit as any)?.name || 'Not assigned'}</p>
+                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-2">Class</p>
+                <p className="text-ds-text1">{(profileStudent.academicUnit as any)?.displayName || (profileStudent.academicUnit as any)?.name || 'Not assigned'}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Parent</p>
+                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-2">Parent</p>
                 <p>{profileStudent.fatherName} / {profileStudent.motherName}</p>
-                <p className="text-gray-500">{profileStudent.parentPhone}</p>
+                <p className="text-ds-text2">{profileStudent.parentPhone}</p>
               </div>
 
               {/* Parent Portal Access */}
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Parent Portal Access</p>
+                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-2">Parent Portal Access</p>
                 {profileStudent.parentUser ? (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <div className="flex items-center justify-between">
@@ -993,7 +1031,7 @@ export default function StudentsPage() {
 
               {/* Student Portal Access */}
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Student Portal Access</p>
+                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-2">Student Portal Access</p>
                 {profileStudent.userAccount ? (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
                     <div>
@@ -1006,7 +1044,7 @@ export default function StudentsPage() {
                     </button>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-400">Not linked (future scope)</p>
+                  <p className="text-xs text-ds-text3">Not linked (future scope)</p>
                 )}
               </div>
             </div>
@@ -1017,19 +1055,19 @@ export default function StudentsPage() {
       {/* ── Manual Link Modal ── */}
       {linkingStudent && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-0.5">Link Portal Account</h2>
-            <p className="text-xs text-gray-400 mb-4">
-              Student: <span className="font-medium text-gray-700">{linkingStudent.firstName} {linkingStudent.lastName}</span>
+          <div className="bg-ds-surface rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <h2 className="text-lg font-semibold text-ds-text1 mb-0.5">Link Portal Account</h2>
+            <p className="text-xs text-ds-text3 mb-4">
+              Student: <span className="font-medium text-ds-text1">{linkingStudent.firstName} {linkingStudent.lastName}</span>
             </p>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Account Type</label>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Account Type</label>
                 <div className="flex gap-2">
                   {(['parent', 'student'] as const).map((t) => (
                     <button key={t} onClick={() => { setLinkType(t); setFoundUser(null); setLinkUserId(''); }}
                       className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                        linkType === t ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                        linkType === t ? 'bg-ds-brand text-white border-ds-brand-dark' : 'bg-ds-surface text-ds-text2 border-ds-border-strong hover:border-gray-400'
                       }`}>
                       {t === 'student' ? 'Student Login' : 'Parent Login'}
                     </button>
@@ -1037,13 +1075,13 @@ export default function StudentsPage() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
+                <label className="text-xs font-medium text-ds-text2 block mb-1">
                   Search by Phone or Email
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className="flex-1 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                    className="flex-1 p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand"
                     placeholder="Phone number or email"
                     value={linkSearch}
                     onChange={(e) => { setLinkSearch(e.target.value); setFoundUser(null); setLinkUserId(''); }}
@@ -1057,7 +1095,7 @@ export default function StudentsPage() {
                   </button>
                 </div>
                 {linkType === 'parent' && linkingStudent.parentPhone && (
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-ds-text3 mt-1">
                     Registered parent phone: <span className="font-medium">{linkingStudent.parentPhone}</span>
                   </p>
                 )}
@@ -1091,11 +1129,11 @@ export default function StudentsPage() {
             {error && <p className="text-red-600 text-xs mt-3">{error}</p>}
             <div className="flex gap-2 mt-5">
               <button onClick={handleLink} disabled={linking || !linkUserId}
-                className="flex-1 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                className="flex-1 py-2.5 btn-brand rounded-lg disabled:opacity-50">
                 {linking ? 'Linking...' : 'Link Account'}
               </button>
               <button onClick={() => { setLinkingStudent(null); setError(null); }}
-                className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                className="px-5 py-2.5 border border-ds-border-strong rounded-lg text-sm text-ds-text2 hover:bg-ds-bg2">
                 Cancel
               </button>
             </div>

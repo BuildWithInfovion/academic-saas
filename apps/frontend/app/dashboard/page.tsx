@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { apiFetch } from '@/lib/api';
 
-interface Stats        { totalStudents: number; unlinkedParents: number; }
+interface Stats        { totalStudents: number; unlinkedParents: number; boys: number; girls: number; }
 interface AcademicYear { id: string; name: string; isCurrent: boolean; }
 
 export default function DashboardPage() {
@@ -83,7 +83,8 @@ export default function DashboardPage() {
 
   const statCards = [
     {
-      label: 'Total Students', value: stats?.totalStudents ?? '—', sub: 'Active enrollments',
+      label: 'Total Students', value: stats?.totalStudents ?? '—',
+      sub: stats ? `Boys ${stats.boys} · Girls ${stats.girls}` : 'Active enrollments',
       accent: 'stat-accent-violet', iconBg: '#fdf0e0', iconColor: '#ae5525',
       icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,
     },

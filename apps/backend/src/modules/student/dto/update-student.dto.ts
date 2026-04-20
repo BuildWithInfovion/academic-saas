@@ -3,6 +3,7 @@ import {
   IsString,
   IsDateString,
   IsEmail,
+  IsBoolean,
   Matches,
 } from 'class-validator';
 
@@ -100,4 +101,12 @@ export class UpdateStudentDto {
   @IsOptional()
   @IsString()
   tcPreviousInstitution?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  hasDisability?: boolean;
+
+  @IsOptional()
+  @IsString()
+  disabilityDetails?: string;
 }

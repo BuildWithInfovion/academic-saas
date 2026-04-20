@@ -7,10 +7,11 @@ import { apiFetch } from '@/lib/api';
 type AcademicYear = { id: string; name: string; isCurrent: boolean };
 type Unit = { id: string; displayName: string; name: string };
 type Exam = { id: string; name: string; status: string };
+type StudentCount = { totalStudents: number; boys: number; girls: number };
 
 export default function DirectorOverviewPage() {
   const router = useRouter();
-  const [stats, setStats] = useState({ students: 0, staff: 0 });
+  const [stats, setStats] = useState({ students: 0, staff: 0, boys: 0, girls: 0 });
   const [currentYear, setCurrentYear] = useState<AcademicYear | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
   const [activeExams, setActiveExams] = useState<Exam[]>([]);
@@ -29,7 +30,8 @@ export default function DirectorOverviewPage() {
       apiFetch('/users'),
     ])
       .then(([count, years, leafUnits, users]) => {
-        setStats({ students: count.totalStudents ?? 0, staff: users.length ?? 0 });
+        const sc = count as StudentCount;
+        setStats({ students: sc.totalStudents ?? 0, staff: users.length ?? 0, boys: sc.boys ?? 0, girls: sc.girls ?? 0 });
         const yr: AcademicYear = years.find((y: AcademicYear) => y.isCurrent) ?? years[0] ?? null;
         setCurrentYear(yr);
         setUnits(leafUnits);
@@ -61,10 +63,10 @@ export default function DirectorOverviewPage() {
   }, []);
 
   const statCards = [
-    { label: 'Total Students', value: stats.students, sub: 'Enrolled', color: 'bg-white' },
-    { label: 'Academic Year', value: currentYear?.name ?? '—', sub: 'Current', color: 'bg-white' },
-    { label: 'Classes', value: units.length, sub: 'Active divisions', color: 'bg-white' },
-    { label: 'Staff Accounts', value: stats.staff, sub: 'System users', color: 'bg-white' },
+    { label: 'Total Students', value: stats.students, sub: `Boys ${stats.boys} · Girls ${stats.girls}`, color: 'bg-ds-surface' },
+    { label: 'Academic Year', value: currentYear?.name ?? '—', sub: 'Current', color: 'bg-ds-surface' },
+    { label: 'Classes', value: units.length, sub: 'Active divisions', color: 'bg-ds-surface' },
+    { label: 'Staff Accounts', value: stats.staff, sub: 'System users', color: 'bg-ds-surface' },
   ];
 
   const alertCards = [
@@ -94,17 +96,17 @@ export default function DirectorOverviewPage() {
   return (
     <div className="p-8 max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Institution Overview</h1>
-        <p className="text-sm text-gray-400 mt-1">{todayDate}</p>
+        <h1 className="text-2xl font-bold text-ds-text1">Institution Overview</h1>
+        <p className="text-sm text-ds-text3 mt-1">{todayDate}</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {statCards.map((s) => (
-          <div key={s.label} className={`${s.color} rounded-xl border border-gray-100 shadow-sm p-4`}>
-            <p className="text-2xl font-bold text-gray-800">{s.value}</p>
-            <p className="text-sm font-medium text-gray-600 mt-1">{s.label}</p>
-            <p className="text-xs text-gray-400">{s.sub}</p>
+          <div key={s.label} className={`${s.color} rounded-xl border border-ds-border shadow-sm p-4`}>
+            <p className="text-2xl font-bold text-ds-text1">{s.value}</p>
+            <p className="text-sm font-medium text-ds-text2 mt-1">{s.label}</p>
+            <p className="text-xs text-ds-text3">{s.sub}</p>
           </div>
         ))}
       </div>
@@ -115,19 +117,19 @@ export default function DirectorOverviewPage() {
           <div key={a.label} className={`rounded-xl border p-4 ${a.color}`}>
             <p className={`text-3xl font-bold ${a.textColor}`}>{a.value}</p>
             <p className={`text-sm font-semibold mt-1 ${a.textColor}`}>{a.label}</p>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">{a.desc}</p>
+            <p className="text-xs text-ds-text2 mt-0.5 truncate">{a.desc}</p>
           </div>
         ))}
       </div>
 
       {/* Quick navigation */}
       <div className="mb-8">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Access</h2>
+        <h2 className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Quick Access</h2>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Detailed Reports', desc: 'Attendance, fees & exam breakdown by class', path: '/portal/director/reports', bg: 'bg-black text-white' },
-            { label: 'Staff Directory', desc: 'View all staff accounts and roles', path: '/portal/director/staff', bg: 'bg-gray-800 text-white' },
-            { label: 'Institution Settings', desc: 'Configure academic structure & preferences', path: '/portal/director/settings', bg: 'bg-gray-600 text-white' },
+            { label: 'Detailed Reports', desc: 'Attendance, fees & exam breakdown by class', path: '/portal/director/reports', bg: 'btn-brand' },
+            { label: 'Staff Directory', desc: 'View all staff accounts and roles', path: '/portal/director/staff', bg: 'btn-brand' },
+            { label: 'Institution Settings', desc: 'Configure academic structure & preferences', path: '/portal/director/settings', bg: 'btn-brand' },
           ].map((item) => (
             <button
               key={item.label}
@@ -143,14 +145,14 @@ export default function DirectorOverviewPage() {
 
       {/* Active exams table */}
       {activeExams.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800 text-sm">Active Examinations</h2>
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm">
+          <div className="px-5 py-4 border-b border-ds-border">
+            <h2 className="font-semibold text-ds-text1 text-sm">Active Examinations</h2>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-ds-border">
             {activeExams.map((e) => (
               <div key={e.id} className="px-5 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-800 font-medium">{e.name}</span>
+                <span className="text-sm text-ds-text1 font-medium">{e.name}</span>
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Active</span>
               </div>
             ))}
