@@ -48,6 +48,7 @@ model Institution {
   transferCertificates   TransferCertificate[]
   supportTickets         SupportTicket[]
   calendarEvents         CalendarEvent[]
+  otpRecords             OtpRecord[]
 
   @@map("institutions")
 }
@@ -836,4 +837,27 @@ model CalendarEvent {
   @@index([institutionId])
   @@index([institutionId, startDate])
   @@map("calendar_events")
+}
+
+// ── OTP RECORDS ───────────────────────────────────────────────────────────────
+// Stores time-limited one-time passwords for phone-based authentication.
+// Each record is single-use; expired or exhausted records are left for cleanup.
+
+model OtpRecord {
+  id            String   @id @default(cuid())
+  institutionId String
+  phone         String
+  purpose       String   @default("login")  // login | verify_phone
+  otpHash       String   // SHA-256 hex of the raw 6-digit OTP
+  expiresAt     DateTime
+  isUsed        Boolean  @default(false)
+  attemptCount  Int      @default(0)         // failed verification attempts
+  createdAt     DateTime @default(now())
+
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([phone, institutionId, purpose])   // OTP lookup by phone+institution
+  @@index([expiresAt])                       // cleanup job index
+  @@map("otp_records")
 }

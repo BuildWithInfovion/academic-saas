@@ -17,6 +17,8 @@ import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard';
+import { OtpRateLimitGuard } from '../../common/guards/otp-rate-limit.guard';
+import { ParentLoginRateLimitGuard } from '../../common/guards/parent-login-rate-limit.guard';
 
 const RT_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -149,5 +151,91 @@ export class AuthController {
     @Param('id') id: string,
   ) {
     return this.authService.rejectResetRequest(tenant.institutionId, id);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // OTP-BASED LOGIN  (school management / all staff roles)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * POST /auth/otp/request
+   * Step 1 of OTP login: validate institution + phone, issue a 6-digit OTP.
+   * Always returns a constant response regardless of whether the phone exists.
+   * Rate-limited: 3 requests per 10 minutes per phone+institutionCode.
+   */
+  @Post('otp/request')
+  @UseGuards(OtpRateLimitGuard)
+  async requestOtp(
+    @Body('institutionCode') institutionCode: string,
+    @Body('phone') phone: string,
+  ) {
+    return this.authService.requestOtp(
+      (institutionCode ?? '').trim().toLowerCase(),
+      (phone ?? '').trim(),
+    );
+  }
+
+  /**
+   * POST /auth/otp/verify
+   * Step 2 of OTP login: verify the OTP and issue JWT + refresh-token cookie.
+   * Up to 5 wrong attempts per OTP record — exceeded attempts invalidate the record.
+   */
+  @Post('otp/verify')
+  async verifyOtp(
+    @Body('institutionCode') institutionCode: string,
+    @Body('phone') phone: string,
+    @Body('otp') otp: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verifyOtp(
+      (institutionCode ?? '').trim().toLowerCase(),
+      (phone ?? '').trim(),
+      (otp ?? '').trim(),
+    );
+
+    const roles: string[] = result.user?.roles ?? [];
+    const cookieName = roles.includes('admin') ? 'auth_rt_op' : 'auth_rt';
+    res.cookie(cookieName, result.refreshToken, {
+      ...RT_COOKIE_OPTIONS,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { refreshToken: _rt, ...safe } = result;
+    return safe;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // PARENT LOGIN  (phone + password, no institution code)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * POST /auth/parent/login
+   * Password-based login for parents only.
+   * No institution code is required — the system automatically resolves the
+   * parent's school from their registered phone number.
+   * Rate-limited: 10 attempts per 15 minutes per IP + phone.
+   */
+  @Post('parent/login')
+  @UseGuards(ParentLoginRateLimitGuard)
+  async parentLogin(
+    @Body('phone') phone: string,
+    @Body('password') password: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.parentLogin(
+      (phone ?? '').trim(),
+      password ?? '',
+    );
+
+    // Parents always get the portal cookie (auth_rt), never the operator cookie.
+    res.cookie('auth_rt', result.refreshToken, {
+      ...RT_COOKIE_OPTIONS,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { refreshToken: _rt, ...safe } = result;
+    return safe;
   }
 }

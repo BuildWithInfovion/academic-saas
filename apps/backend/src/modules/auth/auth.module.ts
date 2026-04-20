@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { SmsService } from './sms.service';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
@@ -22,7 +23,7 @@ import { PrismaModule } from '../../prisma/prisma.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule], // ✅ Export JwtModule so AuthGuard works elsewhere
+  providers: [AuthService, SmsService, JwtStrategy],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
