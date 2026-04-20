@@ -384,7 +384,14 @@ export class AuthService {
       data: { institutionId, phone, purpose: 'login', otpHash, expiresAt },
     });
 
-    await this.smsService.sendOtp(phone, otp);
+    // SMS is fire-and-forget — the OTP is already persisted in the DB.
+    // SmsService catches its own errors and falls back to console logging,
+    // so a provider misconfiguration never blocks the login flow.
+    this.smsService.sendOtp(phone, otp).catch((err: unknown) => {
+      this.logger.error(
+        `[requestOtp] SMS dispatch threw unexpectedly: ${String(err)}`,
+      );
+    });
     this.logger.log(
       `[requestOtp] OTP issued — institution=${institutionId} phone=${phone.slice(0, 5)}***`,
     );
