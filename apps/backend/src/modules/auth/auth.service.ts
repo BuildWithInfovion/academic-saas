@@ -396,6 +396,12 @@ export class AuthService {
       `[requestOtp] OTP issued — institution=${institutionId} phone=${phone.slice(0, 5)}***`,
     );
 
+    // In non-production environments, expose the OTP in the response so
+    // developers/QA can test the full login flow without an SMS provider.
+    // This field is never present when NODE_ENV=production.
+    if (process.env.NODE_ENV !== 'production') {
+      return { ...RESPONSE, devOtp: otp };
+    }
     return RESPONSE;
   }
 

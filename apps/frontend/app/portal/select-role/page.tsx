@@ -47,13 +47,13 @@ export default function SelectRolePage() {
     if (!ready) return;
     const currentUser = usePortalAuthStore.getState().user;
     if (!currentUser) { router.replace('/'); return; }
-    const portalRoles = (currentUser.roles ?? []).filter((r) => PORTAL_ROLES.includes(r));
+    const portalRoles = (currentUser.roles ?? []).filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
     if (portalRoles.length <= 1) router.replace(getRoleRoute(currentUser.roles));
   }, [ready, router]);
 
   if (!ready || !user) return null;
 
-  const portalRoles = (user.roles ?? []).filter((r) => PORTAL_ROLES.includes(r));
+  const portalRoles = (user.roles ?? []).filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
 
   return (
     <div

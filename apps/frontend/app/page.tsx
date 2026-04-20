@@ -61,6 +61,7 @@ export default function LoginPage() {
   const [otpDigits,      setOtpDigits]      = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null, null]);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [devOtpBanner,   setDevOtpBanner]   = useState<string | null>(null);
 
   // Parent fields
   const [parentPhone,    setParentPhone]    = useState('');
@@ -114,14 +115,21 @@ export default function LoginPage() {
           phone: staffPhone.trim(),
         }),
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => null);
-        throw new Error(j?.message || 'Failed to send OTP');
-      }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || 'Failed to send OTP');
       setStaffStep(2);
-      setOtpDigits(['', '', '', '', '', '']);
       setResendCooldown(60);
-      setTimeout(() => otpRefs.current[0]?.focus(), 120);
+      // Non-production: backend returns devOtp so testers don't need SMS
+      if (data?.devOtp) {
+        const digits = String(data.devOtp).padStart(6, '0').slice(0, 6).split('');
+        setOtpDigits(digits);
+        setDevOtpBanner(`DEV MODE — OTP auto-filled: ${data.devOtp}`);
+        setTimeout(() => otpRefs.current[5]?.focus(), 120);
+      } else {
+        setOtpDigits(['', '', '', '', '', '']);
+        setDevOtpBanner(null);
+        setTimeout(() => otpRefs.current[0]?.focus(), 120);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP');
     } finally {
@@ -166,7 +174,7 @@ export default function LoginPage() {
       const isDashboardUser = roles.some((r) => DASHBOARD_ROLES.includes(r));
       if (isDashboardUser) { setAuth(authPayload); } else { usePortalAuthStore.getState().setAuth(authPayload); }
       setLoadStep(3);
-      const portalRoles = roles.filter((r) => PORTAL_ROLES.includes(r));
+      const portalRoles = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
       const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
       setSuccessInfo({ institution: data.user.institutionName || institutionCode });
       await new Promise<void>((resolve) => setTimeout(resolve, 5500));
@@ -259,6 +267,7 @@ export default function LoginPage() {
     setStaffStep(1);
     setError(null);
     setOtpDigits(['', '', '', '', '', '']);
+    setDevOtpBanner(null);
   };
 
   const openForgot = () => {
@@ -659,6 +668,16 @@ export default function LoginPage() {
                   {/* Step 2: OTP input */}
                   {staffStep === 2 && (
                     <div style={{ animation:'otpReveal 0.35s ease forwards' }}>
+                      {/* Dev mode banner */}
+                      {devOtpBanner && (
+                        <div style={{
+                          marginBottom:12, padding:'8px 12px', borderRadius:8, fontSize:12,
+                          background:'rgba(234,179,8,0.12)', border:'1px solid rgba(234,179,8,0.35)',
+                          color:'#fbbf24', textAlign:'center', letterSpacing:'0.02em',
+                        }}>
+                          {devOtpBanner}
+                        </div>
+                      )}
                       {/* OTP cells */}
                       <div style={{ display:'flex', gap:8, justifyContent:'center', marginBottom:6 }}
                         onPaste={handleOtpPaste}>
