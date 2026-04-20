@@ -387,8 +387,8 @@ export default function FeesPage() {
 
       {/* ── Collect Fee ── */}
       {tab === 'collect' && (
-        <div className="grid grid-cols-5 gap-5">
-          <div className="col-span-3 space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+          <div className="lg:col-span-3 space-y-5">
             <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
               <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Student</p>
               <div className="relative">
@@ -456,7 +456,7 @@ export default function FeesPage() {
             </div>
           </div>
 
-          <div className="col-span-2">
+          <div className="lg:col-span-2">
             <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 sticky top-6">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider">
@@ -529,7 +529,7 @@ export default function FeesPage() {
             {structUnit && (
               <>
                 <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Add Fee Entry</p>
-                <div className="grid grid-cols-4 gap-3 items-end">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
                   <div>
                     <label className={lbl}>Fee Head *</label>
                     <select className={inp} value={structForm.feeHeadId}
@@ -751,7 +751,7 @@ export default function FeesPage() {
           ) : (
             <>
               {/* Summary strip */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-ds-error-bg border border-ds-error-border rounded-xl p-4">
                   <p className="text-2xl font-bold text-ds-error-text">{alertData.summary.overdueCount}</p>
                   <p className="text-xs text-ds-error-text font-medium mt-1">Overdue Installments</p>

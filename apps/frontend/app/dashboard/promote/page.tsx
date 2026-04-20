@@ -185,7 +185,7 @@ export default function YearEndPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
 
       {/* Header */}
       <div className="mb-6">

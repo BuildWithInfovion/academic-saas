@@ -148,7 +148,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-4 sm:p-7 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
 
       {/* ── Header ── */}
       <div className="page-header mb-8 fade-up-1">

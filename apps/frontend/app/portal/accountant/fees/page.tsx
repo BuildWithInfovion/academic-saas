@@ -194,7 +194,7 @@ export default function AccountantFeesPage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-1)' }}>Fee Collection</h1>
       <p className="text-sm mb-6" style={{ color: 'var(--text-3)' }}>Search students to view dues and record payments</p>
 

@@ -131,7 +131,7 @@ export default function TeacherPromotePage() {
 
   if (myClasses.length === 0) {
     return (
-      <div className="p-8 max-w-3xl">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-ds-text1 mb-1">Promote Students</h1>
         <div className="mt-8 bg-ds-warning-bg border border-ds-warning-border rounded-xl p-6 text-center">
           <p className="text-sm font-medium text-ds-warning-text mb-1">No classes assigned</p>
@@ -144,7 +144,7 @@ export default function TeacherPromotePage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-ds-text1 mb-1">Promote Students</h1>
       <p className="text-sm text-ds-text3 mb-8">
         Bulk move students to the next class or section at year-end. You can only act on classes you are class teacher of.

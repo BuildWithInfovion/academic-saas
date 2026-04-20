@@ -71,7 +71,7 @@ export default function PrincipalExamsPage() {
   const inp = 'border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand';
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold text-ds-text1 mb-1">Exam Results</h1>
       <p className="text-sm text-ds-text3 mb-6">Class-wise exam results and rankings</p>
 
@@ -129,7 +129,7 @@ export default function PrincipalExamsPage() {
         <>
           {/* Summary cards */}
           {summary.length > 0 && (
-            <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4">
                 <p className="text-2xl font-bold text-ds-text1">{summary.length}</p>
                 <p className="text-sm text-ds-text2 mt-1">Total Students</p>

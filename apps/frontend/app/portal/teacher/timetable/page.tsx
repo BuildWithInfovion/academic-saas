@@ -59,12 +59,12 @@ export default function TeacherTimetablePage() {
   const periods = Array.from({ length: maxPeriod }, (_, i) => i + 1);
 
   if (loading) {
-    return <div className="p-8 text-sm text-ds-text3">Loading timetable…</div>;
+    return <div className="p-4 sm:p-6 text-sm text-ds-text3">Loading timetable…</div>;
   }
 
   if (slots.length === 0) {
     return (
-      <div className="p-8 max-w-2xl">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-ds-text1 mb-1">My Timetable</h1>
         <div className="mt-8 bg-ds-warning-bg border border-ds-warning-border rounded-xl p-8 text-center">
           <p className="text-sm font-medium text-ds-warning-text">No timetable assigned yet</p>
@@ -77,7 +77,7 @@ export default function TeacherTimetablePage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-ds-text1 mb-1">My Timetable</h1>

@@ -80,7 +80,7 @@ export default function ReceptionistInquiriesPage() {
   const stats = STATUS_OPTIONS.map((s) => ({ label: s, count: inquiries.filter((i) => i.status === s).length }));
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-1">
         <div>
           <h1 className="text-2xl font-bold text-ds-text1">Admission Inquiries</h1>
@@ -93,7 +93,7 @@ export default function ReceptionistInquiriesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-3 my-6">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 my-6">
         {stats.map((s) => (
           <div key={s.label}
             onClick={() => setFilterStatus(filterStatus === s.label ? 'all' : s.label)}

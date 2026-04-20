@@ -44,7 +44,7 @@ export default function ParentAttendancePage() {
 
   if (notLinked) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-5 text-sm text-ds-warning-text">
           Your child's record has not been linked yet. Please contact the school admin.
         </div>
@@ -65,7 +65,7 @@ export default function ParentAttendancePage() {
   const child = children.find((c) => c.id === selectedChildId);
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-ds-text1 mb-1">Child's Attendance</h1>
       <p className="text-sm text-ds-text3 mb-6">Monthly attendance record</p>
 
@@ -117,7 +117,7 @@ export default function ParentAttendancePage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="bg-ds-success-bg border border-ds-success-border rounded-xl p-4 text-center">
               <p className="text-2xl font-bold text-ds-success-text">{summary.present}</p>
               <p className="text-xs text-ds-success-text mt-1">Present</p>

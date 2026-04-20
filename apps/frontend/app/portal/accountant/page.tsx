@@ -40,7 +40,7 @@ export default function AccountantOverviewPage() {
   ];
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-3)' }}>{todayDate}</p>
       <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-1)' }}>Accountant Overview</h1>
 

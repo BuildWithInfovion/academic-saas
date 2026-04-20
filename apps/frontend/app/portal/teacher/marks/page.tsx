@@ -111,7 +111,7 @@ export default function TeacherMarksPage() {
 
   if (noAssignments) {
     return (
-      <div className="p-8 max-w-3xl">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-ds-text1 mb-6">Mark Entry</h1>
         <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-6">
           <p className="text-sm font-medium text-ds-warning-text mb-1">No active exams assigned to you</p>
@@ -124,7 +124,7 @@ export default function TeacherMarksPage() {
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h1 className="text-xl sm:text-2xl font-bold text-ds-text1 mb-1">Mark Entry</h1>
       <p className="text-sm text-ds-text2 mb-6">You can only enter marks for subjects assigned to you</p>
 

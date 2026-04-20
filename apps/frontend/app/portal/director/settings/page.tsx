@@ -28,7 +28,7 @@ export default function DirectorSchoolInfoPage() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-ds-text1 mb-1">School Information</h1>
       <p className="text-sm text-ds-text3 mb-6">Read-only overview of institution setup and structure</p>
 

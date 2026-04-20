@@ -99,7 +99,7 @@ export default function OperatorSettingsPage() {
   const inp = 'w-full p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand';
 
   return (
-    <div className="p-8 max-w-2xl space-y-5">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-ds-text1 mb-1">Settings</h1>
         <p className="text-sm text-ds-text3">Manage your account and pending requests</p>

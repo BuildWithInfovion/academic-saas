@@ -123,7 +123,7 @@ export default function StaffSelfAttendancePage() {
   const presentDays = records.filter((r) => ['present', 'late', 'half_day'].includes(r.status)).length;
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-1)' }}>My Attendance</h1>
       <p className="text-sm mb-6" style={{ color: 'var(--text-3)' }}>
         Mark your daily attendance and manage leave requests

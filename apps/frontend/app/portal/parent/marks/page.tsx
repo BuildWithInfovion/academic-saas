@@ -59,7 +59,7 @@ export default function ParentMarksPage() {
 
   if (notLinked) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-5 text-sm text-ds-warning-text">
           Your child's record has not been linked yet. Please contact the school admin.
         </div>
@@ -72,7 +72,7 @@ export default function ParentMarksPage() {
   };
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-ds-text1 mb-1">Child's Marks & Results</h1>
       <p className="text-sm text-ds-text3 mb-6">Exam scorecards</p>
 

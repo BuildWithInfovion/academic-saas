@@ -121,7 +121,7 @@ export default function TimetablePage() {
   const inp = 'border border-ds-border rounded-lg p-1.5 text-xs bg-ds-surface focus:outline-none focus:ring-1 focus:ring-ds-brand w-full';
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-ds-text1 mb-1">Timetable</h1>
       <p className="text-sm text-ds-text3 mb-6">Configure weekly class schedules and assign subject teachers per period</p>
 

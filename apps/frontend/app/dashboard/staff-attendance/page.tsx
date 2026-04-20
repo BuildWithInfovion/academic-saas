@@ -105,7 +105,7 @@ export default function StaffAttendanceDashboardPage() {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   return (
-    <div className="p-6 max-w-6xl">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-1)' }}>Staff Attendance</h1>
       <p className="text-sm mb-6" style={{ color: 'var(--text-3)' }}>
         View daily records, monthly summaries, and approve leave requests

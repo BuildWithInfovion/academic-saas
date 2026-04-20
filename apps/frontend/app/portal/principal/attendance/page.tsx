@@ -42,7 +42,7 @@ export default function PrincipalAttendancePage() {
   const inp = 'border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand';
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-ds-text1 mb-1">Attendance Reports</h1>
       <p className="text-sm text-ds-text3 mb-6">Class-wise attendance monitoring and defaulter tracking</p>
 

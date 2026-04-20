@@ -103,7 +103,7 @@ export default function TeacherAttendancePage() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="p-4 sm:p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h1 className="text-xl sm:text-2xl font-bold text-ds-text1 mb-1">Mark Attendance</h1>
       <p className="text-sm text-ds-text2 mb-6">Daily class attendance — tap a status badge to cycle P → A → L → Lv</p>
 

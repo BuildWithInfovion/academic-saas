@@ -94,14 +94,14 @@ export default function DirectorOverviewPage() {
   ];
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ds-text1">Institution Overview</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-ds-text1">Institution Overview</h1>
         <p className="text-sm text-ds-text3 mt-1">{todayDate}</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {statCards.map((s) => (
           <div key={s.label} className={`${s.color} rounded-xl border border-ds-border shadow-sm p-4`}>
             <p className="text-2xl font-bold text-ds-text1">{s.value}</p>
@@ -112,7 +112,7 @@ export default function DirectorOverviewPage() {
       </div>
 
       {/* Alert panels */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {alertCards.map((a) => (
           <div key={a.label} className={`rounded-xl border p-4 ${a.color}`}>
             <p className={`text-3xl font-bold ${a.textColor}`}>{a.value}</p>
@@ -125,7 +125,7 @@ export default function DirectorOverviewPage() {
       {/* Quick navigation */}
       <div className="mb-8">
         <h2 className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Quick Access</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: 'Detailed Reports', desc: 'Attendance, fees & exam breakdown by class', path: '/portal/director/reports', gradient: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)' },
             { label: 'Staff Directory', desc: 'View all staff accounts and roles', path: '/portal/director/staff', gradient: 'linear-gradient(135deg, #6b432f 0%, #3a1f0c 100%)' },
