@@ -124,8 +124,8 @@ export default function StaffSelfAttendancePage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-1)' }}>My Attendance</h1>
-      <p className="text-sm mb-6" style={{ color: 'var(--text-3)' }}>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">My Attendance</h1>
+      <p className="text-sm text-ds-text3 mb-6">
         Mark your daily attendance and manage leave requests
       </p>
 

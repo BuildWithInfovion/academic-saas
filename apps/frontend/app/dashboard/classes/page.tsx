@@ -192,7 +192,7 @@ export default function ClassesPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Classes</h1>
+          <h1 className="text-2xl font-bold text-ds-text1">Classes</h1>
           <p className="text-sm text-ds-text3 mt-0.5">Manage classes, sections and assign class teachers</p>
         </div>
         <button

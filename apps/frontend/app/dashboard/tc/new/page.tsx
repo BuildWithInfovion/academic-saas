@@ -228,8 +228,8 @@ export default function NewTcPage() {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-ds-text1">Request Transfer Certificate</h1>
-        <p className="text-sm text-ds-text2 mt-0.5">
+        <h1 className="text-2xl font-bold text-ds-text1">Request Transfer Certificate</h1>
+        <p className="text-sm text-ds-text3 mt-0.5">
           Fill in all TC fields for <strong>{student.firstName} {student.lastName}</strong> — an approver must review before the TC can be issued.
         </p>
       </div>

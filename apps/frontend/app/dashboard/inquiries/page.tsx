@@ -133,7 +133,7 @@ export default function InquiriesPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Inquiries</h1>
+        <h1 className="text-2xl font-bold text-ds-text1">Inquiries</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="btn-brand px-4 py-2 rounded-lg"

@@ -224,7 +224,7 @@ export default function StudentProfilePage() {
               {student.firstName[0]}{student.lastName[0]}
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-ds-text1">{student.firstName} {student.lastName}</h1>
+              <h1 className="text-2xl font-bold text-ds-text1">{student.firstName} {student.lastName}</h1>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <span className="text-sm text-ds-text2 font-mono">{student.admissionNo}</span>
                 {student.rollNo && <span className="text-sm text-ds-text2">Roll: {student.rollNo}</span>}

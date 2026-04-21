@@ -41,8 +41,8 @@ export default function AccountantOverviewPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-3)' }}>{todayDate}</p>
-      <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-1)' }}>Accountant Overview</h1>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Accountant Overview</h1>
+      <p className="text-sm text-ds-text3 mb-6">{todayDate}</p>
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -53,15 +53,15 @@ export default function AccountantOverviewPage() {
             className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity"
             style={{ background: a.gradient, color: '#fcfbf7', border: '1px solid rgba(140,57,25,0.25)' }}
           >
-            <p className="font-semibold">{a.label}</p>
-            <p className="text-sm mt-1 opacity-70">{a.desc}</p>
+            <p className="text-sm font-semibold">{a.label}</p>
+            <p className="text-xs mt-1 opacity-75">{a.desc}</p>
           </button>
         ))}
       </div>
 
       {/* Stats */}
       {loading ? (
-        <p className="text-sm" style={{ color: 'var(--text-3)' }}>Loading stats…</p>
+        <p className="text-sm text-ds-text3">Loading stats…</p>
       ) : stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
@@ -72,7 +72,7 @@ export default function AccountantOverviewPage() {
           ].map((s) => (
             <div key={s.label} className="rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
               <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>{s.label}</p>
+              <p className="text-xs mt-1 text-ds-text3">{s.label}</p>
             </div>
           ))}
         </div>

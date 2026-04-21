@@ -100,7 +100,7 @@ export default function AttendancePage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-2">Attendance</h1>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Attendance</h1>
       <p className="text-sm text-ds-text3 mb-6">View and monitor attendance records. Attendance is marked by class teachers.</p>
 
       {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}

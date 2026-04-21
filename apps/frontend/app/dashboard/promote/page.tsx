@@ -189,8 +189,8 @@ export default function YearEndPage() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text-1)' }}>Year-End Transition</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
+        <h1 className="text-2xl font-bold text-ds-text1">Year-End Transition</h1>
+        <p className="text-sm mt-0.5 text-ds-text3">
           Bulk-promote all students to the next academic year in one guided workflow.
         </p>
       </div>

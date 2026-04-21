@@ -400,8 +400,8 @@ export default function SalaryPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-ds-text1">Staff Salary Management</h1>
-          <p className="text-xs text-ds-text3 mt-0.5">Configure structures, assign profiles, and manage monthly payroll</p>
+          <h1 className="text-2xl font-bold text-ds-text1">Staff Salary Management</h1>
+          <p className="text-sm text-ds-text3 mt-0.5">Configure structures, assign profiles, and manage monthly payroll</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowGenerateModal(true)}

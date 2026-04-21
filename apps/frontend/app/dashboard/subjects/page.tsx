@@ -195,7 +195,7 @@ export default function SubjectsPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-1">Subjects</h1>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Subjects</h1>
       <p className="text-sm text-ds-text3 mb-6">Manage subject catalogue and assign subjects + teachers to classes</p>
 
       {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
@@ -235,7 +235,7 @@ export default function SubjectsPage() {
                 <div className="space-y-4">
                   {SUBJECT_CATALOGUE.map((group) => (
                     <div key={group.group}>
-                      <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-3)' }}>{group.group}</p>
+                      <p className="text-xs font-semibold mb-2 text-ds-text3">{group.group}</p>
                       <div className="flex flex-wrap gap-2">
                         {group.subjects.map((s) => {
                           const ex = subjects.find((sub) => sub.name.toLowerCase() === s.name.toLowerCase());
@@ -341,7 +341,7 @@ export default function SubjectsPage() {
               <div className="space-y-3">
                 {SUBJECT_CATALOGUE.map((group) => (
                   <div key={group.group}>
-                    <p className="text-xs font-semibold mb-1.5" style={{ color: 'var(--text-3)' }}>{group.group}</p>
+                    <p className="text-xs font-semibold mb-1.5 text-ds-text3">{group.group}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {group.subjects.map((s) => {
                         const already = subjects.some((sub) => sub.name.toLowerCase() === s.name.toLowerCase());

@@ -114,10 +114,10 @@ export default function TeacherDashboard() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-3)' }}>{todayDate}</p>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
+        <h1 className="text-2xl font-bold text-ds-text1 mb-1">
           {isClassTeacher ? 'My Dashboard' : 'Teacher Dashboard'}
         </h1>
+        <p className="text-sm text-ds-text3">{todayDate}</p>
       </div>
 
       {/* Class Teacher banner */}
@@ -138,7 +138,7 @@ export default function TeacherDashboard() {
               </span>
             ))}
           </div>
-          <p className="text-xs mt-2" style={{ color: 'var(--text-3)' }}>
+          <p className="text-xs mt-2 text-ds-text3">
             You are accountable class teacher for the above class(es) — you can promote students and view full scorecards.
           </p>
         </div>
@@ -153,18 +153,18 @@ export default function TeacherDashboard() {
             className="rounded-xl p-5 text-left hover:opacity-90 transition-opacity"
             style={{ background: a.gradient, color: '#fcfbf7', border: '1px solid rgba(140,57,25,0.25)' }}
           >
-            <p className="font-semibold">{a.label}</p>
-            <p className="text-sm mt-1 opacity-70">{a.desc}</p>
+            <p className="text-sm font-semibold">{a.label}</p>
+            <p className="text-xs mt-1 opacity-75">{a.desc}</p>
           </button>
         ))}
       </div>
 
       {loading ? (
-        <p className="text-sm" style={{ color: 'var(--text-3)' }}>Loading your classes…</p>
+        <p className="text-sm text-ds-text3">Loading your classes…</p>
       ) : !hasAnyClass ? (
         <div className="rounded-xl p-8 text-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-          <p className="font-medium text-sm" style={{ color: 'var(--text-2)' }}>No classes assigned yet</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
+          <p className="font-medium text-sm text-ds-text2">No classes assigned yet</p>
+          <p className="text-xs mt-1 text-ds-text3">
             Contact your school operator to be assigned as class teacher or subject teacher.
           </p>
         </div>
@@ -173,7 +173,7 @@ export default function TeacherDashboard() {
           {/* My owned classes */}
           {isClassTeacher && (
             <div className="mb-6">
-              <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-3)' }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider mb-3 text-ds-text3">
                 My Classes — Class Teacher ({myClasses.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -185,14 +185,14 @@ export default function TeacherDashboard() {
                       className="rounded-xl p-4"
                       style={{ background: 'rgba(174,85,37,0.06)', border: '1px solid rgba(174,85,37,0.18)' }}
                     >
-                      <p className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{unitLabel(u)}</p>
-                      <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+                      <p className="font-semibold text-sm text-ds-text1">{unitLabel(u)}</p>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-ds-brand">
                         Class Teacher
                       </span>
                       {cnt && (
                         <div className="flex gap-3 mt-2">
-                          <span className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>
-                            Total: <strong style={{ color: 'var(--text-1)' }}>{cnt.total}</strong>
+                          <span className="text-xs font-medium text-ds-text2">
+                            Total: <strong className="text-ds-text1">{cnt.total}</strong>
                           </span>
                           <span className="text-xs font-medium text-ds-brand">
                             Boys: <strong>{cnt.boys}</strong>
@@ -219,7 +219,7 @@ export default function TeacherDashboard() {
           {/* Subject-only teaching classes */}
           {subjectOnlyUnits.length > 0 && (
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-3)' }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider mb-3 text-ds-text3">
                 Subject Teaching ({subjectOnlyUnits.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
