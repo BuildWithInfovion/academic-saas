@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Infovion Academic SaaS — System Architecture &amp; Product Reference</title>
+<style>
+:root{
+  --bg:#090d18;--surface:#0f1623;--surface2:#161f30;--surface3:#1c2840;
+  --border:rgba(96,165,250,0.09);--border2:rgba(96,165,250,0.18);--border3:rgba(96,165,250,0.30);
+  --accent:#3b82f6;--accent2:#60a5fa;--accent3:#93c5fd;
+  --green:#34d399;--green2:#6ee7b7;--amber:#fbbf24;--red:#f87171;
+  --purple:#a78bfa;--cyan:#22d3ee;--pink:#f472b6;--orange:#fb923c;
+  --text1:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--text4:#475569;
+  --code-bg:#060a12;--radius:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:var(--bg);color:var(--text1);font-size:14px;line-height:1.75;}
+
+/* ── LAYOUT ── */
+.layout{display:flex;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+nav.sidebar{
+  width:260px;flex-shrink:0;position:sticky;top:0;height:100vh;
+  overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);
+  padding:0 0 48px;
+}
+nav.sidebar::-webkit-scrollbar{width:2px;}
+nav.sidebar::-webkit-scrollbar-thumb{background:rgba(96,165,250,.15);border-radius:2px;}
+.nav-brand{padding:20px 18px 16px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+.nav-brand .logo{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);}
+.nav-brand .sub{font-size:10px;color:var(--text4);margin-top:2px;letter-spacing:.08em;}
+.nav-group{padding:10px 18px 3px;}
+.nav-group span{font-size:9px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--text4);}
+nav.sidebar a{
+  display:block;padding:5px 18px;font-size:12px;color:var(--text3);
+  text-decoration:none;border-left:2px solid transparent;transition:all .15s;
+}
+nav.sidebar a:hover{color:var(--accent2);border-left-color:var(--accent);background:rgba(59,130,246,.05);}
+
+/* ── MAIN ── */
+main{flex:1;max-width:1020px;padding:48px 56px 120px;overflow-x:hidden;}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:9px 56px;font-size:11px;color:var(--text4);
+  display:flex;justify-content:space-between;align-items:center;letter-spacing:.06em;
+}
+
+/* ── TYPOGRAPHY ── */
+h1{font-size:27px;font-weight:800;color:var(--text1);letter-spacing:-.02em;line-height:1.2;
+   border-bottom:1px solid var(--border2);padding-bottom:18px;margin-bottom:6px;}
+h2{font-size:18px;font-weight:700;color:var(--text1);margin-top:56px;margin-bottom:14px;
+   padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+h2 .sec-num{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--accent);
+   background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);
+   padding:2px 8px;border-radius:4px;flex-shrink:0;}
+h3{font-size:14px;font-weight:700;color:var(--accent2);margin-top:30px;margin-bottom:10px;}
+h4{font-size:11.5px;font-weight:700;color:var(--text1);margin-top:18px;margin-bottom:7px;
+   text-transform:uppercase;letter-spacing:.1em;}
+p{color:var(--text2);margin-bottom:10px;}
+p strong,li strong{color:var(--text1);font-weight:600;}
+.doc-meta{font-size:11px;color:var(--text4);margin-bottom:32px;letter-spacing:.04em;}
+ul,ol{padding-left:20px;color:var(--text2);margin-bottom:12px;}
+li{margin-bottom:4px;}
+a{color:var(--accent2);text-decoration:none;}
+
+/* ── CALLOUTS ── */
+.note{border-left:3px solid var(--accent);background:rgba(59,130,246,.07);border-radius:0 var(--radius) var(--radius) 0;padding:11px 15px;margin:12px 0 18px;font-size:13px;color:var(--text2);}
+.note strong{color:var(--accent2);}
+.note.warn{border-left-color:var(--amber);background:rgba(251,191,36,.07);}
+.note.warn strong{color:var(--amber);}
+.note.danger{border-left-color:var(--red);background:rgba(248,113,113,.07);}
+.note.danger strong{color:var(--red);}
+.note.success{border-left-color:var(--green);background:rgba(52,211,153,.07);}
+.note.success strong{color:var(--green);}
+
+/* ── TABLES ── */
+.tw{overflow-x:auto;margin:12px 0 22px;border-radius:var(--radius);border:1px solid var(--border2);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--surface2);}
+thead th{text-align:left;padding:9px 13px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.12em;color:var(--text3);border-bottom:1px solid var(--border2);}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(59,130,246,.035);}
+tbody td{padding:9px 13px;color:var(--text2);vertical-align:top;}
+tbody td:first-child{color:var(--text1);font-weight:500;}
+
+/* ── CODE ── */
+code{font-family:'Fira Code','Cascadia Code','JetBrains Mono',monospace;font-size:12px;
+  background:var(--code-bg);border:1px solid var(--border2);color:var(--cyan);padding:1px 5px;border-radius:4px;}
+pre{background:var(--code-bg);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:15px 17px;overflow-x:auto;margin:12px 0 18px;font-family:'Fira Code','Cascadia Code',monospace;
+  font-size:12px;line-height:1.65;color:#c9d1d9;white-space:pre;}
+
+/* ── BADGES ── */
+.b{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;padding:2px 7px;border-radius:4px;}
+.b-blue{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.28);color:#60a5fa;}
+.b-green{background:rgba(52,211,153,.10);border:1px solid rgba(52,211,153,.25);color:#34d399;}
+.b-amber{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.25);color:#fbbf24;}
+.b-red{background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.25);color:#f87171;}
+.b-purple{background:rgba(167,139,250,.10);border:1px solid rgba(167,139,250,.25);color:#a78bfa;}
+.b-cyan{background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.25);color:#22d3ee;}
+.b-orange{background:rgba(251,146,60,.10);border:1px solid rgba(251,146,60,.25);color:#fb923c;}
+
+/* ── GRID ── */
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:12px 0 20px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 20px;}
+.card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:15px 16px;transition:border-color .2s;}
+.card:hover{border-color:var(--border3);}
+.card .ct{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin-bottom:5px;}
+.card p{font-size:12.5px;margin:0;}
+.card.danger-card{border-color:rgba(248,113,113,.25);background:rgba(248,113,113,.04);}
+.card.success-card{border-color:rgba(52,211,153,.25);background:rgba(52,211,153,.04);}
+.card.warn-card{border-color:rgba(251,191,36,.25);background:rgba(251,191,36,.04);}
+
+/* ── FILE TREE ── */
+.ftree{background:var(--code-bg);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:16px 18px;margin:12px 0 20px;font-size:12.5px;line-height:1;overflow-x:auto;}
+.ftree ul{list-style:none;padding:0;margin:0;}
+.ftree li{padding:0;margin:0;line-height:1;}
+.ftree .row{display:flex;align-items:baseline;gap:0;padding:3.5px 0;white-space:nowrap;}
+.ftree .indent{flex-shrink:0;color:#2d3748;font-family:'Fira Code',monospace;font-size:12px;}
+.ftree .icon{flex-shrink:0;width:18px;font-size:11px;color:#4a5568;}
+.ftree .name{font-family:'Fira Code',monospace;font-size:12px;flex-shrink:0;}
+.ftree .name.dir{color:#60a5fa;font-weight:700;}
+.ftree .name.file{color:#c9d1d9;}
+.ftree .name.imp{color:#fbbf24;}
+.ftree .name.key{color:#a78bfa;}
+.ftree .name.cfg{color:#34d399;}
+.ftree .sep{color:#2d3748;font-family:'Fira Code',monospace;font-size:12px;margin:0 8px;flex-shrink:0;}
+.ftree .desc{color:#4a5568;font-size:11.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+
+/* ── FLOW ── */
+.flow{background:var(--code-bg);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:16px 20px;margin:12px 0 20px;font-family:'Fira Code',monospace;font-size:12px;
+  line-height:1.8;overflow-x:auto;white-space:pre;color:#8b949e;}
+.flow .hi{color:#79c0ff;}.flow .ok{color:#56d364;}.flow .warn{color:#e3b341;}
+.flow .dim{color:#2d3748;}.flow .em{color:#f472b6;}
+
+/* ── SCALE TIERS ── */
+.tier{border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;}
+.tier-header{padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.tier-num{font-size:11px;font-weight:800;letter-spacing:.1em;padding:3px 10px;border-radius:4px;}
+.tier-body{padding:14px 16px;}
+.tier-body p{font-size:13px;margin-bottom:8px;}
+.tier-body ul{font-size:13px;}
+
+/* ── FEATURE LIST ── */
+.feat-group{margin-bottom:28px;}
+.feat-group h4{color:var(--purple);border-bottom:1px solid rgba(167,139,250,.15);padding-bottom:6px;margin-bottom:10px;}
+.feat-item{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);}
+.feat-item:last-child{border-bottom:none;}
+.feat-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:7px;}
+.feat-name{font-size:13px;font-weight:600;color:var(--text1);min-width:210px;flex-shrink:0;}
+.feat-desc{font-size:12.5px;color:var(--text2);}
+
+/* ── SEC ITEMS ── */
+.sec-item{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+.sec-item .threat{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:4px;}
+.sec-item .mitigation{font-size:13px;color:var(--text2);}
+.sec-item .mitigation strong{color:var(--text1);}
+.sec-item code{font-size:11.5px;}
+
+hr{border:none;border-top:1px solid var(--border);margin:36px 0;}
+[id]::before{content:'';display:block;height:64px;margin-top:-64px;visibility:hidden;}
+@media(max-width:900px){nav.sidebar{display:none;}main{padding:28px 20px 80px;}.topbar{padding:9px 20px;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span>INFOVION &mdash; ACADEMIC SAAS PLATFORM &mdash; INTERNAL REFERENCE</span>
+  <span>CONFIDENTIAL &bull; APRIL 2026</span>
+</div>
+
+<div class="layout">
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+  <div class="nav-brand">
+    <div class="logo">Infovion</div>
+    <div class="sub">System Architecture v2.0 &bull; 2026</div>
+  </div>
+
+  <div class="nav-group"><span>Overview</span></div>
+  <a href="#overview">Product Overview</a>
+  <a href="#objectives">Objectives</a>
+  <a href="#tech-stack">Technology Stack</a>
+
+  <div class="nav-group"><span>Features</span></div>
+  <a href="#features-operator">Operator Features</a>
+  <a href="#features-portal">Portal Features</a>
+  <a href="#features-platform">Platform Features</a>
+
+  <div class="nav-group"><span>Architecture</span></div>
+  <a href="#architecture">System Architecture</a>
+  <a href="#url-namespace">URL Namespace</a>
+  <a href="#request-lifecycle">Request Lifecycle</a>
+  <a href="#deployment">Deployment &amp; Infra</a>
+  <a href="#directory">Directory Structure</a>
+
+  <div class="nav-group"><span>Authentication</span></div>
+  <a href="#auth-design">Auth Design</a>
+  <a href="#auth-contexts">Three Auth Contexts</a>
+  <a href="#token-flow">Token Flow</a>
+  <a href="#totp">TOTP 2FA</a>
+  <a href="#rbac">Role-Based Access</a>
+
+  <div class="nav-group"><span>Database</span></div>
+  <a href="#database">Schema Overview</a>
+  <a href="#multi-tenancy">Multi-Tenancy</a>
+  <a href="#models">Core Models</a>
+  <a href="#indexes">Indexes &amp; Performance</a>
+
+  <div class="nav-group"><span>Backend</span></div>
+  <a href="#backend-modules">Feature Modules</a>
+  <a href="#common-infra">Common Infrastructure</a>
+  <a href="#api-reference">API Reference</a>
+  <a href="#platform-layer">Platform API</a>
+
+  <div class="nav-group"><span>Frontend</span></div>
+  <a href="#frontend-arch">Frontend Architecture</a>
+  <a href="#portal-system">Portal System</a>
+  <a href="#state-mgmt">State Management</a>
+  <a href="#edge-middleware">Edge Middleware</a>
+
+  <div class="nav-group"><span>Modules</span></div>
+  <a href="#mod-students">Students</a>
+  <a href="#mod-academic">Academic Structure</a>
+  <a href="#mod-attendance">Attendance</a>
+  <a href="#mod-fees">Fees</a>
+  <a href="#mod-exams">Examinations</a>
+  <a href="#mod-staff">Staff</a>
+  <a href="#mod-timetable">Timetable</a>
+  <a href="#mod-announce">Announcements</a>
+  <a href="#mod-calendar">Calendar</a>
+  <a href="#mod-tc">Transfer Certificates</a>
+  <a href="#mod-support">Support Tickets</a>
+
+  <div class="nav-group"><span>Workflows</span></div>
+  <a href="#wf-onboarding">Client Onboarding</a>
+  <a href="#wf-daily">Daily Operations</a>
+  <a href="#wf-parent">Parent Journey</a>
+
+  <div class="nav-group"><span>Security</span></div>
+  <a href="#security-arch">Security Architecture</a>
+  <a href="#security-impl">Implementation Detail</a>
+  <a href="#cookie-config">Cookie Configuration</a>
+
+  <div class="nav-group"><span>Scalability</span></div>
+  <a href="#scale-current">Current Capacity</a>
+  <a href="#scale-tiers">Scale Tiers</a>
+  <a href="#scale-bottlenecks">Bottlenecks</a>
+  <a href="#scale-roadmap">Migration Roadmap</a>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main>
+
+<!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
+<h1>Academic SaaS Platform<br>
+<span style="font-size:15px;font-weight:400;color:var(--text3);">System Architecture &amp; Complete Product Reference</span></h1>
+<p class="doc-meta">Infovion Internal Documentation &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; April 2026 &nbsp;·&nbsp; v2.0</p>
+
+<div class="note success">
+  <strong>Purpose:</strong> This is the authoritative internal reference for the Infovion Academic SaaS platform. It documents every layer of the product — features, architecture, data models, security, and scaling strategy — for technical leadership, product teams, and engineering onboarding.
+</div>
+
+<!-- ═══════════════════════════════ 1. OVERVIEW ═══════════════════════════════ -->
+<h2 id="overview"><span class="sec-num">01</span> Product Overview</h2>
+
+<p>Infovion is a <strong>multi-tenant school management SaaS</strong> platform. Each subscribing school (institution) receives a fully isolated data environment within a shared infrastructure. The product serves three distinct user populations over separate URL paths with independent authentication contexts:</p>
+
+<div class="grid3">
+  <div class="card success-card">
+    <div class="ct">Institution Operators</div>
+    <p>School admins who manage all institutional data: students, staff, fees, academics, timetables, and settings via <code>/dashboard</code>.</p>
+  </div>
+  <div class="card">
+    <div class="ct">Portal Users</div>
+    <p>Role-specific stakeholders — teachers, parents, principals, accountants — consuming structured data through their own dedicated portal at <code>/portal/[role]</code>.</p>
+  </div>
+  <div class="card warn-card">
+    <div class="ct">Platform Admins (Infovion)</div>
+    <p>Infovion's own team who onboard clients, manage subscriptions, and handle support tickets via a private console at <code>/platform</code>.</p>
+  </div>
+</div>
+
+<h2 id="objectives"><span class="sec-num">02</span> Product Objectives</h2>
+
+<div class="grid2">
+  <div class="card"><div class="ct">Operational Efficiency</div><p>Digitise all school operations — admissions, attendance, fees, exams, timetables — eliminating paper-based workflows entirely.</p></div>
+  <div class="card"><div class="ct">Parent Transparency</div><p>Real-time visibility into attendance, marks, fees, and school events through a mobile-friendly parent portal accessible from any browser.</p></div>
+  <div class="card"><div class="ct">Multi-Tenant Isolation</div><p>Hundreds of schools on a single deployment with zero cross-tenant data exposure, enforced at both the application and query layer.</p></div>
+  <div class="card"><div class="ct">Role-Gated Access</div><p>Every user sees exactly what their role permits — no over-exposure of data, no accidental cross-role visibility.</p></div>
+  <div class="card"><div class="ct">SaaS Manageability</div><p>Complete lifecycle control for Infovion: onboarding, subscription management, feature flags, and support from a private admin console.</p></div>
+  <div class="card"><div class="ct">Security-First Design</div><p>httpOnly cookies, token rotation, TOTP 2FA, rate limiting, audit logging, and tenant guards throughout the stack.</p></div>
+</div>
+
+<!-- ═══════════════════════════════ 2. TECH STACK ═══════════════════════════════ -->
+<h2 id="tech-stack"><span class="sec-num">03</span> Technology Stack</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Technology</th><th>Layer</th><th>Purpose &amp; Reasoning</th></tr></thead>
+  <tbody>
+    <tr><td><strong>NestJS</strong></td><td><span class="b b-blue">Backend</span></td><td>TypeScript-first framework with modules, guards, interceptors, decorators. Maps cleanly onto multi-tenant RBAC requirements. Dependency injection makes services testable and swappable.</td></tr>
+    <tr><td><strong>Next.js 14 (App Router)</strong></td><td><span class="b b-cyan">Frontend</span></td><td>React framework with file-based routing and Edge Middleware. Middleware runs before any page renders, enabling server-side cookie checks for route protection.</td></tr>
+    <tr><td><strong>PostgreSQL</strong></td><td><span class="b b-green">Database</span></td><td>ACID-compliant relational DB with strong FK enforcement, composite index support, and row-level reliability. Hosted on Railway with automated backups.</td></tr>
+    <tr><td><strong>Prisma ORM</strong></td><td><span class="b b-green">Database</span></td><td>Type-safe query builder. Schema is the single source of truth; migrations are version-controlled. Generated types eliminate manual SQL and catch query errors at compile time.</td></tr>
+    <tr><td><strong>TypeScript (strict)</strong></td><td><span class="b b-amber">Both</span></td><td>Enforced throughout the monorepo. DTOs, guards, stores, and API responses are fully typed. Eliminates entire categories of runtime errors.</td></tr>
+    <tr><td><strong>Passport.js + JWT</strong></td><td><span class="b b-blue">Backend</span></td><td>Stateless JWT access tokens (15 min) with httpOnly refresh token cookies (7 days). Industry-standard SPA auth pattern. Refresh tokens stored as bcrypt hashes in DB.</td></tr>
+    <tr><td><strong>otplib (TOTP)</strong></td><td><span class="b b-blue">Backend</span></td><td>RFC 6238 Time-based OTP for optional two-factor auth. Compatible with any standard authenticator app (Google Authenticator, Authy, 1Password, etc.).</td></tr>
+    <tr><td><strong>Nodemailer</strong></td><td><span class="b b-blue">Backend</span></td><td>Transactional email for password reset OTPs. SMTP provider is configurable via environment variables — swap providers without code changes.</td></tr>
+    <tr><td><strong>Zustand</strong></td><td><span class="b b-cyan">Frontend</span></td><td>Minimal state management with persist middleware. sessionStorage persistence eliminates the blank-screen flash on page refresh by restoring tokens without a network call.</td></tr>
+    <tr><td><strong>Tailwind CSS</strong></td><td><span class="b b-cyan">Frontend</span></td><td>Utility-first CSS. Zero dead styles in production build. Combined with inline style objects for the platform console's custom dark UI.</td></tr>
+    <tr><td><strong>compression</strong></td><td><span class="b b-blue">Backend</span></td><td>Gzip response compression. Reduces payload size significantly for large list responses (student lists, exam results, attendance reports).</td></tr>
+    <tr><td><strong>Railway</strong></td><td><span class="b b-purple">Infra</span></td><td>Backend PaaS + managed PostgreSQL. Auto-deploys from GitHub on push to main. Nixpacks builder for zero-config deployments.</td></tr>
+    <tr><td><strong>Vercel</strong></td><td><span class="b b-purple">Infra</span></td><td>Frontend hosting with global edge CDN. Edge Middleware support is critical — cookie-based route protection runs at the edge before SSR.</td></tr>
+  </tbody>
+</table></div>
+
+<!-- ═══════════════════════════════ 3. FEATURES ═══════════════════════════════ -->
+<h2 id="features-operator"><span class="sec-num">04</span> Complete Feature List — Operator Dashboard</h2>
+
+<div class="feat-group">
+  <h4>Student Management</h4>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Student Admission</div><div class="feat-desc">Full admission form: personal details, parent details, address, demographics (blood group, nationality, religion, caste category, Aadhaar), disability status, previous TC details. Admission number auto-assigned or manually specified.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Parent Account Auto-Provisioning</div><div class="feat-desc">When a student is admitted with a parent phone number, a parent user account is automatically created. The phone becomes the login credential. No separate manual step required.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Student Directory</div><div class="feat-desc">Searchable, filterable directory of all students. Filter by class, section, status (active/inactive). View full student profile.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Student Profile Edit</div><div class="feat-desc">Update any student field post-admission. Soft delete (deactivate) without losing historical data including attendance, fees, and marks.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Sibling Linking</div><div class="feat-desc">Link siblings via a shared siblingGroupId for batch fee operations and family-level reports.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Student Promotion</div><div class="feat-desc">Bulk promote students from one academic unit to another (end-of-year class promotion). Source unit becomes empty; students are reassigned to the target unit.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Parent Password Reset</div><div class="feat-desc">Operator can directly reset a parent's password and receive the new password in the response (displayed once, then discarded).</div></div>
+</div>
+
+<div class="feat-group">
+  <h4>Academic Structure</h4>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Academic Year Management</div><div class="feat-desc">Create and manage academic years (e.g. 2025-26). Mark one as current. Each year has a start and end date.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Academic Unit Hierarchy</div><div class="feat-desc">Create grades (level 1) and sections within each grade (level 2). Self-referential parent-child structure. Unlimited depth supported by the data model.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Class Teacher Assignment</div><div class="feat-desc">Assign a class teacher to each section. Teacher is linked via classTeacherUserId on AcademicUnit.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Subject Management</div><div class="feat-desc">Create subjects for the institution. Assign subjects to academic units. Link a specific teacher to each subject within a unit.</div></div>
+</div>
+
+<div class="feat-group">
+  <h4>Fee Management</h4>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Fee Head Configuration</div><div class="feat-desc">Define fee categories: Tuition Fee, Transport, Lab Fee, Sports Fee, etc. Custom fee heads supported.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Fee Structure Setup</div><div class="feat-desc">Assign fee amounts per academic unit + year + fee head combination. Supports installment breakdown with due dates per installment.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Payment Collection</div><div class="feat-desc">Record payments per student: amount, fee head, payment mode (cash, cheque, online), receipt number. Receipt number is unique per institution and auto-incremented.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Student Balance Calculation</div><div class="feat-desc">Real-time balance per student per academic year: total dues (from fee structure) minus total payments made.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Defaulter Detection</div><div class="feat-desc">List all students with outstanding fees, grouped by class. Filter by academic year. Used for fee reminder campaigns.</div></div>
+</div>
+
+<div class="feat-group">
+  <h4>Examination System</h4>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Exam Creation &amp; Scheduling</div><div class="feat-desc">Create named exams (Mid-Term, Final, Unit Test). Add subject-level schedule per unit: exam date, time, max marks, passing marks, exam centre.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Mark Entry</div><div class="feat-desc">Enter marks per student per subject. Support for marking students as absent (distinct from zero marks). Bulk entry per class.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Result Reports</div><div class="feat-desc">Class-wise result summary: rank list, percentage, subject-wise pass/fail count. Student-level report card with all subjects.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Result Visibility Control</div><div class="feat-desc">Exam status (draft / published / completed) controls when results are visible to parents and students.</div></div>
+</div>
+
+<div class="feat-group">
+  <h4>Staff Management</h4>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Staff User Creation</div><div class="feat-desc">Create staff accounts with email, phone, role assignment. Multiple roles per user supported via UserRole junction table.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Role Assignment</div><div class="feat-desc">Assign any combination of roles to a staff member. Role permissions are JSON arrays configurable per institution.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Staff Activation / Deactivation</div><div class="feat-desc">Deactivate a staff account without deleting it. Login is rejected for inactive accounts. Historical data retained.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Staff Password Management</div><div class="feat-desc">Admin-initiated password reset returns the new password once. Staff can self-reset via email OTP flow.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Staff Attendance Management</div><div class="feat-desc">View all staff attendance records. Admin can override any staff member's daily attendance. Approve or reject leave requests.</div></div>
+</div>
+
+<div class="feat-group">
+  <h4>Administrative Tools</h4>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Transfer Certificate Workflow</div><div class="feat-desc">Request TC → approve → issue. Captures immutable student snapshot at request time (academic data, fee status, attendance). Sequential TC number assigned on issue.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Inquiry Management</div><div class="feat-desc">Track pre-admission inquiries through a status pipeline: new → contacted → visited → enrolled / dropped. Add notes at each stage.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Announcement Publishing</div><div class="feat-desc">Post announcements targeted to specific roles (or all). Pin important notices. Set expiry date. Immediately visible to all targeted portal users.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Institution Profile</div><div class="feat-desc">Manage institution name, address, contact, website, board type, logo. Feature flags configurable per institution.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Timetable Setup</div><div class="feat-desc">Build weekly timetable per class: day × period grid. Assign subject and teacher per slot. Bulk save replaces the full unit timetable at once.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">Calendar Management</div><div class="feat-desc">Add institution calendar events: holidays, exam dates, parent meetings, vacations. Visible to all portal users.</div></div>
+  <div class="feat-item"><div class="feat-dot"></div><div class="feat-name">TOTP 2FA Setup</div><div class="feat-desc">Operators and staff can optionally enable two-factor auth via any standard authenticator app. 8 single-use backup codes generated on setup.</div></div>
+</div>
+
+<h2 id="features-portal"><span class="sec-num">05</span> Complete Feature List — Role Portals</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Portal</th><th>Role</th><th>Available Features</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Parent</strong></td><td><code>parent</code></td>
+      <td>Child's attendance (daily + percentage) · Marks and report card · Exam schedule · Fee balance and payment history · Weekly timetable · School calendar · Announcements targeted to parents</td>
+    </tr>
+    <tr>
+      <td><strong>Teacher</strong></td><td><code>teacher</code></td>
+      <td>Mark class attendance (per subject or full-day) · Enter marks for assigned subjects · View own weekly timetable · Initiate student promotion · View school calendar · Self-mark own attendance · View announcements</td>
+    </tr>
+    <tr>
+      <td><strong>Principal</strong></td><td><code>principal</code></td>
+      <td>Attendance reports across all classes · Exam result summaries and rank lists · Fee defaulter reports · Staff attendance overview · School timetable view · Calendar management · Announcements · Institution settings (read)</td>
+    </tr>
+    <tr>
+      <td><strong>Director</strong></td><td><code>super_admin</code></td>
+      <td>High-level institution reports · Staff management view · Announcements · Settings access · Full read access across all data domains</td>
+    </tr>
+    <tr>
+      <td><strong>Accountant</strong></td><td><code>accountant</code></td>
+      <td>Record fee payments · View payment history · Defaulter list · Fee reports per class/year · View announcements · Own attendance tracking</td>
+    </tr>
+    <tr>
+      <td><strong>Receptionist</strong></td><td><code>receptionist</code></td>
+      <td>View and update inquiries · Admission support · View announcements</td>
+    </tr>
+    <tr>
+      <td><strong>Non-Teaching Staff</strong></td><td><code>non_teaching_staff</code></td>
+      <td>View announcements · Self-mark own attendance · View own leave status</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<h2 id="features-platform"><span class="sec-num">06</span> Complete Feature List — Platform Console (Infovion Internal)</h2>
+
+<div class="grid2">
+  <div class="card"><div class="ct">Client Onboarding</div><p>Create new institution with name, code, plan, type. Seeds default role set automatically. Creates initial admin user.</p></div>
+  <div class="card"><div class="ct">Subscription Management</div><p>Set plan name, student cap, price per user, billing cycle, start/end dates. Track active / expired / suspended / cancelled status.</p></div>
+  <div class="card"><div class="ct">Client Directory</div><p>List all institutions with subscription status, student count, user count. Filter and search.</p></div>
+  <div class="card"><div class="ct">Client Detail View</div><p>Full institution profile, subscription info, user list, student count. Edit institution profile and feature flags.</p></div>
+  <div class="card"><div class="ct">Support Ticket Management</div><p>View all tickets across all institutions. Update status (open → resolved). Add internal admin notes.</p></div>
+  <div class="card"><div class="ct">Live Notification Bell</div><p>Sidebar polls for open support tickets every 60 seconds. Badge count visible at all times. Click-through to ticket list.</p></div>
+  <div class="card"><div class="ct">Single-Session Enforcement</div><p>Only one active browser session allowed per platform admin at a time. New login invalidates the previous session.</p></div>
+  <div class="card"><div class="ct">Platform Profile &amp; Password</div><p>Update display name, change password. Full login history with IP and user agent logged on every attempt.</p></div>
+</div>
+
+<!-- ═══════════════════════════════ 4. ARCHITECTURE ═══════════════════════════════ -->
+<h2 id="architecture"><span class="sec-num">07</span> System Architecture</h2>
+
+<p>The system is a <strong>monorepo</strong> containing two independently deployed applications. They share no runtime code — only development conventions and the git repository.</p>
+
+<div class="flow"><span class="hi">┌──────────────────────────────────────────────────────────────────────┐</span>
+<span class="hi">│                  INFOVION ACADEMIC SAAS — MONOREPO                    │</span>
+<span class="hi">└──────────────────────────────────────────────────────────────────────┘</span>
+                                    │
+               ┌────────────────────┴────────────────────┐
+               │                                         │
+<span class="hi">  ┌──────────────────────────────┐    ┌────────────────────────────────┐</span>
+<span class="hi">  │  apps/frontend (Next.js)     │    │  apps/backend (NestJS)         │</span>
+<span class="hi">  │  app.buildwithinfovion.com   │    │  api.buildwithinfovion.com     │</span>
+<span class="hi">  │  Deployed on: Vercel Edge    │    │  Deployed on: Railway          │</span>
+<span class="hi">  └──────────────────────────────┘    └────────────────────────────────┘</span>
+          │                                        │
+          │  HTTP REST + httpOnly Cookies           │
+          └───────────────────────────────────────►│
+                                                    │
+                                      <span class="ok">┌──────────────────────┐</span>
+                                      <span class="ok">│   PostgreSQL DB       │</span>
+                                      <span class="ok">│   Railway Managed     │</span>
+                                      <span class="ok">│   Automated Backups   │</span>
+                                      <span class="ok">└──────────────────────┘</span>
+
+<span class="dim">Cookie domain: .buildwithinfovion.com (shared across all subdomains)</span>
+<span class="dim">Auth cookies are readable by Vercel Edge Middleware before any page renders.</span></div>
+
+<h2 id="url-namespace"><span class="sec-num">08</span> URL Namespace</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Path</th><th>User Group</th><th>Auth Cookie Required</th><th>Redirect on Fail</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code></td><td>All (unauthenticated)</td><td>None</td><td>—</td></tr>
+    <tr><td><code>/dashboard/*</code></td><td>Institution Operators (admin role only)</td><td><code>auth_rt_op</code></td><td><code>/</code></td></tr>
+    <tr><td><code>/portal/select-role</code></td><td>Any authenticated portal user (multi-role picker)</td><td>None (public after login)</td><td>—</td></tr>
+    <tr><td><code>/portal/parent/*</code></td><td>Parent users</td><td><code>auth_rt</code></td><td><code>/</code></td></tr>
+    <tr><td><code>/portal/teacher/*</code></td><td>Teacher users</td><td><code>auth_rt</code></td><td><code>/</code></td></tr>
+    <tr><td><code>/portal/principal/*</code></td><td>Principal users</td><td><code>auth_rt</code></td><td><code>/</code></td></tr>
+    <tr><td><code>/portal/director/*</code></td><td>Director (super_admin) users</td><td><code>auth_rt</code></td><td><code>/</code></td></tr>
+    <tr><td><code>/portal/accountant/*</code></td><td>Accountant users</td><td><code>auth_rt</code></td><td><code>/</code></td></tr>
+    <tr><td><code>/portal/receptionist/*</code></td><td>Receptionist users</td><td><code>auth_rt</code></td><td><code>/</code></td></tr>
+    <tr><td><code>/portal/non-teaching-staff/*</code></td><td>Non-teaching staff users</td><td><code>auth_rt</code></td><td><code>/</code></td></tr>
+    <tr><td><code>/platform/login</code></td><td>Platform admin login page (public)</td><td>None</td><td>—</td></tr>
+    <tr><td><code>/platform/*</code></td><td>Infovion Platform Admins</td><td><code>platform_rt</code></td><td><code>/platform/login</code></td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="request-lifecycle"><span class="sec-num">09</span> Request Lifecycle</h2>
+
+<div class="flow"><span class="hi">Browser makes a request to /dashboard/students</span>
+│
+├─► <span class="hi">[1] Vercel Edge Middleware</span> (runs at CDN edge, before any server)
+│       Reads auth_rt_op cookie from request headers
+│       If absent → redirect to /  (never reaches the server)
+│       If present → allow request through
+│
+├─► <span class="hi">[2] Next.js Page Component</span>
+│       useEffect fires (after Zustand sessionStorage hydration)
+│       Reads useAuthStore.getState().accessToken
+│       If token exists → render immediately (zero network calls)
+│       If missing → call silentRefreshOp() → POST /auth/refresh-op
+│                    → stores new accessToken in Zustand
+│
+├─► <span class="hi">[3] apiFetch() called by component</span>
+│       Attaches: Authorization: Bearer &lt;accessToken&gt;
+│                 X-Institution-ID: &lt;institutionId&gt;
+│                 Content-Type: application/json
+│                 credentials: include
+│       On 401 response → tryRefreshToken() → retry once
+│
+├─► <span class="hi">[4] NestJS TenantMiddleware</span>
+│       Reads X-Institution-ID header
+│       Attaches institutionId to request context
+│
+├─► <span class="hi">[5] AuthGuard (Passport JWT)</span>
+│       Validates JWT signature, expiry, issuer
+│       Attaches decoded payload to req.user
+│       { userId, institutionId, roles }
+│
+├─► <span class="hi">[6] TenantGuard</span>
+│       Compares req.user.institutionId vs X-Institution-ID header
+│       If mismatch → 403 Forbidden (cross-tenant attempt blocked)
+│
+├─► <span class="hi">[7] RolesGuard + @Permissions() decorator</span>
+│       Reads required permission from route metadata
+│       Checks user's role permissions array
+│       If not permitted → 403 Forbidden
+│
+└─► <span class="ok">[8] Controller → Service → PrismaService</span>
+        All DB queries include: where: { institutionId }
+        Data returned is always scoped to the authenticated institution</div>
+
+<h2 id="deployment"><span class="sec-num">10</span> Deployment &amp; Infrastructure</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Component</th><th>Host</th><th>Config</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Backend API</strong></td><td>Railway</td><td><code>railway.json</code>, <code>nixpacks.toml</code>, <code>start.sh</code></td><td>Auto-deploys on push to main. Prisma migrations run in start.sh before server boots. Dockerfile available for self-hosting.</td></tr>
+    <tr><td><strong>PostgreSQL</strong></td><td>Railway (managed)</td><td><code>DATABASE_URL</code> env var</td><td>Managed instance with automated backups. Connection pooling via Railway's built-in proxy.</td></tr>
+    <tr><td><strong>Frontend</strong></td><td>Vercel</td><td><code>vercel.json</code></td><td>Global edge CDN. Edge Middleware runs at the network edge before any compute. Auto-scales.</td></tr>
+    <tr><td><strong>DNS / Domain</strong></td><td>Custom DNS</td><td>DNS A/CNAME records</td><td>Shared <code>.buildwithinfovion.com</code> root domain enables cookie sharing between API and frontend subdomains.</td></tr>
+    <tr><td><strong>Email (SMTP)</strong></td><td>Provider via env</td><td><code>SMTP_*</code> env vars</td><td>Used for password reset OTPs. Provider-agnostic — swap without code changes.</td></tr>
+  </tbody>
+</table></div>
+
+<!-- ═══════════════════════════════ 5. DIRECTORY STRUCTURE ═══════════════════════════════ -->
+<h2 id="directory"><span class="sec-num">11</span> Directory Structure</h2>
+
+<p>Every file and directory listed below with its role. Color coding: <span style="color:#60a5fa;font-family:monospace;font-size:12px;">blue = directory</span> · <span style="color:#fbbf24;font-family:monospace;font-size:12px;">yellow = critical entry point</span> · <span style="color:#a78bfa;font-family:monospace;font-size:12px;">purple = config</span> · <span style="color:#c9d1d9;font-family:monospace;font-size:12px;">white = source file</span></p>
+
+<div class="ftree">
+<ul>
+  <li><div class="row"><span class="name dir">academic-saas/</span><span class="sep">—</span><span class="desc">Monorepo root. Contains both applications and shared configuration.</span></div>
+    <ul style="padding-left:20px">
+      <li><div class="row"><span class="name cfg">.claude/</span><span class="sep">—</span><span class="desc">Claude Code configuration and project memory files</span></div></li>
+      <li><div class="row"><span class="name cfg">.github/</span><span class="sep">—</span><span class="desc">Pull request templates and GitHub workflow configuration</span></div></li>
+      <li><div class="row"><span class="name cfg">.vscode/extensions.json</span><span class="sep">—</span><span class="desc">Recommended VS Code extensions for the development team</span></div></li>
+      <li><div class="row"><span class="name dir">docs/</span><span class="sep">—</span><span class="desc">Internal documentation, audit reports, system guides, this document</span></div></li>
+      <li><div class="row"><span class="name dir">packages/</span><span class="sep">—</span><span class="desc">Reserved for future shared TypeScript packages (currently placeholder, not populated)</span></div></li>
+      <li><div class="row"><span class="name cfg">package.json</span><span class="sep">—</span><span class="desc">Monorepo root — defines workspace structure for npm workspaces</span></div></li>
+      <li><div class="row"><span class="name file">README.md</span><span class="sep">—</span><span class="desc">Public project overview</span></div></li>
+      <li><div class="row"><span class="name file">CONTRIBUTING.md</span><span class="sep">—</span><span class="desc">Contribution guidelines and Git workflow for the engineering team</span></div></li>
+
+      <!-- BACKEND -->
+      <li style="margin-top:10px"><div class="row"><span class="name dir">apps/backend/</span><span class="sep">—</span><span class="desc">NestJS API application — deployed to Railway</span></div>
+        <ul style="padding-left:20px">
+          <li><div class="row"><span class="name imp">src/main.ts</span><span class="sep">—</span><span class="desc">Server entry point. Bootstraps NestJS app: CORS (allowlisted origins), cookie-parser, gzip compression, global ValidationPipe (whitelist+forbid), PrismaExceptionFilter, port binding.</span></div></li>
+          <li><div class="row"><span class="name imp">src/app.module.ts</span><span class="sep">—</span><span class="desc">Root module. Imports all 16 feature modules. Registers global interceptors (AuditLog, HttpCache, RequestMetrics). Configures TenantMiddleware with exclusion list for public endpoints.</span></div></li>
+          <li><div class="row"><span class="name file">src/app.controller.ts</span><span class="sep">—</span><span class="desc">GET /health — queries DB with SELECT 1, returns status, db connectivity, version, timestamp. Used by Railway health probes for zero-downtime deploys.</span></div></li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name dir">src/common/</span><span class="sep">—</span><span class="desc">Cross-cutting infrastructure. Zero business logic — only guards, interceptors, middleware, decorators.</span></div>
+            <ul style="padding-left:20px">
+              <li><div class="row"><span class="name file">guards/auth.guard.ts</span><span class="sep">—</span><span class="desc">Validates JWT access token via Passport strategy. Attaches {userId, institutionId, roles} to req.user. Applied on every authenticated route.</span></div></li>
+              <li><div class="row"><span class="name file">guards/roles.guard.ts</span><span class="sep">—</span><span class="desc">Reads @Permissions() decorator metadata. Checks user's role permission array includes required permission string. Returns 403 if not.</span></div></li>
+              <li><div class="row"><span class="name file">guards/tenant.guard.ts</span><span class="sep">—</span><span class="desc">Compares JWT institutionId vs X-Institution-ID header. The hard wall against cross-tenant data access. Returns 403 on mismatch.</span></div></li>
+              <li><div class="row"><span class="name file">guards/login-rate-limit.guard.ts</span><span class="sep">—</span><span class="desc">Rate-limits staff/operator login: 10 attempts per IP per window + 8 attempts per user. Returns 429 with retry-after. Protects /auth/login.</span></div></li>
+              <li><div class="row"><span class="name file">guards/parent-login-rate-limit.guard.ts</span><span class="sep">—</span><span class="desc">Identical rate-limiting pattern isolated for /auth/parent/login. Separate pool prevents parent lockouts from affecting staff login.</span></div></li>
+              <li><div class="row"><span class="name file">middleware/tenant.middleware.ts</span><span class="sep">—</span><span class="desc">Reads X-Institution-ID header early in pipeline. Attaches to request. Excluded from all public auth endpoints via AppModule configuration.</span></div></li>
+              <li><div class="row"><span class="name file">interceptors/audit-log.interceptor.ts</span><span class="sep">—</span><span class="desc">Global. Fires on every non-GET response. Records action, entity type/ID, before/after values, IP address, userId into AuditLog table. Immutable trail.</span></div></li>
+              <li><div class="row"><span class="name file">interceptors/http-cache.interceptor.ts</span><span class="sep">—</span><span class="desc">In-memory response cache for expensive read endpoints. Keyed by URL + institutionId. Invalidated on write operations to the same resource.</span></div></li>
+              <li><div class="row"><span class="name file">interceptors/request-metrics.interceptor.ts</span><span class="sep">—</span><span class="desc">Tracks request counts, response times, error rates per endpoint. Metrics exposed via GET /health for monitoring dashboards.</span></div></li>
+              <li><div class="row"><span class="name file">filters/prisma-exception.filter.ts</span><span class="sep">—</span><span class="desc">Catches Prisma P-code errors. Maps unique constraint violations → 409, record-not-found → 404, FK violations → 400. Prevents raw DB error exposure.</span></div></li>
+              <li><div class="row"><span class="name file">decorators/tenant.decorator.ts</span><span class="sep">—</span><span class="desc">@Tenant() parameter decorator. Extracts institutionId from request for use in controller method signatures.</span></div></li>
+              <li><div class="row"><span class="name file">decorators/permissions.decorator.ts</span><span class="sep">—</span><span class="desc">@Permissions('resource.action') — attaches required permission string to route metadata. Read by RolesGuard at runtime.</span></div></li>
+              <li><div class="row"><span class="name file">cache/app-cache.service.ts</span><span class="sep">—</span><span class="desc">Injectable wrapper around NestJS CACHE_MANAGER. Provides get/set/del with TTL. Used by HttpCacheInterceptor and hot service methods directly.</span></div></li>
+              <li><div class="row"><span class="name file">services/audit-log.service.ts</span><span class="sep">—</span><span class="desc">Injectable service for creating AuditLog entries. Used by AuditLogInterceptor and directly in services needing custom audit records.</span></div></li>
+            </ul>
+          </li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name dir">src/modules/</span><span class="sep">—</span><span class="desc">All 14 business feature modules. Each owns its controller, service, and DTOs.</span></div>
+            <ul style="padding-left:20px">
+              <li><div class="row"><span class="name imp">auth/</span><span class="sep">—</span><span class="desc">Login (email+password+TOTP), token refresh (separate endpoints for operator vs portal), logout (clears both cookies), password reset (email OTP flow), parent login, TOTP lifecycle management</span></div></li>
+              <li><div class="row"><span class="name file">student/</span><span class="sep">—</span><span class="desc">Student CRUD, search/filter, profile management, sibling linking, promotion, parent account auto-provisioning</span></div></li>
+              <li><div class="row"><span class="name file">users/</span><span class="sep">—</span><span class="desc">Staff user management: create, update, activate/deactivate, role assignment, password reset</span></div></li>
+              <li><div class="row"><span class="name file">roles/</span><span class="sep">—</span><span class="desc">List institution roles, update role permissions JSON per institution</span></div></li>
+              <li><div class="row"><span class="name file">academic/</span><span class="sep">—</span><span class="desc">Academic years and units (classes/sections): CRUD, hierarchy, class teacher assignment</span></div></li>
+              <li><div class="row"><span class="name file">subject/</span><span class="sep">—</span><span class="desc">Subject CRUD, unit-subject assignment, teacher-subject linking per unit</span></div></li>
+              <li><div class="row"><span class="name file">attendance/</span><span class="sep">—</span><span class="desc">Session-based attendance: create session, bulk mark records, student history, aggregate reports</span></div></li>
+              <li><div class="row"><span class="name file">staff-attendance/</span><span class="sep">—</span><span class="desc">Staff daily attendance: self-mark, admin override, clock-in/out, leave requests (submit/approve/reject), monthly summaries</span></div></li>
+              <li><div class="row"><span class="name file">fees/</span><span class="sep">—</span><span class="desc">Fee heads, structures (per unit/year), payment recording, receipt generation, balance calculation, defaulter detection</span></div></li>
+              <li><div class="row"><span class="name file">exam/</span><span class="sep">—</span><span class="desc">Exam creation and scheduling, subject-level schedule (ExamSubject), mark entry, result reports, class rank summaries</span></div></li>
+              <li><div class="row"><span class="name file">announcement/</span><span class="sep">—</span><span class="desc">Role-targeted announcements: create, list (filtered by caller's role), pin, soft delete, expiry support</span></div></li>
+              <li><div class="row"><span class="name file">calendar/</span><span class="sep">—</span><span class="desc">Institution calendar events, date range queries, typed events (holiday/exam/meeting/vacation)</span></div></li>
+              <li><div class="row"><span class="name file">timetable/</span><span class="sep">—</span><span class="desc">Weekly timetable slots (day+period grid per unit), bulk save, teacher schedule view</span></div></li>
+              <li><div class="row"><span class="name file">inquiry/</span><span class="sep">—</span><span class="desc">Pre-admission lead tracking: status pipeline, notes, class interest, academic year</span></div></li>
+              <li><div class="row"><span class="name file">tc/</span><span class="sep">—</span><span class="desc">Transfer certificate workflow: request → approve → issue (or reject). Immutable snapshot. Sequential TC number.</span></div></li>
+              <li><div class="row"><span class="name file">support/</span><span class="sep">—</span><span class="desc">Authenticated users submit support tickets. institution name and submitter auto-populated from JWT — not from user input.</span></div></li>
+            </ul>
+          </li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name file">src/institution/</span><span class="sep">—</span><span class="desc">Institution profile management: update name, address, contact, board type, feature flags</span></div></li>
+          <li><div class="row"><span class="name imp">src/platform/</span><span class="sep">—</span><span class="desc">Infovion internal admin API: auth (platform_rt cookie), client onboarding, subscription management, support ticket management. Completely separate from institution auth.</span></div></li>
+          <li><div class="row"><span class="name file">src/prisma/</span><span class="sep">—</span><span class="desc">PrismaService (global singleton) and PrismaModule. All other modules import PrismaModule to access the DB client.</span></div></li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name dir">prisma/</span><span class="sep">—</span><span class="desc">Database configuration and scripts</span></div>
+            <ul style="padding-left:20px">
+              <li><div class="row"><span class="name imp">schema.prisma</span><span class="sep">—</span><span class="desc">The single source of truth for all 22 data models. All migrations derive from this file. Never edit the DB manually — always through Prisma migrations.</span></div></li>
+              <li><div class="row"><span class="name dir">migrations/</span><span class="sep">—</span><span class="desc">31 versioned SQL migration files. Applied automatically in order during deploy. Never manually edited after creation.</span></div></li>
+              <li><div class="row"><span class="name file">seed.ts</span><span class="sep">—</span><span class="desc">Dev seed: creates a test institution with users, academic units, and sample data. Used for local development setup.</span></div></li>
+              <li><div class="row"><span class="name file">seed-bulk.ts</span><span class="sep">—</span><span class="desc">Bulk seed: inserts hundreds of students for load testing and performance profiling.</span></div></li>
+              <li><div class="row"><span class="name file">seed-platform-admin.ts</span><span class="sep">—</span><span class="desc">Creates the initial Infovion platform admin account. Run once on fresh production deployment.</span></div></li>
+              <li><div class="row"><span class="name file">seed-fix-roles.ts</span><span class="sep">—</span><span class="desc">Re-runnable fix: normalises role permission sets across all institutions to match the canonical definition. Safe to run multiple times.</span></div></li>
+              <li><div class="row"><span class="name file">seed-fix-dedup.ts</span><span class="sep">—</span><span class="desc">One-time fix: merges duplicate academic units that were created by bulk-seed runs. Preserves all student assignments and historical data.</span></div></li>
+              <li><div class="row"><span class="name file">clean.ts</span><span class="sep">—</span><span class="desc">Dev utility: wipes all data from the DB while preserving the institution structure. Used to reset dev environment between test cycles.</span></div></li>
+            </ul>
+          </li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name cfg">Dockerfile</span><span class="sep">—</span><span class="desc">Multi-stage Docker build for self-hosting the backend outside Railway</span></div></li>
+          <li><div class="row"><span class="name cfg">railway.json</span><span class="sep">—</span><span class="desc">Railway service configuration: build command, start command, health check path</span></div></li>
+          <li><div class="row"><span class="name cfg">nixpacks.toml</span><span class="sep">—</span><span class="desc">Nixpacks build configuration (Railway's default builder)</span></div></li>
+          <li><div class="row"><span class="name cfg">nest-cli.json</span><span class="sep">—</span><span class="desc">NestJS CLI configuration: source root, entry file, compiler options</span></div></li>
+          <li><div class="row"><span class="name cfg">tsconfig.json / tsconfig.build.json</span><span class="sep">—</span><span class="desc">TypeScript configuration. Build config excludes test files and seed scripts from production compilation.</span></div></li>
+          <li><div class="row"><span class="name cfg">.env / .env.example</span><span class="sep">—</span><span class="desc">Environment variables: DATABASE_URL, JWT_SECRET, CORS_ORIGIN, SMTP_*, PORT. .env.example documents all required variables.</span></div></li>
+        </ul>
+      </li>
+
+      <!-- FRONTEND -->
+      <li style="margin-top:10px"><div class="row"><span class="name dir">apps/frontend/</span><span class="sep">—</span><span class="desc">Next.js application — deployed to Vercel</span></div>
+        <ul style="padding-left:20px">
+          <li><div class="row"><span class="name imp">middleware.ts</span><span class="sep">—</span><span class="desc">Next.js Edge Middleware. Runs at the CDN edge before any page renders. Checks httpOnly cookies per route: auth_rt_op for /dashboard, auth_rt for /portal, platform_rt for /platform. First line of route protection.</span></div></li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name dir">app/</span><span class="sep">—</span><span class="desc">Next.js App Router — all pages and layouts</span></div>
+            <ul style="padding-left:20px">
+              <li><div class="row"><span class="name imp">page.tsx</span><span class="sep">—</span><span class="desc">Landing page. Contains all login forms: operator login (email+password+TOTP), parent login (phone+password), platform admin redirect. Role detection post-login routes user to the correct URL.</span></div></li>
+              <li><div class="row"><span class="name imp">dashboard/layout.tsx</span><span class="sep">—</span><span class="desc">Operator dashboard shell. Auth check: reads useAuthStore.getState().accessToken post-hydration. If absent, calls silentRefreshOp(). Contains full sidebar navigation, user menu, logout.</span></div></li>
+              <li><div class="row"><span class="name dir">dashboard/</span><span class="sep">—</span><span class="desc">19 operator pages: students, staff, fees, exams, attendance, staff-attendance, timetable, subjects, classes, inquiries, announcements, calendar, tc, promote, settings, and more.</span></div></li>
+              <li><div class="row"><span class="name dir">portal/</span><span class="sep">—</span><span class="desc">Role-specific portals. Each role has its own directory with layout.tsx (wraps PortalShell) and individual feature pages.</span></div>
+                <ul style="padding-left:20px">
+                  <li><div class="row"><span class="name file">select-role/page.tsx</span><span class="sep">—</span><span class="desc">Shown to multi-role users after login. Lets them pick which portal to enter. Reads roles from the portal auth store.</span></div></li>
+                  <li><div class="row"><span class="name file">parent/ · teacher/ · principal/</span><span class="sep">—</span><span class="desc">Each has layout.tsx (PortalShell wrapper with allowedRoles + menuItems) and individual feature pages.</span></div></li>
+                  <li><div class="row"><span class="name file">director/ · accountant/ · receptionist/ · non-teaching-staff/</span><span class="sep">—</span><span class="desc">Same pattern. Each portal is fully isolated — no shared page code across roles.</span></div></li>
+                </ul>
+              </li>
+              <li><div class="row"><span class="name dir">platform/</span><span class="sep">—</span><span class="desc">Infovion internal console: layout.tsx (sci-fi dark UI, polling notification bell), login page, dashboard, clients list and detail, support tickets, profile.</span></div></li>
+            </ul>
+          </li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name dir">components/</span><span class="sep">—</span><span class="desc">Shared React components</span></div>
+            <ul style="padding-left:20px">
+              <li><div class="row"><span class="name imp">portal-shell.tsx</span><span class="sep">—</span><span class="desc">Master layout for ALL portal users. Handles: session restoration (getState() post-hydration), silentRefresh(), role enforcement, sidebar navigation, connection error state with retry, logout. Props: allowedRoles, portalTitle, menuItems.</span></div></li>
+              <li><div class="row"><span class="name file">academic-calendar.tsx</span><span class="sep">—</span><span class="desc">Reusable calendar display component. Used in both dashboard and all portal views that show the institution calendar.</span></div></li>
+              <li><div class="row"><span class="name file">announcements-list.tsx</span><span class="sep">—</span><span class="desc">Reusable announcement feed. Renders pinned announcements first, supports expiry filtering, role-targeted display.</span></div></li>
+              <li><div class="row"><span class="name file">totp-setup-card.tsx</span><span class="sep">—</span><span class="desc">Two-factor auth setup UI. Shows QR code (data URL from backend), code verification input, backup codes display, enable/disable toggle.</span></div></li>
+            </ul>
+          </li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name dir">lib/</span><span class="sep">—</span><span class="desc">Frontend utility libraries</span></div>
+            <ul style="padding-left:20px">
+              <li><div class="row"><span class="name imp">api.ts</span><span class="sep">—</span><span class="desc">Central API client. Exports: apiFetch() (authenticated requests with auto-retry on 401), silentRefreshOp() (operator silent restore via auth_rt_op), silentRefresh() (portal silent restore via auth_rt). Singleton refresh guards prevent concurrent token refresh storms.</span></div></li>
+              <li><div class="row"><span class="name file">platform-api.ts</span><span class="sep">—</span><span class="desc">Platform admin API client. Exports: platformFetch() (sends platform_rt cookie, handles 401 → logout), silentPlatformRefresh() (GET /platform/auth/me with cookie).</span></div></li>
+              <li><div class="row"><span class="name file">auth-utils.ts</span><span class="sep">—</span><span class="desc">Shared constants. DASHBOARD_ROLES (['admin']), PORTAL_ROLES array, getRoleRoute() (role → URL mapping), getRoleLabel() (role code → display name), ROLE_LABELS map.</span></div></li>
+            </ul>
+          </li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name dir">store/</span><span class="sep">—</span><span class="desc">Zustand state management stores</span></div>
+            <ul style="padding-left:20px">
+              <li><div class="row"><span class="name imp">auth.store.ts</span><span class="sep">—</span><span class="desc">Operator session store. Persisted to sessionStorage (key: 'auth-op'). Fields: accessToken, user (email, institutionId, roles), isAuthenticated. Actions: setAuth(), logout().</span></div></li>
+              <li><div class="row"><span class="name imp">portal-auth.store.ts</span><span class="sep">—</span><span class="desc">Portal user session store. Persisted to sessionStorage (key: 'auth-portal'). Same shape as auth.store but separate key — never collides with operator store even in the same browser.</span></div></li>
+              <li><div class="row"><span class="name file">platform-auth.store.ts</span><span class="sep">—</span><span class="desc">Platform admin store. NO persist — in-memory only. Platform session is always restored from the platform_rt cookie via silentPlatformRefresh() on page load.</span></div></li>
+            </ul>
+          </li>
+
+          <li style="margin-top:6px"><div class="row"><span class="name cfg">next.config.ts</span><span class="sep">—</span><span class="desc">Next.js build configuration: image domains, environment variable exposure, compiler options</span></div></li>
+          <li><div class="row"><span class="name cfg">tailwind.config.ts</span><span class="sep">—</span><span class="desc">Tailwind CSS configuration: content paths, theme extensions, custom color tokens</span></div></li>
+          <li><div class="row"><span class="name cfg">vercel.json</span><span class="sep">—</span><span class="desc">Vercel deployment configuration: framework, build settings, environment overrides</span></div></li>
+          <li><div class="row"><span class="name cfg">.env.local / .env.local.example</span><span class="sep">—</span><span class="desc">NEXT_PUBLIC_API_URL and other frontend environment variables</span></div></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+</div>
+
+<!-- ═══════════════════════════════ AUTH ═══════════════════════════════ -->
+<h2 id="auth-design"><span class="sec-num">12</span> Authentication System Design</h2>
+
+<p>The auth system solves two production problems that emerged with multi-context usage:</p>
+
+<div class="grid2">
+  <div class="card danger-card">
+    <div class="ct">Problem 1 — Session Collision</div>
+    <p>When a school admin and parent open the platform in separate tabs on the same browser, a shared cookie name caused one login to overwrite the other's session. Refreshing either tab produced a blank screen or wrong user context.</p>
+  </div>
+  <div class="card danger-card">
+    <div class="ct">Problem 2 — Blank Screen on Refresh</div>
+    <p>Access tokens were stored in-memory only. Every page refresh required a network round-trip to restore the session, causing a 200–500ms blank screen flash before the UI could render.</p>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card success-card">
+    <div class="ct">Solution 1 — Separate Cookie Names</div>
+    <p>Each auth context gets its own httpOnly cookie: <code>auth_rt_op</code> for operators, <code>auth_rt</code> for portal users, <code>platform_rt</code> for Infovion admins. The browser enforces cookie namespacing — no collision possible.</p>
+  </div>
+  <div class="card success-card">
+    <div class="ct">Solution 2 — sessionStorage Persist</div>
+    <p>Zustand persist middleware caches the access token in sessionStorage per tab. On refresh, the token is restored synchronously before any network call. Post-hydration getState() read pattern ensures correct timing.</p>
+  </div>
+</div>
+
+<h2 id="auth-contexts"><span class="sec-num">13</span> Three Auth Contexts</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Context</th><th>Users</th><th>Cookie</th><th>Refresh Endpoint</th><th>Store</th><th>Path</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Operator</strong></td>
+      <td>admin role only</td>
+      <td><code>auth_rt_op</code></td>
+      <td><code>POST /auth/refresh-op</code></td>
+      <td><code>auth.store.ts</code> (key: <code>auth-op</code>)</td>
+      <td><code>/dashboard</code></td>
+    </tr>
+    <tr>
+      <td><strong>Portal</strong></td>
+      <td>teacher, parent, principal, director, accountant, receptionist, non_teaching_staff</td>
+      <td><code>auth_rt</code></td>
+      <td><code>POST /auth/refresh</code></td>
+      <td><code>portal-auth.store.ts</code> (key: <code>auth-portal</code>)</td>
+      <td><code>/portal/*</code></td>
+    </tr>
+    <tr>
+      <td><strong>Platform</strong></td>
+      <td>Infovion platform admins</td>
+      <td><code>platform_rt</code></td>
+      <td><code>GET /platform/auth/me</code></td>
+      <td><code>platform-auth.store.ts</code> (in-memory)</td>
+      <td><code>/platform</code></td>
+    </tr>
+  </tbody>
+</table></div>
+
+<h2 id="token-flow"><span class="sec-num">14</span> Token Flow</h2>
+
+<div class="flow"><span class="hi">── LOGIN (Staff / Operator) ──────────────────────────────────────────────</span>
+
+POST /auth/login  { institutionCode, email, password }
+  │
+  ├─► Lookup user by email within institution (institutionCode → institutionId)
+  ├─► bcrypt.compare(password, passwordHash)
+  ├─► If TOTP enabled: return { requiresTOTP: true, totpToken }
+  │     Client calls POST /auth/totp/authenticate { totpToken, code }
+  │
+  └─► On success:
+        • Sign JWT access token: { userId, institutionId, roles } — expires 15 min
+        • Generate refresh token (random bytes)
+        • bcrypt.hash(refreshToken) → store in RefreshToken table
+        • Determine cookie name: roles.includes('admin') ? 'auth_rt_op' : 'auth_rt'
+        • Set httpOnly cookie (7 days)
+        • Return { accessToken, user }  — refreshToken never sent to client
+
+<span class="hi">── PAGE REFRESH (Silent Token Restore) ──────────────────────────────────</span>
+
+Client loads /dashboard or /portal/[role]
+  │
+  ├─► Edge Middleware checks httpOnly cookie → allows through
+  │
+  ├─► React useEffect fires (after Zustand sessionStorage hydration)
+  │     const cached = useAuthStore.getState().accessToken
+  │     If present → setReady(true) — ZERO network calls, instant render
+  │
+  └─► If absent → POST /auth/refresh-op (operator) or /auth/refresh (portal)
+        Browser sends httpOnly cookie automatically
+        Backend: find RefreshToken by hash comparison, check not revoked/expired
+        On match: revoke old token, generate new pair (rotation)
+        Set new cookie + return new accessToken
+        Store in Zustand sessionStorage
+
+<span class="hi">── 401 AUTO-RETRY (Mid-Session Token Expiry) ─────────────────────────────</span>
+
+apiFetch() receives 401
+  │
+  ├─► tryRefreshToken()
+  │     Detects operator vs portal: !!useAuthStore.getState().user
+  │     Calls correct refresh endpoint
+  │     Singleton promise prevents concurrent refresh storms
+  │
+  ├─► If refresh ok → retry original request with new accessToken
+  └─► If refresh expired → logout() + redirect to /</div>
+
+<h2 id="totp"><span class="sec-num">15</span> TOTP Two-Factor Authentication</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Endpoint</th><th>Action</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST /auth/totp/setup</code></td><td>Generate secret</td><td>Creates TOTP secret (base32), stores in User.totpSecret. Returns QR code data URL + raw secret. TOTP is NOT yet active.</td></tr>
+    <tr><td><code>POST /auth/totp/confirm</code></td><td>Enable TOTP</td><td>User scans QR, enters first 6-digit code. On verify: sets totpEnabled=true. Returns 8 single-use backup codes (SHA-256 hashed in DB).</td></tr>
+    <tr><td><code>POST /auth/totp/authenticate</code></td><td>Complete login</td><td>Called after password login when TOTP is required. Verifies 6-digit code OR a backup code. On backup code use: removes hash from array. Sets full session cookie.</td></tr>
+    <tr><td><code>GET /auth/totp/status</code></td><td>Check status</td><td>Returns { enabled: bool, backupCodesRemaining: number }. Used by settings UI to show current 2FA state.</td></tr>
+    <tr><td><code>DELETE /auth/totp</code></td><td>Disable TOTP</td><td>Requires submitting a valid current TOTP code. Clears totpSecret, sets totpEnabled=false, empties backup codes array.</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="rbac"><span class="sec-num">16</span> Role-Based Access Control</h2>
+
+<p>Each institution has its own role table seeded from a canonical definition. Permissions are stored as a JSON array on the Role record and can be customised per institution without code changes.</p>
+
+<pre>// Example role record
+{
+  code: "teacher",
+  label: "Teacher",
+  permissions: [
+    "students.read", "attendance.read", "attendance.write",
+    "exams.read", "marks.write", "timetable.read",
+    "announcements.read", "calendar.read", "subjects.read"
+  ]
+}
+
+// Endpoint protection
+@UseGuards(AuthGuard, RolesGuard)
+@Permissions('marks.write')
+async enterMarks(@Tenant() tenant, @Body() dto: MarkEntryDto) {
+  // Only reached if: valid JWT + user has 'marks.write' in their role permissions
+}</pre>
+
+<!-- ═══════════════════════════════ DATABASE ═══════════════════════════════ -->
+<h2 id="database"><span class="sec-num">17</span> Database Schema</h2>
+
+<h2 id="multi-tenancy"><span class="sec-num">18</span> Multi-Tenancy Design</h2>
+
+<div class="note">
+  <strong>Pattern: Shared Database, Separate Rows.</strong> All institutions share the same PostgreSQL tables. Every institution-scoped row includes an <code>institutionId</code> foreign key. The application enforces isolation at two layers: (1) TenantGuard compares the JWT's institutionId with the request header, and (2) every Prisma query includes <code>where: { institutionId }</code>. A compromised token from Institution A cannot read Institution B's data.
+</div>
+
+<div class="note warn">
+  <strong>Soft Deletes:</strong> Critical models (students, academic units, announcements, exams, fee structures, calendar events, TCs) use <code>deletedAt: DateTime?</code> rather than hard deletes. This preserves audit history and allows data recovery without DB restoration. All list queries filter <code>where: { deletedAt: null }</code>.
+</div>
+
+<h2 id="models"><span class="sec-num">19</span> Core Data Models</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Model</th><th>Key Fields</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Institution</strong></td><td>code (unique), planCode, features (JSON), status, board</td><td>Root anchor. Every row in every table belongs to one institution. features JSON enables per-client feature flags without schema changes.</td></tr>
+    <tr><td><strong>Student</strong></td><td>admissionNo (unique per inst.), userId, parentUserId, siblingGroupId, academicUnitId</td><td>Links to two User accounts: student and parent. siblingGroupId for family-level operations. Full demographic capture including disability fields.</td></tr>
+    <tr><td><strong>AcademicYear</strong></td><td>name, startDate, endDate, isCurrent</td><td>Named year (2025-26). One marked as current. Anchors fee structures, exams.</td></tr>
+    <tr><td><strong>AcademicUnit</strong></td><td>level, parentId (self-ref), classTeacherUserId, academicYearId</td><td>Self-referential hierarchy. level 1 = grade, level 2 = section. Soft deleted.</td></tr>
+    <tr><td><strong>User</strong></td><td>email, phone, passwordHash, isActive, totpSecret, totpEnabled, totpBackupCodes[]</td><td>All institution humans: operators, teachers, parents. TOTP fields directly on User. Roles via UserRole junction.</td></tr>
+    <tr><td><strong>Role</strong></td><td>code, label, permissions (JSON array)</td><td>Per-institution role definitions. Permissions customisable per institution.</td></tr>
+    <tr><td><strong>RefreshToken</strong></td><td>tokenHash (bcrypt), isRevoked, expiresAt</td><td>All active refresh sessions. Rotation on each refresh. Revoked tokens stored but rejected.</td></tr>
+    <tr><td><strong>AttendanceSession</strong></td><td>academicUnitId, date, subjectId?</td><td>Unique per (unit, date, subject). Contains many AttendanceRecord rows (one per student).</td></tr>
+    <tr><td><strong>AttendanceRecord</strong></td><td>sessionId, studentId, status (present/absent/late/leave)</td><td>Unique per (session, student). Status is a string enum.</td></tr>
+    <tr><td><strong>FeeHead</strong></td><td>name, isCustom</td><td>Fee categories. Unique per institution by name.</td></tr>
+    <tr><td><strong>FeeStructure</strong></td><td>academicUnitId, academicYearId, feeHeadId, amount, installmentName, dueDate</td><td>Defines what is owed. Unique per (unit, year, head, installment).</td></tr>
+    <tr><td><strong>FeePayment</strong></td><td>studentId, feeHeadId, amount, receiptNo (unique per inst.), paymentMode, paidOn</td><td>Actual payments. 7 targeted indexes for fast balance and defaulter queries.</td></tr>
+    <tr><td><strong>Exam</strong></td><td>academicYearId, name, status (draft/published/completed)</td><td>Status controls parent/student visibility of results.</td></tr>
+    <tr><td><strong>ExamSubject</strong></td><td>examId, academicUnitId, subjectId, maxMarks, passingMarks, examDate, examTime</td><td>Unique per (exam, unit, subject). The schedule grid.</td></tr>
+    <tr><td><strong>ExamResult</strong></td><td>examId, studentId, subjectId, marksObtained, isAbsent</td><td>Unique per (exam, student, subject). isAbsent distinct from zero marks.</td></tr>
+    <tr><td><strong>TransferCertificate</strong></td><td>status workflow, full student snapshot fields, tcNumber (assigned at issue)</td><td>Immutable snapshot at request time. Legal document. TC number sequential per institution.</td></tr>
+    <tr><td><strong>PlatformAdmin</strong></td><td>failedLoginCount, lockedUntil, activeSessionId</td><td>Single-session enforcement via activeSessionId. New login invalidates prior session.</td></tr>
+    <tr><td><strong>AuditLog</strong></td><td>action, entityType, entityId, oldValue, newValue, userId, ipAddress</td><td>Immutable. Written by global AuditLogInterceptor on every non-GET response.</td></tr>
+    <tr><td><strong>PasswordResetOtp</strong></td><td>email, otpHash (SHA-256), expiresAt, isUsed</td><td>6-digit OTP, 10-min TTL, single-use. Stored as hash, never plaintext.</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="indexes"><span class="sec-num">20</span> Database Indexes &amp; Performance</h2>
+
+<p>All indexes are defined in <code>schema.prisma</code> using <code>@@index</code> and <code>@@unique</code> decorators. Key composite indexes covering the hottest query paths:</p>
+
+<div class="tw"><table>
+  <thead><tr><th>Model</th><th>Index</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Student</td><td><code>(institutionId, status)</code></td><td>Active student list — always filtered by institution + active status</td></tr>
+    <tr><td>Student</td><td><code>(institutionId, parentUserId)</code></td><td>Parent → children lookup on every parent portal page load</td></tr>
+    <tr><td>FeePayment</td><td><code>(studentId, academicYearId)</code></td><td>Student balance: sum payments per student per year</td></tr>
+    <tr><td>FeePayment</td><td><code>(institutionId, academicYearId)</code></td><td>Defaulter list: all payments for an institution in a year</td></tr>
+    <tr><td>AttendanceSession</td><td><code>(academicUnitId, date, subjectId)</code> UNIQUE</td><td>Prevents duplicate sessions + fastest session lookup</td></tr>
+    <tr><td>ExamResult</td><td><code>(examId, academicUnitId)</code></td><td>Class result summary — most result queries filter on both</td></tr>
+    <tr><td>RefreshToken</td><td><code>(tokenHash)</code></td><td>Token validation on every refresh — must be fast</td></tr>
+    <tr><td>User</td><td><code>(institutionId, phone)</code></td><td>Parent phone-based login lookup</td></tr>
+    <tr><td>AuditLog</td><td><code>(institutionId)</code>, <code>(userId)</code></td><td>Per-institution and per-user audit trail queries</td></tr>
+    <tr><td>PasswordResetOtp</td><td><code>(email, institutionId)</code>, <code>(expiresAt)</code></td><td>OTP validation lookup + cleanup job index</td></tr>
+  </tbody>
+</table></div>
+
+<!-- ═══════════════════════════════ SECURITY ═══════════════════════════════ -->
+<h2 id="security-arch"><span class="sec-num">21</span> Security Architecture</h2>
+
+<p>Security is applied in multiple layers. Compromise of any single layer does not result in a breach — each layer provides independent protection.</p>
+
+<div class="flow"><span class="hi">Security Layers (outermost to innermost)</span>
+
+<span class="ok">[Layer 1]</span> DNS / TLS               HTTPS enforced on all domains. Cookies marked Secure=true.
+<span class="ok">[Layer 2]</span> Vercel Edge Middleware  Cookie presence check before any page/compute runs.
+<span class="ok">[Layer 3]</span> CORS                    Only allowlisted origins accepted. Blocks cross-origin API calls.
+<span class="ok">[Layer 4]</span> Rate Limiting           Per-IP and per-user limits on all login endpoints.
+<span class="ok">[Layer 5]</span> ValidationPipe         Strips and rejects any field not declared in a DTO.
+<span class="ok">[Layer 6]</span> AuthGuard               JWT signature + expiry validation on every authenticated call.
+<span class="ok">[Layer 7]</span> TenantGuard             Cross-tenant request blocked even with a valid token.
+<span class="ok">[Layer 8]</span> RolesGuard              Insufficient-permission requests rejected per endpoint.
+<span class="ok">[Layer 9]</span> Query-level isolation   All DB queries include institutionId — data physically cannot leak.</div>
+
+<h2 id="security-impl"><span class="sec-num">22</span> Security Implementation Detail</h2>
+
+<div class="sec-item">
+  <div class="threat">Threat: Session Collision Between User Types</div>
+  <div class="mitigation"><strong>Implementation:</strong> Three distinct httpOnly cookie names (<code>auth_rt_op</code>, <code>auth_rt</code>, <code>platform_rt</code>) set by the backend at login based on role detection. Refresh endpoints only read their own cookie — <code>/auth/refresh-op</code> reads <code>auth_rt_op</code>, ignores <code>auth_rt</code>. Frontend Zustand stores use different sessionStorage keys per context. Browser enforces complete namespace separation.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Cross-Tenant Data Access</div>
+  <div class="mitigation"><strong>Implementation:</strong> <code>TenantGuard</code> compares <code>req.user.institutionId</code> (from JWT, set at login, cannot be modified by client) against the <code>X-Institution-ID</code> header sent by the frontend. If they differ, request is rejected with 403 before any service method runs. Additionally, every Prisma query includes <code>where: { institutionId }</code> — a compromised token still cannot read another institution's rows because the SQL condition filters them out.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Refresh Token Replay Attack</div>
+  <div class="mitigation"><strong>Implementation:</strong> Refresh tokens are never stored in plaintext. The backend bcrypt-hashes the token and stores the hash in the <code>RefreshToken</code> table with <code>isRevoked: false</code>. On refresh: compare submitted token against hashes for the user, verify not revoked and not expired. On success: mark old token as <code>isRevoked: true</code>, generate new token pair. Even if an attacker intercepts a refresh token in transit, using it once invalidates it — the next legitimate use would be rejected.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: XSS Token Theft</div>
+  <div class="mitigation"><strong>Implementation:</strong> Refresh tokens are in <code>httpOnly</code> cookies — completely inaccessible to JavaScript. Access tokens are stored in <code>sessionStorage</code> (not <code>localStorage</code>) and have a 15-minute lifetime. If XSS extracts an access token, it expires in at most 15 minutes. sessionStorage is also cleared when the tab closes, further limiting exposure window.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Brute Force Login</div>
+  <div class="mitigation"><strong>Implementation:</strong> Two independent rate limiters: <code>LoginRateLimitGuard</code> for <code>/auth/login</code> and <code>ParentLoginRateLimitGuard</code> for <code>/auth/parent/login</code>. Each tracks attempts per IP (max 10 per window) and per user (max 8 per window). Returns HTTP 429 with <code>Retry-After</code> header. Separate guards prevent one endpoint's traffic from consuming the other's limit pool.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: SQL Injection</div>
+  <div class="mitigation"><strong>Implementation:</strong> All database access goes through Prisma's parameterised query builder. Zero raw SQL strings that include user input anywhere in the codebase. The only raw SQL is <code>SELECT 1</code> in the health check — no user data involved. Prisma's generated client types prevent passing arbitrary strings where typed values are expected.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Input Injection / Mass Assignment</div>
+  <div class="mitigation"><strong>Implementation:</strong> Global <code>ValidationPipe</code> with <code>whitelist: true</code> strips any fields not declared in the DTO, and <code>forbidNonWhitelisted: true</code> returns 400 if unexpected fields are present. Every endpoint has a typed DTO with class-validator decorators. Untrusted user input cannot reach the service layer in any unexpected shape.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: CSRF</div>
+  <div class="mitigation"><strong>Implementation:</strong> All state-changing API calls require a valid <code>Authorization: Bearer &lt;token&gt;</code> header. CSRF attacks (which forge same-origin cookie submission) cannot forge this header. Additionally, cookies use <code>sameSite: 'lax'</code> which prevents them from being sent on cross-site POST requests initiated from third-party sites.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Password Reset Enumeration</div>
+  <div class="mitigation"><strong>Implementation:</strong> <code>POST /auth/forgot-password</code> always returns the same constant success response regardless of whether the email exists in the system. An attacker cannot determine which emails have accounts by observing response differences.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Platform Admin Account Takeover</div>
+  <div class="mitigation"><strong>Implementation:</strong> <code>PlatformAdmin</code> has <code>failedLoginCount</code>, <code>lockedUntil</code>, and <code>lastFailedAt</code> fields. After exceeding the threshold, login is blocked until <code>lockedUntil</code> time passes. <code>activeSessionId</code> enforces single-session: a new successful login updates this field, immediately invalidating any previous session — even if the previous session's cookie is still valid.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Data Exposure via Error Messages</div>
+  <div class="mitigation"><strong>Implementation:</strong> <code>PrismaExceptionFilter</code> catches all Prisma-specific error codes (P2002 unique violation, P2025 record not found, etc.) and maps them to clean HTTP responses with generic messages. Raw DB error messages, table names, and column names never reach the client response.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Audit Trail Gaps</div>
+  <div class="mitigation"><strong>Implementation:</strong> Global <code>AuditLogInterceptor</code> fires on every non-GET response automatically — no per-route configuration needed. Records: action name, entity type, entity ID, before-value (JSON), after-value (JSON), IP address, user ID, and timestamp. The interceptor operates at the NestJS interceptor level, so it cannot be bypassed by controller code.</div>
+</div>
+
+<div class="sec-item">
+  <div class="threat">Threat: Support Ticket Spoofing</div>
+  <div class="mitigation"><strong>Implementation:</strong> <code>POST /support/ticket</code> extracts <code>institutionId</code>, <code>institutionName</code>, and <code>submittedBy</code> (email/phone) from the validated JWT — not from the request body. Users cannot claim to be from a different institution or submit under a different identity. The DTO only accepts <code>subject</code> and <code>message</code> from user input.</div>
+</div>
+
+<h2 id="cookie-config"><span class="sec-num">23</span> Cookie Security Configuration</h2>
+
+<pre>const RT_COOKIE_OPTIONS = {
+  httpOnly: true,                       // Inaccessible to JavaScript (XSS-proof)
+  secure: true,                         // HTTPS only — never sent over plain HTTP
+  sameSite: 'lax',                      // Sent on same-site navigation; blocked on
+                                        // cross-site POST (CSRF protection)
+  domain: '.buildwithinfovion.com',    // Shared across all subdomains —
+                                        // readable by Vercel Edge Middleware
+  path: '/',                            // Available on all paths
+  maxAge: 7 * 24 * 60 * 60 * 1000,     // 7-day lifetime
+};
+
+// Cookie name selection at login:
+const cookieName = roles.includes('admin') ? 'auth_rt_op' : 'auth_rt';
+res.cookie(cookieName, result.refreshToken, RT_COOKIE_OPTIONS);
+
+// Logout clears BOTH cookie names — regardless of which one was active:
+res.clearCookie('auth_rt',    RT_COOKIE_OPTIONS);
+res.clearCookie('auth_rt_op', RT_COOKIE_OPTIONS);</pre>
+
+<!-- ═══════════════════════════════ SCALABILITY ═══════════════════════════════ -->
+<h2 id="scale-current"><span class="sec-num">24</span> Current Infrastructure Capacity</h2>
+
+<p>The current setup (single Railway backend + managed PostgreSQL + Vercel frontend) is production-grade for the early growth phase. Understanding exactly where the ceilings are is critical for knowing when to act.</p>
+
+<div class="tw"><table>
+  <thead><tr><th>Dimension</th><th>Current Design</th><th>Estimated Ceiling</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Number of Schools</strong></td><td>Single shared DB, single backend instance</td><td>~150–200 active schools before query latency degrades noticeably</td></tr>
+    <tr><td><strong>Students per School</strong></td><td>Subscription cap enforced (maxStudents field), composite indexes on all hot paths</td><td>Comfortably handles 5,000 students per school without index degradation</td></tr>
+    <tr><td><strong>Concurrent Users</strong></td><td>Single NestJS process, stateless JWT</td><td>~500–800 concurrent connections on a Railway Standard instance</td></tr>
+    <tr><td><strong>API Throughput</strong></td><td>Single instance, gzip compression, in-memory cache for list endpoints</td><td>~300–600 req/sec sustained before needing horizontal scaling</td></tr>
+    <tr><td><strong>Database Connections</strong></td><td>Railway managed PG connection pooling</td><td>Depends on Railway plan — typically 25–100 pooled connections</td></tr>
+    <tr><td><strong>Frontend</strong></td><td>Vercel global CDN, Edge Middleware</td><td>Unlimited — Vercel auto-scales globally. Not a bottleneck.</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="scale-tiers"><span class="sec-num">25</span> Scale Tiers — Schools &amp; Migration Roadmap</h2>
+
+<div class="tier" style="border-color:rgba(52,211,153,.3)">
+  <div class="tier-header" style="background:rgba(52,211,153,.06)">
+    <span class="tier-num" style="background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3)">TIER 1</span>
+    <strong style="color:#e2e8f0">1 – 50 Schools</strong>
+    <span class="b b-green" style="margin-left:auto">Current Architecture</span>
+  </div>
+  <div class="tier-body">
+    <p><strong>Infrastructure:</strong> Current setup — single Railway backend, Railway managed PostgreSQL, Vercel frontend. No changes required.</p>
+    <p><strong>Estimated data volume:</strong> ~50 schools × 500 avg students = 25,000 students. Fee payments: ~500,000 records/year. Attendance: ~5M records/year. All fits comfortably on a single PG instance.</p>
+    <p><strong>Action required:</strong> None beyond monitoring. Set up Railway and Vercel alerts for response time and DB CPU.</p>
+    <ul>
+      <li>Keep the in-memory HTTP cache for list endpoints — eliminates repeat DB reads for static data (academic units, subjects, roles)</li>
+      <li>Run <code>EXPLAIN ANALYZE</code> on the 5 most-called queries monthly to catch index drift</li>
+      <li>Ensure Railway PostgreSQL is on a plan with automated daily backups</li>
+    </ul>
+  </div>
+</div>
+
+<div class="tier" style="border-color:rgba(251,191,36,.3)">
+  <div class="tier-header" style="background:rgba(251,191,36,.06)">
+    <span class="tier-num" style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)">TIER 2</span>
+    <strong style="color:#e2e8f0">50 – 200 Schools</strong>
+    <span class="b b-amber" style="margin-left:auto">Optimise &amp; Observe</span>
+  </div>
+  <div class="tier-body">
+    <p><strong>Infrastructure changes:</strong> Upgrade Railway PostgreSQL to a larger plan. Add a Redis instance for shared rate limiting and caching. Upgrade backend to a higher-spec Railway instance.</p>
+    <p><strong>Estimated data volume:</strong> 200 schools × 800 avg students = 160,000 students. Fee payments: ~4M records/year. Attendance: ~40M records/year. DB size: ~50–100 GB.</p>
+    <p><strong>Specific actions:</strong></p>
+    <ul>
+      <li><strong>Redis rate limiting:</strong> Replace in-process rate limit counters with Redis-backed <code>@nestjs/throttler</code> store. Required before horizontal backend scaling — in-memory counters are per-process and would allow limit bypass across instances.</li>
+      <li><strong>Redis caching:</strong> Replace <code>AppCacheModule</code> (in-memory) with <code>@nestjs/cache-manager</code> Redis adapter. Shared cache survives process restarts and works across multiple backend instances.</li>
+      <li><strong>Database read replica:</strong> Migrate reporting queries (exam result summaries, attendance reports, fee defaulter lists) to a read replica. Prisma supports read/write splitting with <code>$extends</code>.</li>
+      <li><strong>Audit log partitioning:</strong> Partition the <code>audit_logs</code> table by <code>institutionId</code> range or month to prevent unbounded table growth from degrading query performance.</li>
+      <li><strong>Refresh token cleanup job:</strong> Schedule a nightly cron that deletes <code>RefreshToken</code> rows where <code>expiresAt &lt; NOW()</code> OR <code>isRevoked = true</code>. Without this, the table grows indefinitely.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="tier" style="border-color:rgba(251,146,60,.3)">
+  <div class="tier-header" style="background:rgba(251,146,60,.06)">
+    <span class="tier-num" style="background:rgba(251,146,60,.15);color:#fb923c;border:1px solid rgba(251,146,60,.3)">TIER 3</span>
+    <strong style="color:#e2e8f0">200 – 1,000 Schools</strong>
+    <span class="b b-orange" style="margin-left:auto">Horizontal Scale</span>
+  </div>
+  <div class="tier-body">
+    <p><strong>Infrastructure changes:</strong> Multiple backend instances behind a load balancer. Dedicated Redis cluster. PostgreSQL with read replica. Consider migrating to AWS RDS or Neon for better connection pooling (PgBouncer).</p>
+    <p><strong>Estimated data volume:</strong> 1,000 schools × 1,000 avg students = 1M students. Attendance records: ~200M/year. Total DB size: ~500 GB – 1 TB. This is where single-DB limits become real.</p>
+    <p><strong>Specific actions:</strong></p>
+    <ul>
+      <li><strong>Horizontal backend scaling:</strong> NestJS is already stateless — JWT validation is pure CPU with no shared process state. Deploy 3–5 instances behind a Railway load balancer or migrate to a container orchestration platform (ECS, Cloud Run).</li>
+      <li><strong>Connection pooling:</strong> At this scale, each backend instance opening its own PG connection pool hits the database's max_connections limit quickly. Add PgBouncer between the backends and PostgreSQL. Target: transaction-mode pooling for short-lived queries.</li>
+      <li><strong>Database sharding strategy:</strong> Consider migrating from shared-DB to a schema-per-institution or database-per-institution-group model. Prisma supports multi-database setups. Group institutions by region or signup date. This is a major migration — plan it with zero-downtime blue/green cutover.</li>
+      <li><strong>Async processing:</strong> Heavy operations (bulk mark entry for large exams, attendance report generation for the full year) should be moved to a background job queue (Bull + Redis). Return a job ID immediately; client polls for completion. This prevents HTTP timeout on large datasets.</li>
+      <li><strong>CDN for static assets:</strong> Institution logos and any uploaded files should go to S3 + CloudFront rather than being served through the NestJS process. Current setup does not handle file uploads — implement this before allowing photo uploads at scale.</li>
+      <li><strong>Observability:</strong> Integrate OpenTelemetry for distributed tracing. At this scale, a slow query or a misbehaving interceptor can degrade the entire cluster silently. Sentry for error tracking, Datadog or Grafana for metrics.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="tier" style="border-color:rgba(248,113,113,.3)">
+  <div class="tier-header" style="background:rgba(248,113,113,.06)">
+    <span class="tier-num" style="background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.3)">TIER 4</span>
+    <strong style="color:#e2e8f0">1,000+ Schools</strong>
+    <span class="b b-red" style="margin-left:auto">Distributed Architecture</span>
+  </div>
+  <div class="tier-body">
+    <p><strong>This tier requires architectural decisions that should be planned at Tier 3, not when you arrive at Tier 4.</strong></p>
+    <p><strong>Estimated data volume:</strong> 1,000+ schools × variable students = multi-million student records. DB size: multi-TB. At this scale, a single PostgreSQL instance — even on the highest hardware — becomes a coordination bottleneck.</p>
+    <p><strong>Specific actions:</strong></p>
+    <ul>
+      <li><strong>Tenant database isolation:</strong> Each institution (or group of 50–100 institutions) gets its own PostgreSQL database. A routing layer (tenant resolver) maps institutionId → database connection string. Prisma's multi-client pattern supports this. Benefits: complete data isolation, independent backup/restore, no cross-tenant query interference.</li>
+      <li><strong>Microservice decomposition:</strong> Split the NestJS monolith into bounded services: Auth Service, Student Service, Fee Service, Exam Service. Communicate via a message broker (RabbitMQ or Kafka). Each service owns its data store. The monorepo structure already separates modules cleanly — this decomposition follows existing module boundaries.</li>
+      <li><strong>Event-driven architecture:</strong> Parent portal reads (attendance, marks, fees) generate high read volume. Denormalise into a read-optimised store (e.g. Elasticsearch or a separate PG read database) that is updated by events when writes happen. Parent portal queries the fast read store; admin writes go to the authoritative DB.</li>
+      <li><strong>Geographic distribution:</strong> Deploy backend and database clusters per region (India: Mumbai, Singapore). Use a global load balancer to route institutions to the nearest cluster. Reduces latency significantly for schools in different geographic zones.</li>
+      <li><strong>Background job platform:</strong> Migrate from Bull (Redis-backed, single cluster) to a distributed job platform (Temporal.io or AWS SQS + Lambda workers). Handle bulk operations, report generation, and scheduled tasks at scale without timeouts.</li>
+      <li><strong>Dedicated analytics pipeline:</strong> Offload all reporting queries to a separate analytics database (ClickHouse or BigQuery) populated by a change data capture (CDC) stream from the primary DB. Reporting never hits the transactional database.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="scale-bottlenecks"><span class="sec-num">26</span> Known Bottlenecks &amp; When to Act</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Bottleneck</th><th>Symptom</th><th>Action Trigger</th><th>Fix</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>In-memory rate limiter</strong></td>
+      <td>With multiple backend instances, users bypass rate limits by hitting different processes</td>
+      <td>When adding the 2nd backend instance</td>
+      <td>Replace with Redis-backed <code>@nestjs/throttler</code> store. One Redis key shared across all instances.</td>
+    </tr>
+    <tr>
+      <td><strong>In-memory HTTP cache</strong></td>
+      <td>Each instance has its own cache — cache invalidation on one instance doesn't propagate to others. Stale data served.</td>
+      <td>When adding the 2nd backend instance</td>
+      <td>Replace <code>AppCacheModule</code> with Redis cache adapter. Shared cache, shared invalidation.</td>
+    </tr>
+    <tr>
+      <td><strong>RefreshToken table growth</strong></td>
+      <td>Table scans slow down even with the tokenHash index as millions of revoked rows accumulate</td>
+      <td>When table exceeds 500K rows (approx. 100 schools)</td>
+      <td>Schedule nightly cleanup: <code>DELETE FROM refresh_tokens WHERE expires_at &lt; NOW() OR is_revoked = true</code></td>
+    </tr>
+    <tr>
+      <td><strong>AuditLog table growth</strong></td>
+      <td>Unbounded table growth degrades writes and any full-table queries</td>
+      <td>When table exceeds 2M rows</td>
+      <td>Partition by month (PG table partitioning) or archive rows older than 12 months to cold storage</td>
+    </tr>
+    <tr>
+      <td><strong>PG connection exhaustion</strong></td>
+      <td>Connection refused or timeout errors; <code>max_connections</code> limit hit</td>
+      <td>When backend reaches 3+ instances</td>
+      <td>Add PgBouncer in transaction mode between backends and PostgreSQL. Each instance connects to PgBouncer, not PG directly.</td>
+    </tr>
+    <tr>
+      <td><strong>Attendance table size</strong></td>
+      <td>Slow attendance report queries — scanning millions of rows per institution per year</td>
+      <td>When a single institution accumulates &gt;2M attendance records (approx. 5,000 students × 2 years)</td>
+      <td>Add PostgreSQL partial index on <code>(institutionId, date)</code> with a <code>WHERE date &gt; '2024-01-01'</code> filter. Or partition attendance tables by academic year.</td>
+    </tr>
+    <tr>
+      <td><strong>Heavy report generation</strong></td>
+      <td>HTTP 504 timeouts on exam result summaries or annual attendance reports for large schools</td>
+      <td>When report endpoint consistently takes &gt;3 seconds</td>
+      <td>Move to async: return jobId immediately, compute in background worker (Bull queue), client polls for result. Or pre-compute and cache reports nightly.</td>
+    </tr>
+    <tr>
+      <td><strong>Single DB write bottleneck</strong></td>
+      <td>High write latency during peak hours (morning attendance, end-of-term mark entry by all teachers simultaneously)</td>
+      <td>When P99 write latency exceeds 500ms</td>
+      <td>Add a write queue for bulk operations. Teachers' mark submissions queue to a Bull job that processes them sequentially — avoids simultaneous write spikes hitting the DB.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<h2 id="scale-roadmap"><span class="sec-num">27</span> Migration Readiness — What Exists Today</h2>
+
+<p>The current architecture already makes several correct decisions that simplify future scaling:</p>
+
+<div class="grid2">
+  <div class="card success-card">
+    <div class="ct">Stateless Backend</div>
+    <p>JWT validation is pure CPU. No session state in memory. Adding more backend instances requires zero coordination. Load balancing is trivial — any instance can handle any request.</p>
+  </div>
+  <div class="card success-card">
+    <div class="ct">Abstracted Cache Layer</div>
+    <p><code>AppCacheService</code> is already an abstraction over the cache manager. Swapping from in-memory to Redis requires changing one module import, not refactoring service code.</p>
+  </div>
+  <div class="card success-card">
+    <div class="ct">institutionId on Every Row</div>
+    <p>The shared-DB multi-tenant design means moving to per-institution databases is a data migration challenge, not a code challenge. All queries already include institutionId — no query refactoring needed.</p>
+  </div>
+  <div class="card success-card">
+    <div class="ct">Module-Per-Feature Backend</div>
+    <p>NestJS modules map directly to potential microservices (AuthModule, FeesModule, ExamModule). If decomposition is needed, each module already owns its service, controller, and DTOs.</p>
+  </div>
+  <div class="card success-card">
+    <div class="ct">Prisma Migrations</div>
+    <p>All schema changes are version-controlled migrations that apply atomically. Zero-downtime schema changes are achievable by adding nullable columns first, backfilling, then adding constraints.</p>
+  </div>
+  <div class="card success-card">
+    <div class="ct">Feature Flags Ready</div>
+    <p><code>Institution.features</code> is a JSON column. Per-institution feature gating can be added without schema changes — just add a feature key and check it in the relevant service.</p>
+  </div>
+</div>
+
+<hr/>
+
+<p style="font-size:12px;color:var(--text4);text-align:center;letter-spacing:.06em;margin-top:32px;">
+  INFOVION &mdash; ACADEMIC SAAS PLATFORM &nbsp;&bull;&nbsp; SYSTEM ARCHITECTURE REFERENCE v2.0 &nbsp;&bull;&nbsp; INTERNAL &amp; CONFIDENTIAL &nbsp;&bull;&nbsp; APRIL 2026
+</p>
+
+</main>
+</div>
+</body>
+</html>
