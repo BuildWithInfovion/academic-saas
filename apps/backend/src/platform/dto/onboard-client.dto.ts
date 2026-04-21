@@ -77,6 +77,11 @@ export class OnboardClientDto {
   @IsOptional()
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  directorName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   directorPhone?: string;
 
   @IsOptional()

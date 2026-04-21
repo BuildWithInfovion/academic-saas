@@ -215,6 +215,7 @@ model Inquiry {
 model User {
   id               String    @id @default(cuid())
   institutionId    String
+  name             String?
   email            String?
   phone            String?
   passwordHash     String?

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { apiFetch } from '@/lib/api';
 
 type Status = { enabled: boolean; backupCodesRemaining: number };
-type SetupData = { qrCode: string; secret: string };
+type SetupData = { qrCodeDataUrl: string; secret: string };
 type View = 'loading' | 'disabled' | 'setup' | 'backup-codes' | 'enabled' | 'disabling' | 'error';
 
 const inp = 'w-full p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
@@ -171,7 +171,7 @@ export function TotpSetupCard() {
 
           <div className="flex justify-center">
             <div className="p-3 bg-white rounded-xl border border-ds-border shadow-sm inline-block">
-              <Image src={setup.qrCode} alt="TOTP QR Code" width={180} height={180} unoptimized />
+              <Image src={setup.qrCodeDataUrl} alt="TOTP QR Code" width={180} height={180} unoptimized />
             </div>
           </div>
 

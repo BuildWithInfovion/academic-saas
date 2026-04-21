@@ -71,7 +71,8 @@ const menuGroups = [
   },
 ];
 
-function displayName(email?: string | null, phone?: string | null): string {
+function displayName(name?: string | null, email?: string | null, phone?: string | null): string {
+  if (name) return name;
   if (email) {
     const prefix = email.split('@')[0];
     return prefix.replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -179,7 +180,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (!ready || !accessToken) return null;
 
   const roleLabel    = user ? getRoleLabel(user.roles) : '';
-  const userName     = user ? displayName(user.email, user.phone) : '';
+  const userName     = user ? displayName(user.name, user.email, user.phone) : '';
   const activeNavPath = getActivePath(pathname);
 
   const sidebarContent = (

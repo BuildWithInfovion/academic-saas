@@ -41,24 +41,34 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const cached = this.cache.get<boolean>(cacheKey);
 
     if (cached === undefined) {
-      // Verify user still exists, is active, and has not been removed.
-      const user = await this.prisma.user.findFirst({
-        where: {
-          id: payload.sub,
-          institutionId: payload.institutionId,
-          isActive: true,
-          deletedAt: null,
-        },
-        select: { id: true },
-      });
+      // Verify user exists/active AND institution is not suspended — both in one round-trip.
+      const [user, institution] = await Promise.all([
+        this.prisma.user.findFirst({
+          where: {
+            id: payload.sub,
+            institutionId: payload.institutionId,
+            isActive: true,
+            deletedAt: null,
+          },
+          select: { id: true },
+        }),
+        this.prisma.institution.findUnique({
+          where: { id: payload.institutionId },
+          select: { status: true, deletedAt: true },
+        }),
+      ]);
 
-      const isActive = !!user;
+      const isActive =
+        !!user &&
+        !!institution &&
+        !institution.deletedAt &&
+        institution.status === 'active';
+
       this.cache.set(cacheKey, isActive, USER_ACTIVE_CACHE_TTL_MS);
 
       if (!isActive) {
-        throw new UnauthorizedException(
-          'Account is inactive or has been removed',
-        );
+        if (!user) throw new UnauthorizedException('Account is inactive or has been removed');
+        throw new UnauthorizedException('Institution account is inactive or suspended');
       }
     } else if (!cached) {
       throw new UnauthorizedException(

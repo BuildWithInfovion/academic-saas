@@ -657,6 +657,7 @@ export class PlatformService {
         const operator = await tx.user.create({
           data: {
             institutionId: inst.id,
+            name: dto.adminName?.trim() || null,
             email: operatorEmail,
             phone: dto.adminPhone?.trim() || null,
             passwordHash,
@@ -678,6 +679,7 @@ export class PlatformService {
           directorUser = await tx.user.create({
             data: {
               institutionId: inst.id,
+              name: dto.directorName?.trim() || null,
               email: directorEmail,
               phone: dto.directorPhone?.trim() || null,
               passwordHash: directorPasswordHash,

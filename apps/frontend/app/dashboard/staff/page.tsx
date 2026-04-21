@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { validatePassword, checkPasswordStrength } from '@/lib/password-utils';
 
 type Role = { id: string; code: string; label: string };
 type StaffUser = {
-  id: string; email: string; phone?: string; isActive: boolean; createdAt: string;
+  id: string; name?: string | null; email: string; phone?: string; isActive: boolean; createdAt: string;
   roles: { role: Role }[];
 };
 
@@ -54,13 +55,14 @@ export default function StaffPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; phone?: string; password: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ name?: string; email: string; phone?: string; password: string } | null>(null);
 
   const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 4000); };
 
@@ -84,6 +86,8 @@ export default function StaffPage() {
     const validationError = validateStaffIdentity(email, phone);
     if (validationError) return setError(validationError);
     if (!password.trim()) return setError('Password is required');
+    const pwErr = validatePassword(password);
+    if (pwErr) return setError(pwErr);
     if (!selectedRoleId) return setError('Role is required. Please select a role for this staff member.');
     setSubmitting(true);
     setError(null);
@@ -91,6 +95,7 @@ export default function StaffPage() {
       const newUser = await apiFetch('/users', {
         method: 'POST',
         body: JSON.stringify({
+          name: name.trim() || undefined,
           email: email.trim().toLowerCase() || undefined,
           phone: phone.trim() || undefined,
           password,
@@ -100,8 +105,8 @@ export default function StaffPage() {
         method: 'POST',
         body: JSON.stringify({ roleId: selectedRoleId }),
       });
-      setCreatedCredentials({ email: email.trim().toLowerCase() || undefined as any, phone: phone.trim() || undefined, password });
-      setEmail(''); setPhone(''); setPassword(''); setSelectedRoleId('');
+      setCreatedCredentials({ name: name.trim() || undefined, email: email.trim().toLowerCase() || undefined as any, phone: phone.trim() || undefined, password });
+      setName(''); setEmail(''); setPhone(''); setPassword(''); setSelectedRoleId('');
       await loadData();
     } catch (e: any) { setError(e.message); }
     finally { setSubmitting(false); }
@@ -156,7 +161,8 @@ export default function StaffPage() {
                   onClick={() => router.push(`/dashboard/staff/${u.id}`)}
                   className="cursor-pointer hover:bg-ds-bg2 transition-colors">
                   <td className="px-5 py-3 text-ds-text1 font-medium">
-                    <div>{u.email || '—'}</div>
+                    {u.name && <div className="font-semibold">{u.name}</div>}
+                    <div className={u.name ? 'text-xs text-ds-text3' : ''}>{u.email || '—'}</div>
                     {u.phone && <div className="text-xs text-ds-text3">{u.phone}</div>}
                   </td>
                   <td className="px-5 py-3">
@@ -205,6 +211,12 @@ export default function StaffPage() {
                 <h2 className="text-lg font-bold text-ds-text1 mb-1 text-center">Staff Account Created</h2>
                 <p className="text-xs text-ds-text3 text-center mb-5">Share these credentials. Password will not be shown again.</p>
                 <div className="bg-ds-bg2 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
+                  {createdCredentials.name && (
+                    <div>
+                      <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Name</p>
+                      <p className="text-ds-text1 font-medium font-sans">{createdCredentials.name}</p>
+                    </div>
+                  )}
                   {createdCredentials.email && (
                     <div>
                       <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Email</p>
@@ -241,6 +253,11 @@ export default function StaffPage() {
                 {error && <div className="mb-3 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-xs">{error}</div>}
                 <div className="space-y-3">
                   <div>
+                    <label className="text-xs font-medium text-ds-text2 block mb-1">Full Name</label>
+                    <input type="text" className={inp} placeholder="e.g. Priya Sharma"
+                      value={name} onChange={(e) => setName(e.target.value)} />
+                  </div>
+                  <div>
                     <label className="text-xs font-medium text-ds-text2 block mb-1">Email</label>
                     <input type="email" className={inp} placeholder="teacher@school.com"
                       value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -268,6 +285,18 @@ export default function StaffPage() {
                     {password && showPassword && (
                       <p className="mt-1 text-xs text-indigo-600 font-mono font-medium">{password}</p>
                     )}
+                    {password && (() => {
+                      const s = checkPasswordStrength(password);
+                      return (
+                        <div className="mt-2 grid grid-cols-2 gap-1">
+                          {([['minLength', '8+ chars'], ['hasUppercase', 'Uppercase'], ['hasLowercase', 'Lowercase'], ['hasNumber', 'Number']] as const).map(([k, label]) => (
+                            <span key={k} className={`text-xs flex items-center gap-1 ${s[k] ? 'text-ds-success-text' : 'text-ds-text3'}`}>
+                              {s[k] ? '✓' : '○'} {label}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div>
                     <label className="text-xs font-medium text-ds-text2 block mb-1">Role <span className="text-red-500">*</span></label>
@@ -278,7 +307,7 @@ export default function StaffPage() {
                   </div>
                 </div>
                 <div className="flex gap-3 mt-6">
-                  <button onClick={() => { setShowCreate(false); setError(null); setEmail(''); setPhone(''); setPassword(''); setSelectedRoleId(''); }}
+                  <button onClick={() => { setShowCreate(false); setError(null); setName(''); setEmail(''); setPhone(''); setPassword(''); setSelectedRoleId(''); }}
                     className="flex-1 border border-ds-border-strong text-ds-text1 py-2.5 rounded-lg text-sm font-medium hover:bg-ds-bg2">
                     Cancel
                   </button>

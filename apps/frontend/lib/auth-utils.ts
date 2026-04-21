@@ -3,7 +3,6 @@ export const ROLE_LABELS: Record<string, string> = {
   admin: 'Operator',
   principal: 'Principal',
   teacher: 'Teacher',
-  student: 'Student',
   parent: 'Parent',
   receptionist: 'Desk / Reception',
   accountant: 'Accountant',
@@ -15,7 +14,6 @@ export function getRoleRoute(roles: string[]): string {
   if (roles.includes('admin')) return '/dashboard';
   if (roles.includes('principal')) return '/portal/principal';
   if (roles.includes('teacher')) return '/portal/teacher';
-  if (roles.includes('student')) return '/portal/student';
   if (roles.includes('parent')) return '/portal/parent';
   if (roles.includes('receptionist')) return '/portal/receptionist';
   if (roles.includes('accountant')) return '/portal/accountant';
@@ -24,7 +22,7 @@ export function getRoleRoute(roles: string[]): string {
 }
 
 export function getRoleLabel(roles: string[]): string {
-  for (const role of ['super_admin', 'admin', 'principal', 'teacher', 'student', 'parent', 'receptionist', 'accountant', 'non_teaching_staff']) {
+  for (const role of ['super_admin', 'admin', 'principal', 'teacher', 'parent', 'receptionist', 'accountant', 'non_teaching_staff']) {
     if (roles.includes(role)) return ROLE_LABELS[role] ?? role;
   }
   return 'Staff';
@@ -37,12 +35,11 @@ export const DASHBOARD_ROLES = ['admin'];
 
 // All roles that land in a portal (not dashboard). Used to detect multi-role users
 // who need to pick a portal on login. Must stay in sync with getRoleRoute() above.
-// Note: 'student' is intentionally excluded — the student portal is not active.
+// 'student' excluded — student portal is not active in this release.
 export const PORTAL_ROLES = [
   'super_admin',
   'principal',
   'teacher',
-  'student',
   'parent',
   'receptionist',
   'accountant',

@@ -1,6 +1,10 @@
 import { IsEmail, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
 
 export class CreateUserDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   // B2-05: at least one of email or phone must be provided
   @ValidateIf((o) => !o.phone)
   @IsEmail(

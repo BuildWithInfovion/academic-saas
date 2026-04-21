@@ -156,7 +156,7 @@ export default function DashboardPage() {
           <h1 className="page-title">
             {greeting},{' '}
             <span style={{ color: '#ae5525' }}>
-              {user?.email?.split('@')[0] || 'Admin'}
+              {user?.name || user?.email?.split('@')[0] || 'Admin'}
             </span>
           </h1>
           <p className="page-subtitle">{todayDate}</p>

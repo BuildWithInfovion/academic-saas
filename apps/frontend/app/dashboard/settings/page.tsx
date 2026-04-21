@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { TotpSetupCard } from '@/components/totp-setup-card';
+import { validatePassword, checkPasswordStrength } from '@/lib/password-utils';
 
 interface ResetRequest {
   id: string;
@@ -50,7 +51,8 @@ export default function OperatorSettingsPage() {
     setPwError(null);
     if (!oldPassword.trim()) return setPwError('Current password is required');
     if (!newPassword.trim()) return setPwError('New password is required');
-    if (newPassword.length < 6) return setPwError('New password must be at least 6 characters');
+    const pwErr = validatePassword(newPassword);
+    if (pwErr) return setPwError(pwErr);
     if (newPassword !== confirmPassword) return setPwError('New passwords do not match');
 
     setSaving(true);
@@ -224,8 +226,20 @@ export default function OperatorSettingsPage() {
           </div>
           <div>
             <label className="text-xs font-medium text-ds-text2 block mb-1">New Password</label>
-            <input type="password" className={inp} placeholder="At least 6 characters"
+            <input type="password" className={inp} placeholder="At least 8 characters"
               value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            {newPassword && (() => {
+              const s = checkPasswordStrength(newPassword);
+              return (
+                <div className="mt-2 grid grid-cols-2 gap-1">
+                  {([['minLength', '8+ characters'], ['hasUppercase', 'Uppercase letter'], ['hasLowercase', 'Lowercase letter'], ['hasNumber', 'Number']] as const).map(([k, label]) => (
+                    <span key={k} className={`text-xs flex items-center gap-1 ${s[k] ? 'text-ds-success-text' : 'text-ds-text3'}`}>
+                      {s[k] ? '✓' : '○'} {label}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
           <div>
             <label className="text-xs font-medium text-ds-text2 block mb-1">Confirm New Password</label>

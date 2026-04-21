@@ -826,6 +826,7 @@ export class AuthService {
   private async issueFullSession(
     user: {
       id: string;
+      name?: string | null;
       email: string | null;
       phone: string | null;
       institutionId: string;
@@ -858,6 +859,7 @@ export class AuthService {
       refreshToken,
       user: {
         id: user.id,
+        name: user.name ?? null,
         email: user.email,
         phone: user.phone,
         institutionId,
