@@ -688,6 +688,342 @@ hr{border:none;border-top:1px solid var(--border);margin:36px 0;}
 </ul>
 </div>
 
+<!-- ═══════════════════════════════ BACKEND ═══════════════════════════════ -->
+<h2 id="backend-modules"><span class="sec-num">BE</span> Backend — Feature Modules</h2>
+
+<p>The NestJS backend is composed of 18 independently encapsulated modules registered in <code>AppModule</code>. Each module owns its controller, service, and DTOs — no cross-module DB access. Services communicate only through NestJS dependency injection.</p>
+
+<div class="tw"><table>
+  <thead><tr><th>Module</th><th>Path Prefix</th><th>Key Responsibilities</th><th>Guards</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Auth</strong></td><td><code>/auth</code></td><td>Login (email+password+TOTP), logout, token refresh (operator + portal), forgot/reset password, parent login, TOTP lifecycle</td><td>Public (most) + AuthGuard (TOTP/logout)</td></tr>
+    <tr><td><strong>Student</strong></td><td><code>/students</code></td><td>CRUD, search/filter, promotion, sibling linking, parent auto-provisioning, parent password reset</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Users</strong></td><td><code>/users</code></td><td>Staff CRUD, role assignment, activation/deactivation, password reset</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Roles</strong></td><td><code>/roles</code></td><td>List institution roles, update permissions JSON per role per institution</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Academic</strong></td><td><code>/academic</code></td><td>Academic years (create, mark current), units/sections (self-referential hierarchy), class teacher assignment</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Subject</strong></td><td><code>/subjects</code></td><td>Subject CRUD, unit-subject assignment, teacher-subject linking per unit</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Attendance</strong></td><td><code>/attendance</code></td><td>Session creation (unique per unit+date+subject), bulk record marking, student history, aggregate reports</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Staff Attendance</strong></td><td><code>/staff-attendance</code></td><td>Self-mark, admin override, clock-in/out, leave requests (submit/approve/reject), monthly summaries</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Fees</strong></td><td><code>/fees</code></td><td>Fee heads, structures (per unit/year/installment), payment recording, receipt number generation, balance calculation, defaulter detection</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Exam</strong></td><td><code>/exams</code></td><td>Exam CRUD, ExamSubject schedule (date/time/maxMarks/passingMarks), mark entry, result reports, rank summaries, status workflow</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Announcement</strong></td><td><code>/announcements</code></td><td>Create announcements targeted by role, list (caller-role-filtered), pin, soft delete, expiry</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Calendar</strong></td><td><code>/calendar</code></td><td>Institution events CRUD, date-range filtering, typed events (holiday/exam/meeting/vacation)</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Timetable</strong></td><td><code>/timetable</code></td><td>Weekly slot grid per unit (day×period), bulk-save replacing full unit timetable, teacher schedule view</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Inquiry</strong></td><td><code>/inquiries</code></td><td>Pre-admission lead tracking, status pipeline (new→contacted→visited→enrolled/dropped), notes per stage</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>TC</strong></td><td><code>/tc</code></td><td>Transfer certificate workflow (request→approve→issue/reject), immutable student snapshot, sequential TC number on issue</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Support</strong></td><td><code>/support</code></td><td>Authenticated ticket submission — institution name and submitter read from JWT, not body</td><td>Auth + Tenant</td></tr>
+    <tr><td><strong>Institution</strong></td><td><code>/institution</code></td><td>Institution profile CRUD, feature flags (JSON column on Institution model)</td><td>Auth + Tenant + Roles</td></tr>
+    <tr><td><strong>Platform</strong></td><td><code>/platform</code></td><td>Infovion internal: admin auth (separate cookie), client onboarding, subscription management, support ticket management</td><td>PlatformGuard (separate chain)</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="common-infra"><span class="sec-num">CI</span> Common Infrastructure</h2>
+
+<p>Everything in <code>src/common/</code> is pure infrastructure — zero business logic. It wraps every request at the NestJS pipeline level.</p>
+
+<div class="grid2">
+  <div class="card">
+    <div class="ct">Guards — Applied per route</div>
+    <p><strong>AuthGuard</strong> — Passport JWT strategy. Validates signature + expiry + issuer. Populates <code>req.user = { userId, institutionId, roles }</code>.<br/><br/>
+    <strong>TenantGuard</strong> — Compares <code>req.user.institutionId</code> vs <code>X-Institution-ID</code> header. Returns 403 on mismatch. Applied after AuthGuard.<br/><br/>
+    <strong>RolesGuard</strong> — Reads <code>@Permissions('resource.action')</code> metadata. Checks user's role permission array. Returns 403 if missing.<br/><br/>
+    <strong>LoginRateLimitGuard</strong> — Per-IP (10/window) + per-user (8/window) limits on <code>/auth/login</code>.<br/>
+    <strong>ParentLoginRateLimitGuard</strong> — Identical logic, isolated pool for <code>/auth/parent/login</code>.</p>
+  </div>
+  <div class="card">
+    <div class="ct">Global Interceptors — Applied to all routes</div>
+    <p><strong>AuditLogInterceptor</strong> — Fires on every non-GET response. Records: action, entityType, entityId, oldValue (JSON), newValue (JSON), IP address, userId, timestamp. Cannot be bypassed by controller code — runs at NestJS interceptor level.<br/><br/>
+    <strong>HttpCacheInterceptor</strong> — In-memory cache for expensive read endpoints. Cache key = URL + institutionId. Invalidated on write operations to the same resource.<br/><br/>
+    <strong>RequestMetricsInterceptor</strong> — Tracks request counts, P95/P99 response times, error rates per endpoint. Metrics surfaced via <code>GET /health</code>.</p>
+  </div>
+  <div class="card">
+    <div class="ct">Middleware</div>
+    <p><strong>TenantMiddleware</strong> — Reads <code>X-Institution-ID</code> header early in the pipeline and attaches <code>institutionId</code> to the request context. Excluded from all public auth paths via the exclusion list in <code>AppModule.configure()</code>.</p>
+  </div>
+  <div class="card">
+    <div class="ct">Filters & Decorators</div>
+    <p><strong>PrismaExceptionFilter</strong> — Global. Catches Prisma error codes: P2002 (unique violation) → 409, P2025 (not found) → 404, FK violations → 400. Raw DB error messages never reach the client.<br/><br/>
+    <strong>@Tenant()</strong> — Parameter decorator. Extracts <code>institutionId</code> from the request for use in controller method signatures, avoiding manual <code>req.user.institutionId</code> access.<br/><br/>
+    <strong>@Permissions('x.y')</strong> — Route metadata decorator read by RolesGuard at runtime.</p>
+  </div>
+</div>
+
+<h2 id="api-reference"><span class="sec-num">API</span> API Endpoint Reference</h2>
+
+<p>All authenticated endpoints require <code>Authorization: Bearer &lt;accessToken&gt;</code> and <code>X-Institution-ID: &lt;institutionId&gt;</code> headers plus <code>credentials: include</code> (for cookies). Base URL: <code>api.buildwithinfovion.com</code>.</p>
+
+<h3>Authentication — <code>/auth</code></h3>
+<div class="tw"><table>
+  <thead><tr><th>Method</th><th>Path</th><th>Auth Required</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/login</code></td><td><span class="b b-green">Public</span></td><td>Email + password + institutionCode. Sets <code>auth_rt_op</code> or <code>auth_rt</code> cookie based on role. Returns <code>{ accessToken, user }</code>. If TOTP enabled: returns <code>{ requiresTOTP: true, totpToken }</code> instead.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/parent/login</code></td><td><span class="b b-green">Public</span></td><td>Phone + password + institutionCode. Sets <code>auth_rt</code> cookie.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/refresh</code></td><td>Cookie: <code>auth_rt</code></td><td>Portal token refresh. Rotates cookie + returns new accessToken.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/refresh-op</code></td><td>Cookie: <code>auth_rt_op</code></td><td>Operator token refresh. Rotates cookie + returns new accessToken.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/logout</code></td><td>Bearer</td><td>Revokes refresh token. Clears both <code>auth_rt</code> and <code>auth_rt_op</code> cookies regardless of which was active.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/forgot-password</code></td><td><span class="b b-green">Public</span></td><td>Sends 6-digit OTP to email. Always returns 200 — does not reveal whether email exists.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/reset-password</code></td><td><span class="b b-green">Public</span></td><td>OTP + new password. OTP is single-use, 10-min TTL, SHA-256 hashed in DB.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/totp/setup</code></td><td>Bearer</td><td>Generates TOTP secret. Returns QR code data URL + raw secret. TOTP not active until confirmed.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/totp/confirm</code></td><td>Bearer</td><td>Enables TOTP after verifying first code. Returns 8 single-use backup codes.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/auth/totp/authenticate</code></td><td>TOTP token</td><td>Second step of 2FA login. Accepts 6-digit code or unused backup code. Sets full session cookie on success.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/auth/totp/status</code></td><td>Bearer</td><td>Returns <code>{ enabled: bool, backupCodesRemaining: number }</code>.</td></tr>
+    <tr><td><span class="b b-red">DELETE</span></td><td><code>/auth/totp</code></td><td>Bearer</td><td>Disables TOTP. Requires submitting a valid current TOTP code to confirm intent.</td></tr>
+  </tbody>
+</table></div>
+
+<h3>Students — <code>/students</code></h3>
+<div class="tw"><table>
+  <thead><tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/students</code></td><td><code>students.read</code></td><td>List students. Query params: <code>academicUnitId</code>, <code>status</code>, <code>search</code> (name or admissionNo). Excludes soft-deleted rows.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/students</code></td><td><code>students.write</code></td><td>Admit student with full profile. If parent phone provided, auto-creates parent User account with a generated password (returned once in response).</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/students/:id</code></td><td><code>students.read</code></td><td>Full student profile: personal, parent, academic unit, demographics.</td></tr>
+    <tr><td><span class="b b-amber">PATCH</span></td><td><code>/students/:id</code></td><td><code>students.write</code></td><td>Partial update any student field. Preserves historical data (attendance, fees, marks) unchanged.</td></tr>
+    <tr><td><span class="b b-red">DELETE</span></td><td><code>/students/:id</code></td><td><code>students.write</code></td><td>Soft delete — sets <code>deletedAt</code>. Student is hidden from all lists but historical records remain intact.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/students/promote</code></td><td><code>students.write</code></td><td>Bulk promote students from source academic unit to target unit. Used at end-of-year class advancement.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/students/:id/parent-password-reset</code></td><td><code>students.write</code></td><td>Admin resets parent account password. New plaintext password returned once in response, never stored.</td></tr>
+  </tbody>
+</table></div>
+
+<h3>Fees — <code>/fees</code></h3>
+<div class="tw"><table>
+  <thead><tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/fees/heads</code></td><td><code>fees.read</code></td><td>List all fee heads (Tuition, Transport, Lab, etc.) for the institution.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/fees/heads</code></td><td><code>fees.write</code></td><td>Create a fee head. Name must be unique within the institution.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/fees/structures</code></td><td><code>fees.read</code></td><td>List fee structures. Filter by <code>academicUnitId</code> and/or <code>academicYearId</code>.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/fees/structures</code></td><td><code>fees.write</code></td><td>Create structure: unit + year + fee head + amount. Supports installment breakdown with <code>installmentName</code> and <code>dueDate</code>.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/fees/payments</code></td><td><code>fees.read</code></td><td>List payments. Filter by <code>studentId</code>, <code>academicYearId</code>, <code>feeHeadId</code>, date range.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/fees/payments</code></td><td><code>fees.write</code></td><td>Record a payment. Auto-assigns sequential <code>receiptNo</code> (unique per institution). Body: studentId, feeHeadId, amount, paymentMode, paidOn.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/fees/balance/:studentId</code></td><td><code>fees.read</code></td><td>Real-time balance: SUM(fee structure amounts) minus SUM(payments) for a given academic year.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/fees/defaulters</code></td><td><code>fees.read</code></td><td>All students with outstanding balance for a given <code>academicYearId</code>. Grouped by class for fee reminder campaigns.</td></tr>
+  </tbody>
+</table></div>
+
+<h3>Exams — <code>/exams</code></h3>
+<div class="tw"><table>
+  <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/exams</code></td><td>List exams for the institution. Filter by <code>academicYearId</code> or <code>status</code>.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/exams</code></td><td>Create exam. Status defaults to <code>draft</code> — results invisible to parents/students until published.</td></tr>
+    <tr><td><span class="b b-amber">PATCH</span></td><td><code>/exams/:id</code></td><td>Update details or advance status: <code>draft</code> → <code>published</code> → <code>completed</code>.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/exams/:id/subjects</code></td><td>List ExamSubject schedule: date, time, maxMarks, passingMarks per academic unit + subject pair.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/exams/:id/subjects</code></td><td>Add a subject to the exam schedule for a specific academic unit. Unique per (exam, unit, subject).</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/exams/:id/marks</code></td><td>Bulk mark entry. Accepts array of <code>{ studentId, subjectId, marksObtained, isAbsent }</code>. isAbsent is distinct from zero marks.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/exams/:id/results</code></td><td>All results for an exam, filtered by <code>academicUnitId</code>. Per-student, per-subject marks.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/exams/:id/results/summary</code></td><td>Class rank list: total marks, percentage, rank, subject-wise pass/fail count per student.</td></tr>
+  </tbody>
+</table></div>
+
+<h3>Other Modules — Abbreviated</h3>
+<div class="tw"><table>
+  <thead><tr><th>Module</th><th>Endpoints</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Attendance</strong></td><td><code>POST /attendance/sessions</code> (create) · <code>POST /attendance/sessions/:id/records</code> (bulk mark) · <code>GET /attendance/students/:id</code> (history) · <code>GET /attendance/units/:id/summary</code></td></tr>
+    <tr><td><strong>Staff Attendance</strong></td><td><code>POST /staff-attendance</code> (self-mark) · <code>PATCH /staff-attendance/:id</code> (admin override) · <code>POST /staff-attendance/leave-requests</code> · <code>PATCH /staff-attendance/leave-requests/:id</code> (approve/reject) · <code>GET /staff-attendance/monthly</code></td></tr>
+    <tr><td><strong>Academic</strong></td><td><code>GET/POST /academic/years</code> · <code>PATCH /academic/years/:id</code> · <code>GET/POST /academic/units</code> · <code>PATCH/DELETE /academic/units/:id</code></td></tr>
+    <tr><td><strong>Subjects</strong></td><td><code>GET/POST /subjects</code> · <code>GET/POST /academic/units/:id/subjects</code> · <code>DELETE /academic/units/:id/subjects/:subjectId</code></td></tr>
+    <tr><td><strong>Timetable</strong></td><td><code>GET /timetable/units/:unitId</code> · <code>POST /timetable/units/:unitId</code> (bulk save — replaces entire unit timetable atomically)</td></tr>
+    <tr><td><strong>Announcements</strong></td><td><code>GET/POST /announcements</code> · <code>PATCH /announcements/:id</code> (update/pin) · <code>DELETE /announcements/:id</code> (soft delete)</td></tr>
+    <tr><td><strong>Calendar</strong></td><td><code>GET/POST /calendar</code> · <code>PATCH/DELETE /calendar/:id</code></td></tr>
+    <tr><td><strong>Inquiries</strong></td><td><code>GET/POST /inquiries</code> · <code>PATCH /inquiries/:id</code> (status + notes)</td></tr>
+    <tr><td><strong>TC</strong></td><td><code>GET /tc</code> · <code>POST /tc/request</code> · <code>PATCH /tc/:id/approve</code> · <code>PATCH /tc/:id/issue</code> · <code>PATCH /tc/:id/reject</code></td></tr>
+    <tr><td><strong>Support</strong></td><td><code>POST /support/ticket</code> — institutionId, institutionName, submittedBy extracted from JWT, not from request body</td></tr>
+    <tr><td><strong>Users</strong></td><td><code>GET/POST /users</code> · <code>PATCH /users/:id</code> · <code>DELETE /users/:id</code> (deactivate) · <code>POST /users/:id/reset-password</code></td></tr>
+    <tr><td><strong>Institution</strong></td><td><code>GET/PATCH /institution</code> · <code>GET /institution/roles</code> · <code>PATCH /institution/roles/:id</code></td></tr>
+    <tr><td><strong>Health</strong></td><td><code>GET /health</code> — <code>SELECT 1</code> DB ping + metrics JSON. Used by Railway zero-downtime deploy health probes.</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="platform-layer"><span class="sec-num">PL</span> Platform API — <code>/platform</code></h2>
+
+<p>The platform API is a completely separate auth context within the same NestJS process. It uses <code>PlatformGuard</code> which reads the <code>platform_rt</code> httpOnly cookie — no institution JWT is accepted on any platform route. Platform admins have no access to institution data and institution users have no access to platform routes.</p>
+
+<div class="tw"><table>
+  <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/platform/auth/login</code></td><td>Email + password. Enforces single-session by updating <code>activeSessionId</code> — invalidates any prior session. Sets <code>platform_rt</code> cookie. Logs IP + user agent to <code>PlatformLoginLog</code>. Increments <code>failedLoginCount</code> on failure; locks account after threshold.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/platform/auth/me</code></td><td>Returns current admin profile. Called by <code>silentPlatformRefresh()</code> on every platform page load to restore session from cookie.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/platform/auth/logout</code></td><td>Clears <code>platform_rt</code> cookie and nullifies <code>activeSessionId</code>.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/platform/institutions</code></td><td>List all client institutions with subscription status, student count, user count. Paginated and searchable.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/platform/institutions</code></td><td>Onboard new client: creates Institution record, seeds default role set (7 roles with canonical permissions), creates initial admin User, creates Subscription record.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/platform/institutions/:id</code></td><td>Full institution detail: profile, subscription info, user list, student count, feature flags.</td></tr>
+    <tr><td><span class="b b-amber">PATCH</span></td><td><code>/platform/institutions/:id</code></td><td>Update institution profile fields and/or feature flags JSON.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/platform/subscriptions</code></td><td>Create subscription: plan name, maxStudents, pricePerUser, billingCycle, startDate, endDate.</td></tr>
+    <tr><td><span class="b b-amber">PATCH</span></td><td><code>/platform/subscriptions/:id</code></td><td>Update subscription status (active / expired / suspended / cancelled) or modify plan terms.</td></tr>
+    <tr><td><span class="b b-cyan">GET</span></td><td><code>/platform/support-tickets</code></td><td>All support tickets across all institutions. Filter by <code>status</code> (open/resolved). Includes institution name and submitter email.</td></tr>
+    <tr><td><span class="b b-amber">PATCH</span></td><td><code>/platform/support-tickets/:id</code></td><td>Update ticket status (open → resolved) and add internal admin note.</td></tr>
+    <tr><td><span class="b b-amber">PATCH</span></td><td><code>/platform/profile</code></td><td>Update platform admin display name.</td></tr>
+    <tr><td><span class="b b-blue">POST</span></td><td><code>/platform/profile/change-password</code></td><td>Change password. Requires current password verification before accepting new password.</td></tr>
+  </tbody>
+</table></div>
+
+<!-- ═══════════════════════════════ FRONTEND ═══════════════════════════════ -->
+<h2 id="frontend-arch"><span class="sec-num">FE</span> Frontend Architecture</h2>
+
+<p>The frontend is a <strong>Next.js 14 App Router</strong> application deployed to Vercel. All routing is file-system based under <code>app/</code>. The architecture prioritises client-side data fetching over server-side rendering because auth state lives in the browser (sessionStorage + httpOnly cookies).</p>
+
+<div class="grid2">
+  <div class="card">
+    <div class="ct">Static Route Priority</div>
+    <p>Next.js App Router resolves static named routes before dynamic <code>[param]</code> segments. All 7 portal roles have dedicated directories (<code>portal/parent/</code>, <code>portal/teacher/</code>, etc.) — these always win over any <code>portal/[role]/</code> segment. This means adding a <code>portal/[role]/</code> catch-all would be dead code and was removed during the audit.</p>
+  </div>
+  <div class="card">
+    <div class="ct">Layout Nesting</div>
+    <p>Each portal role's <code>layout.tsx</code> wraps <code>PortalShell</code> with role-specific props (<code>allowedRoles</code>, <code>menuItems</code>, <code>portalTitle</code>). The shell handles all auth logic. Individual feature pages contain zero auth code — they only fetch and display data.</p>
+  </div>
+  <div class="card">
+    <div class="ct">Client Components Only</div>
+    <p>All pages are <code>'use client'</code> components because they depend on Zustand stores which are browser-only (sessionStorage). No React Server Components make backend calls. The only server-side execution is the Edge Middleware cookie check.</p>
+  </div>
+  <div class="card">
+    <div class="ct">API Communication Pattern</div>
+    <p>All data fetching is client-side via <code>apiFetch()</code> (institution APIs) or <code>platformFetch()</code> (platform API). Both functions handle 401 auto-retry via token refresh before giving up and redirecting to login.</p>
+  </div>
+</div>
+
+<h3>Page Inventory</h3>
+<div class="tw"><table>
+  <thead><tr><th>Path</th><th>Component</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code></td><td><code>app/page.tsx</code></td><td>Landing page with all login forms: operator (email+password+TOTP), parent (phone+password), platform admin redirect. Post-login role detection routes to correct URL.</td></tr>
+    <tr><td><code>/dashboard/*</code></td><td>19 pages under <code>app/dashboard/</code></td><td>Students, staff, fees, exams, attendance, staff-attendance, timetable, subjects, classes, inquiries, announcements, calendar, TC, promote, settings, TOTP setup, and more.</td></tr>
+    <tr><td><code>/portal/select-role</code></td><td><code>app/portal/select-role/page.tsx</code></td><td>Multi-role picker for users with more than one assigned role. Reads roles from portal auth store.</td></tr>
+    <tr><td><code>/portal/parent/*</code></td><td>Attendance, marks, fees, timetable, calendar, announcements pages</td><td>Parent-specific views. Data always scoped to the logged-in parent's children.</td></tr>
+    <tr><td><code>/portal/teacher/*</code></td><td>Attendance marking, mark entry, timetable, calendar, self-attendance pages</td><td>Teacher views. Attendance and marks limited to teacher's assigned subjects/units.</td></tr>
+    <tr><td><code>/portal/principal/*</code></td><td>Reports, staff overview, calendar management pages</td><td>Principal views — read-heavy, cross-class visibility.</td></tr>
+    <tr><td><code>/portal/director/*</code></td><td>High-level reports, staff management, announcements pages</td><td>Director (super_admin) — widest read access across all data domains.</td></tr>
+    <tr><td><code>/portal/accountant/*</code></td><td>Fee recording, payment history, defaulters, own attendance pages</td><td>Accountant — write access to fee payments; no student profile editing.</td></tr>
+    <tr><td><code>/portal/receptionist/*</code></td><td>Inquiry management, admission support pages</td><td>Receptionist — inquiry pipeline management.</td></tr>
+    <tr><td><code>/portal/non-teaching-staff/*</code></td><td>Announcements, self-attendance, leave status pages</td><td>Non-teaching staff — minimal access, self-service only.</td></tr>
+    <tr><td><code>/platform/*</code></td><td>Dashboard, clients list, client detail, support tickets, profile pages</td><td>Infovion internal console. Custom dark "sci-fi" UI. Polling notification bell checks open ticket count every 60s.</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="portal-system"><span class="sec-num">PS</span> Portal System — PortalShell</h2>
+
+<p><code>PortalShell</code> at <code>components/portal-shell.tsx</code> is the master layout shared by all 7 portal roles. It accepts role-specific configuration as props and owns the entire session lifecycle — individual portal pages contain no auth code whatsoever.</p>
+
+<pre>// Each portal role's layout.tsx follows this pattern:
+export default function TeacherLayout({ children }: { children: React.ReactNode }) {
+  return (
+    &lt;PortalShell
+      allowedRoles={['teacher']}
+      portalTitle="Teacher Portal"
+      menuItems={[
+        { href: '/portal/teacher/attendance', label: 'Attendance', icon: 'check' },
+        { href: '/portal/teacher/marks',      label: 'Mark Entry', icon: 'edit' },
+        { href: '/portal/teacher/timetable',  label: 'Timetable',  icon: 'grid' },
+        { href: '/portal/teacher/calendar',   label: 'Calendar',   icon: 'cal'  },
+      ]}
+    &gt;
+      {children}
+    &lt;/PortalShell&gt;
+  );
+}</pre>
+
+<h4>PortalShell Lifecycle on Mount</h4>
+<ol>
+  <li>Wait for Zustand sessionStorage hydration (fires in <code>useEffect</code>)</li>
+  <li>Read <code>usePortalAuthStore.getState().accessToken</code> — the <code>getState()</code> pattern reads the internal store value which is populated synchronously from sessionStorage, unlike the React hook which starts as null before hydration</li>
+  <li>If token exists → <code>setReady(true)</code> → renders children with zero network calls (instant render)</li>
+  <li>If token absent → calls <code>silentRefresh()</code> → <code>POST /auth/refresh</code> — browser sends <code>auth_rt</code> cookie automatically</li>
+  <li>If silentRefresh succeeds → stores new accessToken in Zustand → <code>setReady(true)</code></li>
+  <li>If silentRefresh fails (expired/revoked) → calls <code>logout()</code> → redirects to <code>/</code></li>
+  <li>After auth confirmed → verifies user's roles include one of <code>allowedRoles</code> → if not → redirects to <code>/portal/select-role</code></li>
+</ol>
+
+<div class="note warn">
+  <strong>Why not use the Zustand hook value?</strong> <code>const { accessToken } = usePortalAuthStore()</code> reads from React state, which starts as <code>null</code> before Zustand's persist middleware restores sessionStorage data — causing a false "no token" flash on every page refresh. <code>store.getState().accessToken</code> reads the Zustand store directly and is populated synchronously from sessionStorage before any React render.
+</div>
+
+<h2 id="state-mgmt"><span class="sec-num">SM</span> State Management</h2>
+
+<div class="tw"><table>
+  <thead><tr><th>Store</th><th>File</th><th>Persistence</th><th>Storage Key</th><th>Contents</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Operator Auth</strong></td><td><code>auth.store.ts</code></td>
+      <td>sessionStorage</td><td><code>auth-op</code></td>
+      <td><code>accessToken</code>, <code>user</code> (email, institutionId, name, roles), <code>isAuthenticated</code>. Actions: <code>setAuth(token, user)</code>, <code>logout()</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Portal Auth</strong></td><td><code>portal-auth.store.ts</code></td>
+      <td>sessionStorage</td><td><code>auth-portal</code></td>
+      <td>Same shape as operator store. Separate key ensures operator and portal sessions never collide in the same browser — even when a school admin and teacher are both logged in.</td>
+    </tr>
+    <tr>
+      <td><strong>Platform Auth</strong></td><td><code>platform-auth.store.ts</code></td>
+      <td>In-memory only</td><td>—</td>
+      <td><code>platformToken</code>, <code>admin</code> (id, email, name). No sessionStorage persistence — session is always restored from the <code>platform_rt</code> httpOnly cookie via <code>silentPlatformRefresh()</code>.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<div class="note warn">
+  <strong>sessionStorage vs localStorage — a deliberate choice:</strong> sessionStorage is tab-scoped. Two browser tabs can hold different institution sessions without interference. localStorage is shared across all tabs from the same origin — if two tabs held different sessions, they would overwrite each other's tokens. sessionStorage is also cleared automatically when the tab closes, limiting the exposure window for any token that persists client-side.
+</div>
+
+<pre>// Zustand persist configuration (operator store pattern):
+export const useAuthStore = create&lt;AuthState&gt;()(
+  persist(
+    (set) =&gt; ({
+      accessToken: null,
+      user: null,
+      isAuthenticated: false,
+      setAuth: (token, user) =&gt; set({ accessToken: token, user, isAuthenticated: true }),
+      logout: () =&gt; set({ accessToken: null, user: null, isAuthenticated: false }),
+    }),
+    {
+      name: 'auth-op',                               // sessionStorage key
+      storage: createJSONStorage(() =&gt; sessionStorage),
+      partialize: (s) =&gt; ({                         // Only persist what's needed
+        accessToken: s.accessToken,
+        user: s.user,
+        isAuthenticated: s.isAuthenticated,
+      }),
+    }
+  )
+);</pre>
+
+<h2 id="edge-middleware"><span class="sec-num">EM</span> Next.js Edge Middleware</h2>
+
+<p>The middleware at <code>apps/frontend/middleware.ts</code> runs at the Vercel CDN edge — before any page component renders, before any server-side code executes, and before any request reaches the Next.js compute layer. It reads cookies from the raw HTTP request headers.</p>
+
+<pre>// Middleware logic (simplified):
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Operator dashboard — requires auth_rt_op cookie
+  if (pathname.startsWith('/dashboard')) {
+    if (!request.cookies.has('auth_rt_op'))
+      return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // Portal routes — require auth_rt cookie
+  // (select-role page is public — reached after login, before role selection)
+  if (pathname.startsWith('/portal/') && pathname !== '/portal/select-role') {
+    if (!request.cookies.has('auth_rt'))
+      return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // Platform console — requires platform_rt cookie
+  if (pathname.startsWith('/platform') && pathname !== '/platform/login') {
+    if (!request.cookies.has('platform_rt'))
+      return NextResponse.redirect(new URL('/platform/login', request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/portal/:path*', '/platform/:path*'],
+};</pre>
+
+<div class="note">
+  <strong>Middleware checks presence, not validity.</strong> The middleware only verifies that the cookie exists — not that the JWT inside it is valid or unexpired. That validation happens in the NestJS <code>AuthGuard</code> on every API call. Middleware is a UX guard (prevents page flash for unauthenticated users) — not a security boundary. Security is enforced server-side. This is intentional: JWT validation in Edge Middleware would require the JWT secret in the Vercel environment and make the middleware slower.
+</div>
+
 <!-- ═══════════════════════════════ AUTH ═══════════════════════════════ -->
 <h2 id="auth-design"><span class="sec-num">12</span> Authentication System Design</h2>
 
