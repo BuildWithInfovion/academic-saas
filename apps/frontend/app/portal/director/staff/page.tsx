@@ -33,13 +33,16 @@ function generatePassword(): string {
   return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
+// TLD must be 2+ chars (rejects abc@def.x, abc@test, etc.)
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+
 function validateStaffIdentity(email: string, phone: string): string | null {
   const trimmedEmail = email.trim().toLowerCase();
   const trimmedPhone = phone.trim();
 
   if (!trimmedEmail && !trimmedPhone) return 'Email or phone is required';
-  if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-    return 'Enter a valid email address';
+  if (trimmedEmail && !EMAIL_RE.test(trimmedEmail)) {
+    return 'Enter a valid email address (e.g. name@school.com)';
   }
   if (trimmedPhone && !/^\d{10}$/.test(trimmedPhone)) {
     return 'Enter a valid 10-digit phone number';
@@ -424,6 +427,16 @@ export default function DirectorStaffPage() {
                     <input type="tel" className={inp} placeholder="9876543210"
                       value={phone} onChange={(e) => setPhone(e.target.value)} />
                   </div>
+                  {!email.trim() && phone.trim() && (
+                    <div className="flex items-start gap-2 bg-ds-warning-bg border border-ds-warning-border rounded-lg px-3 py-2.5">
+                      <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--warning)' }}>
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                      <p className="text-xs text-ds-warning-text leading-relaxed">
+                        Without an email address this staff member cannot use &ldquo;Forgot password?&rdquo; — they will need you to reset their password manually.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="text-xs font-medium text-ds-text2 block mb-1">Password *</label>
                     <div className="flex gap-2">

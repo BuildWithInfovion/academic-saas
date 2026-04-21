@@ -3,7 +3,10 @@ import { IsEmail, IsOptional, IsString, MinLength, ValidateIf } from 'class-vali
 export class CreateUserDto {
   // B2-05: at least one of email or phone must be provided
   @ValidateIf((o) => !o.phone)
-  @IsEmail({}, { message: 'A valid email is required when phone is not provided' })
+  @IsEmail(
+    { require_tld: true, allow_ip_domain: false },
+    { message: 'A valid email address is required (e.g. name@school.com)' },
+  )
   email?: string;
 
   @ValidateIf((o) => !o.email)

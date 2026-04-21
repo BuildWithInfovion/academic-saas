@@ -84,10 +84,13 @@ export default function PrincipalSettingsPage() {
       {tab === 'fees'     && <FeeHeadsTab showSuccess={showSuccess} showError={showError} />}
       {tab === 'subjects' && <SubjectsTab showSuccess={showSuccess} showError={showError} />}
       {tab === 'security' && (
-        <div className="max-w-xl">
-          <h2 className="text-base font-semibold text-ds-text1 mb-1">Account Security</h2>
-          <p className="text-sm text-ds-text3 mb-4">Manage two-factor authentication for your account</p>
+        <div className="max-w-xl space-y-6">
+          <div>
+            <h2 className="text-base font-semibold text-ds-text1 mb-1">Account Security</h2>
+            <p className="text-sm text-ds-text3 mb-4">Manage two-factor authentication and your password</p>
+          </div>
           <TotpSetupCard />
+          <ChangePasswordSection />
         </div>
       )}
     </div>
@@ -597,6 +600,69 @@ function SubjectsTab({ showSuccess, showError }: { showSuccess: (m: string) => v
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Change Password ───────────────────────────────────────────────────────────
+function ChangePasswordSection() {
+  const [oldPassword, setOldPassword]         = useState('');
+  const [newPassword, setNewPassword]         = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving]                   = useState(false);
+  const [pwError, setPwError]                 = useState<string | null>(null);
+  const [pwSuccess, setPwSuccess]             = useState<string | null>(null);
+
+  const inp = 'w-full p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
+
+  const handle = async () => {
+    setPwError(null);
+    if (!oldPassword.trim()) return setPwError('Current password is required');
+    if (!newPassword.trim()) return setPwError('New password is required');
+    if (newPassword.length < 6) return setPwError('New password must be at least 6 characters');
+    if (newPassword !== confirmPassword) return setPwError('Passwords do not match');
+    setSaving(true);
+    try {
+      await apiFetch('/users/me/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ oldPassword, newPassword }),
+      });
+      setPwSuccess('Password changed successfully');
+      setOldPassword(''); setNewPassword(''); setConfirmPassword('');
+      setTimeout(() => setPwSuccess(null), 4000);
+    } catch (e: any) {
+      setPwError(e.message || 'Failed to change password');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+      <h2 className="text-sm font-semibold text-ds-text1 mb-4">Change Password</h2>
+      {pwError   && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{pwError}</div>}
+      {pwSuccess && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{pwSuccess}</div>}
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Current Password</label>
+          <input type="password" className={inp} placeholder="Enter current password"
+            value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">New Password</label>
+          <input type="password" className={inp} placeholder="At least 6 characters"
+            value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-ds-text2 block mb-1">Confirm New Password</label>
+          <input type="password" className={inp} placeholder="Repeat new password"
+            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+        </div>
+      </div>
+      <button onClick={handle} disabled={saving}
+        className="mt-5 px-5 py-2.5 btn-brand rounded-lg disabled:opacity-50 transition-colors">
+        {saving ? 'Saving…' : 'Update Password'}
+      </button>
     </div>
   );
 }

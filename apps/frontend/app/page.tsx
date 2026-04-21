@@ -315,6 +315,7 @@ export default function LoginPage() {
   const handleForgotSendOtp = async () => {
     if (!fpCode.trim())  return setFpError('School code is required');
     if (!fpEmail.trim()) return setFpError('Email is required');
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(fpEmail.trim())) return setFpError('Enter a valid email address (e.g. name@school.com)');
     setFpLoading(true); setFpError(null);
     try {
       const res = await fetch(api('/auth/forgot-password'), {
