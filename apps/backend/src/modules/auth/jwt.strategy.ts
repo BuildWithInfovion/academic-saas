@@ -12,10 +12,15 @@ export interface JwtPayload {
   permissions: string[];
 }
 
-// Cache user active-status for 30 seconds.
-// Short enough that deactivated accounts are blocked within 30 s;
-// long enough to eliminate the DB hit on every authenticated request.
-const USER_ACTIVE_CACHE_TTL_MS = 30 * 1000;
+// Cache user session data for 60 seconds.
+// Short enough that permission/role changes take effect quickly;
+// long enough to avoid a DB hit on every single request.
+const USER_ACTIVE_CACHE_TTL_MS = 60 * 1000;
+
+type CachedSession = {
+  roles: string[];
+  permissions: string[];
+};
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -37,11 +42,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    const cacheKey = `user-active:${payload.sub}:${payload.institutionId}`;
-    const cached = this.cache.get<boolean>(cacheKey);
+    const cacheKey = `user-session:${payload.sub}:${payload.institutionId}`;
+    const cached = this.cache.get<CachedSession | false>(cacheKey);
 
     if (cached === undefined) {
-      // Verify user exists/active AND institution is not suspended — both in one round-trip.
+      // Fetch user, institution status, and live role permissions in one go.
       const [user, institution] = await Promise.all([
         this.prisma.user.findFirst({
           where: {
@@ -50,7 +55,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             isActive: true,
             deletedAt: null,
           },
-          select: { id: true },
+          select: {
+            id: true,
+            roles: { include: { role: { select: { code: true, permissions: true } } } },
+          },
         }),
         this.prisma.institution.findUnique({
           where: { id: payload.institutionId },
@@ -64,23 +72,35 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         !institution.deletedAt &&
         institution.status === 'active';
 
-      this.cache.set(cacheKey, isActive, USER_ACTIVE_CACHE_TTL_MS);
-
       if (!isActive) {
+        this.cache.set(cacheKey, false, USER_ACTIVE_CACHE_TTL_MS);
         if (!user) throw new UnauthorizedException('Account is inactive or has been removed');
         throw new UnauthorizedException('Institution account is inactive or suspended');
       }
-    } else if (!cached) {
-      throw new UnauthorizedException(
-        'Account is inactive or has been removed',
-      );
+
+      // Extract live roles + permissions from the DB (not from the stale JWT payload).
+      const roles = user!.roles.map((ur) => ur.role.code);
+      const permissions = [
+        ...new Set(
+          user!.roles.flatMap((ur) => ur.role.permissions as string[]),
+        ),
+      ];
+
+      const session: CachedSession = { roles, permissions };
+      this.cache.set(cacheKey, session, USER_ACTIVE_CACHE_TTL_MS);
+
+      return { userId: payload.sub, institutionId: payload.institutionId, roles, permissions };
+    }
+
+    if (cached === false) {
+      throw new UnauthorizedException('Account is inactive or has been removed');
     }
 
     return {
       userId: payload.sub,
       institutionId: payload.institutionId,
-      roles: payload.roles,
-      permissions: payload.permissions,
+      roles: cached.roles,
+      permissions: cached.permissions,
     };
   }
 }
