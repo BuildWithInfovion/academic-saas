@@ -656,8 +656,6 @@ export class ExamService {
         subjectName: s.subject.name,
         examDate: s.examDate,
         examTime: s.examTime,
-        maxMarks: s.maxMarks,
-        passingMarks: s.passingMarks,
       })),
     };
   }

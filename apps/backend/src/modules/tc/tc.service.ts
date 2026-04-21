@@ -346,9 +346,15 @@ export class TcService {
           },
         },
       });
+      // Wipe class link, portal links — student data preserved in the TC snapshot above
       await tx.student.update({
         where: { id: tc.studentId },
-        data: { status: 'transferred' },
+        data: {
+          status: 'transferred',
+          academicUnitId: null,   // remove from class (teacher views)
+          parentUserId: null,     // revoke parent portal access
+          userId: null,           // revoke student portal access
+        },
       });
       return issued;
     });

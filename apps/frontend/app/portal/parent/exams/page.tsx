@@ -45,8 +45,6 @@ type AdmitCardSubject = {
   subjectName: string;
   examDate?: string;
   examTime?: string;
-  maxMarks: number;
-  passingMarks: number;
 };
 
 type AdmitCard = {
@@ -149,82 +147,219 @@ function printReportCard(sc: Scorecard) {
 
 function printAdmitCard(ac: AdmitCard) {
   const inst = ac.institution;
-  const studentName = `${ac.student.firstName} ${ac.student.lastName}`;
+  const studentName = `${ac.student.firstName} ${ac.student.lastName}`.toUpperCase();
   const className = ac.student.academicUnit?.displayName || ac.student.academicUnit?.name || '—';
-  const fmt = (d?: string | null) =>
-    d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+  const fmtDate = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fmtDay = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('en-IN', { weekday: 'short' }) : '—';
+  const fmtDob = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+  const issueDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
-  const subjectRows = ac.subjects.map((s) => `
-    <tr>
-      <td>${esc(s.subjectName)}</td>
-      <td class="c">${s.examDate ? new Date(s.examDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
-      <td class="c">${esc(s.examTime ?? '—')}</td>
-      <td class="c">${s.maxMarks}</td>
-      <td class="c">${s.passingMarks}</td>
+  const subjectRows = ac.subjects.map((s, i) => `
+    <tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+      <td style="text-align:center;font-weight:600;color:#374151">${i + 1}</td>
+      <td style="font-weight:500">${esc(s.subjectName)}</td>
+      <td style="text-align:center">${fmtDate(s.examDate)}</td>
+      <td style="text-align:center;color:#6b7280">${fmtDay(s.examDate)}</td>
+      <td style="text-align:center;font-weight:600;color:#1d4ed8">${esc(s.examTime ?? '—')}</td>
     </tr>`).join('');
 
-  const html = `<!DOCTYPE html><html><head><title>Admit Card — ${esc(studentName)}</title>
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<title>Hall Ticket — ${esc(studentName)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:28px}
-  .card{max-width:660px;margin:0 auto;background:#fff;border:2px solid #0f172a;border-radius:8px;overflow:hidden}
-  .letterhead{background:#0f172a;color:#fff;padding:18px 24px;text-align:center}
-  .letterhead h1{font-size:17px;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
-  .letterhead .sub{font-size:11px;opacity:.65;line-height:1.5}
-  .title-bar{background:#fef9c3;border-bottom:1px solid #fde047;border-top:1px solid #fde047;padding:8px 20px;text-align:center;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#713f12}
-  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #e2e8f0}
-  .info-cell{padding:9px 20px;border-right:1px solid #e2e8f0;font-size:12px}
-  .info-cell:nth-child(even){border-right:none}
-  .info-label{color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
-  .info-value{font-weight:600;color:#0f172a}
-  .info-cell.full{grid-column:1/-1;border-right:none}
-  table{width:100%;border-collapse:collapse}
-  th{background:#f8fafc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;padding:8px 12px;border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0}
-  td{padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#334155}
-  td.c{text-align:center}
-  .instructions{background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 20px;font-size:11px;color:#475569}
-  .instructions ul{list-style:disc;padding-left:16px;line-height:1.8}
-  .sig{display:flex;justify-content:space-between;padding:16px 32px 8px;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b}
-  .sig-line{border-top:1px solid #94a3b8;width:140px;margin-bottom:4px}
-  .footer{text-align:center;font-size:10px;color:#94a3b8;padding:10px;border-top:1px solid #f1f5f9}
-  @media print{body{background:#fff;padding:0}.card{border-radius:0};-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:'Times New Roman',Times,serif;font-size:12px;color:#111;background:#e5e7eb;padding:24px}
+  .card{max-width:680px;margin:0 auto;background:#fff;border:2px solid #1e3a5f;padding:0;page-break-inside:avoid}
+  /* Header */
+  .header{display:flex;align-items:center;gap:16px;padding:14px 20px 12px;border-bottom:3px double #1e3a5f}
+  .header-logo{width:56px;height:56px;border:2px solid #1e3a5f;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#1e3a5f;flex-shrink:0;border-radius:4px;font-family:Arial,sans-serif}
+  .header-text{flex:1;text-align:center}
+  .school-name{font-size:18px;font-weight:700;color:#1e3a5f;letter-spacing:.3px;line-height:1.2}
+  .school-sub{font-size:10.5px;color:#374151;margin-top:2px;line-height:1.4}
+  /* Title */
+  .title-section{background:#1e3a5f;color:#fff;text-align:center;padding:7px 16px}
+  .title-main{font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+  .title-exam{font-size:11px;letter-spacing:.8px;opacity:.85;margin-top:2px}
+  /* Student info */
+  .student-section{display:flex;gap:0;border-bottom:1px solid #d1d5db}
+  .student-details{flex:1;padding:12px 16px}
+  .photo-box{width:90px;border-left:1px solid #d1d5db;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 6px;flex-shrink:0}
+  .photo-inner{width:72px;height:86px;border:1px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:9px;color:#9ca3af;text-align:center;line-height:1.4}
+  .photo-label{font-size:8.5px;color:#6b7280;margin-top:4px;text-align:center}
+  /* Info rows in 2-col */
+  .info-table{width:100%;border-collapse:collapse}
+  .info-table td{padding:3px 0;font-size:11.5px;vertical-align:top}
+  .info-label{color:#6b7280;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;width:110px;padding-right:6px;white-space:nowrap}
+  .info-colon{width:10px;color:#374151}
+  .info-value{font-weight:700;color:#111;font-size:12px}
+  /* Important notice */
+  .notice{background:#fef3c7;border:1px solid #f59e0b;border-left:4px solid #d97706;margin:0 16px 12px;padding:6px 10px;font-size:10.5px;color:#92400e;font-weight:600}
+  /* Schedule table */
+  .schedule-wrap{border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db}
+  .schedule-title{background:#f3f4f6;padding:6px 16px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#374151;border-bottom:1px solid #d1d5db}
+  .sched-table{width:100%;border-collapse:collapse}
+  .sched-table th{background:#1e3a5f;color:#fff;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:6px 10px;text-align:center}
+  .sched-table th:first-child{text-align:center;width:36px}
+  .sched-table th.left{text-align:left}
+  .sched-table td{padding:7px 10px;font-size:11.5px;border-bottom:1px solid #e5e7eb;color:#111}
+  /* Instructions */
+  .instructions{padding:10px 16px;font-size:10.5px;color:#374151}
+  .instructions-title{font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1e3a5f;margin-bottom:5px;font-size:10px}
+  .instructions ol{padding-left:16px;line-height:1.8}
+  .instructions li{margin-bottom:1px}
+  /* Signatures */
+  .sig-section{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #d1d5db;padding:12px 20px 8px;gap:12px}
+  .sig-block{text-align:center}
+  .sig-line{border-top:1px solid #374151;margin-bottom:4px;width:100%}
+  .sig-name{font-size:9.5px;color:#374151;font-weight:600}
+  /* Footer */
+  .footer{background:#f3f4f6;border-top:1px solid #d1d5db;padding:5px 16px;display:flex;justify-content:space-between;font-size:9px;color:#6b7280}
+  /* Stamp box */
+  .stamp-area{position:absolute;right:16px;bottom:60px;width:68px;height:68px;border:1px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:8.5px;color:#9ca3af;text-align:center;line-height:1.4}
+  @media print{
+    body{background:#fff;padding:0}
+    .card{border:2px solid #000;max-width:100%}
+    -webkit-print-color-adjust:exact;print-color-adjust:exact
+  }
 </style></head><body>
 <div class="card">
-  <div class="letterhead">
-    <h1>${esc(inst?.name ?? '—')}</h1>
-    <div class="sub">${esc([inst?.board, inst?.address].filter(Boolean).join(' · '))}</div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">${esc((inst?.name ?? 'S')[0].toUpperCase())}</div>
+    <div class="header-text">
+      <div class="school-name">${esc(inst?.name ?? 'School Name')}</div>
+      <div class="school-sub">
+        ${inst?.board ? `Affiliated to ${esc(inst.board)}` : ''}
+        ${inst?.address ? (inst?.board ? ' &nbsp;|&nbsp; ' : '') + esc(inst.address) : ''}
+        ${inst?.phone ? ' &nbsp;|&nbsp; ' + esc(inst.phone) : ''}
+      </div>
+    </div>
   </div>
-  <div class="title-bar">Admit Card — ${esc(ac.exam.name)} (${esc(ac.exam.academicYear)})</div>
-  <div class="info-grid">
-    <div class="info-cell"><div class="info-label">Student Name</div><div class="info-value">${esc(studentName)}</div></div>
-    <div class="info-cell"><div class="info-label">Admission No</div><div class="info-value">${esc(ac.student.admissionNo)}</div></div>
-    <div class="info-cell"><div class="info-label">Class / Section</div><div class="info-value">${esc(className)}</div></div>
-    ${ac.student.rollNo ? `<div class="info-cell"><div class="info-label">Roll No</div><div class="info-value">${esc(ac.student.rollNo)}</div></div>` : ''}
-    ${ac.exam.examCenter ? `<div class="info-cell full"><div class="info-label">Exam Center</div><div class="info-value">${esc(ac.exam.examCenter)}</div></div>` : ''}
-    ${ac.exam.reportingTime ? `<div class="info-cell full"><div class="info-label">Reporting Time</div><div class="info-value">${esc(ac.exam.reportingTime)}</div></div>` : ''}
+
+  <!-- Title -->
+  <div class="title-section">
+    <div class="title-main">Hall Ticket / Admit Card</div>
+    <div class="title-exam">${esc(ac.exam.name)} &nbsp;&bull;&nbsp; Academic Year ${esc(ac.exam.academicYear)}</div>
   </div>
-  <table>
-    <thead><tr><th style="text-align:left">Subject</th><th class="c">Date</th><th class="c">Time</th><th class="c">Max Marks</th><th class="c">Passing Marks</th></tr></thead>
-    <tbody>${subjectRows}</tbody>
-  </table>
+
+  <!-- Student Details + Photo -->
+  <div class="student-section">
+    <div class="student-details">
+      <table class="info-table">
+        <tbody>
+          <tr>
+            <td class="info-label">Student Name</td>
+            <td class="info-colon">:</td>
+            <td class="info-value" style="font-size:13px">${esc(studentName)}</td>
+          </tr>
+          <tr>
+            <td class="info-label">Class / Section</td>
+            <td class="info-colon">:</td>
+            <td class="info-value">${esc(className)}</td>
+          </tr>
+          <tr>
+            <td class="info-label">Roll No.</td>
+            <td class="info-colon">:</td>
+            <td class="info-value">${esc(ac.student.rollNo ?? '—')}</td>
+          </tr>
+          <tr>
+            <td class="info-label">Admission No.</td>
+            <td class="info-colon">:</td>
+            <td class="info-value">${esc(ac.student.admissionNo)}</td>
+          </tr>
+          ${ac.student.dateOfBirth ? `<tr>
+            <td class="info-label">Date of Birth</td>
+            <td class="info-colon">:</td>
+            <td class="info-value">${fmtDob(ac.student.dateOfBirth)}</td>
+          </tr>` : ''}
+          ${ac.exam.examCenter ? `<tr>
+            <td class="info-label">Exam Centre</td>
+            <td class="info-colon">:</td>
+            <td class="info-value">${esc(ac.exam.examCenter)}</td>
+          </tr>` : ''}
+          ${ac.exam.reportingTime ? `<tr>
+            <td class="info-label">Reporting Time</td>
+            <td class="info-colon">:</td>
+            <td class="info-value" style="color:#1d4ed8">${esc(ac.exam.reportingTime)}</td>
+          </tr>` : ''}
+        </tbody>
+      </table>
+    </div>
+    <div class="photo-box">
+      <div class="photo-inner">Affix<br/>Photograph<br/>&amp;<br/>Sign across</div>
+      <div class="photo-label">Sign &amp; Stamp</div>
+    </div>
+  </div>
+
+  <!-- Notice -->
+  <div style="padding:10px 16px 0">
+    <div class="notice">
+      &#9888;&nbsp; This Hall Ticket must be produced at the examination hall. Entry will not be permitted without it. It must bear the signature and stamp of the Principal.
+    </div>
+  </div>
+
+  <!-- Exam Schedule -->
+  <div class="schedule-wrap" style="margin:10px 0 0">
+    <div class="schedule-title">Examination Schedule</div>
+    <table class="sched-table">
+      <thead>
+        <tr>
+          <th>S.No</th>
+          <th class="left">Subject</th>
+          <th>Date</th>
+          <th>Day</th>
+          <th>Timing</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${subjectRows || `<tr><td colspan="5" style="text-align:center;color:#6b7280;padding:12px">No exam schedule published yet</td></tr>`}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Instructions -->
   <div class="instructions">
-    <strong style="display:block;margin-bottom:6px">Instructions:</strong>
-    <ul>
-      <li>Bring this admit card to the examination hall. Entry will not be permitted without it.</li>
-      <li>Arrive at the exam center at the reporting time mentioned above.</li>
-      <li>No electronic devices or unfair materials are allowed inside the hall.</li>
-      <li>Verify your name, class, and subjects before the examination.</li>
-    </ul>
+    <div class="instructions-title">Important Instructions</div>
+    <ol>
+      <li>Candidates must carry this Hall Ticket to every examination session. No candidate will be admitted without it.</li>
+      <li>Be seated in the examination hall <strong>15 minutes</strong> before the scheduled time.</li>
+      <li>Mobile phones, smartwatches, Bluetooth devices and electronic gadgets are strictly prohibited.</li>
+      <li>Unfair means will lead to immediate cancellation of the examination.</li>
+      <li>Verify your name, class, roll number, and subjects carefully. Report any discrepancy immediately.</li>
+      <li>This card is valid only with the signature and official seal of the Principal/Exam Controller.</li>
+    </ol>
   </div>
-  <div class="sig">
-    <div><div class="sig-line"></div>Student Signature</div>
-    <div style="text-align:right"><div class="sig-line"></div>Principal / Exam Controller</div>
+
+  <!-- Signatures -->
+  <div class="sig-section">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-name">Student's Signature</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-name">Parent / Guardian</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-name">Principal / Controller of Examinations</div>
+    </div>
   </div>
-  <div class="footer">${esc(inst?.name ?? '')} · This admit card is issued for ${esc(ac.exam.name)} · ${esc(ac.exam.academicYear)}</div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>${esc(inst?.name ?? '')} &nbsp;&bull;&nbsp; ${esc(ac.exam.name)} &nbsp;&bull;&nbsp; Academic Year ${esc(ac.exam.academicYear)}</span>
+    <span>Date of Issue: ${issueDate}</span>
+  </div>
+
 </div>
 <script>window.onload=function(){window.print();}</script>
 </body></html>`;
-  const w = window.open('', '_blank', 'width=720,height=900');
+  const w = window.open('', '_blank', 'width=760,height=960');
   if (w) { w.document.write(html); w.document.close(); }
 }
 

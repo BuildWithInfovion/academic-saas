@@ -516,7 +516,7 @@ export class StudentService {
     // Guard: if parentUserId is undefined/null Prisma drops the filter and returns ALL students.
     if (!parentUserId) return [];
     return this.prisma.student.findMany({
-      where: { institutionId, parentUserId, deletedAt: null },
+      where: { institutionId, parentUserId, deletedAt: null, status: 'active' },
       include: { academicUnit: true },
     });
   }
