@@ -73,7 +73,14 @@ export default function LoginPage() {
   const [error,       setError]       = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<{ institution: string } | null>(null);
 
-  // Forgot-password modal
+  // Parent forgot-password modal
+  const [showParentForgot,    setShowParentForgot]    = useState(false);
+  const [pfPhone,             setPfPhone]             = useState('');
+  const [pfLoading,           setPfLoading]           = useState(false);
+  const [pfError,             setPfError]             = useState<string | null>(null);
+  const [pfSubmitted,         setPfSubmitted]         = useState(false);
+
+  // Staff forgot-password modal
   const [showForgot,     setShowForgot]     = useState(false);
   const [fpStep,         setFpStep]         = useState<'form' | 'otp'>('form');
   const [fpCode,         setFpCode]         = useState('');
@@ -276,6 +283,32 @@ export default function LoginPage() {
     setFpError(null);
     setFpSuccess(null);
     setShowForgot(true);
+  };
+
+  // ── Parent forgot password ───────────────────────────────────────────────
+  const openParentForgot = () => {
+    setPfPhone(parentPhone);
+    setPfError(null);
+    setPfSubmitted(false);
+    setShowParentForgot(true);
+  };
+
+  const handleParentForgotSubmit = async () => {
+    if (!pfPhone.trim()) return setPfError('Phone number is required');
+    if (!/^\d{10}$/.test(pfPhone.trim())) return setPfError('Enter a valid 10-digit phone number');
+    setPfLoading(true); setPfError(null);
+    try {
+      await fetch(api('/auth/parent/request-password-reset'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: pfPhone.trim() }),
+      });
+      setPfSubmitted(true);
+    } catch {
+      setPfError('Something went wrong. Please try again.');
+    } finally {
+      setPfLoading(false);
+    }
   };
 
   // ── Forgot password: send OTP ─────────────────────────────────────────────
@@ -958,6 +991,17 @@ export default function LoginPage() {
                       </span>
                     )}
                   </button>
+
+                  {/* Forgot password — parent */}
+                  <div style={{ textAlign:'center', marginTop:14 }}>
+                    <button type="button" onClick={openParentForgot}
+                      style={{ fontSize:12, fontWeight:500, color:'rgba(220,146,75,0.5)',
+                        background:'none', border:'none', cursor:'pointer', padding:0 }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color='#f7c576')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.5)')}>
+                      Forgot password?
+                    </button>
+                  </div>
                 </>
               )}
 
@@ -969,6 +1013,120 @@ export default function LoginPage() {
             letterSpacing:'0.04em', marginTop:20 }}>
             © {new Date().getFullYear()} Infovion. All rights reserved.
           </p>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          PARENT FORGOT PASSWORD MODAL
+      ══════════════════════════════════════════════════ */}
+      {showParentForgot && (
+        <div style={{
+          position:'fixed', inset:0, zIndex:60, display:'flex', alignItems:'center', justifyContent:'center',
+          padding:16, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)',
+          WebkitBackdropFilter:'blur(8px)',
+        }}
+          onClick={(e) => e.target === e.currentTarget && setShowParentForgot(false)}>
+          <div style={{
+            width:'100%', maxWidth:380, borderRadius:18, overflow:'hidden',
+            background:'linear-gradient(160deg, rgba(28,14,6,0.98) 0%, rgba(18,9,3,0.99) 100%)',
+            border:'1px solid rgba(220,146,75,0.18)',
+            boxShadow:'0 32px 80px rgba(0,0,0,0.75)',
+            animation:'loginCardReveal 0.4s ease forwards',
+          }}>
+            {/* Header */}
+            <div style={{ padding:'20px 24px 18px',
+              background:'linear-gradient(135deg, rgba(29,16,6,0.95), rgba(40,22,8,0.95))',
+              borderBottom:'1px solid rgba(220,146,75,0.1)' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ width:34, height:34, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center',
+                    background:'rgba(174,85,37,0.15)', border:'1px solid rgba(220,146,75,0.2)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(220,146,75,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p style={{ fontSize:14, fontWeight:700, color:'#fcfbf7', margin:0 }}>Forgot Password</p>
+                    <p style={{ fontSize:11, color:'rgba(220,146,75,0.6)', margin:0 }}>Parent account recovery</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowParentForgot(false)}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(220,146,75,0.5)', fontSize:20, lineHeight:1, padding:4 }}>×</button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding:'22px 24px 24px' }}>
+              {pfSubmitted ? (
+                <div style={{ textAlign:'center', padding:'8px 0' }}>
+                  <div style={{ width:52, height:52, borderRadius:'50%', margin:'0 auto 16px',
+                    background:'rgba(22,163,74,0.15)', border:'1px solid rgba(22,163,74,0.3)',
+                    display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(74,222,128,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <p style={{ fontSize:15, fontWeight:600, color:'#fcfbf7', marginBottom:8 }}>Request Submitted</p>
+                  <p style={{ fontSize:12.5, color:'rgba(220,146,75,0.65)', lineHeight:1.6, marginBottom:20 }}>
+                    Your school operator will reset your password and share it with you directly. Please contact the school if you don&apos;t hear back soon.
+                  </p>
+                  <button onClick={() => setShowParentForgot(false)}
+                    style={{ padding:'10px 28px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
+                      background:'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
+                      color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)' }}>
+                    Back to Login
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize:12.5, color:'rgba(220,146,75,0.65)', marginBottom:18, lineHeight:1.5 }}>
+                    Enter your registered phone number. Your school operator will receive a request and reset your password.
+                  </p>
+
+                  <div style={{ marginBottom:16 }}>
+                    <label style={{ display:'block', fontSize:11, fontWeight:600, marginBottom:6,
+                      color:'rgba(220,146,75,0.7)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      Phone Number
+                    </label>
+                    <div style={{ position:'relative' }}>
+                      <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
+                        alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.13 1 .38 1.97.74 2.91a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 5.16 5.16l.96-.96a2 2 0 0 1 2.11-.45c.94.36 1.92.61 2.91.74A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                      </div>
+                      <input className="ldf" type="tel" placeholder="10-digit phone number"
+                        value={pfPhone} onChange={(e) => setPfPhone(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleParentForgotSubmit()}
+                        disabled={pfLoading} />
+                    </div>
+                  </div>
+
+                  {pfError && (
+                    <div style={{ marginBottom:14, padding:'9px 12px', borderRadius:8, fontSize:12.5,
+                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)', color:'#ff9090' }}>
+                      {pfError}
+                    </div>
+                  )}
+
+                  <div style={{ display:'flex', gap:10 }}>
+                    <button onClick={() => setShowParentForgot(false)} disabled={pfLoading}
+                      style={{ flex:1, padding:'11px', borderRadius:10, fontSize:13, fontWeight:500, cursor:'pointer',
+                        background:'transparent', border:'1px solid rgba(220,146,75,0.2)', color:'rgba(220,146,75,0.6)' }}>
+                      Cancel
+                    </button>
+                    <button onClick={handleParentForgotSubmit} disabled={pfLoading}
+                      style={{ flex:1, padding:'11px', borderRadius:10, fontSize:13, fontWeight:600,
+                        cursor: pfLoading ? 'default' : 'pointer',
+                        background: pfLoading ? 'rgba(174,85,37,0.55)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
+                        color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)' }}>
+                      {pfLoading ? 'Submitting…' : 'Submit Request'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

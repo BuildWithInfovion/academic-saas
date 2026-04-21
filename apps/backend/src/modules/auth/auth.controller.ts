@@ -287,6 +287,18 @@ export class AuthController {
     return this.authService.resetParentPassword(tenant.institutionId, userId);
   }
 
+  // ── Parent: self-service password reset request ────────────────────────────
+
+  /**
+   * POST /auth/parent/request-password-reset
+   * Parent submits their phone; creates a PasswordResetRequest for the operator.
+   * Always returns success to prevent phone enumeration.
+   */
+  @Post('parent/request-password-reset')
+  async requestParentPasswordReset(@Body('phone') phone: string) {
+    return this.authService.requestParentPasswordReset((phone ?? '').trim());
+  }
+
   // ── Parent login ───────────────────────────────────────────────────────────
 
   /**

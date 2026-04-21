@@ -677,6 +677,43 @@ export class AuthService {
     );
   }
 
+  // ── Parent: submit password reset request ─────────────────────────────────
+
+  async requestParentPasswordReset(
+    phone: string,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        phone,
+        isActive: true,
+        deletedAt: null,
+        roles: { some: { role: { code: 'parent' } } },
+      },
+      select: { id: true, institutionId: true },
+    });
+
+    // Always return success to avoid phone enumeration
+    if (!user) return { message: 'Request submitted' };
+
+    const existing = await this.prisma.passwordResetRequest.findFirst({
+      where: { userId: user.id, institutionId: user.institutionId, status: 'pending' },
+    });
+    if (!existing) {
+      await this.prisma.passwordResetRequest.create({
+        data: {
+          userId: user.id,
+          institutionId: user.institutionId,
+          status: 'pending',
+        },
+      });
+    }
+
+    this.logger.log(
+      `[requestParentPasswordReset] Reset request — userId=${user.id}`,
+    );
+    return { message: 'Request submitted' };
+  }
+
   // ── Operator: reset parent password ────────────────────────────────────────
 
   /**
