@@ -41,6 +41,7 @@ const DEFAULT_ROLES = [
       'subjects.read', 'subjects.write',
       'academic.read', 'academic.write',
       'institution.read', 'institution.write',
+      'inquiry.read', 'inquiry.write',
     ],
   },
   {
@@ -56,6 +57,7 @@ const DEFAULT_ROLES = [
       'subjects.read', 'subjects.write',
       'academic.read', 'academic.write',
       'institution.read', 'institution.write',
+      'inquiry.read', 'inquiry.write',
     ],
   },
   {
