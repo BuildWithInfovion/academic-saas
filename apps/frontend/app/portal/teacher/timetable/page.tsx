@@ -28,17 +28,31 @@ function unitLabel(u: { name: string; displayName: string | null; parent?: { nam
   return u.displayName || u.name;
 }
 
+interface CoverDuty {
+  id: string;
+  periodNo: number;
+  subject: { name: string; code?: string | null } | null;
+  academicUnit: { name: string; displayName: string | null; parent?: { name: string; displayName: string | null } | null };
+  absentTeacher: { name: string | null; email: string | null } | null;
+}
+
 export default function TeacherTimetablePage() {
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState(TODAY_DAY <= 6 ? TODAY_DAY : 1);
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [coverDuties, setCoverDuties] = useState<CoverDuty[]>([]);
+
+  const todayStr = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    apiFetch('/timetable/my-schedule')
-      .then((s: unknown) => setSlots(Array.isArray(s) ? (s as TimetableSlot[]) : []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      apiFetch('/timetable/my-schedule'),
+      apiFetch(`/covers/my-duties?date=${todayStr}`).catch(() => []),
+    ]).then(([s, c]) => {
+      setSlots(Array.isArray(s) ? (s as TimetableSlot[]) : []);
+      setCoverDuties(Array.isArray(c) ? (c as CoverDuty[]) : []);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   // Group by day
@@ -78,6 +92,35 @@ export default function TeacherTimetablePage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      {/* Cover duty banner — shown when teacher has substitute duties today */}
+      {coverDuties.length > 0 && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-amber-700 mb-2">
+            Cover Duty Today — {coverDuties.length} extra period{coverDuties.length !== 1 ? 's' : ''}
+          </p>
+          <div className="space-y-1.5">
+            {coverDuties.map((d) => (
+              <div key={d.id} className="flex items-center gap-3 text-sm">
+                <span className="w-8 h-8 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center text-xs font-bold shrink-0">
+                  P{d.periodNo}
+                </span>
+                <span className="text-amber-900 font-medium">
+                  {d.subject?.name ?? 'No subject'} —{' '}
+                  {d.academicUnit.parent
+                    ? `${d.academicUnit.parent.displayName || d.academicUnit.parent.name} › ${d.academicUnit.displayName || d.academicUnit.name}`
+                    : d.academicUnit.displayName || d.academicUnit.name}
+                </span>
+                {d.absentTeacher && (
+                  <span className="text-xs text-amber-600">
+                    (covering for {d.absentTeacher.name || d.absentTeacher.email})
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-ds-text1 mb-1">My Timetable</h1>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 
 interface AcademicUnit { id: string; name: string; displayName: string | null; parent?: { name: string; displayName: string | null } | null; }
@@ -122,7 +123,19 @@ export default function TimetablePage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Timetable</h1>
+      <div className="flex items-start justify-between mb-1">
+        <h1 className="text-2xl font-bold text-ds-text1">Timetable</h1>
+        <Link
+          href="/dashboard/timetable/covers"
+          className="flex items-center gap-1.5 text-sm font-medium text-ds-brand border border-ds-brand rounded-lg px-3 py-1.5 hover:bg-ds-brand hover:text-white transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Cover Management
+        </Link>
+      </div>
       <p className="text-sm text-ds-text3 mb-6">Configure weekly class schedules and assign subject teachers per period</p>
 
       {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}

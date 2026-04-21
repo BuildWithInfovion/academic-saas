@@ -41,6 +41,7 @@ model Institution {
   examResults        ExamResult[]
   announcements          Announcement[]
   timetableSlots         TimetableSlot[]
+  timetableCovers        TimetableCover[]
   passwordResetRequests  PasswordResetRequest[]
   subscription           Subscription?
   staffAttendance        StaffAttendance[]
@@ -179,6 +180,7 @@ model AcademicUnit {
   feeStructures       FeeStructure[]
   examSubjects        ExamSubject[]
   timetableSlots      TimetableSlot[]
+  timetableCovers     TimetableCover[]
 
   @@index([institutionId])
   @@index([parentId])
@@ -520,6 +522,30 @@ model TimetableSlot {
   @@index([institutionId])
   @@index([academicUnitId])
   @@map("timetable_slots")
+}
+
+model TimetableCover {
+  id              String   @id @default(cuid())
+  institutionId   String
+  date            DateTime @db.Date
+  dayOfWeek       Int      // 1=Mon … 6=Sat
+  periodNo        Int
+  academicUnitId  String
+  subjectId       String?
+  absentTeacherId String   // userId of absent teacher (no FK — mirrors TimetableSlot pattern)
+  substituteId    String?  // userId of substitute assigned
+  status          String   @default("uncovered")  // uncovered | covered | cancelled
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution  Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicUnit AcademicUnit @relation(fields: [academicUnitId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, date, academicUnitId, periodNo])
+  @@index([institutionId, date])
+  @@index([institutionId, absentTeacherId])
+  @@index([institutionId, substituteId])
+  @@map("timetable_covers")
 }
 
 // ── EXAMINATION ───────────────────────────────────────────────────────────────
