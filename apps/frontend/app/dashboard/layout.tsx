@@ -255,12 +255,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
         <button
           onClick={() => {
-            logout();
+            const token = useAuthStore.getState().accessToken ?? '';
             void fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/logout`, {
               method: 'POST', credentials: 'include',
-              headers: { 'Authorization': `Bearer ${useAuthStore.getState().accessToken ?? ''}` },
+              headers: { 'Authorization': `Bearer ${token}` },
+            }).finally(() => {
+              logout();
+              window.location.href = '/';
             });
-            window.location.href = '/';
           }}
           className="flex items-center gap-1.5 text-xs font-medium transition-colors"
           style={{ color: 'var(--text-3)' }}

@@ -215,12 +215,14 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
         </button>
         <button
           onClick={() => {
-            logout();
+            const token = usePortalAuthStore.getState().accessToken ?? '';
             void fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/logout`, {
               method: 'POST', credentials: 'include',
-              headers: { 'Authorization': `Bearer ${usePortalAuthStore.getState().accessToken ?? ''}` },
-            }).catch(() => {});
-            window.location.href = '/';
+              headers: { 'Authorization': `Bearer ${token}` },
+            }).finally(() => {
+              logout();
+              window.location.href = '/';
+            });
           }}
           className="flex items-center gap-1.5 text-xs font-medium transition-colors"
           style={{ color: '#ef4444' }}

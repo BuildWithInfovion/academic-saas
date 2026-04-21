@@ -31,7 +31,8 @@ export default function DirectorOverviewPage() {
     ])
       .then(([count, years, leafUnits, users]) => {
         const sc = count as StudentCount;
-        setStats({ students: sc.totalStudents ?? 0, staff: users.length ?? 0, boys: sc.boys ?? 0, girls: sc.girls ?? 0 });
+        const staffUsers = (users as any[]).filter((u) => !u.roles.every((ur: any) => ['parent', 'student'].includes(ur.role.code)));
+        setStats({ students: sc.totalStudents ?? 0, staff: staffUsers.length ?? 0, boys: sc.boys ?? 0, girls: sc.girls ?? 0 });
         const yr: AcademicYear = years.find((y: AcademicYear) => y.isCurrent) ?? years[0] ?? null;
         setCurrentYear(yr);
         setUnits(leafUnits);

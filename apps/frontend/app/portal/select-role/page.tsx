@@ -8,8 +8,10 @@ import { silentRefresh } from '@/lib/api';
 import { getRoleRoute, ROLE_LABELS, PORTAL_ROLES } from '@/lib/auth-utils';
 
 const ROLE_ICONS: Record<string, string> = {
+  super_admin:        '🎯',
   principal:          '🏛️',
   teacher:            '📚',
+  student:            '🎓',
   parent:             '👨‍👩‍👧',
   receptionist:       '🖥️',
   accountant:         '💰',
@@ -17,8 +19,10 @@ const ROLE_ICONS: Record<string, string> = {
 };
 
 const ROLE_DESC: Record<string, string> = {
+  super_admin:        'Full institution management & configuration',
   principal:          'Manage staff, attendance & fees overview',
   teacher:            'Mark attendance, enter marks, manage classes',
+  student:            'View your timetable, marks & attendance',
   parent:             'Track your child\'s attendance, marks & fees',
   receptionist:       'Handle admissions, inquiries & desk tasks',
   accountant:         'Manage fee collection & financial records',
@@ -120,11 +124,14 @@ export default function SelectRolePage() {
           <div className="px-5 pb-5">
             <button
               onClick={() => {
-                logout();
+                const token = usePortalAuthStore.getState().accessToken ?? '';
                 void fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/logout`, {
                   method: 'POST', credentials: 'include',
-                }).catch(() => {});
-                window.location.href = '/';
+                  headers: { 'Authorization': `Bearer ${token}` },
+                }).finally(() => {
+                  logout();
+                  window.location.href = '/';
+                });
               }}
               className="w-full text-xs font-medium py-2 rounded-lg transition-colors"
               style={{ color: 'var(--text-3)', background: 'transparent' }}

@@ -117,7 +117,7 @@ export default function LoginPage() {
     const portalRoles = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
     const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
     setSuccessInfo({ institution: data.user.institutionName || fallbackCode });
-    await new Promise<void>((resolve) => setTimeout(resolve, 5500));
+    await new Promise<void>((resolve) => setTimeout(resolve, 1500));
     router.push(destination);
   };
 
