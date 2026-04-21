@@ -20,9 +20,34 @@ const STATUS_BADGE: Record<string, string> = {
   leave: 'bg-ds-info-bg text-ds-info-text',
 };
 
+interface MonthlyReportRow {
+  id: string; firstName: string; lastName: string; admissionNo: string; rollNo?: string;
+  daily: (string | null)[]; present: number; absent: number; leave: number; total: number; percentage: number;
+}
+
+function downloadMonthlyCSV(report: { dates: string[]; rows: MonthlyReportRow[] }, unitName: string, year: number, month: number) {
+  const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const headers = ['Roll No', 'Name', 'Adm No', ...report.dates.map((d) => new Date(d).getDate().toString()), 'Present', 'Absent', 'Leave', 'Total', '%'];
+  const rows = report.rows.map((r) => [
+    r.rollNo ?? '',
+    `${r.firstName} ${r.lastName}`,
+    r.admissionNo,
+    ...r.daily.map((d) => d === 'present' ? 'P' : d === 'absent' ? 'A' : d === 'late' ? 'L' : d === 'leave' ? 'LE' : ''),
+    r.present, r.absent, r.leave, r.total, r.percentage + '%',
+  ]);
+  const csv = [headers, ...rows].map((row) => row.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `attendance-${unitName}-${MONTHS_FULL[month - 1]}-${year}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AttendancePage() {
   const user = useAuthStore((s) => s.user);
-  const [tab, setTab] = useState<'daily' | 'defaulters'>('daily');
+  const [tab, setTab] = useState<'daily' | 'defaulters' | 'monthly'>('daily');
 
   // Daily report
   const [units, setUnits] = useState<AcademicUnit[]>([]);
@@ -80,6 +105,27 @@ export default function AttendancePage() {
     }
   };
 
+  // Monthly report
+  const [monthUnit, setMonthUnit] = useState('');
+  const [monthYear, setMonthYear] = useState(new Date().getFullYear());
+  const [monthMonth, setMonthMonth] = useState(new Date().getMonth() + 1);
+  const [monthReport, setMonthReport] = useState<{ dates: string[]; rows: MonthlyReportRow[] } | null>(null);
+  const [loadingMonth, setLoadingMonth] = useState(false);
+
+  const loadMonthlyReport = async () => {
+    if (!monthUnit) return;
+    setLoadingMonth(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/attendance/units/${monthUnit}/monthly-report?year=${monthYear}&month=${monthMonth}`);
+      setMonthReport(res);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load monthly report');
+    } finally {
+      setLoadingMonth(false);
+    }
+  };
+
   const counts = reportData?.records
     ? {
         present: reportData.records.filter((r) => r.status === 'present').length,
@@ -93,7 +139,7 @@ export default function AttendancePage() {
   const marked = reportData?.records?.length ?? 0;
 
   const inp = 'border border-ds-border-strong rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
-  const tabBtn = (t: typeof tab) =>
+  const tabBtn = (t: 'daily' | 'defaulters' | 'monthly') =>
     `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-black text-black' : 'border-transparent text-ds-text2 hover:text-ds-text1'}`;
 
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -106,8 +152,9 @@ export default function AttendancePage() {
       {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-ds-border mb-6">
+      <div className="flex gap-1 border-b border-ds-border mb-6 overflow-x-auto">
         <button className={tabBtn('daily')} onClick={() => setTab('daily')}>Daily Report</button>
+        <button className={tabBtn('monthly')} onClick={() => setTab('monthly')}>Monthly Report</button>
         <button className={tabBtn('defaulters')} onClick={() => setTab('defaulters')}>Defaulters</button>
       </div>
 
@@ -280,6 +327,97 @@ export default function AttendancePage() {
                 </tbody>
               </table>
             </div>
+          )}
+        </>
+      )}
+
+      {/* ── Monthly Report ── */}
+      {tab === 'monthly' && (
+        <>
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 mb-5">
+            <div className="flex gap-4 items-end flex-wrap">
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Class *</label>
+                <select className={inp + ' w-full'} value={monthUnit} onChange={(e) => setMonthUnit(e.target.value)}>
+                  <option value="">Select Class</option>
+                  {units.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Month</label>
+                <select className={inp} value={monthMonth} onChange={(e) => setMonthMonth(Number(e.target.value))}>
+                  {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Year</label>
+                <select className={inp} value={monthYear} onChange={(e) => setMonthYear(Number(e.target.value))}>
+                  {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <button onClick={loadMonthlyReport} disabled={!monthUnit || loadingMonth} className="btn-brand px-4 py-2 rounded-lg">
+                {loadingMonth ? 'Loading…' : 'Generate'}
+              </button>
+              {monthReport && (
+                <button
+                  onClick={() => downloadMonthlyCSV(monthReport, units.find((u) => u.id === monthUnit)?.displayName ?? 'class', monthYear, monthMonth)}
+                  className="px-4 py-2 rounded-lg border border-ds-border-strong text-sm font-medium text-ds-text1 hover:bg-ds-bg2"
+                >
+                  ↓ Download CSV
+                </button>
+              )}
+            </div>
+          </div>
+
+          {monthReport && (
+            monthReport.rows.length === 0 ? (
+              <div className="text-center py-12 text-ds-text3 text-sm">No students in this class.</div>
+            ) : (
+              <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-x-auto">
+                <table className="text-sm" style={{ minWidth: `${Math.max(600, 220 + monthReport.dates.length * 36)}px` }}>
+                  <thead className="bg-ds-bg2">
+                    <tr>
+                      <th className="px-3 py-3 text-xs font-medium text-ds-text2 text-left sticky left-0 bg-ds-bg2 z-10">Roll</th>
+                      <th className="px-3 py-3 text-xs font-medium text-ds-text2 text-left sticky left-10 bg-ds-bg2 z-10 whitespace-nowrap">Student</th>
+                      {monthReport.dates.map((d) => (
+                        <th key={d} className="px-1 py-3 text-xs font-medium text-ds-text2 text-center w-8">
+                          {new Date(d).getDate()}
+                        </th>
+                      ))}
+                      <th className="px-3 py-3 text-xs font-medium text-ds-text2 text-center">P</th>
+                      <th className="px-3 py-3 text-xs font-medium text-ds-text2 text-center">A</th>
+                      <th className="px-3 py-3 text-xs font-medium text-ds-text2 text-center">%</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ds-border">
+                    {monthReport.rows.map((row) => (
+                      <tr key={row.id} className="hover:bg-ds-bg2">
+                        <td className="px-3 py-2 text-ds-text3 text-xs sticky left-0 bg-ds-surface">{row.rollNo ?? '—'}</td>
+                        <td className="px-3 py-2 sticky left-10 bg-ds-surface whitespace-nowrap">
+                          <div className="font-medium text-ds-text1 text-xs">{row.firstName} {row.lastName}</div>
+                        </td>
+                        {row.daily.map((d, i) => (
+                          <td key={i} className="px-1 py-2 text-center text-[10px] font-semibold">
+                            {d === 'present' ? <span className="text-emerald-600">P</span>
+                              : d === 'absent' ? <span className="text-red-600">A</span>
+                              : d === 'late' ? <span className="text-yellow-600">L</span>
+                              : d === 'leave' ? <span className="text-blue-500">LE</span>
+                              : <span className="text-ds-border">·</span>}
+                          </td>
+                        ))}
+                        <td className="px-3 py-2 text-center text-emerald-600 font-semibold text-xs">{row.present}</td>
+                        <td className="px-3 py-2 text-center text-red-600 font-semibold text-xs">{row.absent}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`text-xs font-bold ${row.percentage >= 75 ? 'text-emerald-600' : row.percentage >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {row.percentage}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
         </>
       )}

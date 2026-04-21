@@ -344,6 +344,7 @@ export class StudentService {
     const whereCondition: Prisma.StudentWhereInput = {
       institutionId,
       deletedAt: null,
+      status: { not: 'transferred' },
     };
 
     if (unitId) {
@@ -385,6 +386,22 @@ export class StudentService {
     };
   }
 
+  async findExited(institutionId: string) {
+    return this.prisma.student.findMany({
+      where: { institutionId, status: 'transferred', deletedAt: null },
+      include: {
+        academicUnit: { select: { id: true, name: true, displayName: true } },
+        transferCertificates: {
+          where: { status: 'issued' },
+          orderBy: { issuedAt: 'desc' },
+          take: 1,
+          select: { id: true, tcNumber: true, issuedAt: true, classLastStudied: true, reason: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
   async findOne(institutionId: string, studentId: string) {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, institutionId, deletedAt: null },
@@ -406,6 +423,8 @@ export class StudentService {
       where: { id: studentId, institutionId, deletedAt: null },
     });
     if (!student) throw new NotFoundException('Student not found');
+    if (student.status === 'transferred')
+      throw new BadRequestException('This student has been transferred and their record is locked. View their TC for details.');
 
     // If the caller is moving the student to a different class, verify that class
     // exists in this institution. Skipping this lets an operator assign a student

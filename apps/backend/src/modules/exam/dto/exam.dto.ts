@@ -79,6 +79,42 @@ export class ExamResultEntryDto {
   remarks?: string;
 }
 
+export class BulkAddSubjectsDto {
+  @IsString()
+  @IsNotEmpty()
+  subjectId: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  academicUnitIds: string[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(1000)
+  maxMarks?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1000)
+  passingMarks?: number;
+
+  @IsOptional()
+  @IsDateString()
+  examDate?: string;
+
+  @IsOptional()
+  @IsString()
+  examTime?: string;
+}
+
+export class CloneSubjectsDto {
+  @IsString()
+  @IsNotEmpty()
+  sourceExamId: string;
+}
+
 export class SaveResultsDto {
   @IsString()
   @IsNotEmpty()

@@ -346,6 +346,12 @@ export class TcService {
           },
         },
       });
+      // Capture portal link IDs before nulling them
+      const studentRecord = await tx.student.findUnique({
+        where: { id: tc.studentId },
+        select: { parentUserId: true, userId: true },
+      });
+
       // Wipe class link, portal links — student data preserved in the TC snapshot above
       await tx.student.update({
         where: { id: tc.studentId },
@@ -356,6 +362,32 @@ export class TcService {
           userId: null,           // revoke student portal access
         },
       });
+
+      // Deactivate student's own portal account immediately
+      if (studentRecord?.userId) {
+        await tx.user.update({
+          where: { id: studentRecord.userId },
+          data: { isActive: false },
+        });
+      }
+
+      // Deactivate parent portal account only if they have no other linked children
+      if (studentRecord?.parentUserId) {
+        const otherChildren = await tx.student.count({
+          where: {
+            parentUserId: studentRecord.parentUserId,
+            deletedAt: null,
+            id: { not: tc.studentId },
+          },
+        });
+        if (otherChildren === 0) {
+          await tx.user.update({
+            where: { id: studentRecord.parentUserId },
+            data: { isActive: false },
+          });
+        }
+      }
+
       return issued;
     });
   }

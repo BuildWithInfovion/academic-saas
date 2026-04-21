@@ -78,6 +78,23 @@ export class AttendanceController {
     );
   }
 
+  // GET /attendance/units/:unitId/monthly-report — class-wise full month report (operator/principal)
+  @Get('units/:unitId/monthly-report')
+  @Permissions('attendance.read')
+  getMonthlyReport(
+    @Request() req: any,
+    @Param('unitId') unitId: string,
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    return this.attendanceService.getClassMonthlyReport(
+      req.tenant?.institutionId ?? req.institutionId,
+      unitId,
+      parseInt(year),
+      parseInt(month),
+    );
+  }
+
   // GET /attendance/units/:unitId/defaulters — operator/principal only
   @Get('units/:unitId/defaulters')
   @Permissions('attendance.read')

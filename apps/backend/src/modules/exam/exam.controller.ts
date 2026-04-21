@@ -32,7 +32,7 @@ export class ExamController {
   @Post()
   @Permissions('subjects.write')
   create(@Request() req: any, @Body() dto: CreateExamDto) {
-    return this.examService.create(req.tenant?.institutionId, dto);
+    return this.examService.create(req.tenant?.institutionId, req.user?.userId, dto);
   }
 
   // PATCH status — operator/director only

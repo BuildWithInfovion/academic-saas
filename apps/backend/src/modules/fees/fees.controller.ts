@@ -3,7 +3,7 @@ import {
   UseGuards, Request, ForbiddenException,
 } from '@nestjs/common';
 import { FeesService } from './fees.service';
-import { CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto } from './dto/fees.dto';
+import { CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto, RecordBulkPaymentDto } from './dto/fees.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -64,12 +64,31 @@ export class FeesController {
     return this.feesService.recordPayment(req.tenant?.institutionId, dto);
   }
 
+  // Collect multiple installments in one shot
+  @Post('payments/bulk')
+  @Permissions('fees.write')
+  recordBulkPayments(@Request() req: any, @Body() dto: RecordBulkPaymentDto) {
+    return this.feesService.recordBulkPayments(req.tenant?.institutionId, dto);
+  }
+
   @Get('payments/student/:studentId')
   @Permissions('fees.read')
   getStudentPayments(@Request() req: any, @Param('studentId') studentId: string) {
     // C-05: pass parentUserId so service can enforce ownership for parent role
     const parentUserId = req.user?.roles?.includes('parent') ? req.user.userId : undefined;
     return this.feesService.getStudentPayments(req.tenant?.institutionId, studentId, parentUserId);
+  }
+
+  // Installment-level dues for a student — used by the improved collect-fees UI
+  @Get('payments/student/:studentId/installments')
+  @Permissions('fees.read')
+  getInstallmentDues(
+    @Request() req: any,
+    @Param('studentId') studentId: string,
+    @Query('yearId') yearId: string,
+  ) {
+    const parentUserId = req.user?.roles?.includes('parent') ? req.user.userId : undefined;
+    return this.feesService.getStudentInstallmentDues(req.tenant?.institutionId, studentId, yearId, parentUserId);
   }
 
   @Get('payments/student/:studentId/balance')

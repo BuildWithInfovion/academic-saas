@@ -1,7 +1,8 @@
 import {
   IsNotEmpty, IsOptional, IsString, IsNumber, IsIn,
-  IsDateString, IsPositive, Min,
+  IsDateString, IsPositive, Min, IsArray, ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateFeeHeadDto {
   @IsString()
@@ -31,7 +32,7 @@ export class CreateFeeStructureDto {
 
   @IsOptional()
   @IsString()
-  installmentName?: string; // "Term 1", "Annual", etc.
+  installmentName?: string;
 
   @IsOptional()
   @IsDateString()
@@ -49,11 +50,62 @@ export class RecordPaymentDto {
 
   @IsOptional()
   @IsString()
+  feeStructureId?: string;
+
+  @IsOptional()
+  @IsString()
+  installmentName?: string;
+
+  @IsOptional()
+  @IsString()
   academicYearId?: string;
 
   @IsNumber()
   @Min(1)
   amount: number;
+
+  @IsIn(['cash', 'online', 'cheque', 'dd', 'neft', 'upi'])
+  paymentMode: string;
+
+  @IsDateString()
+  paidOn: string;
+
+  @IsOptional()
+  @IsString()
+  remarks?: string;
+}
+
+export class BulkPaymentItemDto {
+  @IsString()
+  @IsNotEmpty()
+  feeHeadId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  feeStructureId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  installmentName: string;
+
+  @IsNumber()
+  @Min(1)
+  amount: number;
+}
+
+export class RecordBulkPaymentDto {
+  @IsString()
+  @IsNotEmpty()
+  studentId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  academicYearId: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BulkPaymentItemDto)
+  items: BulkPaymentItemDto[];
 
   @IsIn(['cash', 'online', 'cheque', 'dd', 'neft', 'upi'])
   paymentMode: string;

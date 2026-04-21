@@ -5,16 +5,46 @@ import { apiFetch } from '@/lib/api';
 
 type Child = { id: string; firstName: string; lastName: string; admissionNo: string };
 type AcademicYear = { id: string; name: string; isCurrent: boolean };
-type Exam = { id: string; name: string; status: string };
-type ScorecardEntry = {
-  subject: { name: string }; marksObtained: number | null; isAbsent: boolean;
-  maxMarks: number; passingMarks: number; percentage: number; grade: string; isPassed: boolean;
+type Exam = { id: string; name: string; status: string; academicYear: { name: string } };
+type ScorecardRow = {
+  subject: string;
+  maxMarks: number;
+  marksObtained: number | string | null;
+  passed: boolean | null;
+  remarks?: string;
 };
 type Scorecard = {
-  student: { firstName: string; lastName: string };
-  entries: ScorecardEntry[];
-  summary: { total: number; maxTotal: number; percentage: number; rank: number };
+  student: { firstName: string; lastName: string; admissionNo: string };
+  exam: { name: string; academicYear: string };
+  rows: ScorecardRow[];
+  totalMax: number;
+  totalObtained: number;
+  percentage: number;
+  grade: string;
+  rank: number;
+  totalStudents: number;
 };
+
+const GRADE_COLORS: Record<string, string> = {
+  'A+': 'text-emerald-600', A: 'text-emerald-600', B: 'text-blue-600',
+  C: 'text-amber-600', D: 'text-orange-600', F: 'text-red-600',
+};
+
+function rowGrade(marks: number | string | null, max: number): string {
+  if (marks === 'AB' || marks === null || marks === '—') return '—';
+  const pct = (Number(marks) / max) * 100;
+  if (pct >= 90) return 'A+';
+  if (pct >= 75) return 'A';
+  if (pct >= 60) return 'B';
+  if (pct >= 50) return 'C';
+  if (pct >= 35) return 'D';
+  return 'F';
+}
+
+function rowPct(marks: number | string | null, max: number): string {
+  if (marks === 'AB' || marks === null || marks === '—') return '—';
+  return ((Number(marks) / max) * 100).toFixed(0) + '%';
+}
 
 export default function ParentMarksPage() {
   const [children, setChildren] = useState<Child[]>([]);
@@ -26,16 +56,18 @@ export default function ParentMarksPage() {
   const [selectedExamId, setSelectedExamId] = useState('');
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scorecardError, setScorecardError] = useState('');
 
   useEffect(() => {
     Promise.all([apiFetch('/students/child'), apiFetch('/academic/years')])
       .then(([kids, ys]) => {
-        const children = Array.isArray(kids) ? kids : [];
-        setChildren(children);
-        if (children.length > 0) setSelectedChildId(children[0].id);
-        if (children.length === 0) setNotLinked(true);
-        setYears(ys);
-        const current = ys.find((y: AcademicYear) => y.isCurrent) ?? ys[0];
+        const childList = Array.isArray(kids) ? kids : [];
+        setChildren(childList);
+        if (childList.length > 0) setSelectedChildId(childList[0].id);
+        if (childList.length === 0) setNotLinked(true);
+        const yearList = Array.isArray(ys) ? ys : [];
+        setYears(yearList);
+        const current = yearList.find((y: AcademicYear) => y.isCurrent) ?? yearList[0];
         if (current) setCurrentYearId(current.id);
       })
       .catch(() => setNotLinked(true));
@@ -43,125 +75,208 @@ export default function ParentMarksPage() {
 
   useEffect(() => {
     if (!currentYearId) return;
+    setExams([]);
+    setSelectedExamId('');
+    setScorecard(null);
     apiFetch(`/exams?yearId=${currentYearId}`)
-      .then((e: Exam[]) => setExams(e.filter((ex) => ex.status === 'completed' || ex.status === 'active')))
+      .then((e: Exam[]) => {
+        const list = Array.isArray(e) ? e : [];
+        setExams(list.filter((ex) => ex.status === 'completed'));
+      })
       .catch(() => {});
   }, [currentYearId]);
 
   useEffect(() => {
     if (!selectedExamId || !selectedChildId) return;
     setLoading(true);
+    setScorecardError('');
+    setScorecard(null);
     apiFetch(`/exams/${selectedExamId}/scorecard/${selectedChildId}`)
-      .then(setScorecard)
-      .catch(() => setScorecard(null))
+      .then((data) => setScorecard(data as Scorecard))
+      .catch((err) => {
+        const msg = err?.message ?? '';
+        setScorecardError(
+          msg.includes('not been released')
+            ? 'Results for this exam have not been released yet.'
+            : msg.includes('authorised')
+              ? 'You are not authorised to view this scorecard.'
+              : 'Could not load scorecard. Please try again.',
+        );
+      })
       .finally(() => setLoading(false));
   }, [selectedExamId, selectedChildId]);
 
   if (notLinked) {
     return (
       <div className="p-4 sm:p-6">
-        <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-5 text-sm text-ds-warning-text">
-          Your child's record has not been linked yet. Please contact the school admin.
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
+          Your child&apos;s record has not been linked yet. Please contact the school admin.
         </div>
       </div>
     );
   }
 
-  const GRADE_COLORS: Record<string, string> = {
-    'A+': 'text-ds-success-text', A: 'text-ds-success-text', B: 'text-ds-brand', C: 'text-ds-warning-text', D: 'text-orange-600', F: 'text-ds-error-text',
-  };
-
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Child's Marks & Results</h1>
-      <p className="text-sm text-ds-text3 mb-6">Exam scorecards</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Marks &amp; Results</h1>
+      <p className="text-sm text-ds-text3 mb-6">View your child&apos;s exam scorecards</p>
 
+      {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-6">
         {children.length > 1 && (
           <div>
             <label className="text-xs font-medium text-ds-text2 block mb-1">Child</label>
-            <select value={selectedChildId} onChange={(e) => { setSelectedChildId(e.target.value); setScorecard(null); }}
-              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
-              {children.map((c) => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
+            <select
+              value={selectedChildId}
+              onChange={(e) => { setSelectedChildId(e.target.value); setScorecard(null); setScorecardError(''); }}
+              className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none"
+            >
+              {children.map((c) => (
+                <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+              ))}
             </select>
           </div>
         )}
         <div>
           <label className="text-xs font-medium text-ds-text2 block mb-1">Academic Year</label>
-          <select value={currentYearId} onChange={(e) => setCurrentYearId(e.target.value)}
-            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
+          <select
+            value={currentYearId}
+            onChange={(e) => setCurrentYearId(e.target.value)}
+            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none"
+          >
             {years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
           </select>
         </div>
         <div>
           <label className="text-xs font-medium text-ds-text2 block mb-1">Examination</label>
-          <select value={selectedExamId} onChange={(e) => setSelectedExamId(e.target.value)}
-            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
-            <option value="">Select exam...</option>
+          <select
+            value={selectedExamId}
+            onChange={(e) => { setSelectedExamId(e.target.value); setScorecardError(''); }}
+            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none"
+          >
+            <option value="">Select exam…</option>
             {exams.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
           </select>
         </div>
       </div>
 
+      {/* No exams state */}
       {exams.length === 0 && currentYearId && (
         <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-8 text-center">
-          <p className="text-ds-text3 text-sm">No completed exams for this year.</p>
+          <p className="text-ds-text3 text-sm">No released results for this academic year yet.</p>
+          <p className="text-ds-text3 text-xs mt-1">Results become visible once the school marks the exam as completed.</p>
         </div>
       )}
 
-      {loading && <p className="text-sm text-ds-text3">Loading scorecard...</p>}
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-ds-text3 mt-4">
+          <span className="animate-spin inline-block w-4 h-4 border-2 border-ds-border border-t-ds-brand rounded-full" />
+          Loading scorecard…
+        </div>
+      )}
+
+      {scorecardError && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 mt-4">
+          {scorecardError}
+        </div>
+      )}
 
       {scorecard && !loading && (
         <>
-          <div className="rounded-xl p-5 mb-5 grid grid-cols-3 gap-4" style={{ background: 'linear-gradient(135deg, var(--brand-dark) 0%, #2d1a0e 100%)', color: '#fcfbf7' }}>
+          {/* Summary banner */}
+          <div
+            className="rounded-xl p-5 mb-5 grid grid-cols-2 sm:grid-cols-4 gap-4"
+            style={{ background: 'linear-gradient(135deg, #0f2c5e 0%, #1a4fa0 100%)', color: '#fff' }}
+          >
             <div>
-              <p className="text-xs" style={{ color: 'rgba(247,197,118,0.7)' }}>Total Marks</p>
-              <p className="text-xl font-bold mt-0.5">{scorecard.summary.total} / {scorecard.summary.maxTotal}</p>
+              <p className="text-xs opacity-70">Exam</p>
+              <p className="text-sm font-semibold mt-0.5">{scorecard.exam.name}</p>
             </div>
             <div>
-              <p className="text-xs" style={{ color: 'rgba(247,197,118,0.7)' }}>Percentage</p>
-              <p className="text-xl font-bold mt-0.5">{scorecard.summary.percentage?.toFixed(1)}%</p>
+              <p className="text-xs opacity-70">Total Marks</p>
+              <p className="text-xl font-bold mt-0.5">{scorecard.totalObtained} / {scorecard.totalMax}</p>
             </div>
             <div>
-              <p className="text-xs" style={{ color: 'rgba(247,197,118,0.7)' }}>Class Rank</p>
-              <p className="text-xl font-bold mt-0.5">#{scorecard.summary.rank ?? '—'}</p>
+              <p className="text-xs opacity-70">Percentage</p>
+              <p className="text-xl font-bold mt-0.5">{scorecard.percentage?.toFixed(1)}%</p>
+            </div>
+            <div>
+              <p className="text-xs opacity-70">Class Rank</p>
+              <p className="text-xl font-bold mt-0.5">
+                #{scorecard.rank > 0 ? scorecard.rank : '—'}
+                <span className="text-xs font-normal opacity-60 ml-1">/ {scorecard.totalStudents}</span>
+              </p>
             </div>
           </div>
 
+          {/* Overall grade badge */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className={`text-4xl font-black ${GRADE_COLORS[scorecard.grade] ?? 'text-ds-text1'}`}>
+              {scorecard.grade}
+            </span>
+            <div>
+              <p className="text-sm font-medium text-ds-text1">{scorecard.student.firstName} {scorecard.student.lastName}</p>
+              <p className="text-xs text-ds-text3">Adm# {scorecard.student.admissionNo} · {scorecard.exam.academicYear}</p>
+            </div>
+          </div>
+
+          {/* Subject-wise table */}
           <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-ds-bg2">
                 <tr>
                   <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Subject</th>
-                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Marks</th>
-                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Max</th>
-                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">%</th>
-                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Grade</th>
-                  <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
+                  <th className="text-center px-4 py-3 text-ds-text2 font-medium text-xs">Marks</th>
+                  <th className="text-center px-4 py-3 text-ds-text2 font-medium text-xs">Max</th>
+                  <th className="text-center px-4 py-3 text-ds-text2 font-medium text-xs">%</th>
+                  <th className="text-center px-4 py-3 text-ds-text2 font-medium text-xs">Grade</th>
+                  <th className="text-center px-4 py-3 text-ds-text2 font-medium text-xs">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ds-border">
-                {scorecard.entries.map((e, i) => (
-                  <tr key={i}>
-                    <td className="px-5 py-3 text-ds-text1 font-medium">{e.subject.name}</td>
-                    <td className="px-5 py-3 text-center text-ds-text1">
-                      {e.isAbsent ? <span className="text-xs text-ds-text3">Absent</span> : (e.marksObtained ?? '—')}
-                    </td>
-                    <td className="px-5 py-3 text-center text-ds-text2">{e.maxMarks}</td>
-                    <td className="px-5 py-3 text-center text-ds-text2">{e.isAbsent ? '—' : `${e.percentage?.toFixed(0)}%`}</td>
-                    <td className={`px-5 py-3 text-center font-bold ${GRADE_COLORS[e.grade] ?? 'text-ds-text2'}`}>{e.isAbsent ? '—' : e.grade}</td>
-                    <td className="px-5 py-3 text-center">
-                      {e.isAbsent
-                        ? <span className="text-xs bg-ds-bg2 text-ds-text2 px-2 py-0.5 rounded-full">Absent</span>
-                        : e.isPassed
-                          ? <span className="text-xs bg-ds-success-bg text-ds-success-text px-2 py-0.5 rounded-full">Pass</span>
-                          : <span className="text-xs bg-ds-error-bg text-ds-error-text px-2 py-0.5 rounded-full">Fail</span>}
-                    </td>
-                  </tr>
-                ))}
+                {scorecard.rows.map((row, i) => {
+                  const isAbsent = row.marksObtained === 'AB';
+                  const grade = rowGrade(row.marksObtained, row.maxMarks);
+                  return (
+                    <tr key={i}>
+                      <td className="px-5 py-3 text-ds-text1 font-medium">{row.subject}</td>
+                      <td className="px-4 py-3 text-center text-ds-text1">
+                        {isAbsent
+                          ? <span className="text-xs text-ds-text3 italic">Absent</span>
+                          : (row.marksObtained ?? '—')}
+                      </td>
+                      <td className="px-4 py-3 text-center text-ds-text2">{row.maxMarks}</td>
+                      <td className="px-4 py-3 text-center text-ds-text2">{rowPct(row.marksObtained, row.maxMarks)}</td>
+                      <td className={`px-4 py-3 text-center font-bold ${GRADE_COLORS[grade] ?? 'text-ds-text2'}`}>
+                        {grade}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {isAbsent ? (
+                          <span className="text-xs bg-ds-bg2 text-ds-text2 px-2 py-0.5 rounded-full">Absent</span>
+                        ) : row.passed === true ? (
+                          <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Pass</span>
+                        ) : row.passed === false ? (
+                          <span className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full">Fail</span>
+                        ) : (
+                          <span className="text-xs text-ds-text3">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+
+          {scorecard.rows.some((r) => r.remarks) && (
+            <div className="mt-3 space-y-1">
+              {scorecard.rows.filter((r) => r.remarks).map((r, i) => (
+                <p key={i} className="text-xs text-ds-text3">
+                  <span className="font-medium">{r.subject}:</span> {r.remarks}
+                </p>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

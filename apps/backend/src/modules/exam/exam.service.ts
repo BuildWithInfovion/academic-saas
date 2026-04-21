@@ -8,6 +8,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateExamDto,
   AddExamSubjectDto,
+  BulkAddSubjectsDto,
+  CloneSubjectsDto,
   SaveResultsDto,
 } from './dto/exam.dto';
 
@@ -32,8 +34,8 @@ export class ExamService {
     });
   }
 
-  async create(institutionId: string, dto: CreateExamDto) {
-    return this.prisma.exam.create({
+  async create(institutionId: string, createdByUserId: string, dto: CreateExamDto) {
+    const exam = await this.prisma.exam.create({
       data: {
         institutionId,
         academicYearId: dto.academicYearId,
@@ -45,6 +47,25 @@ export class ExamService {
         status: 'draft',
       },
     });
+
+    // Auto-create a calendar event so exam dates appear on the school calendar
+    if (dto.startDate && createdByUserId) {
+      const start = new Date(dto.startDate);
+      const end   = dto.endDate ? new Date(dto.endDate) : start;
+      await this.prisma.calendarEvent.create({
+        data: {
+          institutionId,
+          createdByUserId,
+          title:     `Exam: ${dto.name}`,
+          eventType: 'exam',
+          startDate: start,
+          endDate:   end,
+          isAllDay:  true,
+        },
+      });
+    }
+
+    return exam;
   }
 
   async updateStatus(institutionId: string, examId: string, status: string) {
@@ -52,6 +73,33 @@ export class ExamService {
       where: { id: examId, institutionId, deletedAt: null },
     });
     if (!exam) throw new NotFoundException('Exam not found');
+
+    // Guard: cannot release results until every teacher has entered all marks
+    if (status === 'completed') {
+      const completeness = await this.getExamCompleteness(institutionId, examId);
+      if (completeness.totalSlots === 0) {
+        throw new BadRequestException(
+          'No exam subjects configured. Add subjects before marking the exam as completed.',
+        );
+      }
+      if (!completeness.allComplete) {
+        const pending = completeness.entries
+          .filter((e) => !e.complete)
+          .map((e) => `${e.academicUnit.displayName ?? e.academicUnit.name} — ${e.subject.name} (${e.enteredCount}/${e.totalStudents} entered)`)
+          .join('; ');
+        throw new BadRequestException(
+          `Cannot release results — marks not fully entered. Pending: ${pending}`,
+        );
+      }
+    }
+
+    // Guard: cannot revert a completed exam back to active/draft
+    if (exam.status === 'completed' && status !== 'completed') {
+      throw new BadRequestException(
+        'A completed exam cannot be reverted. Results are already visible to parents.',
+      );
+    }
+
     return this.prisma.exam.update({ where: { id: examId }, data: { status } });
   }
 
@@ -147,6 +195,106 @@ export class ExamService {
         examTime: dto.examTime ?? null,
       },
     });
+  }
+
+  async bulkAddSubjects(institutionId: string, examId: string, dto: BulkAddSubjectsDto) {
+    const exam = await this.prisma.exam.findFirst({
+      where: { id: examId, institutionId, deletedAt: null },
+    });
+    if (!exam) throw new NotFoundException('Exam not found');
+
+    const subject = await this.prisma.subject.findFirst({
+      where: { id: dto.subjectId, institutionId },
+      select: { id: true },
+    });
+    if (!subject) throw new NotFoundException('Subject not found');
+
+    const units = await this.prisma.academicUnit.findMany({
+      where: { id: { in: dto.academicUnitIds }, institutionId, deletedAt: null },
+      select: { id: true },
+    });
+    if (units.length !== dto.academicUnitIds.length) {
+      throw new BadRequestException('One or more academic units not found in this institution');
+    }
+
+    await this.prisma.$transaction(
+      dto.academicUnitIds.map((unitId) =>
+        this.prisma.examSubject.upsert({
+          where: {
+            examId_academicUnitId_subjectId: {
+              examId,
+              academicUnitId: unitId,
+              subjectId: dto.subjectId,
+            },
+          },
+          create: {
+            examId,
+            academicUnitId: unitId,
+            subjectId: dto.subjectId,
+            maxMarks: dto.maxMarks ?? 100,
+            passingMarks: dto.passingMarks ?? 35,
+            examDate: dto.examDate ? new Date(dto.examDate) : null,
+            examTime: dto.examTime ?? null,
+          },
+          update: {
+            maxMarks: dto.maxMarks ?? 100,
+            passingMarks: dto.passingMarks ?? 35,
+            examDate: dto.examDate ? new Date(dto.examDate) : null,
+            examTime: dto.examTime ?? null,
+          },
+        }),
+      ),
+    );
+
+    return { added: dto.academicUnitIds.length };
+  }
+
+  async cloneSubjects(institutionId: string, examId: string, dto: CloneSubjectsDto) {
+    const exam = await this.prisma.exam.findFirst({
+      where: { id: examId, institutionId, deletedAt: null },
+    });
+    if (!exam) throw new NotFoundException('Exam not found');
+
+    const source = await this.prisma.exam.findFirst({
+      where: { id: dto.sourceExamId, institutionId, deletedAt: null },
+    });
+    if (!source) throw new NotFoundException('Source exam not found');
+
+    const sourceSubjects = await this.prisma.examSubject.findMany({
+      where: { examId: dto.sourceExamId },
+    });
+    if (sourceSubjects.length === 0) return { cloned: 0 };
+
+    await this.prisma.$transaction(
+      sourceSubjects.map((ss) =>
+        this.prisma.examSubject.upsert({
+          where: {
+            examId_academicUnitId_subjectId: {
+              examId,
+              academicUnitId: ss.academicUnitId,
+              subjectId: ss.subjectId,
+            },
+          },
+          create: {
+            examId,
+            academicUnitId: ss.academicUnitId,
+            subjectId: ss.subjectId,
+            maxMarks: ss.maxMarks,
+            passingMarks: ss.passingMarks,
+            examDate: ss.examDate,
+            examTime: ss.examTime,
+          },
+          update: {
+            maxMarks: ss.maxMarks,
+            passingMarks: ss.passingMarks,
+            examDate: ss.examDate,
+            examTime: ss.examTime,
+          },
+        }),
+      ),
+    );
+
+    return { cloned: sourceSubjects.length };
   }
 
   async removeExamSubject(institutionId: string, examId: string, id: string) {
@@ -316,6 +464,13 @@ export class ExamService {
       include: { academicYear: { select: { name: true } } },
     });
     if (!exam) throw new NotFoundException('Exam not found');
+
+    // Parents can only see scorecards for completed (officially released) exams
+    if (parentUserId && exam.status !== 'completed') {
+      throw new BadRequestException(
+        'Results for this exam have not been released yet. Please check back after the exam is marked as completed.',
+      );
+    }
 
     const institution = await this.prisma.institution.findUnique({
       where: { id: institutionId },

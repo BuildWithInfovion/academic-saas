@@ -12,6 +12,12 @@ interface FeePayment { id: string; receiptNo: string; amount: number; paymentMod
 interface FeeStructure { id: string; feeHeadId: string; amount: number; installmentName?: string; dueDate?: string; feeHead: FeeHead; }
 interface Defaulter { id: string; firstName: string; lastName: string; admissionNo: string; due: number; paid: number; balance: number; }
 interface Institution { name: string; board?: string; address?: string; phone?: string; email?: string; }
+interface InstallmentDue {
+  feeStructureId: string; feeHeadId: string; feeHeadName: string;
+  installmentName: string; dueDate?: string | null;
+  due: number; paid: number; balance: number;
+  status: 'paid' | 'partial' | 'unpaid'; isOverdue: boolean;
+}
 
 const MODE_OPTIONS = ['cash', 'online', 'cheque', 'dd', 'neft', 'upi'];
 const STANDARD_FEE_HEADS = ['Tuition Fee', 'Library Fee', 'Lab Fee', 'Activity Fee', 'Sports Fee', 'Exam Fee', 'Development Fee', 'Transport Fee'];
@@ -112,6 +118,15 @@ export default function FeesPage() {
   const [paymentTotal, setPaymentTotal] = useState(0);
   const [pForm, setPForm] = useState({ feeHeadId: '', amount: '', paymentMode: 'cash', paidOn: new Date().toISOString().split('T')[0], remarks: '' });
   const [paying, setPaying] = useState(false);
+  // Installment-based collect (new)
+  const [installmentDues, setInstallmentDues] = useState<{ installments: InstallmentDue[]; totalDue: number; totalPaid: number; outstanding: number } | null>(null);
+  const [loadingDues, setLoadingDues] = useState(false);
+  const [checkedInstallments, setCheckedInstallments] = useState<Record<string, boolean>>({});
+  const [overrideAmounts, setOverrideAmounts] = useState<Record<string, string>>({});
+  const [bulkMode, setBulkMode] = useState<'cash' | 'online' | 'cheque' | 'dd' | 'neft' | 'upi'>('cash');
+  const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0]);
+  const [bulkRemarks, setBulkRemarks] = useState('');
+  const [collectingBulk, setCollectingBulk] = useState(false);
 
   // ── Fee Structure ──────────────────────────────────────────────────────────
   const [structUnit, setStructUnit] = useState('');
@@ -190,11 +205,74 @@ export default function FeesPage() {
   const selectStudent = async (s: Student) => {
     setSelectedStudent(s);
     setSearchQuery(`${s.firstName} ${s.lastName} (${s.admissionNo})`);
+    setInstallmentDues(null);
+    setCheckedInstallments({});
+    setOverrideAmounts({});
+    // Load payment history
+    apiFetch(`/fees/payments/student/${s.id}`)
+      .then((res) => { setStudentPayments(res.payments || []); setPaymentTotal(res.total || 0); })
+      .catch(() => setStudentPayments([]));
+    // Load installment dues
+    if (currentYearId) {
+      setLoadingDues(true);
+      apiFetch(`/fees/payments/student/${s.id}/installments?yearId=${currentYearId}`)
+        .then((res: any) => {
+          setInstallmentDues(res);
+          // Auto-check unpaid/partial installments
+          const autoCheck: Record<string, boolean> = {};
+          for (const inst of (res.installments ?? [])) {
+            if (inst.status !== 'paid') autoCheck[inst.feeStructureId] = true;
+          }
+          setCheckedInstallments(autoCheck);
+        })
+        .catch(() => setInstallmentDues(null))
+        .finally(() => setLoadingDues(false));
+    }
+  };
+
+  const collectSelected = async () => {
+    if (!selectedStudent || !currentYearId) return;
+    const items = (installmentDues?.installments ?? [])
+      .filter((inst) => checkedInstallments[inst.feeStructureId])
+      .map((inst) => ({
+        feeHeadId: inst.feeHeadId,
+        feeStructureId: inst.feeStructureId,
+        installmentName: inst.installmentName,
+        amount: parseFloat(overrideAmounts[inst.feeStructureId] ?? String(inst.balance > 0 ? inst.balance : inst.due)),
+      }))
+      .filter((item) => item.amount > 0);
+    if (!items.length) return setError('Select at least one installment to collect');
+    setCollectingBulk(true);
+    setError(null);
     try {
-      const res = await apiFetch(`/fees/payments/student/${s.id}`);
-      setStudentPayments(res.payments || []);
-      setPaymentTotal(res.total || 0);
-    } catch { setStudentPayments([]); }
+      const res = await apiFetch('/fees/payments/bulk', {
+        method: 'POST',
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          academicYearId: currentYearId,
+          items,
+          paymentMode: bulkMode,
+          paidOn: bulkDate,
+          remarks: bulkRemarks || undefined,
+        }),
+      });
+      showSuccess(`₹${(res.totalCollected ?? 0).toLocaleString('en-IN')} collected successfully — ${items.length} receipt(s) generated`);
+      // Refresh installment dues and payment history
+      const [dues, hist] = await Promise.all([
+        apiFetch(`/fees/payments/student/${selectedStudent.id}/installments?yearId=${currentYearId}`),
+        apiFetch(`/fees/payments/student/${selectedStudent.id}`),
+      ]);
+      setInstallmentDues(dues);
+      setStudentPayments(hist.payments || []);
+      setPaymentTotal(hist.total || 0);
+      setCheckedInstallments({});
+      setOverrideAmounts({});
+      setBulkRemarks('');
+    } catch (e: any) {
+      setError(e.message || 'Failed to collect payment');
+    } finally {
+      setCollectingBulk(false);
+    }
   };
 
   const recordPayment = async () => {
@@ -387,117 +465,219 @@ export default function FeesPage() {
 
       {/* ── Collect Fee ── */}
       {tab === 'collect' && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          <div className="lg:col-span-3 space-y-5">
-            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-              <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Student</p>
-              <div className="relative">
-                <input className={inp} placeholder="Search by name or admission no..."
-                  value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setSelectedStudent(null); }}
-                />
-                {searchQuery.trim().length === 1 && !selectedStudent && (
-                  <p className="mt-2 text-xs text-ds-text3">Type at least 2 characters to search.</p>
-                )}
-                {filteredStudents.length > 0 && !selectedStudent && (
-                  <div className="absolute z-10 w-full bg-ds-surface border border-ds-border rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
-                    {filteredStudents.map((s) => (
-                      <button key={s.id} onClick={() => selectStudent(s)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-ds-bg2 text-sm border-b border-ds-border last:border-0">
-                        <span className="font-medium">{s.firstName} {s.lastName}</span>
-                        <span className="text-ds-text3 text-xs ml-2 font-mono">{s.admissionNo}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {debouncedSearchQuery.length >= 2 && filteredStudents.length === 0 && !selectedStudent && (
-                  <p className="mt-2 text-xs text-ds-text3">No matching students found.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-              <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Record Payment</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className={lbl}>Fee Head *</label>
-                  <select className={inp} value={pForm.feeHeadId} onChange={(e) => setPForm((f) => ({ ...f, feeHeadId: e.target.value }))}>
-                    <option value="">Select Fee Head</option>
-                    {feeHeads.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={lbl}>Amount (₹) *</label>
-                  <input className={inp} type="number" min="1" step="1" placeholder="0"
-                    value={pForm.amount} onChange={(e) => setPForm((f) => ({ ...f, amount: e.target.value }))} />
-                </div>
-                <div>
-                  <label className={lbl}>Payment Mode</label>
-                  <select className={inp} value={pForm.paymentMode} onChange={(e) => setPForm((f) => ({ ...f, paymentMode: e.target.value }))}>
-                    {MODE_OPTIONS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={lbl}>Date</label>
-                  <input type="date" className={inp} value={pForm.paidOn}
-                    onChange={(e) => setPForm((f) => ({ ...f, paidOn: e.target.value }))} />
-                </div>
-                <div>
-                  <label className={lbl}>Remarks</label>
-                  <input className={inp} placeholder="Optional" value={pForm.remarks}
-                    onChange={(e) => setPForm((f) => ({ ...f, remarks: e.target.value }))} />
-                </div>
-              </div>
-              <button onClick={recordPayment} disabled={paying || !selectedStudent}
-                className="mt-4 w-full btn-brand px-4 py-2.5 rounded-lg">
-                {paying ? 'Recording...' : '+ Record Payment'}
-              </button>
-              {!selectedStudent && <p className="text-xs text-ds-text3 mt-2 text-center">Select a student above first</p>}
-            </div>
-          </div>
-
-          <div className="lg:col-span-2">
-            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 sticky top-6">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider">
-                  {selectedStudent ? `${selectedStudent.firstName}'s Payments` : 'Payment History'}
-                </p>
-                {paymentTotal > 0 && (
-                  <span className="text-sm font-semibold text-ds-success-text">₹{paymentTotal.toLocaleString('en-IN')}</span>
-                )}
-              </div>
-              {!selectedStudent ? (
-                <p className="text-sm text-ds-text3 text-center py-6">Select a student to view history</p>
-              ) : studentPayments.length === 0 ? (
-                <p className="text-sm text-ds-text3 text-center py-6">No payments recorded</p>
-              ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {studentPayments.map((p) => (
-                    <div key={p.id} className="bg-ds-bg2 rounded-lg p-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-sm font-medium text-ds-text1">{p.feeHead.name}</p>
-                          <p className="text-xs text-ds-text2 font-mono mt-0.5">{p.receiptNo}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-semibold text-ds-text1">₹{p.amount.toLocaleString('en-IN')}</span>
-                          <button
-                            onClick={() => printFeeReceipt(p, selectedStudent!, institution ?? { name: user?.institutionName ?? 'School' })}
-                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
-                            Print
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex gap-3 mt-1">
-                        <span className="text-xs text-ds-text3">{new Date(p.paidOn).toLocaleDateString('en-IN')}</span>
-                        <span className="text-xs text-ds-text3 uppercase">{p.paymentMode}</span>
-                      </div>
-                    </div>
+        <div className="space-y-5">
+          {/* Student search */}
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Find Student</p>
+            <div className="relative">
+              <input className={inp} placeholder="Search by name or admission no…"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setSelectedStudent(null); setInstallmentDues(null); }}
+              />
+              {searchQuery.trim().length === 1 && !selectedStudent && (
+                <p className="mt-2 text-xs text-ds-text3">Type at least 2 characters to search.</p>
+              )}
+              {filteredStudents.length > 0 && !selectedStudent && (
+                <div className="absolute z-10 w-full bg-ds-surface border border-ds-border rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
+                  {filteredStudents.map((s) => (
+                    <button key={s.id} onClick={() => selectStudent(s)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-ds-bg2 text-sm border-b border-ds-border last:border-0">
+                      <span className="font-medium">{s.firstName} {s.lastName}</span>
+                      <span className="text-ds-text3 text-xs ml-2 font-mono">{s.admissionNo}</span>
+                    </button>
                   ))}
                 </div>
               )}
+              {debouncedSearchQuery.length >= 2 && filteredStudents.length === 0 && !selectedStudent && (
+                <p className="mt-2 text-xs text-ds-text3">No matching students found.</p>
+              )}
             </div>
           </div>
+
+          {/* Installment dues + collect */}
+          {selectedStudent && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2 space-y-4">
+                {/* Fee dues checklist */}
+                <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+                  <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-ds-text1 text-sm">{selectedStudent.firstName} {selectedStudent.lastName}</p>
+                      <p className="text-xs text-ds-text3 font-mono mt-0.5">{selectedStudent.admissionNo}</p>
+                    </div>
+                    {installmentDues && (
+                      <div className="text-right">
+                        <p className="text-xs text-ds-text2">Outstanding</p>
+                        <p className={`text-lg font-bold ${installmentDues.outstanding > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                          ₹{installmentDues.outstanding.toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {loadingDues ? (
+                    <div className="p-6 text-center text-ds-text3 text-sm">Loading fee dues…</div>
+                  ) : !installmentDues || installmentDues.installments.length === 0 ? (
+                    <div className="p-6 text-center text-ds-text3 text-sm">
+                      No fee structure defined for this student&apos;s class.
+                      <br /><span className="text-xs">Set up the fee structure in the &quot;Fee Structure&quot; tab first.</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="px-5 py-2 bg-ds-bg2 flex items-center gap-3 border-b border-ds-border">
+                        <input
+                          type="checkbox"
+                          checked={installmentDues.installments.filter((i) => i.status !== 'paid').every((i) => checkedInstallments[i.feeStructureId])}
+                          onChange={(e) => {
+                            const next: Record<string, boolean> = {};
+                            installmentDues.installments.filter((i) => i.status !== 'paid').forEach((i) => { next[i.feeStructureId] = e.target.checked; });
+                            setCheckedInstallments(next);
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-xs font-medium text-ds-text2">Select all pending</span>
+                      </div>
+                      {installmentDues.installments.map((inst) => (
+                        <div key={inst.feeStructureId}
+                          className={`flex items-center gap-3 px-5 py-3 border-b border-ds-border last:border-0 ${inst.status === 'paid' ? 'opacity-50' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            disabled={inst.status === 'paid'}
+                            checked={!!checkedInstallments[inst.feeStructureId]}
+                            onChange={(e) => setCheckedInstallments((prev) => ({ ...prev, [inst.feeStructureId]: e.target.checked }))}
+                            className="rounded flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-ds-text1">{inst.feeHeadName}</span>
+                              <span className="text-xs text-ds-text3">— {inst.installmentName}</span>
+                              {inst.isOverdue && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-semibold">OVERDUE</span>}
+                            </div>
+                            <div className="flex gap-3 mt-0.5">
+                              {inst.dueDate && <span className="text-xs text-ds-text3">Due {new Date(inst.dueDate).toLocaleDateString('en-IN')}</span>}
+                              <span className="text-xs text-ds-text3">Total ₹{inst.due.toLocaleString('en-IN')}</span>
+                              {inst.paid > 0 && <span className="text-xs text-emerald-600">Paid ₹{inst.paid.toLocaleString('en-IN')}</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {inst.status === 'paid' ? (
+                              <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">Paid</span>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-ds-text3">₹</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  className="w-24 border border-ds-border-strong rounded p-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ds-brand"
+                                  placeholder={String(inst.balance)}
+                                  value={overrideAmounts[inst.feeStructureId] ?? ''}
+                                  onChange={(e) => setOverrideAmounts((prev) => ({ ...prev, [inst.feeStructureId]: e.target.value }))}
+                                  disabled={!checkedInstallments[inst.feeStructureId]}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Collect footer */}
+                {installmentDues && installmentDues.installments.some((i) => i.status !== 'paid') && (
+                  <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+                    <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Collection Details</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                      <div>
+                        <label className={lbl}>Payment Mode</label>
+                        <select className={inp} value={bulkMode} onChange={(e) => setBulkMode(e.target.value as any)}>
+                          {MODE_OPTIONS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={lbl}>Date</label>
+                        <input type="date" className={inp} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className={lbl}>Remarks (optional)</label>
+                        <input className={inp} placeholder="e.g. Cash received" value={bulkRemarks} onChange={(e) => setBulkRemarks(e.target.value)} />
+                      </div>
+                    </div>
+                    {/* Summary of what will be collected */}
+                    {Object.values(checkedInstallments).some(Boolean) && (
+                      <div className="bg-ds-bg2 rounded-lg p-3 mb-3 text-sm">
+                        {(installmentDues?.installments ?? []).filter((i) => checkedInstallments[i.feeStructureId]).map((i) => {
+                          const amt = parseFloat(overrideAmounts[i.feeStructureId] ?? String(i.balance > 0 ? i.balance : i.due));
+                          return (
+                            <div key={i.feeStructureId} className="flex justify-between py-0.5">
+                              <span className="text-ds-text2">{i.feeHeadName} — {i.installmentName}</span>
+                              <span className="font-medium">₹{amt.toLocaleString('en-IN')}</span>
+                            </div>
+                          );
+                        })}
+                        <div className="flex justify-between pt-2 mt-1 border-t border-ds-border font-semibold">
+                          <span>Total to collect</span>
+                          <span className="text-ds-brand">
+                            ₹{(installmentDues?.installments ?? [])
+                              .filter((i) => checkedInstallments[i.feeStructureId])
+                              .reduce((s, i) => s + parseFloat(overrideAmounts[i.feeStructureId] ?? String(i.balance > 0 ? i.balance : i.due)), 0)
+                              .toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      onClick={collectSelected}
+                      disabled={collectingBulk || !Object.values(checkedInstallments).some(Boolean)}
+                      className="w-full btn-brand px-4 py-2.5 rounded-lg text-sm font-semibold"
+                    >
+                      {collectingBulk ? 'Processing…' : `Collect Selected (${Object.values(checkedInstallments).filter(Boolean).length})`}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment history sidebar */}
+              <div>
+                <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 sticky top-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider">Payment History</p>
+                    {paymentTotal > 0 && <span className="text-sm font-semibold text-emerald-600">₹{paymentTotal.toLocaleString('en-IN')}</span>}
+                  </div>
+                  {studentPayments.length === 0 ? (
+                    <p className="text-sm text-ds-text3 text-center py-6">No payments recorded yet</p>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {studentPayments.map((p) => (
+                        <div key={p.id} className="bg-ds-bg2 rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-medium text-ds-text1">{p.feeHead.name}</p>
+                              <p className="text-xs text-ds-text2 font-mono mt-0.5">{p.receiptNo}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-semibold text-ds-text1">₹{p.amount.toLocaleString('en-IN')}</span>
+                              <button
+                                onClick={() => printFeeReceipt(p, selectedStudent!, institution ?? { name: user?.institutionName ?? 'School' })}
+                                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                                Print
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex gap-3 mt-1">
+                            <span className="text-xs text-ds-text3">{new Date(p.paidOn).toLocaleDateString('en-IN')}</span>
+                            <span className="text-xs text-ds-text3 uppercase">{p.paymentMode}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

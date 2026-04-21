@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto } from './dto/fees.dto';
+import { CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto, RecordBulkPaymentDto } from './dto/fees.dto';
 
 @Injectable()
 export class FeesService {
@@ -118,6 +118,8 @@ export class FeesService {
           institutionId,
           studentId: dto.studentId,
           feeHeadId: dto.feeHeadId,
+          feeStructureId: dto.feeStructureId ?? null,
+          installmentName: dto.installmentName ?? null,
           academicYearId: dto.academicYearId,
           amount: dto.amount,
           paymentMode: dto.paymentMode,
@@ -127,6 +129,109 @@ export class FeesService {
         },
         include: { feeHead: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
       });
+    });
+  }
+
+  // Returns every installment for the student's class with paid/unpaid status
+  async getStudentInstallmentDues(institutionId: string, studentId: string, academicYearId: string, parentUserId?: string) {
+    if (parentUserId) {
+      const owned = await this.prisma.student.findFirst({
+        where: { id: studentId, institutionId, parentUserId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!owned) throw new ForbiddenException('You are not authorised to view this student\'s data');
+    }
+
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, institutionId, deletedAt: null },
+      select: { academicUnitId: true, firstName: true, lastName: true, admissionNo: true },
+    });
+    if (!student || !student.academicUnitId) {
+      return { student, installments: [], totalDue: 0, totalPaid: 0, outstanding: 0 };
+    }
+
+    const [structures, payments] = await Promise.all([
+      this.prisma.feeStructure.findMany({
+        where: { institutionId, academicUnitId: student.academicUnitId, academicYearId, deletedAt: null },
+        include: { feeHead: true },
+        orderBy: [{ feeHead: { name: 'asc' } }, { installmentName: 'asc' }],
+      }),
+      this.prisma.feePayment.findMany({
+        where: { institutionId, studentId, academicYearId },
+        select: { feeStructureId: true, feeHeadId: true, installmentName: true, amount: true, receiptNo: true, paidOn: true, paymentMode: true },
+      }),
+    ]);
+
+    // Match payments to structures by feeStructureId (new) or feeHeadId+installmentName (legacy)
+    const paidByStructureId = new Map<string, number>();
+    const paidByHeadInstallment = new Map<string, number>();
+    for (const p of payments) {
+      if (p.feeStructureId) {
+        paidByStructureId.set(p.feeStructureId, (paidByStructureId.get(p.feeStructureId) ?? 0) + p.amount);
+      } else {
+        const key = `${p.feeHeadId}|${p.installmentName ?? ''}`;
+        paidByHeadInstallment.set(key, (paidByHeadInstallment.get(key) ?? 0) + p.amount);
+      }
+    }
+
+    const installments = structures.map((s) => {
+      const legacyKey = `${s.feeHeadId}|${s.installmentName ?? ''}`;
+      const paid = (paidByStructureId.get(s.id) ?? 0) + (paidByHeadInstallment.get(legacyKey) ?? 0);
+      const due = s.amount;
+      const balance = due - paid;
+      return {
+        feeStructureId: s.id,
+        feeHeadId: s.feeHeadId,
+        feeHeadName: s.feeHead.name,
+        installmentName: s.installmentName ?? 'Full Year',
+        dueDate: s.dueDate,
+        due,
+        paid,
+        balance,
+        status: balance <= 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid',
+        isOverdue: s.dueDate ? new Date() > new Date(s.dueDate) && balance > 0 : false,
+      };
+    });
+
+    const totalDue = installments.reduce((s, i) => s + i.due, 0);
+    const totalPaid = installments.reduce((s, i) => s + i.paid, 0);
+    return { student, installments, totalDue, totalPaid, outstanding: totalDue - totalPaid };
+  }
+
+  // Collect payment for multiple installments in one shot — one receipt per installment
+  async recordBulkPayments(institutionId: string, dto: RecordBulkPaymentDto) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: dto.studentId, institutionId, deletedAt: null },
+      select: { id: true, academicUnitId: true, firstName: true, lastName: true, admissionNo: true },
+    });
+    if (!student) throw new NotFoundException('Student not found');
+    if (!dto.items.length) throw new BadRequestException('No payment items provided');
+
+    return this.prisma.$transaction(async (tx) => {
+      const results: Record<string, unknown>[] = [];
+      for (const item of dto.items) {
+        const count = await tx.feePayment.count({ where: { institutionId } });
+        const receiptNo = `RCP-${new Date().getFullYear()}-${String(count + 1).padStart(5, '0')}`;
+        const payment = await tx.feePayment.create({
+          data: {
+            institutionId,
+            studentId: dto.studentId,
+            feeHeadId: item.feeHeadId,
+            feeStructureId: item.feeStructureId,
+            installmentName: item.installmentName,
+            academicYearId: dto.academicYearId,
+            amount: item.amount,
+            paymentMode: dto.paymentMode,
+            receiptNo,
+            paidOn: new Date(dto.paidOn),
+            remarks: dto.remarks,
+          },
+          include: { feeHead: true },
+        });
+        results.push(payment as unknown as Record<string, unknown>);
+      }
+      const totalCollected = dto.items.reduce((s, i) => s + i.amount, 0);
+      return { payments: results, totalCollected, student };
     });
   }
 

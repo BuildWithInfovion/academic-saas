@@ -46,6 +46,12 @@ export class StudentController {
     return this.studentService.count(tenant.institutionId, unitId);
   }
 
+  @Get('exited')
+  @Permissions('students.read')
+  findExited(@Tenant() tenant: TenantContext) {
+    return this.studentService.findExited(tenant.institutionId);
+  }
+
   @Get('unlinked-parents')
   @Permissions('users.read')
   findUnlinkedParents(@Tenant() tenant: TenantContext, @Query('limit') limit?: string) {

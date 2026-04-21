@@ -264,6 +264,48 @@ export class AttendanceService {
     };
   }
 
+  // Class-wise monthly attendance report — all students × all dates in the month
+  async getClassMonthlyReport(institutionId: string, academicUnitId: string, year: number, month: number) {
+    const start = new Date(year, month - 1, 1);
+    const end   = new Date(year, month, 1);
+
+    const [students, sessions] = await Promise.all([
+      this.prisma.student.findMany({
+        where: { institutionId, academicUnitId, deletedAt: null, status: 'active' },
+        orderBy: [{ rollNo: 'asc' }, { firstName: 'asc' }],
+        select: { id: true, firstName: true, lastName: true, admissionNo: true, rollNo: true },
+      }),
+      this.prisma.attendanceSession.findMany({
+        where: { institutionId, academicUnitId, date: { gte: start, lt: end }, subjectId: null },
+        include: {
+          records: { select: { studentId: true, status: true } },
+        },
+        orderBy: { date: 'asc' },
+      }),
+    ]);
+
+    const dates = sessions.map((s) => s.date.toISOString().slice(0, 10));
+
+    // Build lookup: sessionId → Map<studentId, status>
+    const sessionMaps = sessions.map((s) => {
+      const m = new Map<string, string>();
+      for (const r of s.records) m.set(r.studentId, r.status);
+      return m;
+    });
+
+    const rows = students.map((stu) => {
+      const daily: (string | null)[] = sessionMaps.map((m) => m.get(stu.id) ?? null);
+      const present = daily.filter((d) => d === 'present' || d === 'late').length;
+      const absent  = daily.filter((d) => d === 'absent').length;
+      const leave   = daily.filter((d) => d === 'leave').length;
+      const total   = sessions.length;
+      const pct     = total > 0 ? Math.round((present / total) * 100) : 0;
+      return { ...stu, daily, present, absent, leave, total, percentage: pct };
+    });
+
+    return { year, month, academicUnitId, dates, rows };
+  }
+
   // Defaulter list: students below threshold % in a unit for a month
   // Optimised: 2 queries total instead of 1+N (one per student)
   async getDefaulters(institutionId: string, academicUnitId: string, year: number, month: number, threshold = 75) {

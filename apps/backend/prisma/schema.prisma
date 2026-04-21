@@ -467,6 +467,7 @@ model FeeStructure {
   academicUnit    AcademicUnit @relation(fields: [academicUnitId], references: [id], onDelete: Cascade)
   academicYear    AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   feeHead         FeeHead      @relation(fields: [feeHeadId], references: [id], onDelete: Cascade)
+  payments        FeePayment[]
 
   @@unique([academicUnitId, academicYearId, feeHeadId, installmentName])
   @@index([institutionId])
@@ -475,29 +476,33 @@ model FeeStructure {
 }
 
 model FeePayment {
-  id             String   @id @default(cuid())
-  institutionId  String
-  studentId      String
-  feeHeadId      String
-  academicYearId String?
-  amount         Float
-  paymentMode    String   @default("cash")
-  receiptNo      String
-  paidOn         DateTime @db.Date
-  remarks        String?
-  createdAt      DateTime @default(now())
+  id              String   @id @default(cuid())
+  institutionId   String
+  studentId       String
+  feeHeadId       String
+  feeStructureId  String?
+  academicYearId  String?
+  installmentName String?
+  amount          Float
+  paymentMode     String   @default("cash")
+  receiptNo       String
+  paidOn          DateTime @db.Date
+  remarks         String?
+  createdAt       DateTime @default(now())
 
-  institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  student        Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  feeHead        FeeHead     @relation(fields: [feeHeadId], references: [id], onDelete: Cascade)
+  institution    Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feeHead        FeeHead      @relation(fields: [feeHeadId], references: [id], onDelete: Cascade)
+  feeStructure   FeeStructure? @relation(fields: [feeStructureId], references: [id])
 
   @@unique([institutionId, receiptNo])
   @@index([institutionId])
   @@index([studentId])
   @@index([paidOn])
-  @@index([academicYearId])                  // getDefaulters groupBy filters by yearId
-  @@index([institutionId, academicYearId])   // composite for year-scoped institution queries
-  @@index([studentId, academicYearId])       // getStudentBalance: payments per student per year
+  @@index([academicYearId])
+  @@index([institutionId, academicYearId])
+  @@index([studentId, academicYearId])
+  @@index([feeStructureId])
   @@map("fee_payments")
 }
 
