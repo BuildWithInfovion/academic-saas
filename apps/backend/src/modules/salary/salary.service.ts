@@ -2,6 +2,8 @@ import {
   Injectable, NotFoundException, ConflictException, BadRequestException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+
+const STAFF_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist', 'non_teaching_staff', 'accountant', 'director'];
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateSalaryStructureDto, UpdateSalaryStructureDto,
@@ -111,8 +113,14 @@ export class SalaryService {
   }
 
   async assignProfile(institutionId: string, actorUserId: string, dto: AssignSalaryProfileDto) {
-    const user = await this.prisma.user.findFirst({ where: { id: dto.userId, institutionId } });
+    const user = await this.prisma.user.findFirst({
+      where: { id: dto.userId, institutionId, deletedAt: null },
+      include: { roles: { include: { role: true } } },
+    });
     if (!user) throw new NotFoundException('Staff member not found');
+
+    const isStaff = user.roles.some((ur) => STAFF_ROLE_CODES.includes(ur.role.code));
+    if (!isStaff) throw new BadRequestException('Salary profiles can only be assigned to staff members, not parents or students');
 
     if (dto.structureId) {
       const structure = await this.prisma.salaryStructure.findFirst({ where: { id: dto.structureId, institutionId } });
@@ -351,7 +359,7 @@ export class SalaryService {
         institutionId,
         deletedAt: null,
         id: { notIn: ids },
-        roles: { some: {} },
+        roles: { some: { role: { code: { in: STAFF_ROLE_CODES } } } },
       },
       select: { id: true, name: true, email: true, phone: true, roles: { include: { role: true } } },
       orderBy: { name: 'asc' },
