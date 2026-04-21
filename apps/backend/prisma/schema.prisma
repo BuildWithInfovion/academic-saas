@@ -49,6 +49,9 @@ model Institution {
   supportTickets         SupportTicket[]
   calendarEvents         CalendarEvent[]
   passwordResetOtps      PasswordResetOtp[]
+  salaryStructures       SalaryStructure[]
+  staffSalaryProfiles    StaffSalaryProfile[]
+  salaryRecords          SalaryRecord[]
 
   @@map("institutions")
 }
@@ -244,6 +247,8 @@ model User {
   staffLeaveRequests    StaffLeaveRequest[]    @relation("StaffLeaveUser")
   staffLeaveApprovals   StaffLeaveRequest[]    @relation("StaffLeaveApprover")
   calendarEvents        CalendarEvent[]
+  salaryProfile         StaffSalaryProfile?
+  salaryRecords         SalaryRecord[]
 
   @@index([institutionId])
   @@index([email])                      // login lookups — auth.service queries by email
@@ -864,4 +869,114 @@ model PasswordResetOtp {
   @@index([email, institutionId])  // reset OTP lookup
   @@index([expiresAt])             // cleanup job index
   @@map("password_reset_otps")
+}
+
+// ── SALARY MANAGEMENT ─────────────────────────────────────────────────────────
+
+model SalaryStructure {
+  id            String   @id @default(cuid())
+  institutionId String
+  name          String   // e.g. "Teacher Grade A", "Non-Teaching Basic"
+  description   String?
+
+  basicSalary            Float    @default(0)
+  houseRentAllowance     Float    @default(0)
+  medicalAllowance       Float    @default(0)
+  transportAllowance     Float    @default(0)
+  otherAllowances        Json?    // [{name: string, amount: number}]
+
+  providentFund          Float    @default(0)
+  professionalTax        Float    @default(0)
+  otherDeductions        Json?    // [{name: string, amount: number}]
+
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution   Institution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  staffProfiles StaffSalaryProfile[]
+
+  @@unique([institutionId, name])
+  @@index([institutionId])
+  @@map("salary_structures")
+}
+
+model StaffSalaryProfile {
+  id              String   @id @default(cuid())
+  institutionId   String
+  userId          String   @unique
+  structureId     String?
+
+  basicSalary            Float    @default(0)
+  houseRentAllowance     Float    @default(0)
+  medicalAllowance       Float    @default(0)
+  transportAllowance     Float    @default(0)
+  otherAllowances        Json?    // [{name: string, amount: number}]
+
+  providentFund          Float    @default(0)
+  professionalTax        Float    @default(0)
+  otherDeductions        Json?    // [{name: string, amount: number}]
+
+  effectiveFrom   DateTime @db.Date
+  notes           String?
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution       @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  structure       SalaryStructure?  @relation(fields: [structureId], references: [id], onDelete: SetNull)
+  salaryRecords   SalaryRecord[]
+
+  @@index([institutionId])
+  @@index([userId])
+  @@map("staff_salary_profiles")
+}
+
+model SalaryRecord {
+  id              String   @id @default(cuid())
+  institutionId   String
+  userId          String
+  profileId       String
+
+  month           Int   // 1–12
+  year            Int
+
+  // Snapshot at generation time
+  basicSalary            Float    @default(0)
+  houseRentAllowance     Float    @default(0)
+  medicalAllowance       Float    @default(0)
+  transportAllowance     Float    @default(0)
+  otherAllowances        Json?    // [{name: string, amount: number}]
+  grossSalary            Float    @default(0)
+
+  providentFund          Float    @default(0)
+  professionalTax        Float    @default(0)
+  otherDeductions        Json?    // [{name: string, amount: number}]
+  totalDeductions        Float    @default(0)
+
+  netSalary              Float    @default(0)
+
+  // pending | paid | on_hold
+  status          String   @default("pending")
+
+  paidOn          DateTime?
+  paymentMode     String?   // cash | bank_transfer | cheque | upi | other
+  paymentReference String?
+  remarks         String?
+  markedPaidById  String?
+
+  generatedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user            User               @relation(fields: [userId], references: [id])
+  profile         StaffSalaryProfile @relation(fields: [profileId], references: [id])
+
+  @@unique([institutionId, userId, month, year])
+  @@index([institutionId])
+  @@index([institutionId, month, year])
+  @@index([userId])
+  @@map("salary_records")
 }

@@ -142,6 +142,7 @@ async function main() {
         'academic.read', 'academic.write',
         'institution.read', 'institution.write',
         'inquiry.read',
+        'salary.read',
       ],
     },
     {
@@ -152,6 +153,7 @@ async function main() {
         'roles.read',
         'students.read', 'students.write',
         'fees.read', 'fees.write',
+        'salary.read', 'salary.write',
         'attendance.read', 'attendance.write',
         'exams.read', 'exams.write',
         'subjects.read', 'subjects.write',
@@ -163,7 +165,7 @@ async function main() {
     {
       code: 'principal',
       label: 'Principal',
-      permissions: ['students.read', 'attendance.read', 'exams.read', 'fees.read', 'users.read', 'subjects.read'],
+      permissions: ['students.read', 'attendance.read', 'exams.read', 'fees.read', 'users.read', 'subjects.read', 'salary.read'],
     },
     {
       code: 'teacher',
@@ -193,7 +195,7 @@ async function main() {
     {
       code: 'accountant',
       label: 'Accountant',
-      permissions: ['fees.read', 'fees.write', 'students.read', 'attendance.read', 'institution.read', 'subjects.read'],
+      permissions: ['fees.read', 'fees.write', 'students.read', 'attendance.read', 'institution.read', 'subjects.read', 'salary.read', 'salary.write'],
     },
   ];
 

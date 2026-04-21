@@ -25,6 +25,7 @@ import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendan
 import { TcModule } from './modules/tc/tc.module';
 import { SupportModule } from './modules/support/support.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
+import { SalaryModule } from './modules/salary/salary.module';
 import { PlatformModule } from './platform/platform.module';
 
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
@@ -59,6 +60,7 @@ import { AppController } from './app.controller';
     TcModule,
     SupportModule,
     CalendarModule,
+    SalaryModule,
     PlatformModule,
   ],
   controllers: [AppController],
