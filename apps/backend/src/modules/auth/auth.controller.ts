@@ -20,11 +20,13 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard';
 import { ParentLoginRateLimitGuard } from '../../common/guards/parent-login-rate-limit.guard';
 
+const IS_PROD = process.env.NODE_ENV === 'production';
+
 const RT_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: true,
+  secure: IS_PROD,
   sameSite: 'lax' as const,
-  domain: '.buildwithinfovion.com',
+  ...(IS_PROD ? { domain: '.buildwithinfovion.com' } : {}),
   path: '/',
 };
 

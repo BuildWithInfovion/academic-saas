@@ -31,13 +31,13 @@ export class InquiryController {
   }
 
   @Post()
-  @Permissions('users.write')
+  @Permissions('inquiry.write')
   create(@Req() req: any, @Body() dto: CreateInquiryDto) {
     return this.inquiryService.create(this.getId(req), dto);
   }
 
   @Get()
-  @Permissions('users.read')
+  @Permissions('inquiry.read')
   findAll(
     @Req() req: any,
     @Query('status') status?: string,
@@ -47,13 +47,13 @@ export class InquiryController {
   }
 
   @Get(':id')
-  @Permissions('users.read')
+  @Permissions('inquiry.read')
   findOne(@Req() req: any, @Param('id') id: string) {
     return this.inquiryService.findOne(this.getId(req), id);
   }
 
   @Patch(':id')
-  @Permissions('users.write')
+  @Permissions('inquiry.write')
   update(
     @Req() req: any,
     @Param('id') id: string,
@@ -63,7 +63,7 @@ export class InquiryController {
   }
 
   @Delete(':id')
-  @Permissions('users.write')
+  @Permissions('inquiry.write')
   delete(@Req() req: any, @Param('id') id: string) {
     return this.inquiryService.delete(this.getId(req), id);
   }
