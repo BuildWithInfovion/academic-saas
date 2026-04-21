@@ -77,8 +77,23 @@ export default function TeacherMarksPage() {
 
   useEffect(() => { loadMarks(); }, [loadMarks]);
 
+  const maxMarks = selectedAssignment?.maxMarks ?? 100;
+
+  // Students with marks entered that exceed the max
+  const overLimitStudentIds = new Set(
+    students.filter((s) => {
+      const m = marks[s.id];
+      if (!m || m.absent || m.value === '') return false;
+      return Number(m.value) > maxMarks;
+    }).map((s) => s.id)
+  );
+
   const handleSave = async () => {
     if (!selectedAssignment) return;
+    if (overLimitStudentIds.size > 0) {
+      setError(`${overLimitStudentIds.size} student(s) have marks above the maximum (${maxMarks}). Please correct before saving.`);
+      return;
+    }
     setSaving(true); setError(null);
     try {
       const entries = students.map((s) => ({
@@ -107,7 +122,6 @@ export default function TeacherMarksPage() {
   };
 
   const enteredCount = Object.values(marks).filter((m) => m.absent || m.value !== '').length;
-  const maxMarks = selectedAssignment?.maxMarks ?? 100;
 
   if (noAssignments) {
     return (
@@ -223,16 +237,28 @@ export default function TeacherMarksPage() {
                           />
                         </td>
                         <td className="px-5 py-2.5 text-right">
-                          <input
-                            type="number" min={0} max={maxMarks}
-                            value={m.value}
-                            disabled={m.absent}
-                            onChange={(e) =>
-                              setMarks((prev) => ({ ...prev, [s.id]: { ...m, value: e.target.value } }))
-                            }
-                            placeholder="—"
-                            className="w-20 p-1.5 border border-ds-border rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-ds-brand disabled:bg-ds-bg2 disabled:text-ds-text3"
-                          />
+                          <div className="inline-flex flex-col items-end">
+                            <input
+                              type="number" min={0} max={maxMarks}
+                              value={m.value}
+                              disabled={m.absent}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                // Allow empty (not yet entered), or a non-negative number
+                                const clamped = raw === '' ? '' : String(Math.max(0, Number(raw)));
+                                setMarks((prev) => ({ ...prev, [s.id]: { ...m, value: clamped } }));
+                              }}
+                              placeholder="—"
+                              className={`w-20 p-1.5 border rounded-lg text-sm text-right focus:outline-none focus:ring-2 disabled:bg-ds-bg2 disabled:text-ds-text3 ${
+                                overLimitStudentIds.has(s.id)
+                                  ? 'border-ds-error-border bg-ds-error-bg text-ds-error-text focus:ring-red-400'
+                                  : 'border-ds-border focus:ring-ds-brand'
+                              }`}
+                            />
+                            {overLimitStudentIds.has(s.id) && (
+                              <span className="text-[10px] text-ds-error-text mt-0.5">Max: {maxMarks}</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -246,8 +272,8 @@ export default function TeacherMarksPage() {
 
             <button
               onClick={handleSave}
-              disabled={saving}
-              className="btn-brand px-6 py-2.5 rounded-lg"
+              disabled={saving || overLimitStudentIds.size > 0}
+              className="btn-brand px-6 py-2.5 rounded-lg disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save Marks'}
             </button>

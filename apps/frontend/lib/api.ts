@@ -77,11 +77,22 @@ async function doRefresh(endpoint: string): Promise<RefreshResult> {
     if (!res.ok) return { status: 'unavailable' };
     const data = (await res.json()) as {
       accessToken: string;
-      user?: { roles?: string[] } & Record<string, unknown>;
+      user?: { roles?: string[]; email?: string } & Record<string, unknown>;
     };
     const roles: string[] = data.user?.roles ?? [];
     const isDashboard = roles.some((r) => DASHBOARD_ROLES.includes(r));
     const store = isDashboard ? useAuthStore.getState() : usePortalAuthStore.getState();
+
+    // Tab-collision guard: if this tab already has a different user's session
+    // (caused by a shared auth_rt cookie being overwritten by another tab's login),
+    // reject the refresh rather than silently replacing this tab's identity.
+    const thisTabUser = store.user;
+    if (thisTabUser && data.user?.email && data.user.email !== thisTabUser.email) {
+      store.logout();
+      if (typeof window !== 'undefined') window.location.href = '/';
+      return { status: 'expired' };
+    }
+
     store.setAuth({
       accessToken: data.accessToken,
       user: (data.user as Parameters<typeof store.setAuth>[0]['user']) ?? useAuthStore.getState().user!,
@@ -179,7 +190,7 @@ export async function silentRefresh(): Promise<'ok' | 'expired' | 'error'> {
 
       const data = (await res.json()) as {
         accessToken: string;
-        user: { roles?: string[] } & Record<string, unknown>;
+        user: { roles?: string[]; email?: string } & Record<string, unknown>;
       };
       if (!data.user) return 'error';
 
@@ -188,6 +199,17 @@ export async function silentRefresh(): Promise<'ok' | 'expired' | 'error'> {
       const user = data.user as Parameters<
         ReturnType<typeof useAuthStore.getState>['setAuth']
       >[0]['user'];
+
+      // Tab-collision guard: the auth_rt cookie is shared across all browser tabs.
+      // If another tab logged in as a different user, the cookie now belongs to
+      // them. Detect this by comparing email — if the returned user doesn't match
+      // who this tab thinks it is, treat it as session-expired and force re-login
+      // rather than silently hijacking this tab's identity.
+      const thisTabUser = usePortalAuthStore.getState().user;
+      if (thisTabUser && data.user.email && data.user.email !== thisTabUser.email) {
+        usePortalAuthStore.getState().logout();
+        return 'expired';
+      }
 
       if (isDashboard) {
         useAuthStore.getState().setAuth({ accessToken: data.accessToken, user });
