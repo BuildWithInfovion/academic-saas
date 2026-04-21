@@ -16,7 +16,8 @@ type PortalShellProps = {
   menuItems: MenuItem[];
 };
 
-function displayName(email?: string, phone?: string): string {
+function displayName(name?: string | null, email?: string, phone?: string): string {
+  if (name?.trim()) return name.trim();
   if (email) {
     const prefix = email.split('@')[0];
     return prefix.replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -118,7 +119,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   if (!ready || !accessToken) return null;
 
   const roleLabel = user ? getRoleLabel(user.roles) : '';
-  const userName  = user ? displayName(user.email, user.phone) : '';
+  const userName  = user ? displayName(user.name, user.email, user.phone) : '';
 
   // Most-specific match wins — prevents parent paths staying highlighted on sub-pages
   const activeItemPath = [...menuItems]
@@ -241,7 +242,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   );
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
 
       {/* ── Mobile overlay ── */}
       {sidebarOpen && (
@@ -337,7 +338,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
       )}
 
       {/* ── Content ── */}
-      <main className="flex-1 overflow-auto flex flex-col min-h-screen">
+      <main className="flex-1 overflow-y-auto flex flex-col">
         {/* Top bar */}
         <header
           className="sticky top-0 z-20 flex items-center justify-between px-5 py-3"

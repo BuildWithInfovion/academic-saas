@@ -294,7 +294,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
 
       {/* Support Modal */}
       {supportOpen && (
@@ -390,7 +390,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Content */}
-      <main className="flex-1 overflow-auto flex flex-col min-h-screen">
+      <main className="flex-1 overflow-y-auto flex flex-col">
         {/* Top bar */}
         <header
           className="sticky top-0 z-20 flex items-center justify-between px-5 py-3"
