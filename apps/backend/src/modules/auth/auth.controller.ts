@@ -287,6 +287,23 @@ export class AuthController {
     return this.authService.resetParentPassword(tenant.institutionId, userId);
   }
 
+  // ── Director: reset any staff member's password ───────────────────────────
+
+  /**
+   * POST /auth/director/reset-staff-password/:userId
+   * Director sets a new random password for any staff member.
+   * Returns { newPassword } — show once, then discard.
+   */
+  @UseGuards(AuthGuard, RolesGuard)
+  @Permissions('institution.write')
+  @Post('director/reset-staff-password/:userId')
+  async resetStaffPassword(
+    @Tenant() tenant: { institutionId: string },
+    @Param('userId') userId: string,
+  ) {
+    return this.authService.resetStaffPassword(tenant.institutionId, userId);
+  }
+
   // ── Parent: self-service password reset request ────────────────────────────
 
   /**

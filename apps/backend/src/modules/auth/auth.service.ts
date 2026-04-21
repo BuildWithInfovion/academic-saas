@@ -750,6 +750,32 @@ export class AuthService {
     return { newPassword };
   }
 
+  // ── Director: reset any staff member's password ───────────────────────────
+
+  async resetStaffPassword(
+    institutionId: string,
+    userId: string,
+  ): Promise<{ newPassword: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, institutionId, isActive: true, deletedAt: null },
+      select: { id: true },
+    });
+    if (!user)
+      throw new NotFoundException('User not found in this institution');
+
+    const newPassword = this.generatePassword();
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    this.logger.log(
+      `[resetStaffPassword] Password reset by director — userId=${user.id} institution=${institutionId}`,
+    );
+    return { newPassword };
+  }
+
   // ── Operator: password reset request approval (kept for legacy/audit) ────────
 
   async getPendingResetRequests(institutionId: string) {

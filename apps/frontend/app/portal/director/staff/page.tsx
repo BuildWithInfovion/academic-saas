@@ -75,6 +75,7 @@ export default function DirectorStaffPage() {
   const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [addingRole, setAddingRole] = useState(false);
   const [newRoleId, setNewRoleId] = useState('');
+  const [resetResult, setResetResult] = useState<{ userId: string; newPassword: string } | null>(null);
 
   const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 4000); };
 
@@ -127,6 +128,14 @@ export default function DirectorStaffPage() {
       await loadData();
     } catch (e: any) { setError(e.message); }
     finally { setSubmitting(false); }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    if (!confirm('Generate a new random password for this user? Their current password will stop working immediately.')) return;
+    try {
+      const res = await apiFetch(`/auth/director/reset-staff-password/${userId}`, { method: 'POST' }) as { newPassword: string };
+      setResetResult({ userId, newPassword: res.newPassword });
+    } catch (e: any) { setError(e.message); }
   };
 
   const handleDelete = async (userId: string, userEmail: string) => {
@@ -367,8 +376,33 @@ export default function DirectorStaffPage() {
               </div>
             </div>
 
+            {/* Reset password result banner */}
+            {resetResult?.userId === profile.id && (
+              <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-4">
+                <p className="text-xs font-semibold text-ds-warning-text uppercase tracking-wider mb-2">
+                  New Password — Share with user immediately
+                </p>
+                <div className="flex items-center justify-between bg-ds-surface rounded-lg px-3 py-2 mb-2">
+                  <span className="text-xs text-ds-text2">Temporary Password</span>
+                  <span className="font-mono font-bold text-indigo-700 text-sm tracking-widest">
+                    {resetResult.newPassword}
+                  </span>
+                </div>
+                <p className="text-xs text-ds-warning-text">Tell them to change it after logging in.</p>
+                <button onClick={() => setResetResult(null)}
+                  className="mt-2 text-xs text-ds-text3 hover:text-ds-text2 underline">
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            <button onClick={() => handleResetPassword(profile.id)}
+              className="w-full border border-ds-warning-border text-ds-warning-text py-2 rounded-lg text-sm font-medium hover:bg-ds-warning-bg transition-colors">
+              Reset Password
+            </button>
+
             <button onClick={() => handleDelete(profile.id, profile.email || profile.phone || profile.id)}
-              className="w-full border border-ds-error-border text-ds-error-text py-2 rounded-lg text-sm font-medium hover:bg-ds-error-bg mt-2">
+              className="w-full border border-ds-error-border text-ds-error-text py-2 rounded-lg text-sm font-medium hover:bg-ds-error-bg mt-1">
               Delete User
             </button>
           </div>
