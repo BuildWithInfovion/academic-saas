@@ -224,7 +224,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Nav */}
-      <nav className="px-2 pt-3 pb-4 flex-1">
+      <nav className="px-2 pt-1 pb-4 flex-1">
         {menuGroups.map((group) => (
           <div key={group.label}>
             <p className="sidebar-section-label">{group.label}</p>
@@ -237,7 +237,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <span className="shrink-0" style={{ opacity: active ? 0.9 : 0.55 }}>
                     <IconComp />
                   </span>
-                  {item.label}
+                  <span className="truncate">{item.label}</span>
                 </div>
               );
             })}
@@ -250,9 +250,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2 mb-3">
           <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
             style={{ background: 'rgba(220,146,75,0.25)', border: '1px solid rgba(220,146,75,0.3)' }}>
-            {(user?.email?.[0] ?? user?.phone?.[0] ?? 'U').toUpperCase()}
+            {(user?.name?.[0] ?? user?.email?.[0] ?? user?.phone?.[0] ?? 'U').toUpperCase()}
           </div>
-          <p className="text-xs truncate" style={{ color: '#9b7050' }}>{user?.email || user?.phone}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium truncate" style={{ color: '#c4956a' }}>{userName}</p>
+            {user?.email && <p className="text-[10px] truncate" style={{ color: '#7a5538' }}>{user.email}</p>}
+          </div>
         </div>
         <button
           onClick={() => {
@@ -425,7 +428,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
               style={{ background: 'var(--brand)' }}
             >
-              {(user?.email?.[0] ?? user?.phone?.[0] ?? 'U').toUpperCase()}
+              {(user?.name?.[0] ?? user?.email?.[0] ?? user?.phone?.[0] ?? 'U').toUpperCase()}
             </div>
             <div className="hidden sm:block text-right">
               <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--text-1)' }}>
