@@ -108,8 +108,11 @@ async function doRefresh(endpoint: string): Promise<RefreshResult> {
  * which store holds the current user (operator → /auth/refresh-op, portal → /auth/refresh).
  */
 async function tryRefreshToken(): Promise<RefreshResult> {
-  const isOperator = !!useAuthStore.getState().user;
-  const endpoint = isOperator ? '/auth/refresh-op' : '/auth/refresh';
+  // Use the portal store if it has an active session (portal users: teacher,
+  // parent, principal, etc.). Only fall back to the operator endpoint when
+  // the portal store is empty, meaning this is an operator/dashboard session.
+  const isPortal = !!usePortalAuthStore.getState().user;
+  const endpoint = isPortal ? '/auth/refresh' : '/auth/refresh-op';
 
   if (isOperator) {
     if (refreshingOpPromise) return refreshingOpPromise;
