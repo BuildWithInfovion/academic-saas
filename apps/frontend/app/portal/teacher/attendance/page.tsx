@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
-type Unit = { id: string; displayName: string; name: string };
+type Unit = { id: string; displayName: string | null; name: string; parent?: { name: string; displayName: string | null } | null };
 type Student = { id: string; firstName: string; lastName: string; rollNo: string | null; admissionNo: string };
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'leave';
 
@@ -33,7 +33,26 @@ export default function TeacherAttendancePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch('/academic/units/leaf').then(setUnits).catch(() => {});
+    Promise.all([
+      apiFetch('/academic/my-class-units').catch(() => []),
+      apiFetch('/academic/my-subject-units').catch(() => []),
+    ]).then(([myClasses, mySubjects]) => {
+      const classUnits: Unit[] = Array.isArray(myClasses) ? myClasses : [];
+      const subjectUnits: { academicUnit: Unit }[] = Array.isArray(mySubjects) ? mySubjects : [];
+      // Merge: class-teacher units + subject-teaching units (deduplicated)
+      const seen = new Set(classUnits.map((u) => u.id));
+      const combined = [...classUnits];
+      for (const su of subjectUnits) {
+        if (!seen.has(su.academicUnit.id)) {
+          combined.push(su.academicUnit);
+          seen.add(su.academicUnit.id);
+        }
+      }
+      const naturalSort = (a: string, b: string) =>
+        a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      combined.sort((a, b) => naturalSort(a.displayName || a.name, b.displayName || b.name));
+      setUnits(combined);
+    });
   }, []);
 
   useEffect(() => {
@@ -133,6 +152,17 @@ export default function TeacherAttendancePage() {
         </div>
       </div>
 
+      {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+      {saved && <p className="text-sm text-ds-success-text mb-3">Attendance saved successfully.</p>}
+
+      {selectedUnit && loadingStudents && (
+        <p className="text-sm text-ds-text2">Loading students...</p>
+      )}
+
+      {selectedUnit && !loadingStudents && students.length === 0 && !error && (
+        <p className="text-sm text-ds-text2">No active students in this class.</p>
+      )}
+
       {selectedUnit && students.length > 0 && (
         <>
           {/* Summary + bulk actions */}
@@ -188,9 +218,6 @@ export default function TeacherAttendancePage() {
             </table>
           </div>
 
-          {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
-          {saved && <p className="text-sm text-ds-success-text mb-3">Attendance saved successfully.</p>}
-
           <button
             onClick={handleSave}
             disabled={saving}
@@ -199,14 +226,6 @@ export default function TeacherAttendancePage() {
             {saving ? 'Saving...' : 'Save Attendance'}
           </button>
         </>
-      )}
-
-      {selectedUnit && loadingStudents && (
-        <p className="text-sm text-ds-text2">Loading students...</p>
-      )}
-
-      {selectedUnit && !loadingStudents && students.length === 0 && (
-        <p className="text-sm text-ds-text2">No active students in this class.</p>
       )}
     </div>
   );

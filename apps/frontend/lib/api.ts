@@ -112,6 +112,7 @@ async function tryRefreshToken(): Promise<RefreshResult> {
   // parent, principal, etc.). Only fall back to the operator endpoint when
   // the portal store is empty, meaning this is an operator/dashboard session.
   const isPortal = !!usePortalAuthStore.getState().user;
+  const isOperator = !isPortal;
   const endpoint = isPortal ? '/auth/refresh' : '/auth/refresh-op';
 
   if (isOperator) {

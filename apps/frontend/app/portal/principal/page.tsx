@@ -12,6 +12,7 @@ type StudentCount = { totalStudents: number; boys: number; girls: number };
 
 export default function PrincipalDashboard() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ students: 0, staff: 0, boys: 0, girls: 0 });
   const [currentYear, setCurrentYear] = useState<AcademicYear | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -53,7 +54,7 @@ export default function PrincipalDashboard() {
           apiFetch(`/fees/defaulters?yearId=${yr.id}`).then((d) => setFeeDefaulters((d ?? []).slice(0, 8))).catch(() => {});
         }
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   return (
@@ -64,12 +65,24 @@ export default function PrincipalDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Students" value={stats.students} sub={`Boys ${stats.boys} · Girls ${stats.girls}`} />
-        <StatCard label="Academic Year" value={currentYear?.name ?? '—'} sub="Current year" />
-        <StatCard label="Classes" value={units.length} sub="Leaf units" />
-        <StatCard label="Staff Accounts" value={stats.staff} sub="System users" />
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4 animate-pulse">
+              <div className="h-8 w-16 bg-ds-bg2 rounded mb-2" />
+              <div className="h-4 w-24 bg-ds-bg2 rounded mb-1" />
+              <div className="h-3 w-20 bg-ds-bg2 rounded" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Total Students" value={stats.students} sub={`Boys ${stats.boys} · Girls ${stats.girls}`} />
+          <StatCard label="Academic Year" value={currentYear?.name ?? '—'} sub="Current year" />
+          <StatCard label="Classes" value={units.length} sub="Leaf units" />
+          <StatCard label="Staff Accounts" value={stats.staff} sub="System users" />
+        </div>
+      )}
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
