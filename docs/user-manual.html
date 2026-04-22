@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Academic SaaS Platform — User Manual</title>
+<style>
+  :root {
+    --brand: #ae5525;
+    --brand-dark: #8c3919;
+    --brand-light: #fdf4ee;
+    --text1: #0f172a;
+    --text2: #475569;
+    --text3: #94a3b8;
+    --border: #e2e8f0;
+    --surface: #ffffff;
+    --bg: #f8fafc;
+    --success: #166534;
+    --success-bg: #f0fdf4;
+    --warning: #92400e;
+    --warning-bg: #fffbeb;
+    --error: #991b1b;
+    --error-bg: #fef2f2;
+    --info: #1e40af;
+    --info-bg: #eff6ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text1);
+    background: var(--bg);
+  }
+
+  /* ── Print ─────────────────────────────────────────── */
+  @media print {
+    body { background: #fff; font-size: 12px; }
+    .sidebar { display: none; }
+    .page-wrap { margin-left: 0 !important; }
+    .section { page-break-inside: avoid; }
+    h2.section-title { page-break-before: always; }
+    a { color: var(--text1) !important; text-decoration: none; }
+  }
+
+  /* ── Layout ─────────────────────────────────────────── */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 260px;
+    background: #0f172a;
+    color: #cbd5e1;
+    overflow-y: auto;
+    padding: 0 0 32px;
+    z-index: 100;
+  }
+  .sidebar-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid #1e293b;
+  }
+  .sidebar-header .logo {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: 0.3px;
+  }
+  .sidebar-header .version {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+  .sidebar nav { padding: 12px 0; }
+  .nav-section { font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #475569; padding: 14px 20px 4px; }
+  .sidebar nav a {
+    display: block;
+    padding: 7px 20px;
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .sidebar nav a:hover { color: #f1f5f9; background: rgba(255,255,255,0.05); }
+  .sidebar nav a.active { color: #fff; border-left-color: #ae5525; background: rgba(174,85,37,0.12); }
+
+  .page-wrap { margin-left: 260px; }
+  .cover {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #ae5525 100%);
+    color: #fff;
+    padding: 80px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(174,85,37,0.3) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .cover h1 { font-size: 38px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; position: relative; z-index: 1; }
+  .cover .subtitle { font-size: 16px; opacity: 0.75; margin-bottom: 6px; position: relative; z-index: 1; }
+  .cover .meta { font-size: 12px; opacity: 0.5; position: relative; z-index: 1; }
+  .cover .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; position: relative; z-index: 1; }
+  .cover-tag {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 99px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .content { padding: 48px 60px 80px; max-width: 900px; }
+
+  /* ── Typography ─────────────────────────────────────── */
+  h2.section-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text1);
+    margin: 52px 0 6px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2.section-title .icon {
+    width: 36px; height: 36px;
+    background: var(--brand-light);
+    border: 1px solid rgba(174,85,37,0.2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  h2.section-title:first-of-type { margin-top: 0; }
+  h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text1);
+    margin: 28px 0 10px;
+  }
+  h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--brand-dark);
+    margin: 20px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  p { color: var(--text2); margin-bottom: 10px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── Steps ──────────────────────────────────────────── */
+  .steps { list-style: none; counter-reset: step-counter; margin: 12px 0 16px; }
+  .steps li {
+    counter-increment: step-counter;
+    position: relative;
+    padding: 12px 16px 12px 52px;
+    margin-bottom: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text2);
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .steps li::before {
+    content: counter(step-counter);
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px; height: 26px;
+    background: var(--brand);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .steps li strong { color: var(--text1); }
+  .steps li code {
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    color: var(--brand-dark);
+  }
+
+  /* ── Notes / Alerts ─────────────────────────────────── */
+  .note {
+    border-left: 4px solid;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 14px 0;
+    font-size: 13.5px;
+  }
+  .note.info    { border-color: #3b82f6; background: var(--info-bg); color: var(--info); }
+  .note.warn    { border-color: #f59e0b; background: var(--warning-bg); color: var(--warning); }
+  .note.success { border-color: #22c55e; background: var(--success-bg); color: var(--success); }
+  .note.danger  { border-color: #ef4444; background: var(--error-bg); color: var(--error); }
+  .note strong  { font-weight: 700; }
+
+  /* ── Tables ─────────────────────────────────────────── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 18px;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .data-table th {
+    background: #f8fafc;
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #f8fafc; }
+  .data-table td strong { color: var(--text1); }
+
+  /* ── Badges ─────────────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge.green  { background: var(--success-bg); color: var(--success); border: 1px solid #bbf7d0; }
+  .badge.amber  { background: var(--warning-bg); color: var(--warning); border: 1px solid #fde68a; }
+  .badge.red    { background: var(--error-bg);   color: var(--error);   border: 1px solid #fecaca; }
+  .badge.blue   { background: var(--info-bg);    color: var(--info);    border: 1px solid #bfdbfe; }
+  .badge.gray   { background: #f1f5f9;           color: var(--text3);   border: 1px solid var(--border); }
+  .badge.brand  { background: var(--brand-light); color: var(--brand-dark); border: 1px solid rgba(174,85,37,0.25); }
+
+  /* ── Portal header card ─────────────────────────────── */
+  .portal-card {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+    color: #fff;
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin-bottom: 28px;
+  }
+  .portal-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 4px; color: #fff; border: none; padding: 0; margin-top: 0; }
+  .portal-card .role-desc { font-size: 13px; opacity: 0.8; margin-bottom: 12px; }
+  .portal-card .pages { display: flex; flex-wrap: wrap; gap: 6px; }
+  .portal-card .page-tag {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ── Feature block ──────────────────────────────────── */
+  .feature-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+  }
+  .feature-block h3 { margin: 0 0 10px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .feature-block h3 .fi { font-size: 18px; }
+  .feature-block p { font-size: 13.5px; }
+
+  /* ── Sub-list ────────────────────────────────────────── */
+  ul.plain { margin: 8px 0 14px 18px; }
+  ul.plain li { color: var(--text2); font-size: 13.5px; margin-bottom: 4px; }
+  ul.plain li strong { color: var(--text1); }
+
+  /* ── TOC ─────────────────────────────────────────────── */
+  .toc { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 32px; }
+  .toc h3 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); }
+  .toc ol { list-style: decimal; padding-left: 18px; }
+  .toc li { margin-bottom: 5px; }
+  .toc a { color: var(--brand); text-decoration: none; font-size: 13.5px; font-weight: 500; }
+  .toc a:hover { text-decoration: underline; }
+  .toc .sub { list-style: disc; padding-left: 16px; margin-top: 4px; }
+  .toc .sub li { margin-bottom: 2px; }
+  .toc .sub a { font-weight: 400; color: var(--text2); font-size: 13px; }
+
+  /* ── Grid ────────────────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  @media (max-width: 640px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-card .val { font-size: 22px; font-weight: 800; color: var(--text1); }
+  .stat-card .lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── Keyboard / UI element ─────────────────────────── */
+  kbd {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text1);
+  }
+
+  /* ── Scrollbar ──────────────────────────────────────── */
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ─────────────────── SIDEBAR ─────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">Academic SaaS</div>
+    <div class="version">User Manual · v1.0</div>
+  </div>
+  <nav>
+    <div class="nav-section">Introduction</div>
+    <a href="#overview">Platform Overview</a>
+    <a href="#getting-started">Getting Started</a>
+    <a href="#login">Logging In</a>
+
+    <div class="nav-section">Staff Portals</div>
+    <a href="#operator">Operator Dashboard</a>
+    <a href="#teacher">Teacher Portal</a>
+    <a href="#principal">Principal Portal</a>
+    <a href="#director">Director Portal</a>
+    <a href="#accountant">Accountant Portal</a>
+    <a href="#receptionist">Receptionist Portal</a>
+    <a href="#non-teaching">Non-Teaching Staff</a>
+
+    <div class="nav-section">User Portals</div>
+    <a href="#parent">Parent Portal</a>
+    <a href="#student">Student Portal</a>
+
+    <div class="nav-section">Reference</div>
+    <a href="#roles">Roles &amp; Permissions</a>
+    <a href="#glossary">Glossary</a>
+    <a href="#faq">FAQ &amp; Troubleshooting</a>
+  </nav>
+</aside>
+
+<!-- ─────────────────── MAIN ─────────────────── -->
+<div class="page-wrap">
+
+  <!-- Cover -->
+  <div class="cover">
+    <h1>Academic SaaS Platform</h1>
+    <div class="subtitle">Complete User Manual for School Staff, Parents &amp; Students</div>
+    <div class="meta">Version 1.0 &nbsp;·&nbsp; April 2026</div>
+    <div class="tag-row">
+      <span class="cover-tag">Operator</span>
+      <span class="cover-tag">Teacher</span>
+      <span class="cover-tag">Principal</span>
+      <span class="cover-tag">Director</span>
+      <span class="cover-tag">Accountant</span>
+      <span class="cover-tag">Receptionist</span>
+      <span class="cover-tag">Parent</span>
+      <span class="cover-tag">Student</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── TOC ── -->
+    <div class="toc">
+      <h3>Table of Contents</h3>
+      <ol>
+        <li><a href="#overview">Platform Overview</a></li>
+        <li><a href="#getting-started">Getting Started</a>
+          <ol class="sub">
+            <li><a href="#login">Logging In</a></li>
+            <li><a href="#first-login">First Login &amp; Password</a></li>
+          </ol>
+        </li>
+        <li><a href="#operator">Operator Dashboard</a>
+          <ol class="sub">
+            <li><a href="#op-staff">Staff Management</a></li>
+            <li><a href="#op-students">Student Management</a></li>
+            <li><a href="#op-classes">Classes &amp; Subjects</a></li>
+            <li><a href="#op-timetable">Timetable</a></li>
+            <li><a href="#op-attendance">Attendance</a></li>
+            <li><a href="#op-exams">Examinations</a></li>
+            <li><a href="#op-fees">Fees</a></li>
+            <li><a href="#op-salary">Salary</a></li>
+            <li><a href="#op-tc">Transfer Certificates</a></li>
+            <li><a href="#op-inquiries">Inquiries</a></li>
+            <li><a href="#op-announcements">Announcements</a></li>
+            <li><a href="#op-calendar">Calendar</a></li>
+            <li><a href="#op-promote">Promote Students</a></li>
+            <li><a href="#op-settings">Settings</a></li>
+          </ol>
+        </li>
+        <li><a href="#teacher">Teacher Portal</a></li>
+        <li><a href="#principal">Principal Portal</a></li>
+        <li><a href="#director">Director Portal</a></li>
+        <li><a href="#accountant">Accountant Portal</a></li>
+        <li><a href="#receptionist">Receptionist Portal</a></li>
+        <li><a href="#non-teaching">Non-Teaching Staff Portal</a></li>
+        <li><a href="#parent">Parent Portal</a></li>
+        <li><a href="#student">Student Portal</a></li>
+        <li><a href="#roles">Roles &amp; Permissions</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+        <li><a href="#faq">FAQ &amp; Troubleshooting</a></li>
+      </ol>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <h2 class="section-title" id="overview"><span class="icon">🏫</span> Platform Overview</h2>
+
+    <p>The <strong>Academic SaaS Platform</strong> is a cloud-based school management system that brings together all aspects of school operations — student records, attendance, examinations, fees, timetables, staff management, and more — into a single, unified platform.</p>
+
+    <p>The platform is accessed through a web browser. There is no software to install. Each school is given a unique <strong>Institution Code</strong> (also called School Code) that identifies your school on the platform.</p>
+
+    <div class="note info">
+      <strong>Multi-Portal System:</strong> The platform has separate portals for each role (Operator, Teacher, Principal, Director, Accountant, Receptionist, Parent, Student). Each portal shows only the information and tools relevant to that role.
+    </div>
+
+    <h3>System Architecture at a Glance</h3>
+    <table class="data-table">
+      <thead><tr><th>Portal</th><th>Who Uses It</th><th>Key Capabilities</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Operator Dashboard</strong></td><td>School Admin / System Admin</td><td>Full control — students, staff, fees, timetable, exams, settings</td></tr>
+        <tr><td><strong>Teacher Portal</strong></td><td>Teaching Staff</td><td>Mark attendance, enter marks, view timetable, manage own attendance</td></tr>
+        <tr><td><strong>Principal Portal</strong></td><td>School Principal</td><td>Oversight — attendance reports, fee status, staff leave approval</td></tr>
+        <tr><td><strong>Director Portal</strong></td><td>Director / Trustee</td><td>Institution overview, reports, staff management</td></tr>
+        <tr><td><strong>Accountant Portal</strong></td><td>Accounts Staff</td><td>Collect fees, view payment history, print receipts</td></tr>
+        <tr><td><strong>Receptionist Portal</strong></td><td>Front Office Staff</td><td>Log admission inquiries, manage follow-ups</td></tr>
+        <tr><td><strong>Non-Teaching Staff</strong></td><td>Support Staff</td><td>Mark own attendance, view announcements</td></tr>
+        <tr><td><strong>Parent Portal</strong></td><td>Parents / Guardians</td><td>Child's attendance, marks, fees, timetable</td></tr>
+        <tr><td><strong>Student Portal</strong></td><td>Students</td><td>Basic overview (expanding)</td></tr>
+      </tbody>
+    </table>
+
+
+    <!-- ══════════════════════════════════════════ -->
+    <h2 class="section-title" id="getting-started"><span class="icon">🚀</span> Getting Started</h2>
+
+    <h3 id="login">Logging In</h3>
+    <p>All users — staff, parents, and students — log in through the same URL. The system automatically routes you to your correct portal based on your role.</p>
+
+    <ol class="steps">
+      <li>Open your web browser (Chrome, Firefox, Edge, or Safari) and go to the school's platform URL provided by your school administrator.</li>
+      <li>On the login page, enter your <strong>Institution Code</strong> (provided by the school). This is a short code that identifies your school (e.g., <code>STJOSEPH2024</code>).</li>
+      <li>Enter your <strong>Email address</strong> or <strong>10-digit phone number</strong> registered with the school.</li>
+      <li>Enter your <strong>Password</strong> and click <strong>Sign In</strong>.</li>
+      <li>If you have more than one role assigned (e.g., both Teacher and Class Teacher), you will be taken directly to the appropriate portal. The system selects the correct portal automatically.</li>
+    </ol>
+
+    <div class="note warn">
+      <strong>Important:</strong> The Institution Code is mandatory. Without it, the system cannot identify which school you belong to. Contact your school administrator if you do not have this code.
+    </div>
+
+    <h3 id="first-login">First Login &amp; Changing Your Password</h3>
+    <ol class="steps">
+      <li>On your first login, you will receive a temporary password from your school administrator. Use it to log in.</li>
+      <li>After logging in, it is strongly recommended to change your password immediately. Go to your <strong>Profile / Settings</strong> page.</li>
+      <li>Enter your current (temporary) password, then enter and confirm your new password.</li>
+      <li>Click <strong>Save Changes</strong>. Your new password takes effect immediately.</li>
+    </ol>
+
+    <div class="note info">
+      <strong>Forgot Password?</strong> On the login page, click <strong>"Forgot Password?"</strong>. Enter your registered email address and you will receive a password reset link. If you registered with only a phone number (no email), contact your school administrator to reset your password.
+    </div>
+
+    <h3>Session &amp; Security</h3>
+    <ul class="plain">
+      <li>Your session stays active for a period of time. If you are inactive for too long, you will be logged out automatically.</li>
+      <li><strong>Do not share your password</strong> with anyone, including school administrators.</li>
+      <li>Always click <strong>Logout</strong> when using a shared or public computer.</li>
+      <li>The platform works best on modern browsers. Keep your browser updated.</li>
+    </ul>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="operator"><span class="icon">⚙️</span> Operator Dashboard</h2>
+
+    <div class="portal-card">
+      <h2>Operator Dashboard</h2>
+      <div class="role-desc">Full administrative control of the school. Used by the School Administrator (Admin / Super Admin).</div>
+      <div class="pages">
+        <span class="page-tag">Staff</span>
+        <span class="page-tag">Students</span>
+        <span class="page-tag">Classes</span>
+        <span class="page-tag">Subjects</span>
+        <span class="page-tag">Timetable</span>
+        <span class="page-tag">Attendance</span>
+        <span class="page-tag">Exams</span>
+        <span class="page-tag">Fees</span>
+        <span class="page-tag">Salary</span>
+        <span class="page-tag">TC</span>
+        <span class="page-tag">Inquiries</span>
+        <span class="page-tag">Announcements</span>
+        <span class="page-tag">Calendar</span>
+        <span class="page-tag">Promote</span>
+        <span class="page-tag">Settings</span>
+      </div>
+    </div>
+
+    <!-- Staff -->
+    <h3 id="op-staff">Staff Management</h3>
+    <p>Manage all staff accounts: create new users, assign roles, view assignments, and reset passwords.</p>
+
+    <h4>Adding a New Staff Member</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Staff</strong>. The staff list page opens.</li>
+      <li>Click <strong>+ Add Staff</strong> in the top-right corner.</li>
+      <li>Enter the staff member's <strong>Email address</strong> (e.g., <code>rajesh@school.com</code>). If they do not have an email, enter their <strong>10-digit mobile number</strong> instead.</li>
+      <li>Set a password. You can click <strong>Generate</strong> to auto-create a strong random password, or type one manually.</li>
+      <li>Select a <strong>Role</strong> from the dropdown (Teacher, Accountant, Receptionist, etc.).</li>
+      <li>Click <strong>Create Account</strong>. A confirmation screen shows the credentials — <strong>note them down and share with the staff member</strong>. The password is not shown again.</li>
+    </ol>
+
+    <div class="note warn">
+      <strong>Password Visibility:</strong> The generated password is only shown once at creation time. Make sure to copy it and share it securely with the staff member.
+    </div>
+
+    <h4>Viewing a Staff Member's Profile</h4>
+    <ol class="steps">
+      <li>On the <strong>Staff</strong> page, click any row in the table to open the staff member's profile panel on the right side.</li>
+      <li>The panel shows: assigned roles, the class(es) they are class teacher of, and subjects they teach.</li>
+      <li>To assign an additional role, select it from the <strong>Assign Additional Role</strong> dropdown and click <strong>Add</strong>.</li>
+    </ol>
+
+    <h4>Resetting a Staff Member's Password</h4>
+    <ol class="steps">
+      <li>Open the staff member's profile panel by clicking their row.</li>
+      <li>Click <strong>Reset Password</strong> at the bottom of the panel.</li>
+      <li>Confirm when prompted. A new random password is generated and displayed immediately.</li>
+      <li>Share the new password with the staff member and ask them to change it after logging in.</li>
+    </ol>
+
+    <h4>Deleting a Staff Account</h4>
+    <ol class="steps">
+      <li>Open the staff member's profile panel, or find the <strong>Delete</strong> button on their row in the table.</li>
+      <li>Click <strong>Delete User</strong> and confirm. This action is permanent.</li>
+    </ol>
+
+    <div class="note danger">
+      <strong>Warning:</strong> Deleting a staff account is irreversible. All associated data such as attendance records and class assignments will be unlinked. Only delete accounts for staff who have permanently left the school.
+    </div>
+
+    <!-- Students -->
+    <h3 id="op-students">Student Management</h3>
+    <p>Manage the full student lifecycle: enrolment, profile updates, parent linking, and exit.</p>
+
+    <h4>Adding a New Student</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Students</strong>.</li>
+      <li>Click <strong>+ Enrol Student</strong>.</li>
+      <li>Fill in the student's details: <strong>First Name</strong>, <strong>Last Name</strong>, <strong>Date of Birth</strong>, <strong>Gender</strong>, <strong>Admission Number</strong> (must be unique), <strong>Roll Number</strong> (optional), and the <strong>Class/Section</strong> they are joining.</li>
+      <li>Click <strong>Save</strong>. The student is enrolled and appears in the class list.</li>
+    </ol>
+
+    <h4>Linking a Parent to a Student</h4>
+    <p>Parents need a parent portal account. First create the parent account, then link it to the student.</p>
+    <ol class="steps">
+      <li>Create the parent's account via <strong>Staff → Add Staff</strong> with the role <strong>Parent</strong>.</li>
+      <li>Go to <strong>Students → [Student Name]</strong> to open the student's detail page.</li>
+      <li>In the <strong>Parent/Guardian</strong> section, click <strong>Link Parent</strong>.</li>
+      <li>Search for the parent by email or phone and select them. Click <strong>Confirm Link</strong>.</li>
+      <li>The parent can now see this child's data in their portal.</li>
+    </ol>
+
+    <h4>Student Directory</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Students → Directory</strong> for a searchable, filterable view of all students across all classes.</li>
+      <li>Use the search bar to find students by name or admission number.</li>
+      <li>Use the class filter to narrow to a specific class or section.</li>
+    </ol>
+
+    <!-- Classes & Subjects -->
+    <h3 id="op-classes">Classes &amp; Subjects Setup</h3>
+    <p>The academic structure (classes, sections, and subjects) must be set up before any other features can be used.</p>
+
+    <h4>Setting Up Classes</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Classes</strong>.</li>
+      <li>Click <strong>+ Add Class</strong> to create a root class (e.g., "Class 1", "Class 2").</li>
+      <li>To add sections under a class (e.g., "A", "B"), click the class name to expand it, then click <strong>+ Add Section</strong>.</li>
+      <li>Set a <strong>Display Name</strong> for the section (e.g., "1-A", "Class 1 – A"). This is shown throughout the system.</li>
+    </ol>
+
+    <h4>Assigning a Class Teacher</h4>
+    <ol class="steps">
+      <li>On the <strong>Classes</strong> page, click on a class/section row.</li>
+      <li>In the detail panel, click <strong>Set Class Teacher</strong>.</li>
+      <li>Select the teacher from the dropdown (shows all users with the Teacher role).</li>
+      <li>Click <strong>Save</strong>. The teacher now appears as Class Teacher and can mark attendance and manage promotions for that class.</li>
+    </ol>
+
+    <h4>Setting Up Subjects</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Subjects</strong>.</li>
+      <li>Click <strong>+ Add Subject</strong>. Enter the subject <strong>Name</strong> (e.g., "Mathematics") and an optional <strong>Code</strong> (e.g., "MATH").</li>
+      <li>To assign a subject to a class and a teacher, click the subject row, then use <strong>Assign to Class</strong> and select the class and the teaching teacher.</li>
+    </ol>
+
+    <!-- Timetable -->
+    <h3 id="op-timetable">Timetable</h3>
+    <p>Build the weekly timetable for all classes. Define period timings, configure breaks, and assign cover duties.</p>
+
+    <h4>Configuring Period Timings</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Timetable</strong>.</li>
+      <li>Click <strong>Period Configuration</strong> or the settings gear icon.</li>
+      <li>Add each time block of the school day: enter a <strong>Label</strong> (e.g., "Period 1"), <strong>Start Time</strong>, <strong>End Time</strong>, and whether it is a <strong>Break</strong> (e.g., Lunch Break, Short Break).</li>
+      <li>Drag to reorder entries if needed. Click <strong>Save</strong>.</li>
+    </ol>
+
+    <h4>Building the Timetable for a Class</h4>
+    <ol class="steps">
+      <li>On the <strong>Timetable</strong> page, select the <strong>Class/Section</strong> from the dropdown.</li>
+      <li>The weekly grid is displayed with columns for each day (Monday–Saturday) and rows for each period.</li>
+      <li>Click any cell to assign a subject. Select the <strong>Subject</strong> from the dropdown.</li>
+      <li>The teacher assigned to that subject is automatically associated. Click <strong>Save</strong>.</li>
+      <li>Repeat for all periods and all days.</li>
+    </ol>
+
+    <h4>Cover Duties (Substitute Teachers)</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Timetable → Covers</strong>.</li>
+      <li>Click <strong>+ Assign Cover</strong>.</li>
+      <li>Select the <strong>Date</strong>, the <strong>Absent Teacher</strong>, the <strong>Period</strong>, the <strong>Class</strong>, and the <strong>Covering Teacher</strong>.</li>
+      <li>Click <strong>Save</strong>. The covering teacher will see this duty highlighted on their timetable page for that day.</li>
+    </ol>
+
+    <!-- Attendance -->
+    <h3 id="op-attendance">Attendance</h3>
+    <p>Operators can view and override attendance for any class on any date.</p>
+
+    <h4>Viewing Class Attendance</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Attendance</strong>.</li>
+      <li>Select the <strong>Class/Section</strong> from the dropdown.</li>
+      <li>Select the <strong>Date</strong> (defaults to today).</li>
+      <li>The list of students appears with their current attendance status (Present / Absent / Late / Leave).</li>
+    </ol>
+
+    <h4>Marking or Correcting Attendance</h4>
+    <ol class="steps">
+      <li>On the Attendance page with the class and date selected, click the status badge next to any student to cycle through: <span class="badge green">P</span> Present → <span class="badge red">A</span> Absent → <span class="badge amber">L</span> Late → <span class="badge blue">Lv</span> Leave.</li>
+      <li>Use <strong>All Present</strong> or <strong>All Absent</strong> buttons for bulk marking.</li>
+      <li>Click <strong>Save Attendance</strong> to commit the changes.</li>
+    </ol>
+
+    <!-- Exams -->
+    <h3 id="op-exams">Examinations</h3>
+    <p>Create and manage examinations, assign subjects to teachers, and control result visibility.</p>
+
+    <h4>Creating an Examination</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Exams</strong>.</li>
+      <li>Click <strong>+ New Exam</strong>.</li>
+      <li>Enter the <strong>Exam Name</strong> (e.g., "Term 1 Examination"), select the <strong>Academic Year</strong>, and optionally set start/end dates, exam centre, and reporting time.</li>
+      <li>Click <strong>Create</strong>. The exam is created in <span class="badge gray">Draft</span> status.</li>
+    </ol>
+
+    <h4>Adding Subjects to an Exam</h4>
+    <ol class="steps">
+      <li>Open the exam by clicking its name.</li>
+      <li>Click <strong>+ Add Subject</strong>.</li>
+      <li>Select the <strong>Class/Section</strong>, the <strong>Subject</strong>, set <strong>Maximum Marks</strong> and <strong>Passing Marks</strong>.</li>
+      <li>Optionally set an <strong>Exam Date</strong> and <strong>Time</strong> for the admit card schedule.</li>
+      <li>Click <strong>Add</strong>. Repeat for all subjects and classes.</li>
+    </ol>
+
+    <div class="note info">
+      <strong>Bulk Add:</strong> Use <strong>Bulk Add Subjects</strong> to add multiple subjects at once for a class, or <strong>Clone Subjects</strong> to copy the subject structure from another exam.
+    </div>
+
+    <h4>Activating an Exam (Opening for Mark Entry)</h4>
+    <ol class="steps">
+      <li>Open the exam.</li>
+      <li>Click <strong>Change Status → Active</strong>.</li>
+      <li>Teachers assigned to those subjects can now enter marks from their portal.</li>
+    </ol>
+
+    <h4>Completing an Exam (Publishing Results)</h4>
+    <ol class="steps">
+      <li>Once all marks are entered, open the exam.</li>
+      <li>Click <strong>Change Status → Completed</strong>.</li>
+      <li>Results are now visible to parents and students in their portals.</li>
+    </ol>
+
+    <div class="note warn">
+      <strong>Important:</strong> Parents can only see results for exams that are marked <span class="badge green">Completed</span>. Exams in <span class="badge blue">Active</span> or <span class="badge gray">Draft</span> status are not visible to parents.
+    </div>
+
+    <!-- Fees -->
+    <h3 id="op-fees">Fees</h3>
+    <p>Set up the fee structure for the school, record payments, and monitor outstanding dues.</p>
+
+    <h4>Step 1 — Create Fee Heads</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Fees</strong>.</li>
+      <li>Click <strong>+ Add Fee Head</strong>.</li>
+      <li>Enter the fee head name (e.g., "Tuition Fee", "Library Fee", "Transport Fee").</li>
+      <li>Click <strong>Save</strong>. Repeat for all types of fees your school collects.</li>
+    </ol>
+
+    <h4>Step 2 — Create Fee Structures (Assign amounts to classes)</h4>
+    <ol class="steps">
+      <li>On the <strong>Fees</strong> page, go to <strong>Fee Structures</strong>.</li>
+      <li>Select the <strong>Academic Year</strong> and <strong>Class/Section</strong>.</li>
+      <li>Click <strong>+ Add Structure</strong>.</li>
+      <li>Select the <strong>Fee Head</strong>, enter the <strong>Total Amount</strong> for the year.</li>
+      <li>Optionally, split it into installments by setting installment names (e.g., "Q1 April", "Q2 July") and due dates.</li>
+      <li>Click <strong>Save</strong>.</li>
+    </ol>
+
+    <h4>Recording a Fee Payment</h4>
+    <ol class="steps">
+      <li>On the <strong>Fees</strong> page, go to <strong>Collect Fees</strong>.</li>
+      <li>Search for the student by name or admission number. Click the student from the results.</li>
+      <li>The student's outstanding balance and fee breakdown are shown.</li>
+      <li>Click <strong>+ Record Payment</strong>.</li>
+      <li>Select the <strong>Fee Head</strong>, enter the <strong>Amount</strong>, select the <strong>Payment Mode</strong> (Cash, UPI, Cheque, Bank Transfer, DD), and add any remarks.</li>
+      <li>Click <strong>Save Payment</strong>. A receipt is generated automatically.</li>
+      <li>Click <strong>Print</strong> next to the payment to print the official receipt.</li>
+    </ol>
+
+    <h4>Viewing Fee Defaulters</h4>
+    <ol class="steps">
+      <li>On the <strong>Fees</strong> page, go to the <strong>Defaulters</strong> tab.</li>
+      <li>Select the <strong>Academic Year</strong> and optionally a <strong>Class</strong> to filter.</li>
+      <li>All students with an outstanding balance are listed with the amounts due.</li>
+    </ol>
+
+    <!-- Salary -->
+    <h3 id="op-salary">Salary</h3>
+    <p>Record and manage staff salary disbursements.</p>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Salary</strong>.</li>
+      <li>Select the staff member and the month/year.</li>
+      <li>Enter the basic salary, allowances, and deductions as applicable.</li>
+      <li>Click <strong>Save</strong>. The salary record is stored for future reference and reporting.</li>
+    </ol>
+
+    <!-- TC -->
+    <h3 id="op-tc">Transfer Certificates (TC)</h3>
+    <p>Issue Transfer Certificates to students who are leaving the school.</p>
+
+    <h4>Generating a New TC</h4>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Transfer Certificates</strong>.</li>
+      <li>Click <strong>+ New TC</strong>.</li>
+      <li>Search for and select the student.</li>
+      <li>Fill in the TC details: date of leaving, reason, conduct, and any remarks.</li>
+      <li>Click <strong>Generate TC</strong>. The TC is saved and can be printed.</li>
+    </ol>
+
+    <!-- Inquiries -->
+    <h3 id="op-inquiries">Admission Inquiries</h3>
+    <p>Track prospective student inquiries from initial contact through to enrollment.</p>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Inquiries</strong>.</li>
+      <li>All logged inquiries are listed with their current status: <span class="badge blue">New</span> → <span class="badge amber">Contacted</span> → <span class="badge brand">Visited</span> → <span class="badge green">Enrolled</span> or <span class="badge gray">Dropped</span>.</li>
+      <li>To log a new inquiry, click <strong>+ New Inquiry</strong>, fill in the parent's name, phone, email, and the class of interest, then click <strong>Save</strong>.</li>
+      <li>To update status: click <strong>Edit</strong> on any inquiry, change the status, and save.</li>
+    </ol>
+
+    <!-- Announcements -->
+    <h3 id="op-announcements">Announcements</h3>
+    <p>Post notices visible to specific roles or the entire school.</p>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Announcements</strong>.</li>
+      <li>Click <strong>+ New Announcement</strong>.</li>
+      <li>Enter the <strong>Title</strong> and <strong>Content</strong> of the announcement.</li>
+      <li>Select the <strong>Target Audience</strong>: All Staff, All Teachers, Parents, Students, or specific roles.</li>
+      <li>Set an optional <strong>Expiry Date</strong> after which the announcement is hidden.</li>
+      <li>Click <strong>Publish</strong>. The announcement appears immediately in the selected portals.</li>
+    </ol>
+
+    <!-- Calendar -->
+    <h3 id="op-calendar">Academic Calendar</h3>
+    <p>Manage school events, holidays, and important dates visible to all users.</p>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Calendar</strong>.</li>
+      <li>Click any date to add an event on that day.</li>
+      <li>Enter the <strong>Event Name</strong>, select the <strong>Type</strong> (Holiday, Exam, Event, etc.), and add a description.</li>
+      <li>Click <strong>Save</strong>. The event appears on everyone's calendar across all portals.</li>
+    </ol>
+
+    <!-- Promote -->
+    <h3 id="op-promote">Promote Students</h3>
+    <p>Bulk-move students to the next class at the end of the academic year.</p>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Promote</strong>.</li>
+      <li>Select the <strong>Action</strong>: Promote (move to next class), Transfer (move to another class), or Hold Back (keep in current class).</li>
+      <li>Select the <strong>Source Class</strong> (current class) and the <strong>Target Class</strong> (new class, if applicable).</li>
+      <li>The student list appears. All students are selected by default. Deselect any students to exclude them.</li>
+      <li>Click <strong>Confirm &amp; Apply</strong>. The selected students are moved to their new class.</li>
+    </ol>
+
+    <div class="note warn">
+      <strong>One-Way Operation:</strong> Promotion cannot be automatically reversed. Verify your selections carefully before confirming.
+    </div>
+
+    <!-- Settings -->
+    <h3 id="op-settings">Settings</h3>
+    <p>Configure school information and academic year settings.</p>
+    <ol class="steps">
+      <li>Go to <strong>Dashboard → Settings</strong>.</li>
+      <li><strong>School Information:</strong> Update the school name, board affiliation, address, phone, and email. This information appears on printed receipts, report cards, and admit cards.</li>
+      <li><strong>Academic Year:</strong> Create a new academic year (e.g., "2026-27"), set its start and end dates, and mark it as the current year.</li>
+      <li>Click <strong>Save</strong> after each section.</li>
+    </ol>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="teacher"><span class="icon">📚</span> Teacher Portal</h2>
+
+    <div class="portal-card">
+      <h2>Teacher Portal</h2>
+      <div class="role-desc">For teaching staff. Mark student attendance, enter exam marks, view your timetable, and manage your own attendance.</div>
+      <div class="pages">
+        <span class="page-tag">Dashboard</span>
+        <span class="page-tag">Mark Attendance</span>
+        <span class="page-tag">Enter Marks</span>
+        <span class="page-tag">My Timetable</span>
+        <span class="page-tag">Promote Students</span>
+        <span class="page-tag">My Attendance</span>
+        <span class="page-tag">Announcements</span>
+        <span class="page-tag">Calendar</span>
+      </div>
+    </div>
+
+    <h3>Teacher Dashboard (Overview)</h3>
+    <p>The dashboard shows a summary of your classes and quick action buttons.</p>
+    <ul class="plain">
+      <li>If you are a <strong>Class Teacher</strong>, your assigned class(es) are shown with a coloured banner, including the total number of boys and girls.</li>
+      <li>Quick action buttons let you jump directly to <strong>Mark Attendance</strong> or <strong>Enter Marks</strong>.</li>
+      <li>If you teach subjects in other classes (but are not their class teacher), those classes appear under <strong>Subject Teaching</strong>.</li>
+    </ul>
+
+    <h3>Marking Student Attendance</h3>
+    <ol class="steps">
+      <li>Click <strong>Mark Attendance</strong> from the dashboard or the sidebar.</li>
+      <li>Select the <strong>Class/Section</strong> from the dropdown. Only your assigned classes are shown.</li>
+      <li>The <strong>Date</strong> defaults to today. Change it if marking attendance for a different day.</li>
+      <li>The student list loads automatically. By default, all students are set to <span class="badge green">Present</span>.</li>
+      <li>Click the status badge next to any student to cycle: <span class="badge green">P</span> Present → <span class="badge red">A</span> Absent → <span class="badge amber">L</span> Late → <span class="badge blue">Lv</span> Leave.</li>
+      <li>Use <strong>All Present</strong> or <strong>All Absent</strong> buttons for bulk marking.</li>
+      <li>The summary bar at the top shows a live count of each status.</li>
+      <li>When done, click <strong>Save Attendance</strong>.</li>
+    </ol>
+
+    <div class="note info">
+      <strong>Re-opening:</strong> If you have already submitted attendance for a date and open it again, the saved values are pre-loaded. You can correct them and save again.
+    </div>
+
+    <h3>Entering Exam Marks</h3>
+    <ol class="steps">
+      <li>Click <strong>Enter Marks</strong> from the dashboard or sidebar.</li>
+      <li>Select the <strong>Examination</strong> from the dropdown. Only exams with active status that include your assigned subjects are shown.</li>
+      <li>Below the exam selector, buttons show each combination of <strong>Class + Subject</strong> assigned to you. Click one to select it.</li>
+      <li>The student list loads with any previously saved marks pre-filled.</li>
+      <li>Enter marks in the <strong>Marks</strong> column for each student. The maximum marks are shown in the column header.</li>
+      <li>If a student was absent for the exam, tick the <strong>Absent</strong> checkbox. The marks field is disabled for absent students.</li>
+      <li>A <strong>red border</strong> appears if entered marks exceed the maximum — you must correct this before saving.</li>
+      <li>The progress indicator (e.g., "18/35 entered") shows how many students have marks entered.</li>
+      <li>Click <strong>Save Marks</strong> when done.</li>
+    </ol>
+
+    <h3>Viewing My Timetable</h3>
+    <ol class="steps">
+      <li>Click <strong>My Timetable</strong> in the sidebar.</li>
+      <li>Use the <strong>Day View</strong> or <strong>Week View</strong> toggle at the top right.</li>
+      <li>In Day View, click any day tab to see your periods for that day. Period numbers and time slots are shown.</li>
+      <li>In Week View, a full grid of all days and periods is displayed.</li>
+      <li>If you have been assigned as a <strong>Cover Teacher</strong> for the current day, a yellow banner at the top lists the extra periods you need to cover, the class, and the absent teacher's name.</li>
+    </ol>
+
+    <h3>Promoting Students (Class Teachers Only)</h3>
+    <p>This feature is only available to teachers who are assigned as Class Teacher of at least one class.</p>
+    <ol class="steps">
+      <li>Click <strong>Promote Students</strong> in the sidebar.</li>
+      <li>Select the <strong>Action</strong>: Promote, Transfer, or Hold Back.</li>
+      <li>Select the <strong>From Class</strong> (one of your classes) and the <strong>To Class</strong> (any class in the school).</li>
+      <li>The student list for your class loads. All students are selected by default — deselect any you want to skip.</li>
+      <li>Click <strong>Apply to N Students</strong> or <strong>Confirm &amp; Apply</strong> at the bottom.</li>
+    </ol>
+
+    <h3>My Attendance (Self-Marking)</h3>
+    <ol class="steps">
+      <li>Click <strong>My Attendance</strong> in the sidebar.</li>
+      <li>The <strong>Today's card</strong> at the top shows whether you have marked attendance today.</li>
+      <li>If not yet marked: select your status (Present, Late, Half Day), optionally add a note, and click <strong>Mark</strong>.</li>
+      <li>If already marked and you need to clock out, click the <strong>Clock Out</strong> button.</li>
+      <li>The <strong>Monthly Records</strong> tab shows all your attendance entries for the current month.</li>
+      <li>The <strong>Leave Requests</strong> tab lets you apply for leave: click <strong>+ Apply for Leave</strong>, enter start date, end date, and reason, then click <strong>Submit Request</strong>.</li>
+      <li>You can track the status of leave requests (Pending / Approved / Rejected) from the same tab.</li>
+    </ol>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="principal"><span class="icon">🎓</span> Principal Portal</h2>
+
+    <div class="portal-card">
+      <h2>Principal Portal</h2>
+      <div class="role-desc">School Principal's oversight dashboard. Monitor attendance, fees, staff leave, and academic progress — without modifying core data.</div>
+      <div class="pages">
+        <span class="page-tag">Overview</span>
+        <span class="page-tag">Attendance Reports</span>
+        <span class="page-tag">Fee Reports</span>
+        <span class="page-tag">Timetable</span>
+        <span class="page-tag">Staff Attendance</span>
+        <span class="page-tag">Announcements</span>
+        <span class="page-tag">Calendar</span>
+        <span class="page-tag">Exams</span>
+        <span class="page-tag">Settings</span>
+      </div>
+    </div>
+
+    <h3>Overview Dashboard</h3>
+    <p>The Principal's dashboard shows at a glance:</p>
+    <ul class="plain">
+      <li><strong>Total Students</strong> with boys/girls breakdown</li>
+      <li><strong>Current Academic Year</strong></li>
+      <li><strong>Total Classes</strong></li>
+      <li><strong>Staff Accounts</strong> count</li>
+      <li><strong>Attendance Defaulters</strong> (below 75% this month) — top 8 across sampled classes</li>
+      <li><strong>Fee Defaulters</strong> — students with outstanding balances (top 8)</li>
+    </ul>
+
+    <h3>Attendance Reports</h3>
+    <ol class="steps">
+      <li>Click <strong>Attendance</strong> in the sidebar.</li>
+      <li>Select the <strong>Class/Section</strong> and <strong>Month</strong>.</li>
+      <li>Adjust the <strong>Threshold</strong> (default: 75%) to set what counts as a defaulter.</li>
+      <li>The page shows: total students, number of defaulters, and a full table of all students with their attendance percentage.</li>
+      <li>Students below the threshold are highlighted in red with a "Defaulter" badge.</li>
+    </ol>
+
+    <h3>Fee Reports</h3>
+    <ol class="steps">
+      <li>Click <strong>Fees</strong> in the sidebar.</li>
+      <li>Select the <strong>Academic Year</strong> and optionally filter by <strong>Class</strong>.</li>
+      <li><strong>Defaulters tab:</strong> Lists all students with outstanding fee balances, showing total due, amount paid, and balance.</li>
+      <li><strong>Today's Collection tab:</strong> Shows all fee payments recorded today with receipt numbers, student names, and amounts.</li>
+    </ol>
+
+    <h3>Staff Attendance &amp; Leave Management</h3>
+    <ol class="steps">
+      <li>Click <strong>Staff Attendance</strong> in the sidebar.</li>
+      <li>Three tabs are available:
+        <ul class="plain">
+          <li><strong>Leave Requests:</strong> All pending/approved/rejected leave requests from all staff. The tab badge shows the number of pending requests.</li>
+          <li><strong>Daily View:</strong> Select a date to see which staff members marked attendance and their clock-in/out times.</li>
+          <li><strong>Monthly Report:</strong> Select month and year to see a summary of each staff member's present, late, half-day, and absent days.</li>
+        </ul>
+      </li>
+      <li>To approve or reject a leave request, click the <strong>Approve</strong> or <strong>Reject</strong> button on any pending request row.</li>
+    </ol>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="director"><span class="icon">📊</span> Director Portal</h2>
+
+    <div class="portal-card">
+      <h2>Director Portal</h2>
+      <div class="role-desc">For school directors, trustees, or management. High-level oversight with the ability to manage staff accounts.</div>
+      <div class="pages">
+        <span class="page-tag">Institution Overview</span>
+        <span class="page-tag">Reports</span>
+        <span class="page-tag">Staff Management</span>
+        <span class="page-tag">Settings</span>
+      </div>
+    </div>
+
+    <h3>Institution Overview</h3>
+    <p>The Director's homepage shows high-level metrics:</p>
+    <ul class="plain">
+      <li>Total students, staff accounts, classes, and current academic year</li>
+      <li><strong>Attendance Alerts:</strong> Number of students below 75% attendance this month</li>
+      <li><strong>Fee Defaulters:</strong> Total number of students with outstanding balances</li>
+      <li><strong>Active Examinations:</strong> Exams currently in progress</li>
+      <li>Quick navigation cards to Reports, Staff Directory, and Settings</li>
+    </ul>
+
+    <h3>Reports</h3>
+    <p>Three tabbed reports are available:</p>
+    <ul class="plain">
+      <li><strong>Attendance tab:</strong> Select a class to see all students below 75% attendance for the current month.</li>
+      <li><strong>Fees tab:</strong> Full list of fee defaulters for the current academic year with balances.</li>
+      <li><strong>Examinations tab:</strong> All exams for the current year with their status (Draft / Active / Completed).</li>
+    </ul>
+
+    <h3>Staff Management</h3>
+    <p>The Director has full staff management capability — identical to the Operator's staff page.</p>
+    <ol class="steps">
+      <li>Click <strong>Staff</strong> in the sidebar.</li>
+      <li>View all staff members, filter by role, add new staff, view profiles, assign roles, and reset passwords.</li>
+      <li>See the <a href="#op-staff">Operator → Staff Management</a> section for detailed instructions.</li>
+    </ol>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="accountant"><span class="icon">💰</span> Accountant Portal</h2>
+
+    <div class="portal-card">
+      <h2>Accountant Portal</h2>
+      <div class="role-desc">For accounts and finance staff. Record fee collections, print receipts, and view payment summaries.</div>
+      <div class="pages">
+        <span class="page-tag">Overview</span>
+        <span class="page-tag">Fee Collection</span>
+        <span class="page-tag">My Attendance</span>
+        <span class="page-tag">Announcements</span>
+      </div>
+    </div>
+
+    <h3>Overview</h3>
+    <p>The accountant's homepage shows four key financial metrics:</p>
+    <ul class="plain">
+      <li><strong>Today's Collection:</strong> Total fee amount collected today</li>
+      <li><strong>This Month:</strong> Total collected in the current month</li>
+      <li><strong>Total Due:</strong> Total outstanding balance across all students</li>
+      <li><strong>Total Students:</strong> Total enrolled students</li>
+    </ul>
+
+    <h3>Fee Collection</h3>
+    <ol class="steps">
+      <li>Click <strong>Fee Collection</strong> in the sidebar or the quick action button.</li>
+      <li>In the <strong>Search Student</strong> box, type the student's name or admission number, then click <strong>Search</strong> (or press <kbd>Enter</kbd>).</li>
+      <li>A dropdown list of matching students appears. Click the correct student to select them.</li>
+      <li>The student's <strong>balance summary</strong> is shown: Total Due, Total Paid, and Outstanding balance.</li>
+      <li>The <strong>fee breakdown</strong> table shows each fee head with how much is due, paid, and remaining.</li>
+      <li>Click <strong>+ Record Payment</strong>.</li>
+      <li>Select the <strong>Fee Head</strong>, enter the <strong>Amount</strong>, choose the <strong>Payment Mode</strong>, and add optional remarks.</li>
+      <li>Click <strong>Save Payment</strong>. The payment is recorded and the balance updates immediately.</li>
+      <li>To print the receipt, find the payment in the <strong>Payment History</strong> table and click <strong>Print</strong>.</li>
+    </ol>
+
+    <div class="note success">
+      <strong>Receipt Printing:</strong> A print dialog opens in a new browser window. Click Print to send to your printer. The receipt includes school name, student details, fee head, amount, payment mode, and receipt number.
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="receptionist"><span class="icon">📋</span> Receptionist Portal</h2>
+
+    <div class="portal-card">
+      <h2>Receptionist Portal</h2>
+      <div class="role-desc">For front-office staff. Log admission inquiries from walk-ins and phone calls, track follow-ups through to enrollment.</div>
+      <div class="pages">
+        <span class="page-tag">Admission Inquiries</span>
+        <span class="page-tag">Announcements</span>
+      </div>
+    </div>
+
+    <h3>Managing Admission Inquiries</h3>
+    <p>The main page of the receptionist portal is the Inquiry Management screen. All inquiries are listed here with their current status.</p>
+
+    <h4>Logging a New Inquiry</h4>
+    <ol class="steps">
+      <li>Click <strong>+ New Inquiry</strong> in the top-right corner.</li>
+      <li>Fill in the parent/student details:
+        <ul class="plain">
+          <li><strong>First Name</strong> (required)</li>
+          <li><strong>Last Name</strong></li>
+          <li><strong>Phone</strong> (required)</li>
+          <li><strong>Email</strong> (optional)</li>
+          <li><strong>Class Interest</strong> (e.g., "Class 3", "Nursery")</li>
+          <li><strong>Notes</strong> (any additional details)</li>
+        </ul>
+      </li>
+      <li>Click <strong>Log Inquiry</strong>. The inquiry is saved with status <span class="badge blue">New</span>.</li>
+    </ol>
+
+    <h4>Updating Inquiry Status</h4>
+    <p>The status column in each row has a dropdown. Change it directly:</p>
+    <table class="data-table">
+      <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge blue">New</span></td><td>Inquiry just received, not yet followed up</td></tr>
+        <tr><td><span class="badge amber">Contacted</span></td><td>Initial contact made with the family</td></tr>
+        <tr><td><span class="badge brand">Visited</span></td><td>Family has visited the school</td></tr>
+        <tr><td><span class="badge green">Enrolled</span></td><td>Student has been admitted</td></tr>
+        <tr><td><span class="badge gray">Dropped</span></td><td>No longer interested</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Filtering Inquiries</h4>
+    <ol class="steps">
+      <li>Click any status card at the top (New, Contacted, Visited, Enrolled, Dropped) to filter the table to only that status. Click again to remove the filter.</li>
+      <li>Alternatively, use the pill filter buttons below the stats cards.</li>
+    </ol>
+
+    <h4>Editing an Inquiry</h4>
+    <ol class="steps">
+      <li>Click <strong>Edit</strong> on any inquiry row.</li>
+      <li>The form opens pre-filled. Update any details and click <strong>Update</strong>.</li>
+    </ol>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="non-teaching"><span class="icon">🏢</span> Non-Teaching Staff Portal</h2>
+
+    <div class="portal-card">
+      <h2>Non-Teaching Staff Portal</h2>
+      <div class="role-desc">For support staff (office staff, peons, librarians, etc.). Mark daily attendance and view school announcements.</div>
+      <div class="pages">
+        <span class="page-tag">Overview</span>
+        <span class="page-tag">My Attendance</span>
+        <span class="page-tag">Announcements</span>
+      </div>
+    </div>
+
+    <h3>Using the Non-Teaching Staff Portal</h3>
+    <p>The portal has two main functions: self-attendance and announcements.</p>
+
+    <h4>Marking Your Attendance</h4>
+    <ol class="steps">
+      <li>Click <strong>My Attendance</strong> from the overview page or sidebar.</li>
+      <li>The current date is displayed. If you have not marked today, select your status: <strong>Present</strong>, <strong>Late</strong>, or <strong>Half Day</strong>.</li>
+      <li>Optionally add a note (e.g., "Working from home").</li>
+      <li>Click <strong>Mark</strong>.</li>
+      <li>Once marked, you can <strong>Clock Out</strong> by clicking the Clock Out button.</li>
+    </ol>
+
+    <h4>Applying for Leave</h4>
+    <ol class="steps">
+      <li>On the <strong>My Attendance</strong> page, click the <strong>Leave Requests</strong> tab.</li>
+      <li>Click <strong>+ Apply for Leave</strong>.</li>
+      <li>Enter the <strong>From Date</strong>, <strong>To Date</strong>, and <strong>Reason</strong>.</li>
+      <li>Click <strong>Submit Request</strong>. Your leave request is sent to the Principal for approval.</li>
+      <li>Check back on this tab to see if it has been Approved or Rejected.</li>
+    </ol>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="parent"><span class="icon">👨‍👩‍👧</span> Parent Portal</h2>
+
+    <div class="portal-card" style="background: linear-gradient(135deg, #1e40af 0%, #1e3a5f 100%);">
+      <h2>Parent Portal</h2>
+      <div class="role-desc">For parents and guardians. Monitor your child's attendance, marks, fees, timetable, and school announcements.</div>
+      <div class="pages">
+        <span class="page-tag">Overview</span>
+        <span class="page-tag">Attendance</span>
+        <span class="page-tag">Marks & Results</span>
+        <span class="page-tag">Exams</span>
+        <span class="page-tag">Fee Status</span>
+        <span class="page-tag">Timetable</span>
+        <span class="page-tag">Announcements</span>
+        <span class="page-tag">Calendar</span>
+      </div>
+    </div>
+
+    <div class="note info">
+      <strong>Before You Start:</strong> Your child's record must be linked to your account by the school administrator. If you see a message saying "Your child's record has not been linked yet", please contact the school office.
+    </div>
+
+    <h3>Parent Overview Dashboard</h3>
+    <p>The homepage gives you an instant status of your child(ren) today:</p>
+    <ul class="plain">
+      <li>If your child was <strong>marked absent</strong> today, a red alert banner appears at the top with your child's name.</li>
+      <li>If your child is <strong>present</strong> (and attendance was taken), a green banner confirms this.</li>
+      <li>Your linked children are shown as cards with their class name.</li>
+      <li>Quick link buttons take you to Attendance, Marks &amp; Results, Fee Status, and Announcements.</li>
+    </ul>
+
+    <h3>Checking Child's Attendance</h3>
+    <ol class="steps">
+      <li>Click <strong>Attendance</strong> from the dashboard or sidebar.</li>
+      <li>If you have multiple children, select the child from the <strong>Child</strong> dropdown.</li>
+      <li>Select the <strong>Month</strong> to view.</li>
+      <li>A summary shows: <span class="badge green">Present</span>, <span class="badge red">Absent</span>, <span class="badge amber">Late</span>, and overall <strong>Attendance %</strong>.</li>
+      <li>If attendance drops below <strong>75%</strong>, a red warning is shown — please contact the class teacher.</li>
+      <li>The day-by-day record is listed below the summary.</li>
+    </ol>
+
+    <h3>Viewing Marks &amp; Results</h3>
+    <ol class="steps">
+      <li>Click <strong>Marks &amp; Results</strong> in the sidebar.</li>
+      <li>Select the <strong>Child</strong> (if multiple), <strong>Academic Year</strong>, and <strong>Examination</strong>.</li>
+      <li>Only <strong>Completed</strong> exams are shown (results published by the school).</li>
+      <li>The scorecard shows: marks obtained, maximum marks, percentage, grade, pass/fail status for each subject, and the overall class rank.</li>
+    </ol>
+
+    <h3>Exam Schedule &amp; Admit Cards</h3>
+    <ol class="steps">
+      <li>Click <strong>Exams</strong> in the sidebar.</li>
+      <li>Select the <strong>Child</strong> and <strong>Academic Year</strong>.</li>
+      <li>All exams are listed with their status: <span class="badge blue">In Progress</span>, <span class="badge green">Completed</span>, or <span class="badge gray">Upcoming</span>.</li>
+      <li>For <strong>upcoming or active</strong> exams: click <strong>Admit Card</strong> to download and print the hall ticket. The admit card includes the exam schedule (subject-wise dates and times).</li>
+      <li>For <strong>completed</strong> exams: click <strong>View Results</strong> to see the scorecard. Click <strong>Print Report Card</strong> to print an official report card.</li>
+    </ol>
+
+    <div class="note success">
+      <strong>Printing:</strong> The report card and admit card open in a print-ready format in a new window. Your browser's print dialog will open automatically. Use <kbd>Ctrl+P</kbd> (Windows) or <kbd>Cmd+P</kbd> (Mac) if it does not open automatically.
+    </div>
+
+    <h3>Fee Status</h3>
+    <ol class="steps">
+      <li>Click <strong>Fee Status</strong> in the sidebar.</li>
+      <li>Select the <strong>Child</strong> (if multiple).</li>
+      <li>At the top, any <strong>upcoming or overdue fee dues</strong> are highlighted in a panel with the amount and due date. Overdue dues are shown in red.</li>
+      <li>The balance summary shows: Total Due, Total Paid, and Outstanding Balance.</li>
+      <li>The <strong>Fee Breakdown</strong> table shows dues and payments per fee head.</li>
+      <li>The <strong>Payment History</strong> table lists all receipts. Click <strong>Print</strong> to reprint any receipt.</li>
+    </ol>
+
+    <h3>Class Timetable</h3>
+    <ol class="steps">
+      <li>Click <strong>Timetable</strong> in the sidebar.</li>
+      <li>Select the child (if multiple). The weekly timetable for your child's class is displayed as a grid.</li>
+      <li>Each cell shows the subject name and teacher name for that period.</li>
+      <li>Break periods (Lunch, Short Break) are shown as coloured rows spanning all days.</li>
+    </ol>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="student"><span class="icon">🎒</span> Student Portal</h2>
+
+    <div class="portal-card" style="background: linear-gradient(135deg, #166534 0%, #14532d 100%);">
+      <h2>Student Portal</h2>
+      <div class="role-desc">For students. Currently shows a welcome screen. Full features (timetable, attendance, marks) are coming soon.</div>
+      <div class="pages">
+        <span class="page-tag">Overview</span>
+      </div>
+    </div>
+
+    <div class="note warn">
+      <strong>Student Portal Status:</strong> The student portal is currently in its initial phase. It shows a welcome message confirming your account is set up. Full self-service features (timetable, attendance summary, exam results, fee status) are being actively developed and will be available in the next release. Until then, parents can access all this information through the <a href="#parent">Parent Portal</a>.
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="roles"><span class="icon">🔐</span> Roles &amp; Permissions</h2>
+
+    <p>Each user account is assigned one or more roles. Roles determine which portal is accessed and what actions are permitted.</p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Portal</th>
+          <th>Can Read</th>
+          <th>Can Write</th>
+          <th>Restrictions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Super Admin / Admin</strong></td>
+          <td>Operator Dashboard</td>
+          <td>Everything</td>
+          <td>Everything</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td><strong>Principal</strong></td>
+          <td>Principal Portal</td>
+          <td>Students, staff, attendance, fees, exams</td>
+          <td>Approve/reject leave requests</td>
+          <td>Cannot create/delete students or staff</td>
+        </tr>
+        <tr>
+          <td><strong>Director</strong></td>
+          <td>Director Portal</td>
+          <td>Everything</td>
+          <td>Staff accounts, settings</td>
+          <td>Cannot modify student/fee data directly</td>
+        </tr>
+        <tr>
+          <td><strong>Teacher</strong></td>
+          <td>Teacher Portal</td>
+          <td>Own classes &amp; subjects only</td>
+          <td>Attendance (own classes), exam marks (own subjects)</td>
+          <td>Cannot see other teachers' classes</td>
+        </tr>
+        <tr>
+          <td><strong>Accountant</strong></td>
+          <td>Accountant Portal</td>
+          <td>Fees, students</td>
+          <td>Record fee payments</td>
+          <td>Cannot modify fee structures</td>
+        </tr>
+        <tr>
+          <td><strong>Receptionist</strong></td>
+          <td>Receptionist Portal</td>
+          <td>Inquiries, announcements</td>
+          <td>Log and update inquiries</td>
+          <td>No access to student records or fees</td>
+        </tr>
+        <tr>
+          <td><strong>Non-Teaching Staff</strong></td>
+          <td>Non-Teaching Staff Portal</td>
+          <td>Announcements</td>
+          <td>Own attendance, leave requests</td>
+          <td>No access to students, fees, or exams</td>
+        </tr>
+        <tr>
+          <td><strong>Parent</strong></td>
+          <td>Parent Portal</td>
+          <td>Own children only</td>
+          <td>None</td>
+          <td>Can only see their own linked children</td>
+        </tr>
+        <tr>
+          <td><strong>Student</strong></td>
+          <td>Student Portal</td>
+          <td>Own data (coming soon)</td>
+          <td>None</td>
+          <td>Limited access in current version</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note info">
+      <strong>Multiple Roles:</strong> A user can have more than one role (e.g., a teacher who is also the principal). In this case, they can access both portals. The system routes them based on which role is primary.
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="glossary"><span class="icon">📖</span> Glossary</h2>
+
+    <table class="data-table">
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Institution Code</strong></td><td>A unique short code assigned to each school on the platform. Required at login to identify your school. Also called School Code.</td></tr>
+        <tr><td><strong>Academic Unit</strong></td><td>A class or section (e.g., "Class 5 – A"). The system supports two levels: Class → Section.</td></tr>
+        <tr><td><strong>Leaf Unit</strong></td><td>The lowest-level academic unit (typically a section). Students are enrolled directly in leaf units.</td></tr>
+        <tr><td><strong>Class Teacher</strong></td><td>A teacher designated as the primary teacher for a specific class/section. They can mark attendance, promote students, and access full class records.</td></tr>
+        <tr><td><strong>Fee Head</strong></td><td>A category of fee (e.g., Tuition Fee, Library Fee, Transport Fee). Schools can define as many as needed.</td></tr>
+        <tr><td><strong>Fee Structure</strong></td><td>The configuration that assigns specific fee amounts (and installments) to a class for a given academic year.</td></tr>
+        <tr><td><strong>Installment</strong></td><td>A scheduled partial payment within a fee structure (e.g., Q1, Q2, Q3, Q4). Each installment has a due date.</td></tr>
+        <tr><td><strong>Defaulter</strong></td><td>A student who has outstanding fee dues (fee defaulter) or whose attendance percentage falls below the set threshold (attendance defaulter).</td></tr>
+        <tr><td><strong>Receipt No</strong></td><td>A unique auto-generated number for each fee payment. Used to identify and print receipts.</td></tr>
+        <tr><td><strong>Cover Duty</strong></td><td>When a teacher is absent, another teacher is assigned to cover their classes. The covering teacher sees this as a "Cover Duty" on their timetable.</td></tr>
+        <tr><td><strong>Admit Card / Hall Ticket</strong></td><td>An official document given to students before exams. It lists their exam schedule (subject, date, time) and must be presented at the exam hall.</td></tr>
+        <tr><td><strong>Scorecard</strong></td><td>A detailed result sheet showing a student's marks in each subject, percentage, grade, and class rank for an examination.</td></tr>
+        <tr><td><strong>Report Card</strong></td><td>A printable document (same data as scorecard) in official school letterhead format, including signature lines for Class Teacher, Parent, and Principal.</td></tr>
+        <tr><td><strong>Transfer Certificate (TC)</strong></td><td>An official document issued when a student leaves the school, confirming their enrollment and conduct.</td></tr>
+        <tr><td><strong>Academic Year</strong></td><td>The school year period (e.g., 2025-26). All data — fees, exams, timetables — is organised under an academic year.</td></tr>
+        <tr><td><strong>Promote</strong></td><td>Moving students from their current class to the next class at the end of the academic year.</td></tr>
+        <tr><td><strong>Hold Back</strong></td><td>Keeping a student in the same class for another year (not promoting them).</td></tr>
+        <tr><td><strong>Clock In / Clock Out</strong></td><td>Staff self-attendance feature. Clock In is recorded automatically when you mark attendance. Clock Out is done manually at the end of the day.</td></tr>
+      </tbody>
+    </table>
+
+    <hr class="divider" />
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <h2 class="section-title" id="faq"><span class="icon">❓</span> FAQ &amp; Troubleshooting</h2>
+
+    <div class="feature-block">
+      <h3>❓ I cannot log in — it says "Invalid credentials"</h3>
+      <p>Check the following:</p>
+      <ul class="plain">
+        <li>The <strong>Institution Code</strong> is entered correctly (case-sensitive). Ask your administrator if unsure.</li>
+        <li>Your email or phone number is exactly as registered with the school.</li>
+        <li>Caps Lock is not accidentally on.</li>
+        <li>If you recently had your password reset, use the new password provided.</li>
+        <li>If the problem persists, click <strong>Forgot Password</strong> or contact your school administrator.</li>
+      </ul>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ I am a teacher but I cannot see any classes in the attendance page</h3>
+      <p>Your classes have not been assigned yet. Ask your school administrator to:</p>
+      <ul class="plain">
+        <li>Assign you as <strong>Class Teacher</strong> for a class (for class attendance).</li>
+        <li>Assign you as a <strong>Subject Teacher</strong> in the Subjects page (for subject-specific attendance).</li>
+      </ul>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ I am a teacher but I cannot see any exams in the Mark Entry page</h3>
+      <p>Two conditions must be met for an exam to appear:</p>
+      <ul class="plain">
+        <li>The exam must have a status of <span class="badge blue">Active</span> (not Draft or Completed).</li>
+        <li>You must be assigned as the subject teacher for at least one subject in that exam. Ask the operator to assign your subjects.</li>
+      </ul>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ As a parent, I can log in but I cannot see my child's data</h3>
+      <p>Your account needs to be linked to your child's student record. This is done by the school administrator. Contact the school office and provide your registered email/phone number and your child's admission number. Once linked, refresh the page and the data will appear.</p>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ The parent cannot see exam results even though marks have been entered</h3>
+      <p>Results are visible to parents only when the exam status is <span class="badge green">Completed</span>. The school operator must change the exam status from Active to Completed after all marks have been entered. Ask your administrator to complete the exam.</p>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ The Print button does not open the print dialog</h3>
+      <p>The system opens a new browser window/tab for printing. Check that your browser is not blocking pop-ups:</p>
+      <ul class="plain">
+        <li>In Chrome: click the pop-up blocked icon in the address bar and choose "Always allow pop-ups from this site".</li>
+        <li>In Firefox: click the notification bar and allow pop-ups for this site.</li>
+        <li>In Safari: go to Safari → Preferences → Websites → Pop-Up Windows and allow for this site.</li>
+      </ul>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ Attendance was saved but the wrong status was recorded for a student</h3>
+      <p>Attendance can be corrected at any time. Open the attendance page, select the same class and date, change the student's status to the correct value, and click <strong>Save Attendance</strong> again. The record is updated.</p>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ I submitted a leave request but my principal has not seen it</h3>
+      <p>Leave requests appear in the Principal's <strong>Staff Attendance → Leave Requests</strong> tab. The badge on the tab shows how many pending requests there are. Please ask your principal to review the pending requests in their portal.</p>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ I accidentally promoted a student to the wrong class</h3>
+      <p>Contact the school administrator (Operator). The operator can manually transfer the student back by using the Promote page with the <strong>Transfer</strong> action — selecting the incorrect class as source and the correct class as target.</p>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ The platform shows a "Session expired" message</h3>
+      <p>Your login session has timed out due to inactivity. Click the link to go to the login page and sign in again. Your data is safe — nothing was lost.</p>
+    </div>
+
+    <div class="feature-block">
+      <h3>❓ How do I change my password after logging in?</h3>
+      <p>Go to your profile settings (usually accessible from the top-right user menu). Look for <strong>Change Password</strong> or <strong>Security Settings</strong>. Enter your current password and your new password, then save.</p>
+    </div>
+
+    <hr class="divider" />
+
+    <div style="text-align: center; padding: 32px 0 16px; color: var(--text3); font-size: 12px;">
+      <p>Academic SaaS Platform &nbsp;·&nbsp; User Manual v1.0 &nbsp;·&nbsp; April 2026</p>
+      <p style="margin-top: 4px;">For technical support, contact your school administrator or the platform support team.</p>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /page-wrap -->
+
+<script>
+  // Highlight active sidebar link based on scroll position
+  const sections = document.querySelectorAll('[id]');
+  const links = document.querySelectorAll('.sidebar nav a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.sidebar nav a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -75% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
