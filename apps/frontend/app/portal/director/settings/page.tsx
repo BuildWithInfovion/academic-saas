@@ -121,12 +121,17 @@ function YearsTab({ showError }: { showError: (m: string) => void }) {
       {loading ? <p className="p-6 text-sm text-ds-text3">Loading...</p> : years.length === 0 ? (
         <p className="p-6 text-sm text-ds-text3">No academic years configured.</p>
       ) : (
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
+          <colgroup>
+            <col className="w-[25%]" />
+            <col className="w-[55%]" />
+            <col className="w-[20%]" />
+          </colgroup>
           <thead className="bg-ds-bg2">
             <tr>
               <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Name</th>
               <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Period</th>
-              <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
+              <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ds-border">
@@ -137,7 +142,7 @@ function YearsTab({ showError }: { showError: (m: string) => void }) {
                   {new Date(y.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} —{' '}
                   {new Date(y.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-5 py-3 text-center">
                   {y.isCurrent
                     ? <span className="px-2 py-0.5 bg-ds-success-bg text-ds-success-text rounded-full text-xs font-medium">Current</span>
                     : <span className="px-2 py-0.5 bg-ds-bg2 text-ds-text2 rounded-full text-xs">Inactive</span>}

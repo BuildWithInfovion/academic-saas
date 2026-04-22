@@ -148,7 +148,7 @@ export default function StaffAttendanceDashboardPage() {
                 </p>
               ) : (
                 <table className="data-table">
-                  <thead><tr><th>Staff</th><th>Role</th><th>Status</th><th>Clock In</th><th>Note</th></tr></thead>
+                  <thead><tr><th>Staff</th><th>Role</th><th style={{ textAlign: 'center' }}>Status</th><th>Clock In</th><th>Note</th></tr></thead>
                   <tbody>
                     {dailyRecords.map((r) => (
                       <tr key={r.id}>
@@ -156,7 +156,7 @@ export default function StaffAttendanceDashboardPage() {
                         <td className="text-xs">
                           {r.user.roles.map((ur) => ur.role.label).join(', ')}
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_STYLE[r.status]}`}>
                             {r.status.replace('_', ' ')}
                           </span>

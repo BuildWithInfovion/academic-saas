@@ -224,29 +224,37 @@ export default function InquiriesPage() {
         ) : inquiries.length === 0 ? (
           <div className="p-8 text-center text-ds-text3 text-sm">No inquiries yet.</div>
         ) : (
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[25%]" />
+              <col className="w-[15%]" />
+              <col className="w-[18%]" />
+              <col className="w-[14%]" />
+              <col className="w-[14%]" />
+              <col className="w-[14%]" />
+            </colgroup>
             <thead className="bg-ds-bg2">
               <tr>
-                <th className="px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Phone</th>
-                <th className="px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Class Interest</th>
-                <th className="px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Actions</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Name</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Phone</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Class Interest</th>
+                <th className="text-center px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Status</th>
+                <th className="text-center px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Date</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ds-border">
               {inquiries.map((inq) => (
                 <tr key={inq.id} className="hover:bg-ds-bg2 transition-colors">
-                  <td className="px-6 py-4 font-medium text-ds-text1">
+                  <td className="px-6 py-4 font-medium text-ds-text1 align-top">
                     {inq.firstName} {inq.lastName}
                     {inq.notes && (
                       <div className="text-xs text-ds-text3 mt-0.5">{inq.notes}</div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-ds-text2 text-xs">{inq.phone}</td>
-                  <td className="px-6 py-4 text-ds-text2 text-xs">{inq.classInterest || '—'}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-ds-text2 text-xs align-top">{inq.phone}</td>
+                  <td className="px-6 py-4 text-ds-text2 text-xs align-top">{inq.classInterest || '—'}</td>
+                  <td className="px-6 py-4 text-center align-top">
                     <select
                       value={inq.status}
                       onChange={(e) => updateStatus(inq.id, e.target.value)}
@@ -259,10 +267,10 @@ export default function InquiriesPage() {
                       ))}
                     </select>
                   </td>
-                  <td className="px-6 py-4 text-ds-text2 text-xs">
+                  <td className="px-6 py-4 text-ds-text2 text-xs text-center align-top">
                     {new Date(inq.createdAt).toLocaleDateString('en-IN')}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-top">
                     <button onClick={() => handleDelete(inq.id)}
                       className="text-red-500 hover:text-ds-error-text text-sm font-medium">
                       Remove

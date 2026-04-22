@@ -617,16 +617,16 @@ export default function SalaryPage() {
             </div>
           ) : (
             <div className="bg-ds-surface border border-ds-border rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="border-b border-ds-border bg-ds-bg2">
-                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider">Staff</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden md:table-cell">Structure</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider">Gross</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider">Net</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden lg:table-cell">Effective</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3"></th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider w-[28%]">Staff</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden md:table-cell w-[18%]">Structure</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider w-[12%]">Gross</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider w-[12%]">Net</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden lg:table-cell w-[14%]">Effective</th>
+                    <th className="text-center px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider w-[10%]">Status</th>
+                    <th className="px-4 py-3 w-[6%]"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ds-border">
@@ -638,24 +638,24 @@ export default function SalaryPage() {
                     const net = gross - deductions;
                     return (
                       <tr key={p.id} className="hover:bg-ds-bg2/50">
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 align-top">
                           <p className="font-medium text-ds-text1">{staffLabel(p.user)}</p>
                           <p className="text-xs text-ds-text3">{roleLabel(p.user)}</p>
                         </td>
-                        <td className="px-4 py-3 text-ds-text2 text-xs hidden md:table-cell">
+                        <td className="px-4 py-3 text-ds-text2 text-xs hidden md:table-cell align-top">
                           {p.structure?.name ?? <span className="italic text-ds-text3">Custom</span>}
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-ds-text1">{fmt(gross)}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-green-600">{fmt(net)}</td>
-                        <td className="px-4 py-3 text-xs text-ds-text3 hidden lg:table-cell">
+                        <td className="px-4 py-3 text-right font-medium text-ds-text1 align-top">{fmt(gross)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-green-600 align-top">{fmt(net)}</td>
+                        <td className="px-4 py-3 text-xs text-ds-text3 hidden lg:table-cell align-top">
                           {new Date(p.effectiveFrom).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-center align-top">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${p.isActive ? 'bg-ds-success-bg text-ds-success-text' : 'bg-ds-bg2 text-ds-text3'}`}>
                             {p.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right align-top">
                           <button onClick={() => openEditProfile(p)} className="text-xs text-ds-brand hover:underline">Edit</button>
                         </td>
                       </tr>
@@ -719,39 +719,39 @@ export default function SalaryPage() {
             </div>
           ) : (
             <div className="bg-ds-surface border border-ds-border rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="border-b border-ds-border bg-ds-bg2">
-                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider">Staff</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden md:table-cell">Gross</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden md:table-cell">Deductions</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider">Net</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden lg:table-cell">Payment</th>
-                    <th className="px-4 py-3"></th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider w-[28%]">Staff</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden md:table-cell w-[13%]">Gross</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden md:table-cell w-[13%]">Deductions</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider w-[13%]">Net</th>
+                    <th className="text-center px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider w-[12%]">Status</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-ds-text3 uppercase tracking-wider hidden lg:table-cell w-[14%]">Payment</th>
+                    <th className="px-4 py-3 w-[7%]"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ds-border">
                   {records.map((r) => (
                     <tr key={r.id} className="hover:bg-ds-bg2/50">
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-top">
                         <p className="font-medium text-ds-text1">{staffLabel(r.user)}</p>
                         <p className="text-xs text-ds-text3">{roleLabel(r.user)}</p>
                       </td>
-                      <td className="px-4 py-3 text-right text-ds-text2 hidden md:table-cell">{fmt(r.grossSalary)}</td>
-                      <td className="px-4 py-3 text-right text-red-500 hidden md:table-cell">{r.totalDeductions > 0 ? `- ${fmt(r.totalDeductions)}` : '—'}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-green-600">{fmt(r.netSalary)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-right text-ds-text2 hidden md:table-cell align-top">{fmt(r.grossSalary)}</td>
+                      <td className="px-4 py-3 text-right text-red-500 hidden md:table-cell align-top">{r.totalDeductions > 0 ? `- ${fmt(r.totalDeductions)}` : '—'}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-green-600 align-top">{fmt(r.netSalary)}</td>
+                      <td className="px-4 py-3 text-center align-top">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_BADGE[r.status]}`}>
                           {STATUS_LABEL[r.status]}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-ds-text3 hidden lg:table-cell">
+                      <td className="px-4 py-3 text-xs text-ds-text3 hidden lg:table-cell align-top">
                         {r.paidOn ? (
                           <span>{new Date(r.paidOn).toLocaleDateString('en-IN')} · {r.paymentMode?.replace('_', ' ')}</span>
                         ) : <span className="italic">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right align-top">
                         <button onClick={() => openStatusModal(r)}
                           className="text-xs text-ds-brand hover:underline">
                           {r.status === 'paid' ? 'Revert' : 'Mark Paid'}

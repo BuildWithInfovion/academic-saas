@@ -146,12 +146,18 @@ export default function StaffPage() {
         ) : staff.length === 0 ? (
           <p className="p-6 text-sm text-ds-text3">No staff members yet. Add one above.</p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[45%]" />
+              <col className="w-[22%]" />
+              <col className="w-[18%]" />
+              <col className="w-[15%]" />
+            </colgroup>
             <thead className="bg-ds-bg2">
               <tr>
                 <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Email / Phone</th>
-                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Role</th>
-                <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
+                <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Role</th>
+                <th className="text-center px-5 py-3 text-ds-text2 font-medium text-xs">Status</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
@@ -160,16 +166,16 @@ export default function StaffPage() {
                 <tr key={u.id}
                   onClick={() => router.push(`/dashboard/staff/${u.id}`)}
                   className="cursor-pointer hover:bg-ds-bg2 transition-colors">
-                  <td className="px-5 py-3 text-ds-text1 font-medium">
+                  <td className="px-5 py-3 text-ds-text1 align-top">
                     {u.name && <div className="font-semibold">{u.name}</div>}
                     <div className={u.name ? 'text-xs text-ds-text3' : ''}>{u.email || '—'}</div>
                     {u.phone && <div className="text-xs text-ds-text3">{u.phone}</div>}
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-3 text-center align-top">
                     {u.roles.length === 0 ? (
                       <span className="text-ds-text3 italic text-xs">No role assigned</span>
                     ) : (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1 justify-center">
                         {u.roles.map((ur) => (
                           <span key={ur.role.id}
                             className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE[ur.role.code] ?? 'bg-ds-bg2 text-ds-text2'}`}>
@@ -179,12 +185,12 @@ export default function StaffPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-3 text-center align-top">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-ds-success-bg text-ds-success-text' : 'bg-ds-bg2 text-ds-text2'}`}>
                       {u.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-5 py-3 text-right align-top" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => handleDelete(u.id, u.email || u.phone || u.id)}
                       className="text-xs text-red-500 hover:text-ds-error-text font-medium">
                       Delete

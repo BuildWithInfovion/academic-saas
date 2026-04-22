@@ -364,15 +364,24 @@ export default function TcPage() {
         </div>
       ) : (
         <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[22%]" />
+              <col className="w-[12%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[14%]" />
+              <col className="w-[22%]" />
+            </colgroup>
             <thead>
               <tr className="bg-ds-bg2 border-b border-ds-border">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Student</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Class</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Requested</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Conduct</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Dues</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Status</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Requested</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Conduct</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Dues</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Status</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-ds-text2 uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
@@ -391,19 +400,19 @@ export default function TcPage() {
                       <p className="font-medium text-ds-text1">{tc.studentName}</p>
                       <p className="text-xs text-ds-text3 font-mono">{tc.admissionNo}</p>
                     </td>
-                    <td className="px-4 py-3 text-ds-text2">{className}</td>
-                    <td className="px-4 py-3 text-ds-text2 text-xs">
+                    <td className="px-4 py-3 text-ds-text2 align-top">{className}</td>
+                    <td className="px-4 py-3 text-ds-text2 text-xs text-center align-top">
                       {new Date(tc.requestedAt).toLocaleDateString('en-IN')}
                     </td>
-                    <td className="px-4 py-3 text-ds-text2">{tc.conductGrade}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-ds-text2 text-center align-top">{tc.conductGrade}</td>
+                    <td className="px-4 py-3 text-center align-top">
                       {tc.hasDues ? (
                         <span className="text-xs text-ds-error-text bg-ds-error-bg border border-ds-error-border rounded-full px-2 py-0.5">Has Dues</span>
                       ) : (
                         <span className="text-xs text-ds-success-text bg-ds-success-bg border border-ds-success-border rounded-full px-2 py-0.5">Clear</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center align-top">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[tc.status] ?? 'bg-ds-bg2 text-ds-text2'}`}>
                         {STATUS_LABELS[tc.status] ?? tc.status}
                       </span>
