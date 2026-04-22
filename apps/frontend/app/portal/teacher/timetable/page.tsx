@@ -11,6 +11,9 @@ interface TimetableSlot {
   subject: { id: string; name: string; code?: string | null } | null;
   academicUnit: { id: string; name: string; displayName: string | null; parent?: { name: string; displayName: string | null } | null };
 }
+interface PeriodConfig {
+  id: string; sortOrder: number; label: string; isBreak: boolean; startTime: string; endTime: string;
+}
 
 const DAYS = [
   { no: 1, label: 'Monday' },
@@ -42,6 +45,7 @@ export default function TeacherTimetablePage() {
   const [activeDay, setActiveDay] = useState(TODAY_DAY <= 6 ? TODAY_DAY : 1);
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [coverDuties, setCoverDuties] = useState<CoverDuty[]>([]);
+  const [periodConfig, setPeriodConfig] = useState<PeriodConfig[]>([]);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -49,9 +53,11 @@ export default function TeacherTimetablePage() {
     Promise.all([
       apiFetch('/timetable/my-schedule'),
       apiFetch(`/covers/my-duties?date=${todayStr}`).catch(() => []),
-    ]).then(([s, c]) => {
+      apiFetch('/timetable/period-config').catch(() => []),
+    ]).then(([s, c, cfg]) => {
       setSlots(Array.isArray(s) ? (s as TimetableSlot[]) : []);
       setCoverDuties(Array.isArray(c) ? (c as CoverDuty[]) : []);
+      setPeriodConfig(Array.isArray(cfg) ? (cfg as PeriodConfig[]) : []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -67,6 +73,11 @@ export default function TeacherTimetablePage() {
 
   const activeDays = DAYS.filter((d) => byDay.has(d.no));
   const daySlots = byDay.get(activeDay) ?? [];
+
+  // Period time lookup: periodNo (1-based) → config entry
+  const nonBreakEntries = periodConfig.filter((e) => !e.isBreak);
+  const periodTimeMap = new Map<number, PeriodConfig>();
+  nonBreakEntries.forEach((e, idx) => periodTimeMap.set(idx + 1, e));
 
   // Max periods across all days
   const maxPeriod = slots.length > 0 ? Math.max(...slots.map((s) => s.periodNo)) : 0;
@@ -165,22 +176,32 @@ export default function TeacherTimetablePage() {
             {daySlots.length === 0 ? (
               <p className="text-sm text-ds-text3 p-4">No periods assigned for this day.</p>
             ) : (
-              daySlots.map((slot) => (
-                <div key={slot.id} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-ds-bg2 flex items-center justify-center text-sm font-bold text-ds-text2 shrink-0">
-                    P{slot.periodNo}
+              daySlots.map((slot) => {
+                const timeEntry = periodTimeMap.get(slot.periodNo);
+                return (
+                  <div key={slot.id} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4 flex items-center gap-4">
+                    <div className="shrink-0 text-center">
+                      <div className="w-10 h-10 rounded-full bg-ds-bg2 flex items-center justify-center text-sm font-bold text-ds-text2 mx-auto">
+                        P{slot.periodNo}
+                      </div>
+                      {timeEntry && (
+                        <p className="text-[10px] text-ds-text3 mt-1 whitespace-nowrap">
+                          {timeEntry.startTime}–{timeEntry.endTime}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-ds-text1">{slot.subject?.name ?? 'No subject'}</p>
+                      <p className="text-xs text-ds-text2 mt-0.5">{unitLabel(slot.academicUnit)}</p>
+                    </div>
+                    {slot.subject?.code && (
+                      <span className="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded-full font-mono">
+                        {slot.subject.code}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-ds-text1">{slot.subject?.name ?? 'No subject'}</p>
-                    <p className="text-xs text-ds-text2 mt-0.5">{unitLabel(slot.academicUnit)}</p>
-                  </div>
-                  {slot.subject?.code && (
-                    <span className="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded-full font-mono">
-                      {slot.subject.code}
-                    </span>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </>
@@ -202,9 +223,18 @@ export default function TeacherTimetablePage() {
               </tr>
             </thead>
             <tbody>
-              {periods.map((p) => (
+              {periods.map((p) => {
+                const timeEntry = periodTimeMap.get(p);
+                return (
                 <tr key={p} className="border-b border-ds-border last:border-0">
-                  <td className="px-4 py-3 text-xs font-bold text-ds-text3 bg-ds-bg2 text-center">P{p}</td>
+                  <td className="px-4 py-3 bg-ds-bg2 text-center align-top">
+                    <div className="text-xs font-bold text-ds-text1">P{p}</div>
+                    {timeEntry && (
+                      <div className="text-[10px] text-ds-text3 mt-0.5 whitespace-nowrap">
+                        {timeEntry.startTime}–{timeEntry.endTime}
+                      </div>
+                    )}
+                  </td>
                   {activeDays.map((d) => {
                     const slot = byDay.get(d.no)?.find((s) => s.periodNo === p);
                     return (
@@ -221,7 +251,8 @@ export default function TeacherTimetablePage() {
                     );
                   })}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

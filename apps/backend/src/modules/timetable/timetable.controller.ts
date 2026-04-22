@@ -1,5 +1,5 @@
 import { Controller, Get, Put, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
-import { TimetableService, SaveSlotDto, GenerateTimetableDto } from './timetable.service';
+import { TimetableService, SaveSlotDto, GenerateTimetableDto, SavePeriodConfigDto } from './timetable.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -9,6 +9,20 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 @UseGuards(AuthGuard, TenantGuard, RolesGuard)
 export class TimetableController {
   constructor(private readonly timetableService: TimetableService) {}
+
+  // GET /timetable/period-config
+  @Get('period-config')
+  @Permissions('subjects.read')
+  getPeriodConfig(@Request() req: any) {
+    return this.timetableService.getPeriodConfig(req.tenant?.institutionId);
+  }
+
+  // PUT /timetable/period-config — operator/director only
+  @Put('period-config')
+  @Permissions('subjects.write')
+  savePeriodConfig(@Request() req: any, @Body() dto: SavePeriodConfigDto) {
+    return this.timetableService.savePeriodConfig(req.tenant?.institutionId, dto);
+  }
 
   // GET /timetable/units/:unitId — any staff with subjects.read
   @Get('units/:unitId')

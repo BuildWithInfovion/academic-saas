@@ -1,7 +1,31 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
-import { IsInt, IsString, IsOptional, Min, Max, IsArray } from 'class-validator';
+import { IsInt, IsString, IsOptional, Min, Max, IsArray, IsBoolean, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PrismaService } from '../../prisma/prisma.service';
+
+export class PeriodConfigEntryDto {
+  @IsInt() @Min(1) @Type(() => Number)
+  sortOrder: number;
+
+  @IsString()
+  label: string;
+
+  @IsBoolean()
+  isBreak: boolean;
+
+  @IsString()
+  startTime: string; // "HH:MM"
+
+  @IsString()
+  endTime: string;   // "HH:MM"
+}
+
+export class SavePeriodConfigDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PeriodConfigEntryDto)
+  entries: PeriodConfigEntryDto[];
+}
 
 export class SaveSlotDto {
   @IsInt() @Min(1) @Max(6) @Type(() => Number)
@@ -148,6 +172,36 @@ export class TimetableService {
     ]);
 
     return { generated: totalSlots, slots };
+  }
+
+  // Period config: institution-wide day schedule
+  async getPeriodConfig(institutionId: string) {
+    return this.prisma.periodConfig.findMany({
+      where: { institutionId },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  async savePeriodConfig(institutionId: string, dto: SavePeriodConfigDto) {
+    const entries = dto.entries;
+    await this.prisma.$transaction([
+      this.prisma.periodConfig.deleteMany({ where: { institutionId } }),
+      this.prisma.periodConfig.createMany({
+        data: entries.map((e) => ({
+          institutionId,
+          sortOrder: e.sortOrder,
+          label: e.label,
+          isBreak: e.isBreak,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          updatedAt: new Date(),
+        })),
+      }),
+    ]);
+    return this.prisma.periodConfig.findMany({
+      where: { institutionId },
+      orderBy: { sortOrder: 'asc' },
+    });
   }
 
   // What a teacher teaches across all classes (for teacher portal)

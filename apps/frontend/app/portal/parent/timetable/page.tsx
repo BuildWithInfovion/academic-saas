@@ -18,6 +18,9 @@ type TimetableSlot = {
   subject: { id: string; name: string; code?: string | null } | null;
   teacher: { id: string; email: string | null; phone: string | null } | null;
 };
+type PeriodConfig = {
+  id: string; sortOrder: number; label: string; isBreak: boolean; startTime: string; endTime: string;
+};
 
 const DAYS = [
   { no: 1, label: 'Monday' },
@@ -32,6 +35,7 @@ export default function ParentTimetablePage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('');
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
+  const [periodConfig, setPeriodConfig] = useState<PeriodConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [notLinked, setNotLinked] = useState(false);
 
@@ -44,6 +48,9 @@ export default function ParentTimetablePage() {
         setSelectedChildId(kids[0].id);
       })
       .catch(() => setNotLinked(true));
+    apiFetch('/timetable/period-config').then((cfg) => {
+      setPeriodConfig(Array.isArray(cfg) ? (cfg as PeriodConfig[]) : []);
+    }).catch(() => {});
   }, []);
 
   const selectedChild = children.find((c) => c.id === selectedChildId);
@@ -74,6 +81,11 @@ export default function ParentTimetablePage() {
   const periods = Array.from({ length: maxPeriod }, (_, i) => i + 1);
   const activeDays = DAYS.filter((d) => slots.some((s) => s.dayOfWeek === d.no));
   const displayDays = activeDays.length > 0 ? activeDays : DAYS.slice(0, 5);
+
+  // Period time lookup
+  const nonBreakEntries = periodConfig.filter((e) => !e.isBreak);
+  const periodTimeMap = new Map<number, PeriodConfig>();
+  nonBreakEntries.forEach((e, idx) => periodTimeMap.set(idx + 1, e));
 
   const unitLabel = selectedChild?.academicUnit?.displayName || selectedChild?.academicUnit?.name || '';
 
@@ -140,30 +152,88 @@ export default function ParentTimetablePage() {
                 </tr>
               </thead>
               <tbody>
-                {periods.map((p) => (
-                  <tr key={p} className="border-b border-ds-border last:border-0">
-                    <td className="px-4 py-3 text-xs font-bold text-ds-text3 bg-ds-bg2 text-center">P{p}</td>
-                    {displayDays.map((d) => {
-                      const slot = slotMap.get(`${d.no}-${p}`);
+                {periodConfig.length > 0 ? (() => {
+                  let periodIdx = 0;
+                  return periodConfig.map((entry) => {
+                    if (entry.isBreak) {
                       return (
-                        <td key={d.no} className="px-3 py-2.5 border-l border-ds-border align-top">
-                          {slot?.subject ? (
-                            <div>
-                              <p className="text-xs font-semibold text-ds-text1">{slot.subject.name}</p>
-                              {slot.teacher && (
-                                <p className="text-[10px] text-ds-text3 mt-0.5">
-                                  {slot.teacher.email?.split('@')[0] || slot.teacher.phone || ''}
-                                </p>
-                              )}
+                        <tr key={entry.id} className="border-b border-ds-border">
+                          <td colSpan={displayDays.length + 1}
+                            className="px-4 py-2 text-center text-xs font-medium text-amber-700 bg-amber-50 border-y border-amber-200">
+                            {entry.label} &nbsp;·&nbsp; {entry.startTime} – {entry.endTime}
+                          </td>
+                        </tr>
+                      );
+                    }
+                    periodIdx += 1;
+                    const p = periodIdx;
+                    const timeEntry = periodTimeMap.get(p);
+                    return (
+                      <tr key={entry.id} className="border-b border-ds-border last:border-0">
+                        <td className="px-4 py-3 bg-ds-bg2 text-center align-top">
+                          <div className="text-xs font-bold text-ds-text1">P{p}</div>
+                          {timeEntry && (
+                            <div className="text-[10px] text-ds-text3 mt-0.5 whitespace-nowrap">
+                              {timeEntry.startTime}–{timeEntry.endTime}
                             </div>
-                          ) : (
-                            <span className="text-xs text-ds-text3">— Free —</span>
                           )}
                         </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                        {displayDays.map((d) => {
+                          const slot = slotMap.get(`${d.no}-${p}`);
+                          return (
+                            <td key={d.no} className="px-3 py-2.5 border-l border-ds-border align-top">
+                              {slot?.subject ? (
+                                <div>
+                                  <p className="text-xs font-semibold text-ds-text1">{slot.subject.name}</p>
+                                  {slot.teacher && (
+                                    <p className="text-[10px] text-ds-text3 mt-0.5">
+                                      {slot.teacher.email?.split('@')[0] || slot.teacher.phone || ''}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-ds-text3">— Free —</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  });
+                })() : periods.map((p) => {
+                  const timeEntry = periodTimeMap.get(p);
+                  return (
+                    <tr key={p} className="border-b border-ds-border last:border-0">
+                      <td className="px-4 py-3 bg-ds-bg2 text-center align-top">
+                        <div className="text-xs font-bold text-ds-text1">P{p}</div>
+                        {timeEntry && (
+                          <div className="text-[10px] text-ds-text3 mt-0.5 whitespace-nowrap">
+                            {timeEntry.startTime}–{timeEntry.endTime}
+                          </div>
+                        )}
+                      </td>
+                      {displayDays.map((d) => {
+                        const slot = slotMap.get(`${d.no}-${p}`);
+                        return (
+                          <td key={d.no} className="px-3 py-2.5 border-l border-ds-border align-top">
+                            {slot?.subject ? (
+                              <div>
+                                <p className="text-xs font-semibold text-ds-text1">{slot.subject.name}</p>
+                                {slot.teacher && (
+                                  <p className="text-[10px] text-ds-text3 mt-0.5">
+                                    {slot.teacher.email?.split('@')[0] || slot.teacher.phone || ''}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-ds-text3">— Free —</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
