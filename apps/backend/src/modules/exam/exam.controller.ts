@@ -3,7 +3,7 @@ import {
   UseGuards, Request, BadRequestException,
 } from '@nestjs/common';
 import { ExamService } from './exam.service';
-import { CreateExamDto, AddExamSubjectDto, SaveResultsDto } from './dto/exam.dto';
+import { CreateExamDto, AddExamSubjectDto, BulkAddSubjectsDto, CloneSubjectsDto, SaveResultsDto } from './dto/exam.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -70,6 +70,18 @@ export class ExamController {
   @Permissions('subjects.write')
   removeSubject(@Request() req: any, @Param('id') id: string, @Param('subjectEntryId') subjectEntryId: string) {
     return this.examService.removeExamSubject(req.tenant?.institutionId, id, subjectEntryId);
+  }
+
+  @Post(':id/bulk-subjects')
+  @Permissions('subjects.write')
+  bulkAddSubjects(@Request() req: any, @Param('id') id: string, @Body() dto: BulkAddSubjectsDto) {
+    return this.examService.bulkAddSubjects(req.tenant?.institutionId, id, dto);
+  }
+
+  @Post(':id/clone-subjects')
+  @Permissions('subjects.write')
+  cloneSubjects(@Request() req: any, @Param('id') id: string, @Body() dto: CloneSubjectsDto) {
+    return this.examService.cloneSubjects(req.tenant?.institutionId, id, dto);
   }
 
   // Mark entry — teacher + operator (exams.write)

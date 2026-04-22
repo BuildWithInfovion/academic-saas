@@ -34,12 +34,6 @@ const STATUS_COLOR: Record<string, string> = {
   completed: 'bg-ds-info-bg text-ds-info-text',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: 'Draft',
-  active: 'Active — Teachers can enter marks',
-  completed: 'Completed — Score cards visible to students',
-};
-
 export default function ExamsPage() {
   const user = useAuthStore((s) => s.user);
 
@@ -63,16 +57,18 @@ export default function ExamsPage() {
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [examSubjects, setExamSubjects] = useState<ExamSubject[]>([]);
 
-  // Add exam subject
-  const [addSubUnit, setAddSubUnit] = useState('');
-  const [addSubSubject, setAddSubSubject] = useState('');
-  const [addSubMax, setAddSubMax] = useState('100');
-  const [addSubPass, setAddSubPass] = useState('35');
-  const [addSubDate, setAddSubDate] = useState('');
-  const [addSubTime, setAddSubTime] = useState('');
-  const [addingSubject, setAddingSubject] = useState(false);
-  const [unitSubjects, setUnitSubjects] = useState<Subject[]>([]);
-  const [loadingUnitSubjects, setLoadingUnitSubjects] = useState(false);
+  // Bulk add state
+  const [bulkSubject, setBulkSubject] = useState('');
+  const [bulkSelectedUnits, setBulkSelectedUnits] = useState<Set<string>>(new Set());
+  const [bulkMax, setBulkMax] = useState('100');
+  const [bulkPass, setBulkPass] = useState('35');
+  const [bulkDate, setBulkDate] = useState('');
+  const [bulkTime, setBulkTime] = useState('');
+  const [bulkAdding, setBulkAdding] = useState(false);
+
+  // Clone from exam
+  const [cloneSourceId, setCloneSourceId] = useState('');
+  const [cloning, setCloning] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -101,22 +97,6 @@ export default function ExamsPage() {
       .then((res) => setExams(Array.isArray(res) ? res : []))
       .catch(() => {});
   }, [selectedYear]);
-
-  // Fetch subjects mapped to the selected class (not all subjects)
-  useEffect(() => {
-    if (!addSubUnit) { setUnitSubjects([]); return; }
-    setLoadingUnitSubjects(true);
-    apiFetch(`/subjects/units/${addSubUnit}`)
-      .then((res) => {
-        // Response is array of AcademicUnitSubject with nested subject
-        const mapped: Subject[] = (Array.isArray(res) ? res : []).map(
-          (us: { subject: Subject }) => us.subject,
-        );
-        setUnitSubjects(mapped);
-      })
-      .catch(() => setUnitSubjects([]))
-      .finally(() => setLoadingUnitSubjects(false));
-  }, [addSubUnit]);
 
   const createExam = async () => {
     if (!newExamName.trim() || !selectedYear) return;
@@ -153,36 +133,62 @@ export default function ExamsPage() {
   const openConfigure = async (exam: Exam) => {
     setSelectedExam(exam);
     setTab('configure');
+    setBulkSubject(''); setBulkSelectedUnits(new Set());
+    setBulkMax('100'); setBulkPass('35'); setBulkDate(''); setBulkTime('');
+    setCloneSourceId('');
     const subs = await apiFetch(`/exams/${exam.id}/subjects`).catch(() => []);
     setExamSubjects(Array.isArray(subs) ? subs : []);
   };
 
-  const addExamSubject = async () => {
-    if (!selectedExam || !addSubUnit || !addSubSubject) {
-      return setError('Select both class and subject');
+  const bulkAddSubjects = async () => {
+    if (!selectedExam || !bulkSubject || bulkSelectedUnits.size === 0) {
+      setError('Select a subject and at least one class');
+      return;
     }
-    setAddingSubject(true);
+    setBulkAdding(true);
     setError(null);
     try {
-      await apiFetch(`/exams/${selectedExam.id}/subjects`, {
+      await apiFetch(`/exams/${selectedExam.id}/bulk-subjects`, {
         method: 'POST',
         body: JSON.stringify({
-          academicUnitId: addSubUnit,
-          subjectId: addSubSubject,
-          maxMarks: parseInt(addSubMax),
-          passingMarks: parseInt(addSubPass),
-          examDate: addSubDate || undefined,
-          examTime: addSubTime.trim() || undefined,
+          subjectId: bulkSubject,
+          academicUnitIds: Array.from(bulkSelectedUnits),
+          maxMarks: parseInt(bulkMax) || 100,
+          passingMarks: parseInt(bulkPass) || 35,
+          examDate: bulkDate || undefined,
+          examTime: bulkTime.trim() || undefined,
         }),
       });
       const subs = await apiFetch(`/exams/${selectedExam.id}/subjects`);
       setExamSubjects(Array.isArray(subs) ? subs : []);
-      setAddSubSubject(''); setAddSubDate(''); setAddSubTime('');
-      showSuccess('Subject added');
+      setBulkSubject(''); setBulkSelectedUnits(new Set()); setBulkDate(''); setBulkTime('');
+      showSuccess(`Subject added to ${bulkSelectedUnits.size} class(es)`);
     } catch (e: unknown) {
       setError((e as Error).message || 'Failed');
     } finally {
-      setAddingSubject(false);
+      setBulkAdding(false);
+    }
+  };
+
+  const cloneSubjects = async () => {
+    if (!selectedExam || !cloneSourceId) return;
+    const sourceName = exams.find((e) => e.id === cloneSourceId)?.name ?? 'selected exam';
+    if (!confirm(`Copy all subject configurations from "${sourceName}"? Existing entries will be overwritten.`)) return;
+    setCloning(true);
+    setError(null);
+    try {
+      const result = await apiFetch(`/exams/${selectedExam.id}/clone-subjects`, {
+        method: 'POST',
+        body: JSON.stringify({ sourceExamId: cloneSourceId }),
+      }) as { cloned: number };
+      const subs = await apiFetch(`/exams/${selectedExam.id}/subjects`);
+      setExamSubjects(Array.isArray(subs) ? subs : []);
+      setCloneSourceId('');
+      showSuccess(`Copied ${result.cloned} subject configuration(s) from "${sourceName}"`);
+    } catch (e: unknown) {
+      setError((e as Error).message || 'Failed to clone');
+    } finally {
+      setCloning(false);
     }
   };
 
@@ -214,6 +220,33 @@ export default function ExamsPage() {
     }
   };
 
+  const activateExam = async (exam: Exam) => {
+    const subjectCount = selectedExam?.id === exam.id ? examSubjects.length : exam._count?.subjects ?? 0;
+    if (subjectCount === 0) {
+      setError('Cannot activate — no subjects configured yet. Add at least one class-subject combination first.');
+      return;
+    }
+    await updateStatus(exam.id, 'active');
+  };
+
+  const completeExam = async (exam: Exam) => {
+    setError(null);
+    try {
+      const c = await apiFetch(`/exams/${exam.id}/completeness`) as Completeness;
+      if (c.totalSlots > 0 && !c.allComplete) {
+        const incomplete = c.totalSlots - c.completeSlots;
+        const pending = c.entries
+          .filter((e) => !e.complete)
+          .slice(0, 3)
+          .map((e) => `${e.academicUnit.displayName || e.academicUnit.name} — ${e.subject.name} (${e.enteredCount}/${e.totalStudents})`)
+          .join(', ');
+        const suffix = c.entries.filter((e) => !e.complete).length > 3 ? '...' : '';
+        if (!confirm(`${incomplete} subject slot(s) still have pending marks:\n${pending}${suffix}\n\nMark as complete anyway? Students will see partial or missing scorecards.`)) return;
+      }
+    } catch { /* ignore completeness errors — let backend validate */ }
+    await updateStatus(exam.id, 'completed');
+  };
+
   const deleteExam = async (id: string) => {
     if (!confirm('Delete this exam and all its data?')) return;
     try {
@@ -226,15 +259,6 @@ export default function ExamsPage() {
     }
   };
 
-  // Group exam subjects by class for display
-  const subjectsByClass = examSubjects.reduce<Record<string, ExamSubject[]>>((acc, es) => {
-    const key = es.academicUnitId;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(es);
-    return acc;
-  }, {});
-
-  const inp = 'border border-ds-border-strong p-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
   const openProgress = async (exam: Exam) => {
     setSelectedExam(exam);
     setTab('progress');
@@ -243,8 +267,37 @@ export default function ExamsPage() {
     setCompleteness(c as Completeness | null);
   };
 
+  // Derived: units that already have bulkSubject configured in this exam
+  const unitIdsWithBulkSubject = new Set(
+    examSubjects.filter((es) => es.subjectId === bulkSubject).map((es) => es.academicUnitId)
+  );
+
+  const toggleBulkUnit = (unitId: string) => {
+    setBulkSelectedUnits((prev) => {
+      const next = new Set(prev);
+      if (next.has(unitId)) next.delete(unitId); else next.add(unitId);
+      return next;
+    });
+  };
+
+  const selectAllUnits = () => setBulkSelectedUnits(new Set(units.map((u) => u.id)));
+  const clearAllUnits = () => setBulkSelectedUnits(new Set());
+
+  // Group configured subjects by class for display
+  const subjectsByClass = examSubjects.reduce<Record<string, ExamSubject[]>>((acc, es) => {
+    const key = es.academicUnitId;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(es);
+    return acc;
+  }, {});
+
+  const inp = 'border border-ds-border-strong p-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
+
   const tabBtn = (t: typeof tab) =>
     `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-black text-black' : 'border-transparent text-ds-text2 hover:text-ds-text1'}`;
+
+  // Exams available to clone from (all exams except the selected one)
+  const cloneableExams = exams.filter((e) => e.id !== selectedExam?.id && (e._count?.subjects ?? 0) > 0);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -337,9 +390,11 @@ export default function ExamsPage() {
                       {e.endDate && new Date(e.endDate).toLocaleDateString('en-IN')}
                     </p>
                   )}
-                  <p className="text-xs text-ds-text3 mb-3">{e._count?.subjects ?? 0} subject(s) configured</p>
-
-                  <p className="text-xs text-ds-text2 italic mb-3">{STATUS_LABEL[e.status]}</p>
+                  <p className="text-xs text-ds-text3 mb-3">
+                    {(e._count?.subjects ?? 0) === 0
+                      ? <span className="text-ds-warning-text">No subjects configured yet</span>
+                      : `${e._count?.subjects} subject slot(s) configured`}
+                  </p>
 
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={() => openConfigure(e)}
@@ -353,27 +408,26 @@ export default function ExamsPage() {
                       </button>
                     )}
                     {e.status === 'draft' && (
-                      <button onClick={() => updateStatus(e.id, 'active')}
+                      <button onClick={() => activateExam(e)}
                         className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">
                         Activate
                       </button>
                     )}
                     {e.status === 'active' && (
-                      <button onClick={() => updateStatus(e.id, 'completed')}
+                      <button onClick={() => completeExam(e)}
                         className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700">
                         Mark Complete
                       </button>
                     )}
                     {e.status === 'completed' && (
-                      <button onClick={() => updateStatus(e.id, 'active')}
-                        className="px-3 py-1.5 border border-ds-border-strong text-ds-text2 rounded-lg text-xs font-medium hover:bg-ds-bg2">
-                        Reopen
+                      <span className="px-3 py-1.5 text-xs text-ds-text3 italic">Results released</span>
+                    )}
+                    {e.status !== 'completed' && (
+                      <button onClick={() => deleteExam(e.id)}
+                        className="px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-medium hover:bg-ds-error-bg ml-auto">
+                        Delete
                       </button>
                     )}
-                    <button onClick={() => deleteExam(e.id)}
-                      className="px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-medium hover:bg-ds-error-bg ml-auto">
-                      Delete
-                    </button>
                   </div>
                 </div>
               ))}
@@ -388,7 +442,7 @@ export default function ExamsPage() {
           <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 flex items-center justify-between">
             <div>
               <h2 className="font-semibold text-ds-text1 text-lg">{selectedExam.name} — Mark Entry Progress</h2>
-              <p className="text-sm text-ds-text3">How many students have marks entered per class & subject</p>
+              <p className="text-sm text-ds-text3">How many students have marks entered per class &amp; subject</p>
             </div>
             {completeness && (
               <div className="text-right">
@@ -411,7 +465,6 @@ export default function ExamsPage() {
             </div>
           ) : (
             <>
-              {/* Group by class */}
               {Object.entries(
                 completeness.entries.reduce<Record<string, CompletenessEntry[]>>((acc, e) => {
                   const k = e.academicUnit.id;
@@ -479,11 +532,11 @@ export default function ExamsPage() {
               {completeness.allComplete && selectedExam.status === 'active' && (
                 <div className="bg-ds-success-bg border border-ds-success-border rounded-xl p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-ds-success-text">All marks entered for every class & subject</p>
+                    <p className="text-sm font-semibold text-ds-success-text">All marks entered for every class &amp; subject</p>
                     <p className="text-xs text-ds-success-text mt-0.5">You can now complete this exam to release scorecards to students.</p>
                   </div>
                   <button
-                    onClick={() => { void updateStatus(selectedExam.id, 'completed'); setTab('list'); }}
+                    onClick={() => { void completeExam(selectedExam); setTab('list'); }}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
                   >
                     Complete &amp; Release Scorecards
@@ -516,80 +569,137 @@ export default function ExamsPage() {
 
           {/* Workflow guide */}
           <div className="bg-ds-info-bg border border-ds-info-border rounded-lg p-4">
-            <p className="text-xs font-semibold text-ds-info-text mb-1">Exam Workflow</p>
             <ol className="text-xs text-ds-brand space-y-0.5 list-decimal list-inside">
-              <li>Add subjects for each class below (class + subject + max marks is mandatory)</li>
-              <li>Go back to All Exams and click <strong>Activate</strong> — teachers can then enter marks from their portal</li>
-              <li>Once all marks are entered, click <strong>Mark Complete</strong> — score cards become visible to students</li>
+              <li>Select a subject, check all classes it applies to, set max &amp; pass marks — click <strong>Add to Classes</strong></li>
+              <li>Repeat for each subject (or use <strong>Copy from Previous Exam</strong> to prefill everything)</li>
+              <li>Click <strong>Activate</strong> — teachers will see this exam in their portal and can enter marks</li>
+              <li>Once all marks are in, click <strong>Mark Complete</strong> — scorecards become visible to students</li>
             </ol>
           </div>
 
-          {/* Add subject form */}
-          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">
-              Add Subject to Class *
-            </p>
-            <div className="grid grid-cols-3 gap-3 items-end">
-              <div>
-                <label className="text-xs font-medium text-ds-text2 block mb-1">Class *</label>
-                <select className={inp + ' w-full'} value={addSubUnit}
-                  onChange={(e) => { setAddSubUnit(e.target.value); setAddSubSubject(''); setUnitSubjects([]); }}>
-                  <option value="">Select Class</option>
-                  {units.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
+          {/* Copy from previous exam */}
+          {cloneableExams.length > 0 && (
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4 flex items-center gap-3">
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-ds-text2 mb-1">Copy configuration from a previous exam</p>
+                <select className={inp + ' w-full max-w-xs'} value={cloneSourceId}
+                  onChange={(e) => setCloneSourceId(e.target.value)}>
+                  <option value="">Select exam to copy from...</option>
+                  {cloneableExams.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name} — {e.academicYear.name} ({e._count?.subjects} slots)
+                    </option>
+                  ))}
                 </select>
               </div>
-              <div>
-                <label className="text-xs font-medium text-ds-text2 block mb-1">Subject *</label>
-                <select className={inp + ' w-full'} value={addSubSubject}
-                  onChange={(e) => setAddSubSubject(e.target.value)}
-                  disabled={!addSubUnit || loadingUnitSubjects}>
-                  <option value="">
-                    {!addSubUnit ? 'Select class first' : loadingUnitSubjects ? 'Loading...' : unitSubjects.length === 0 ? 'No subjects assigned' : 'Select Subject'}
-                  </option>
-                  {unitSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-ds-text2 block mb-1">Exam Date</label>
-                <input type="date" className={inp + ' w-full'} value={addSubDate}
-                  onChange={(e) => setAddSubDate(e.target.value)} />
-              </div>
+              <button
+                onClick={cloneSubjects}
+                disabled={!cloneSourceId || cloning}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap"
+              >
+                {cloning ? 'Copying...' : 'Copy Configuration'}
+              </button>
             </div>
-            <div className="grid grid-cols-3 gap-3 items-end mt-3">
+          )}
+
+          {/* Bulk Add form */}
+          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-4">Add Subject to Classes</p>
+
+            {/* Step 1: pick subject + marks config */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="col-span-2 md:col-span-1">
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Subject *</label>
+                <select className={inp + ' w-full'} value={bulkSubject}
+                  onChange={(e) => { setBulkSubject(e.target.value); setBulkSelectedUnits(new Set()); }}>
+                  <option value="">Select Subject</option>
+                  {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
               <div>
-                <label className="text-xs font-medium text-ds-text2 block mb-1">Exam Time <span className="text-ds-text3 font-normal">(for admit cards)</span></label>
-                <input className={inp + ' w-full'} placeholder="e.g. 10:00 AM – 12:00 PM"
-                  value={addSubTime} onChange={(e) => setAddSubTime(e.target.value)} />
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Exam Date <span className="text-ds-text3 font-normal">(optional)</span></label>
+                <input type="date" className={inp + ' w-full'} value={bulkDate}
+                  onChange={(e) => setBulkDate(e.target.value)} />
               </div>
               <div>
                 <label className="text-xs font-medium text-ds-text2 block mb-1">Max Marks</label>
-                <input type="number" className={inp + ' w-full'} value={addSubMax}
-                  onChange={(e) => setAddSubMax(e.target.value)} min="1" />
+                <input type="number" className={inp + ' w-full'} value={bulkMax} min="1"
+                  onChange={(e) => setBulkMax(e.target.value)} />
               </div>
               <div>
                 <label className="text-xs font-medium text-ds-text2 block mb-1">Pass Marks</label>
-                <input type="number" className={inp + ' w-full'} value={addSubPass}
-                  onChange={(e) => setAddSubPass(e.target.value)} min="1" />
+                <input type="number" className={inp + ' w-full'} value={bulkPass} min="0"
+                  onChange={(e) => setBulkPass(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Exam Time <span className="text-ds-text3 font-normal">(for admit cards)</span></label>
+                <input className={inp + ' w-full'} placeholder="e.g. 10:00 AM – 12:00 PM"
+                  value={bulkTime} onChange={(e) => setBulkTime(e.target.value)} />
               </div>
             </div>
-            <button onClick={addExamSubject}
-              disabled={addingSubject || !addSubUnit || !addSubSubject}
-              className="mt-3 btn-brand px-5 py-2 rounded-lg">
-              {addingSubject ? 'Adding...' : '+ Add'}
-            </button>
-            {!addSubUnit && (
-              <p className="text-xs text-ds-warning-text mt-2">Select a class first — subjects are configured per class.</p>
+
+            {/* Step 2: pick classes */}
+            {units.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-ds-text2">Apply to Classes * <span className="text-ds-text3 font-normal">({bulkSelectedUnits.size} selected)</span></label>
+                  <div className="flex gap-2">
+                    <button onClick={selectAllUnits} className="text-xs text-ds-brand hover:underline">Select all</button>
+                    <button onClick={clearAllUnits} className="text-xs text-ds-text3 hover:underline">Clear</button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {units.map((u) => {
+                    const checked = bulkSelectedUnits.has(u.id);
+                    const alreadyAdded = bulkSubject ? unitIdsWithBulkSubject.has(u.id) : false;
+                    return (
+                      <button
+                        key={u.id}
+                        onClick={() => toggleBulkUnit(u.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                          checked
+                            ? 'bg-ds-brand text-white border-ds-brand-dark'
+                            : 'bg-ds-surface text-ds-text1 border-ds-border-strong hover:border-gray-500'
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${
+                          checked ? 'bg-white border-white' : 'border-current'
+                        }`}>
+                          {checked && <span className="text-ds-brand text-[9px] font-bold">✓</span>}
+                        </span>
+                        {u.displayName || u.name}
+                        {alreadyAdded && !checked && <span className="opacity-50 text-[9px]">✓ added</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
+
+            <button
+              onClick={bulkAddSubjects}
+              disabled={bulkAdding || !bulkSubject || bulkSelectedUnits.size === 0}
+              className="mt-4 btn-brand px-5 py-2 rounded-lg disabled:opacity-50"
+            >
+              {bulkAdding
+                ? 'Adding...'
+                : bulkSelectedUnits.size > 0
+                  ? `Add to ${bulkSelectedUnits.size} Class${bulkSelectedUnits.size > 1 ? 'es' : ''}`
+                  : 'Select subject and classes above'}
+            </button>
           </div>
 
           {/* Configured subjects grouped by class */}
           {examSubjects.length === 0 ? (
             <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-10 text-center text-ds-text3 text-sm">
-              No subjects configured yet. Select class and subject above to get started.
+              No subjects configured yet. Select a subject and classes above to get started.
             </div>
           ) : (
             <div className="space-y-4">
-              {Object.entries(subjectsByClass).map(([unitId, subjects]) => {
+              <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider">
+                Configured — {examSubjects.length} subject slot(s) across {Object.keys(subjectsByClass).length} class(es)
+              </p>
+              {Object.entries(subjectsByClass).map(([unitId, subs]) => {
                 const unit = units.find((u) => u.id === unitId);
                 return (
                   <div key={unitId} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
@@ -597,21 +707,21 @@ export default function ExamsPage() {
                       <span className="font-medium text-ds-text1 text-sm">
                         {unit?.displayName || unit?.name || unitId}
                       </span>
-                      <span className="ml-2 text-xs text-ds-text3">{subjects.length} subject(s)</span>
+                      <span className="ml-2 text-xs text-ds-text3">{subs.length} subject(s)</span>
                     </div>
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-xs text-ds-text2">
                           <th className="px-5 py-2 text-left">Subject</th>
-                          <th className="px-5 py-2 text-center">Max Marks</th>
-                          <th className="px-5 py-2 text-center">Pass Marks</th>
+                          <th className="px-5 py-2 text-center">Max</th>
+                          <th className="px-5 py-2 text-center">Pass</th>
                           <th className="px-5 py-2 text-center">Exam Date</th>
-                          <th className="px-5 py-2 text-center">Exam Time</th>
+                          <th className="px-5 py-2 text-center">Time</th>
                           <th className="px-5 py-2"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ds-border">
-                        {subjects.map((es) => (
+                        {subs.map((es) => (
                           <tr key={es.id} className="hover:bg-ds-bg2">
                             <td className="px-5 py-2.5 font-medium text-ds-text1">{es.subject.name}</td>
                             <td className="px-5 py-2.5 text-center text-ds-text2">{es.maxMarks}</td>
@@ -619,9 +729,7 @@ export default function ExamsPage() {
                             <td className="px-5 py-2.5 text-center text-ds-text2 text-xs">
                               {es.examDate ? new Date(es.examDate).toLocaleDateString('en-IN') : '—'}
                             </td>
-                            <td className="px-5 py-2.5 text-center text-ds-text2 text-xs">
-                              {es.examTime ?? '—'}
-                            </td>
+                            <td className="px-5 py-2.5 text-center text-ds-text2 text-xs">{es.examTime ?? '—'}</td>
                             <td className="px-5 py-2.5 text-right">
                               <button onClick={() => removeExamSubject(es.id)}
                                 className="text-xs text-red-400 hover:text-ds-error-text">Remove</button>
@@ -643,15 +751,15 @@ export default function ExamsPage() {
               Back to All Exams
             </button>
             {selectedExam.status === 'draft' && examSubjects.length > 0 && (
-              <button onClick={() => updateStatus(selectedExam.id, 'active')}
+              <button onClick={() => activateExam(selectedExam)}
                 className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                Activate Exam (Enable Teacher Mark Entry)
+                Activate Exam — Enable Teacher Mark Entry
               </button>
             )}
             {selectedExam.status === 'active' && (
-              <button onClick={() => updateStatus(selectedExam.id, 'completed')}
+              <button onClick={() => completeExam(selectedExam)}
                 className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                Mark Complete (Release Score Cards to Students)
+                Mark Complete — Release Score Cards to Students
               </button>
             )}
           </div>
