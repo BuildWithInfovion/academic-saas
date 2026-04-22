@@ -2,6 +2,7 @@
 
 import { ReactNode, ReactElement, useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { silentRefresh, apiFetch } from '@/lib/api';
@@ -173,9 +174,10 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
         {menuItems.map((item) => {
           const active = item.path === activeItemPath;
           return (
-            <div
+            <Link
               key={item.path}
-              onClick={() => router.push(item.path)}
+              href={item.path}
+              prefetch={true}
               className={`sidebar-item ${active ? 'active' : ''}`}
             >
               {item.icon && (
@@ -184,7 +186,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
                 </span>
               )}
               <span className="truncate">{item.label}</span>
-            </div>
+            </Link>
           );
         })}
       </nav>

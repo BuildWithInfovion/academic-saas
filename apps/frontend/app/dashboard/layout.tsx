@@ -2,6 +2,7 @@
 
 import { ReactNode, ReactElement, useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { silentRefreshOp, apiFetch } from '@/lib/api';
@@ -234,13 +235,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               const active = item.path === activeNavPath;
               const IconComp = Icons[item.icon];
               return (
-                <div key={item.path} onClick={() => router.push(item.path)}
+                <Link key={item.path} href={item.path} prefetch={true}
                   className={`sidebar-item ${active ? 'active' : ''}`}>
                   <span className="shrink-0" style={{ opacity: active ? 0.9 : 0.55 }}>
                     <IconComp />
                   </span>
                   <span className="truncate">{item.label}</span>
-                </div>
+                </Link>
               );
             })}
           </div>
