@@ -500,54 +500,42 @@ async function main() {
 
   // ── 8. Fee Payments (70% students paid Tuition Fee, 50% paid Development Fund) ──
   console.log('\n── 9. Fee Payments ───────────────────────────────────────────');
-  let paymentCount = 0;
+  const paymentRows: any[] = [];
   for (let i = 0; i < allStudents.length; i++) {
     const s = allStudents[i];
     const fsMap = feeStructureMap[s.unitId] ?? {};
 
-    // 70% pay tuition
     if (i % 10 < 7 && fsMap['Tuition Fee']) {
-      try {
-        await prisma.feePayment.create({
-          data: {
-            institutionId: INST,
-            studentId: s.id,
-            feeHeadId: feeHeadMap['Tuition Fee'],
-            feeStructureId: fsMap['Tuition Fee'],
-            academicYearId: ay.id,
-            installmentName: 'Annual',
-            amount: s.classIdx >= 5 ? 2000 : 1500,
-            paymentMode: ['cash','upi','bank_transfer'][i % 3],
-            receiptNo: `DIS-RCP-${String(receiptCounter++).padStart(5,'0')}`,
-            paidOn: new Date('2025-07-10'),
-          },
-        });
-        paymentCount++;
-      } catch { /* skip duplicate */ }
+      paymentRows.push({
+        institutionId: INST,
+        studentId: s.id,
+        feeHeadId: feeHeadMap['Tuition Fee'],
+        feeStructureId: fsMap['Tuition Fee'],
+        academicYearId: ay.id,
+        installmentName: 'Annual',
+        amount: s.classIdx >= 5 ? 2000 : 1500,
+        paymentMode: ['cash','upi','bank_transfer'][i % 3],
+        receiptNo: `DIS-RCP-${String(receiptCounter++).padStart(5,'0')}`,
+        paidOn: new Date('2025-07-10'),
+      });
     }
-
-    // 50% pay development fund
     if (i % 2 === 0 && fsMap['Development Fund']) {
-      try {
-        await prisma.feePayment.create({
-          data: {
-            institutionId: INST,
-            studentId: s.id,
-            feeHeadId: feeHeadMap['Development Fund'],
-            feeStructureId: fsMap['Development Fund'],
-            academicYearId: ay.id,
-            installmentName: 'Annual',
-            amount: s.classIdx >= 5 ? 8000 : 5000,
-            paymentMode: 'cash',
-            receiptNo: `DIS-RCP-${String(receiptCounter++).padStart(5,'0')}`,
-            paidOn: new Date('2025-07-12'),
-          },
-        });
-        paymentCount++;
-      } catch { /* skip duplicate */ }
+      paymentRows.push({
+        institutionId: INST,
+        studentId: s.id,
+        feeHeadId: feeHeadMap['Development Fund'],
+        feeStructureId: fsMap['Development Fund'],
+        academicYearId: ay.id,
+        installmentName: 'Annual',
+        amount: s.classIdx >= 5 ? 8000 : 5000,
+        paymentMode: 'cash',
+        receiptNo: `DIS-RCP-${String(receiptCounter++).padStart(5,'0')}`,
+        paidOn: new Date('2025-07-12'),
+      });
     }
   }
-  console.log(`   ✅ ${paymentCount} fee payments created (30% are defaulters)`);
+  const pmtResult = await prisma.feePayment.createMany({ data: paymentRows, skipDuplicates: true });
+  console.log(`   ✅ ${pmtResult.count} fee payments created (30% are defaulters)`);
 
   // ── 9. Attendance (past 60 business days) ─────────────────────────────────
   console.log('\n── 10. Attendance Records ────────────────────────────────────');
@@ -590,28 +578,23 @@ async function main() {
         }
         sessionCount++;
 
-        for (let si = 0; si < unitStudents.length; si++) {
-          const student = unitStudents[si];
+        const recordsToCreate = unitStudents.map((student, si) => {
           const isDefaulter = defaulterIndices.has(si);
-          // Defaulters absent 50% of time; normal students absent ~8%
           const isAbsent = isDefaulter
             ? (day.getDate() % 2 === 0)
             : (day.getDate() === 7 || day.getDate() === 14 || day.getDate() === 21);
-
-          try {
-            await prisma.attendanceRecord.upsert({
-              where: { sessionId_studentId: { sessionId: session.id, studentId: student.id } },
-              update: {},
-              create: {
-                institutionId: INST,
-                sessionId: session.id,
-                studentId: student.id,
-                status: isAbsent ? 'absent' : 'present',
-              },
-            });
-            recordCount++;
-          } catch { /* skip */ }
-        }
+          return {
+            institutionId: INST,
+            sessionId: session.id,
+            studentId: student.id,
+            status: isAbsent ? 'absent' : 'present',
+          };
+        });
+        const res = await prisma.attendanceRecord.createMany({
+          data: recordsToCreate,
+          skipDuplicates: true,
+        });
+        recordCount += res.count;
       } catch { /* skip session duplicate */ }
     }
     process.stdout.write(`   ✅ ${leaf.displayName}: ${ATTENDANCE_DAYS.length} days\n`);
