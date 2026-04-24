@@ -348,7 +348,12 @@ export class StudentService {
     };
 
     if (unitId) {
-      whereCondition.academicUnitId = unitId;
+      const children = await this.prisma.academicUnit.findMany({
+        where: { parentId: unitId, deletedAt: null },
+        select: { id: true },
+      });
+      const unitIds = children.length > 0 ? children.map((c) => c.id) : [unitId];
+      whereCondition.academicUnitId = { in: unitIds };
     }
 
     if (search) {
@@ -507,7 +512,16 @@ export class StudentService {
   }
 
   async count(institutionId: string, unitId?: string) {
-    const base = { institutionId, deletedAt: null, ...(unitId ? { academicUnitId: unitId } : {}) };
+    let unitFilter: { academicUnitId?: string | { in: string[] } } = {};
+    if (unitId) {
+      const children = await this.prisma.academicUnit.findMany({
+        where: { parentId: unitId, deletedAt: null },
+        select: { id: true },
+      });
+      const unitIds = children.length > 0 ? children.map((c) => c.id) : [unitId];
+      unitFilter = { academicUnitId: { in: unitIds } };
+    }
+    const base = { institutionId, deletedAt: null, ...unitFilter };
     const [totalStudents, unlinkedParents, boys, girls] = await Promise.all([
       this.prisma.student.count({ where: base }),
       this.prisma.student.count({ where: { ...base, status: 'active', parentUserId: null } }),

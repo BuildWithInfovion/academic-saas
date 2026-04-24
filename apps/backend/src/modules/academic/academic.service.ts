@@ -137,16 +137,9 @@ export class AcademicService {
   /** Root-level classes only (parentId = null) — used for admission class dropdown */
   async getRootClasses(institutionId: string) {
     const raw = await this.prisma.academicUnit.findMany({
-      where: {
-        institutionId,
-        deletedAt: null,
-        parentId: null,
-      },
+      where: { institutionId, deletedAt: null, parentId: null },
       select: {
-        id: true,
-        name: true,
-        displayName: true,
-        level: true,
+        id: true, name: true, displayName: true, level: true,
         children: {
           where: { deletedAt: null },
           select: { id: true, name: true, displayName: true },
@@ -156,9 +149,22 @@ export class AcademicService {
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    // For units with children, aggregate student counts across all child sections
+    const enriched = await Promise.all(
+      raw.map(async (unit) => {
+        if (unit.children.length === 0) return unit;
+        const childIds = unit.children.map((c) => c.id);
+        const childStudentCount = await this.prisma.student.count({
+          where: { academicUnitId: { in: childIds }, deletedAt: null },
+        });
+        return { ...unit, _count: { students: unit._count.students + childStudentCount } };
+      }),
+    );
+
     // Deduplicate by displayName — keep the unit with the most students
-    const seen = new Map<string, (typeof raw)[0]>();
-    for (const unit of raw) {
+    const seen = new Map<string, (typeof enriched)[0]>();
+    for (const unit of enriched) {
       const key = (unit.displayName || unit.name).toLowerCase().trim();
       const existing = seen.get(key);
       if (!existing || unit._count.students > existing._count.students)
