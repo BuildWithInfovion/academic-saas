@@ -641,52 +641,40 @@ async function main() {
   let resultCount = 0;
 
   for (const exam of [exam1, exam2]) {
+    const examResultRows: any[] = [];
     for (const leaf of leafUnits) {
+      const unitStudents = allStudents.filter(s => s.unitId === leaf.id);
       for (const subName of coreSubjectNames) {
         const subId = subjectMap[subName];
-        // Create exam subject
         try {
           await prisma.examSubject.upsert({
             where: { examId_academicUnitId_subjectId: { examId: exam.id, academicUnitId: leaf.id, subjectId: subId } },
             update: {},
-            create: {
-              examId: exam.id,
-              academicUnitId: leaf.id,
-              subjectId: subId,
-              maxMarks: 100,
-              passingMarks: 35,
-              examDate: exam.startDate,
-            },
+            create: { examId: exam.id, academicUnitId: leaf.id, subjectId: subId, maxMarks: 100, passingMarks: 35, examDate: exam.startDate },
           });
         } catch { /* skip */ }
 
-        // Create results for students
-        const unitStudents = allStudents.filter(s => s.unitId === leaf.id);
         for (let si = 0; si < unitStudents.length; si++) {
           const student = unitStudents[si];
-          const baseMarks = 45 + (student.seed % 45); // 45–89
+          const baseMarks = 45 + (student.seed % 45);
           const marks = subName === 'Mathematics' ? baseMarks : baseMarks + (si % 10);
-          try {
-            await prisma.examResult.upsert({
-              where: { examId_studentId_subjectId: { examId: exam.id, studentId: student.id, subjectId: subId } },
-              update: {},
-              create: {
-                institutionId: INST,
-                examId: exam.id,
-                studentId: student.id,
-                subjectId: subId,
-                academicUnitId: leaf.id,
-                marksObtained: Math.min(marks, 100),
-                isAbsent: false,
-              },
-            });
-            resultCount++;
-          } catch { /* skip */ }
+          examResultRows.push({
+            institutionId: INST,
+            examId: exam.id,
+            studentId: student.id,
+            subjectId: subId,
+            academicUnitId: leaf.id,
+            marksObtained: Math.min(marks, 100),
+            isAbsent: false,
+          });
         }
       }
     }
+    const r = await prisma.examResult.createMany({ data: examResultRows, skipDuplicates: true });
+    resultCount += r.count;
+    console.log(`   ✅ ${exam.name}: ${r.count} results`);
   }
-  console.log(`   ✅ ${resultCount} exam results created`);
+  console.log(`   ✅ Total: ${resultCount} exam results`);
 
   // ── 11. Announcements ──────────────────────────────────────────────────────
   console.log('\n── 12. Announcements ─────────────────────────────────────────');
