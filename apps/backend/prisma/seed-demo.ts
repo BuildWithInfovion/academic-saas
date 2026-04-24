@@ -250,53 +250,32 @@ async function main() {
   });
   console.log(`   ✅ ${ay.name} (current)`);
 
-  // ── 4. Class structure (Classes 1–8 with Div A & B; Classes 9–10 single) ──
+  // ── 4. Class structure (flat: Classes 1–10, no sections) ─────────────────
   console.log('\n── 4. Class Structure ────────────────────────────────────────');
 
-  const classParents: { id: string; displayName: string; classIdx: number }[] = [];
-  const leafUnits:    { id: string; displayName: string; classIdx: number; div: string }[] = [];
-
+  const leafUnits: { id: string; displayName: string; classIdx: number }[] = [];
   const classNames = ['Class 1','Class 2','Class 3','Class 4','Class 5','Class 6','Class 7','Class 8','Class 9','Class 10'];
 
   for (let ci = 0; ci < classNames.length; ci++) {
     const cn = classNames[ci];
-    const parentId = `demo-cls-${ci+1}-parent-${INST}`.slice(0, 30) + `${ci}p`;
+    const unitId = `demo-cls-${ci+1}-flat-${INST}`.slice(0, 36);
 
     await prisma.academicUnit.upsert({
-      where: { id: parentId },
-      update: { academicYearId: ay.id, deletedAt: null, level: 1, parentId: null },
+      where: { id: unitId },
+      update: { academicYearId: ay.id, deletedAt: null, level: 1, parentId: null, classTeacherUserId: teachers[ci % 5].id },
       create: {
-        id: parentId,
+        id: unitId,
         institutionId: INST,
         academicYearId: ay.id,
         name: `class_${ci+1}`,
         displayName: cn,
         level: 1,
         parentId: null,
+        classTeacherUserId: teachers[ci % 5].id,
       },
     });
-    classParents.push({ id: parentId, displayName: cn, classIdx: ci });
-
-    // Sections A and B (for all classes)
-    for (const div of ['A','B']) {
-      const sectionId = `demo-cls-${ci+1}-${div.toLowerCase()}-${INST}`.slice(0, 32) + `${ci}${div}`;
-      await prisma.academicUnit.upsert({
-        where: { id: sectionId },
-        update: { academicYearId: ay.id, deletedAt: null, level: 2, parentId: parentId },
-        create: {
-          id: sectionId,
-          institutionId: INST,
-          academicYearId: ay.id,
-          name: `class_${ci+1}_div_${div.toLowerCase()}`,
-          displayName: `${cn} - Div ${div}`,
-          level: 2,
-          parentId: parentId,
-          classTeacherUserId: div === 'A' ? teachers[ci % 5].id : teachers[(ci + 2) % 5].id,
-        },
-      });
-      leafUnits.push({ id: sectionId, displayName: `${cn} - Div ${div}`, classIdx: ci, div });
-    }
-    process.stdout.write(`   ✅ ${cn} (Div A + B)\n`);
+    leafUnits.push({ id: unitId, displayName: cn, classIdx: ci });
+    process.stdout.write(`   ✅ ${cn}\n`);
   }
 
   // ── 5. Subjects ────────────────────────────────────────────────────────────
@@ -830,7 +809,7 @@ async function main() {
   console.log(`  Parent      : parent.aarav37@gmail.com         parent123`);
   console.log('───────────────────────────────────────────────────────────────');
   console.log('  DATA SEEDED:');
-  console.log('  • 10 Classes (1–10), each with Div A & B = 20 sections');
+  console.log('  • 10 Classes (1–10), flat structure, 20 students each');
   console.log(`  • ${allStudents.length} students (10 per section) with linked parent accounts`);
   console.log('  • 5 core subjects assigned to all sections');
   console.log('  • 5 fee heads + fee structures (junior/senior pricing)');
