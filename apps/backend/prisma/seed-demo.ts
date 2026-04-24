@@ -140,7 +140,11 @@ async function ensureUser(
 ) {
   const existing = await prisma.user.findFirst({ where: { institutionId, email } });
   if (existing) {
-    if (name && !existing.name) await prisma.user.update({ where: { id: existing.id }, data: { name, phone } });
+    // Always reset password + name so credentials in the summary are guaranteed correct
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { passwordHash, isActive: true, deletedAt: null, ...(name ? { name } : {}), ...(phone ? { phone } : {}) },
+    });
     return existing;
   }
   return prisma.user.create({ data: { institutionId, email, passwordHash, isActive: true, name, phone } });
