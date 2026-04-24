@@ -60,7 +60,7 @@ const CASTE_CATS   = ['General','OBC','SC','ST'];
 function pick<T>(arr: T[], seed: number): T { return arr[((seed % arr.length) + arr.length) % arr.length]; }
 function isMale(seed: number) { return seed % 2 === 0; }
 function firstName(seed: number) { return isMale(seed) ? pick(MALE_FIRST, seed) : pick(FEMALE_FIRST, seed); }
-function gender(seed: number) { return isMale(seed) ? 'Male' : 'Female'; }
+function gender(seed: number) { return isMale(seed) ? 'male' : 'female'; }
 function phone(seed: number) {
   const prefix = ['98','97','96','95','94','93','91','90','88','87'][seed % 10];
   return `${prefix}${String(Math.abs(seed * 7919) % 100000000).padStart(8,'0')}`;
