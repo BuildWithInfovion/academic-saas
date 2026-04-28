@@ -18,6 +18,8 @@ export function getRoleRoute(roles: string[]): string {
   if (roles.includes('receptionist')) return '/portal/receptionist';
   if (roles.includes('accountant')) return '/portal/accountant';
   if (roles.includes('non_teaching_staff')) return '/portal/non-teaching-staff';
+  // student accounts are managed through the parent portal in K-12
+  if (roles.includes('student')) return '/portal/parent';
   return '/'; // Unknown role → back to login
 }
 

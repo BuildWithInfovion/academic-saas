@@ -70,6 +70,7 @@ const menuGroups = [
       { label: 'Staff Salaries',    path: '/dashboard/salary',            icon: 'salary'    },
       { label: 'Announcements',     path: '/dashboard/announcements',     icon: 'announce'  },
       { label: 'Settings',          path: '/dashboard/settings',          icon: 'settings'  },
+      { label: 'Audit Log',         path: '/dashboard/audit',             icon: 'tc'        },
     ],
   },
 ];

@@ -302,7 +302,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           <button onClick={() => setNotifOpen((v) => !v)}
             style={{
               width:'100%', display:'flex', alignItems:'center', gap:10,
-              padding:'8px 12px', borderRadius:8, background:'none',
+              padding:'8px 12px', borderRadius:8,
               border:`1px solid ${notifOpen ? 'rgba(0,212,255,.22)' : 'rgba(0,120,180,.1)'}`,
               cursor:'pointer', transition:'all .2s',
               background: notifOpen ? 'rgba(0,180,255,.06)' : 'transparent',

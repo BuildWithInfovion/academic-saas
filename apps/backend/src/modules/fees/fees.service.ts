@@ -594,6 +594,25 @@ export class FeesService {
    * Window: 30 days past → 30 days ahead (enough to always show the next installment).
    * "isPaid" = child has at least one payment for that feeHead in the current academic year.
    */
+  // Monthly fee collection trend — last N months (default 6) for dashboard chart
+  async getMonthlyTrend(institutionId: string, months = 6) {
+    const result: { month: string; label: string; amount: number }[] = [];
+    const now = new Date();
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end   = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      const agg = await this.prisma.feePayment.aggregate({
+        where: { institutionId, paidOn: { gte: start, lt: end } },
+        _sum: { amount: true },
+      });
+      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleString('en-IN', { month: 'short', year: '2-digit' });
+      result.push({ month: monthStr, label, amount: agg._sum.amount ?? 0 });
+    }
+    return result;
+  }
+
   async getChildrenUpcomingDues(institutionId: string, parentUserId: string) {
     const children = await this.prisma.student.findMany({
       where: { institutionId, parentUserId, deletedAt: null, status: 'active' },

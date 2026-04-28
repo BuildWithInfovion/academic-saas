@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Institution {
@@ -54,6 +55,7 @@ model Institution {
   salaryStructures       SalaryStructure[]
   staffSalaryProfiles    StaffSalaryProfile[]
   salaryRecords          SalaryRecord[]
+  studentDocuments       StudentDocument[]
 
   @@map("institutions")
 }
@@ -122,6 +124,7 @@ model Student {
   feePayments           FeePayment[]
   examResults           ExamResult[]
   transferCertificates  TransferCertificate[]
+  documents             StudentDocument[]
 
   @@unique([institutionId, admissionNo])
   @@index([institutionId])
@@ -1029,4 +1032,39 @@ model SalaryRecord {
   @@index([institutionId, month, year])
   @@index([userId])
   @@map("salary_records")
+}
+
+// ─── Student Documents ────────────────────────────────────────────────────────
+// Stores scanned/uploaded documents submitted at time of admission.
+// Files live in Cloudinary under: <cloudName>/<institutionId>/<studentId>/
+// The publicId field is the Cloudinary public_id needed to delete the file later.
+model StudentDocument {
+  id            String    @id @default(cuid())
+  institutionId String
+  studentId     String
+
+  // Document classification
+  // aadhaar | birth_certificate | previous_tc | caste_certificate |
+  // migration_certificate | previous_marksheet | medical_certificate |
+  // income_certificate | disability_certificate | residential_proof |
+  // passport_photo | parent_id_proof | other
+  type          String
+
+  label         String    // Human-readable name shown in UI
+  url           String    // Cloudinary secure_url (https, served via CDN)
+  publicId      String    // Cloudinary public_id — required for deletion
+  format        String?   // pdf | jpg | png | webp etc.
+  sizeBytes     Int?      // Original file size for display
+
+  uploadedByUserId String?
+  uploadedAt    DateTime  @default(now())
+  deletedAt     DateTime?
+
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([studentId])
+  @@index([institutionId, studentId])
+  @@map("student_documents")
 }

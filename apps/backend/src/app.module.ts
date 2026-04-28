@@ -5,6 +5,7 @@ import {
   RequestMethod,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module';
@@ -26,8 +27,12 @@ import { TcModule } from './modules/tc/tc.module';
 import { SupportModule } from './modules/support/support.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { SalaryModule } from './modules/salary/salary.module';
+import { DocumentModule } from './modules/document/document.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { PlatformModule } from './platform/platform.module';
 
+import { StorageModule } from './common/storage/storage.module';
+import { CleanupModule } from './common/cleanup/cleanup.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { TenantGuard } from './common/guards/tenant.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
@@ -41,7 +46,9 @@ import { AppController } from './app.controller';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     AppCacheModule,   // Global — AppCacheService injectable everywhere
+    StorageModule,    // Global — StorageService injectable everywhere
     PrismaModule,
     InstitutionModule,
     StudentModule,
@@ -61,6 +68,9 @@ import { AppController } from './app.controller';
     SupportModule,
     CalendarModule,
     SalaryModule,
+    DocumentModule,
+    AuditModule,
+    CleanupModule,
     PlatformModule,
   ],
   controllers: [AppController],

@@ -6,34 +6,50 @@ const prisma = new PrismaClient({
   log: ['error'],
 });
 
+// The two authorised Infovion platform admins.
+// Only these two accounts may ever exist (MAX_PLATFORM_ADMINS = 2 in platform.service.ts).
+// Passwords must be changed on first login — complexity enforced: 12+ chars, uppercase, number, special char.
+const ADMINS = [
+  { email: 'sankalp.deshpande@infovion.in', name: 'Sankalp Deshpande', password: 'Infovion@Admin1' },
+  { email: 'pratik.gore@infovion.in',        name: 'Pratik Gore',       password: 'Infovion@Admin2' },
+];
+
 async function main() {
-  console.log('🌱 Seeding platform admin...');
+  console.log('🌱 Seeding platform admins...\n');
   await prisma.$connect();
 
-  const email = 'dev@infovion.in';
-  const password = 'platform@dev123'; // change after first login
-
-  const existing = await prisma.platformAdmin.findUnique({ where: { email } });
-  if (existing) {
-    console.log('⏭️  Platform admin already exists:', email);
-    return;
+  // Remove any stale seed/dev accounts that are not in the authorised list
+  const authorisedEmails = ADMINS.map((a) => a.email);
+  const staleAccounts = await prisma.platformAdmin.findMany({
+    where: { email: { notIn: authorisedEmails } },
+  });
+  if (staleAccounts.length > 0) {
+    await prisma.platformAdmin.deleteMany({
+      where: { email: { notIn: authorisedEmails } },
+    });
+    console.log(`🗑️  Removed ${staleAccounts.length} stale account(s): ${staleAccounts.map((a) => a.email).join(', ')}\n`);
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
-  const admin = await prisma.platformAdmin.create({
-    data: {
-      email,
-      passwordHash,
-      name: 'Infovion Dev',
-      isActive: true,
-    },
-  });
+  for (const admin of ADMINS) {
+    const existing = await prisma.platformAdmin.findUnique({ where: { email: admin.email } });
 
-  console.log('✅ Platform admin created!');
-  console.log('   Email   :', admin.email);
-  console.log('   Password:', password);
-  console.log('   Login at: http://localhost:3001/platform/login');
-  console.log('\n⚠️  Change this password immediately after first login.');
+    if (existing) {
+      console.log(`⏭️  Already exists: ${admin.email}`);
+      continue;
+    }
+
+    const passwordHash = await bcrypt.hash(admin.password, 12);
+    await prisma.platformAdmin.create({
+      data: { email: admin.email, name: admin.name, passwordHash, isActive: true },
+    });
+
+    console.log(`✅ Created: ${admin.email}`);
+    console.log(`   Name    : ${admin.name}`);
+    console.log(`   Password: ${admin.password}  ← change on first login\n`);
+  }
+
+  console.log('⚠️  Change passwords immediately after first login.');
+  console.log('   Password rules: 12+ chars, uppercase, number, special character.');
 }
 
 main()

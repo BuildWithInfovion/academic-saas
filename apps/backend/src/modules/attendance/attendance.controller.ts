@@ -95,6 +95,22 @@ export class AttendanceController {
     );
   }
 
+  // GET /attendance/class-summary?year=&month= — dashboard chart endpoint
+  @Get('class-summary')
+  @Permissions('attendance.read')
+  getClassSummary(
+    @Request() req: any,
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    const now = new Date();
+    return this.attendanceService.getClassSummary(
+      req.tenant?.institutionId ?? req.institutionId,
+      parseInt(year) || now.getFullYear(),
+      parseInt(month) || now.getMonth() + 1,
+    );
+  }
+
   // GET /attendance/units/:unitId/defaulters — operator/principal only
   @Get('units/:unitId/defaulters')
   @Permissions('attendance.read')

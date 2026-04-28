@@ -839,9 +839,25 @@ export default function FeesPage() {
             <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
                 <span className="font-medium text-ds-text1">{defaulters.length} student(s) with outstanding balance</span>
-                <span className="text-sm font-semibold text-ds-error-text">
-                  Total Due: ₹{defaulters.reduce((s, d) => s + d.balance, 0).toLocaleString('en-IN')}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-ds-error-text">
+                    Total Due: ₹{defaulters.reduce((s, d) => s + d.balance, 0).toLocaleString('en-IN')}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const rows = defaulters.map((d) => [d.admissionNo, d.firstName + ' ' + d.lastName, d.due, d.paid, d.balance]);
+                      const csv = [['Adm No','Student Name','Total Due','Paid','Balance'], ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+                      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+                      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `fee-defaulters-${new Date().toISOString().slice(0,10)}.csv` });
+                      a.click(); URL.revokeObjectURL(a.href);
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border"
+                    style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                  >
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export CSV
+                  </button>
+                </div>
               </div>
               <table className="w-full text-sm">
                 <thead className="bg-ds-bg2">

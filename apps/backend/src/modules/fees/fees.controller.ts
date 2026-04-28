@@ -151,6 +151,12 @@ export class FeesController {
    * Parent portal — returns upcoming/overdue dues for the caller's linked children.
    * Non-parent callers get an empty array (no error, just nothing).
    */
+  @Get('payments/monthly-trend')
+  @Permissions('fees.read')
+  getMonthlyTrend(@Request() req: any, @Query('months') months: string) {
+    return this.feesService.getMonthlyTrend(req.tenant?.institutionId, months ? parseInt(months) : 6);
+  }
+
   @Get('my-children/upcoming-dues')
   @Permissions('fees.read')
   getChildrenUpcomingDues(@Request() req: any) {

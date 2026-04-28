@@ -1,13 +1,13 @@
--- DropForeignKey
-ALTER TABLE "otp_records" DROP CONSTRAINT "otp_records_institutionId_fkey";
+-- DropForeignKey (IF EXISTS — otp_records may not exist on fresh databases)
+ALTER TABLE IF EXISTS "otp_records" DROP CONSTRAINT IF EXISTS "otp_records_institutionId_fkey";
 
 -- AlterTable
-ALTER TABLE "users" ADD COLUMN     "totpBackupCodes" TEXT[],
-ADD COLUMN     "totpEnabled" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "totpSecret" TEXT;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "totpBackupCodes" TEXT[],
+ADD COLUMN IF NOT EXISTS "totpEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS "totpSecret" TEXT;
 
 -- DropTable
-DROP TABLE "otp_records";
+DROP TABLE IF EXISTS "otp_records";
 
 -- CreateTable
 CREATE TABLE "password_reset_otps" (
