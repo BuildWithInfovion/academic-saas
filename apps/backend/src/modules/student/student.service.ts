@@ -223,31 +223,37 @@ export class StudentService {
         }
         this.logger.debug(`[confirmAdmission] tx:fees — ${feeItems.length} fee item(s) to create`);
 
-        // 4. Create one FeePayment per selected fee head
+        // 4. Create one FeePayment per selected fee head.
+        // Count existing receipts once and increment locally to avoid N COUNT queries in the loop.
         const feePayments: Record<string, unknown>[] = [];
-        for (const item of feeItems) {
-          this.logger.debug(`[confirmAdmission] tx:feePayment.create — feeHeadId=${item.feeHeadId} amount=${item.amountPaid}`);
-          const receiptNo = await this.generateReceiptNoInTx(tx, institutionId);
-          const payment = await tx.feePayment.create({
-            data: {
-              institutionId,
-              studentId: student.id,
-              feeHeadId: item.feeHeadId,
-              academicYearId: item.academicYearId,
-              amount: item.amountPaid,
-              paymentMode: item.paymentMode ?? 'cash',
-              receiptNo,
-              paidOn: new Date(),
-              remarks: 'Admission fee payment',
-            },
-            include: { feeHead: true },
-          });
-          this.logger.debug(`[confirmAdmission] tx:feePayment.created — receiptNo=${receiptNo}`);
-          feePayments.push(payment as unknown as Record<string, unknown>);
+        if (feeItems.length > 0) {
+          const receiptBaseCount = await tx.feePayment.count({ where: { institutionId } });
+          const rcpYear = new Date().getFullYear();
+          for (let i = 0; i < feeItems.length; i++) {
+            const item = feeItems[i];
+            const receiptNo = `RCP-${rcpYear}-${String(receiptBaseCount + i + 1).padStart(5, '0')}`;
+            this.logger.debug(`[confirmAdmission] tx:feePayment.create — feeHeadId=${item.feeHeadId} amount=${item.amountPaid} receipt=${receiptNo}`);
+            const payment = await tx.feePayment.create({
+              data: {
+                institutionId,
+                studentId: student.id,
+                feeHeadId: item.feeHeadId,
+                academicYearId: item.academicYearId,
+                amount: item.amountPaid,
+                paymentMode: item.paymentMode ?? 'cash',
+                receiptNo,
+                paidOn: new Date(),
+                remarks: 'Admission fee payment',
+              },
+              include: { feeHead: true },
+            });
+            this.logger.debug(`[confirmAdmission] tx:feePayment.created — receiptNo=${receiptNo}`);
+            feePayments.push(payment as unknown as Record<string, unknown>);
+          }
         }
 
         return { student, parentUser, isNewParentUser, feePayments };
-      }));
+      }, { timeout: 15000, maxWait: 10000 }));
     } catch (err: unknown) {
       const code = (err as any)?.code;
       const msg = (err as any)?.message ?? String(err);
@@ -318,7 +324,7 @@ export class StudentService {
           status: 'active',
         },
       });
-      }); // end $transaction
+      }, { timeout: 15000, maxWait: 10000 }); // end $transaction
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
