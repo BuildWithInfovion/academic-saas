@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api';
 
 interface AcademicUnit { id: string; name: string; displayName: string | null; parent?: { name: string; displayName: string | null } | null; }
 interface Subject { id: string; name: string; code?: string | null; }
-interface Teacher { id: string; email: string | null; phone: string | null; }
+interface Teacher { id: string; name: string | null; email: string | null; phone: string | null; }
 interface UnitSubject { id: string; subjectId: string; teacherUserId?: string | null; subject: Subject; teacher?: Teacher | null; }
 interface TimetableSlot {
   id: string; dayOfWeek: number; periodNo: number;
@@ -40,7 +40,7 @@ function unitLabel(u: { name: string; displayName: string | null; parent?: { nam
 }
 function teacherLabel(t: Teacher | null | undefined) {
   if (!t) return '';
-  return t.email || t.phone || t.id;
+  return t.name || t.email || t.phone || t.id;
 }
 function fmtTime(t: string) { return t; } // already HH:MM
 

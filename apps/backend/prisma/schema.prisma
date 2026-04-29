@@ -60,6 +60,7 @@ model Institution {
   staffSalaryProfiles    StaffSalaryProfile[]
   salaryRecords          SalaryRecord[]
   studentDocuments       StudentDocument[]
+  staffProfiles          StaffProfile[]
 
   @@map("institutions")
 }
@@ -292,10 +293,47 @@ model User {
   salaryProfile         StaffSalaryProfile?
   salaryRecords         SalaryRecord[]
 
+  staffProfile          StaffProfile?
+
   @@index([institutionId])
   @@index([email])                      // login lookups — auth.service queries by email
   @@index([institutionId, phone])       // phone-based login lookup
   @@map("users")
+}
+
+model StaffProfile {
+  id              String   @id @default(cuid())
+  institutionId   String
+  userId          String   @unique
+
+  employeeId      String?
+  designation     String?
+  department      String?
+  dateOfJoining   DateTime?
+  dateOfBirth     DateTime?
+  gender          String?
+  qualification   String?
+  experience      String?  // e.g. "5 years"
+  address         String?
+  bloodGroup      String?
+  aadharNumber    String?
+  panNumber       String?
+  bankAccount     String?
+  ifscCode        String?
+  bankName        String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  photoUrl        String?
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@map("staff_profiles")
 }
 
 model Role {

@@ -96,6 +96,27 @@ export class UsersController {
     return this.usersService.setPasswordByOperator(tenant.institutionId, userId, newPassword);
   }
 
+  // ── Staff Profile ──────────────────────────────────────────────────────────
+
+  @Get(':userId/staff-profile')
+  @Permissions('users.read')
+  getStaffProfile(
+    @Tenant() tenant: TenantContext,
+    @Param('userId') userId: string,
+  ) {
+    return this.usersService.getStaffProfile(tenant.institutionId, userId);
+  }
+
+  @Patch(':userId/staff-profile')
+  @Permissions('users.write')
+  upsertStaffProfile(
+    @Tenant() tenant: TenantContext,
+    @Param('userId') userId: string,
+    @Body() dto: Record<string, any>,
+  ) {
+    return this.usersService.upsertStaffProfile(tenant.institutionId, userId, dto);
+  }
+
   @Post(':userId/roles')
   @Permissions('users.assignRole')
   assignRole(

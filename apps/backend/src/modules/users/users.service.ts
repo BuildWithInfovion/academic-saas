@@ -136,8 +136,8 @@ export class UsersService {
         isActive: true,
         roles: { some: { role: { institutionId, code: roleCode } } },
       },
-      orderBy: { createdAt: 'asc' },
-      select: { id: true, email: true, phone: true },
+      orderBy: [{ name: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, name: true, email: true, phone: true },
     });
   }
 
@@ -153,7 +153,7 @@ export class UsersService {
     if (email) OR.push({ email: { equals: email, mode: 'insensitive' } });
     return this.prisma.user.findMany({
       where: { institutionId, deletedAt: null, OR },
-      select: { id: true, email: true, phone: true },
+      select: { id: true, name: true, email: true, phone: true },
       take: 5,
     });
   }
@@ -276,5 +276,83 @@ export class UsersService {
       }),
     ]);
     return { classTeacherOf, subjectTeaching };
+  }
+
+  // ── Staff Profile ──────────────────────────────────────────────────────────
+
+  async getStaffProfile(institutionId: string, userId: string) {
+    return this.prisma.staffProfile.findUnique({
+      where: { userId },
+      include: { user: { select: { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true, roles: { include: { role: true } } } } },
+    });
+  }
+
+  async upsertStaffProfile(
+    institutionId: string,
+    userId: string,
+    dto: {
+      employeeId?: string; designation?: string; department?: string;
+      dateOfJoining?: string; dateOfBirth?: string; gender?: string;
+      qualification?: string; experience?: string; address?: string;
+      bloodGroup?: string; aadharNumber?: string; panNumber?: string;
+      bankAccount?: string; ifscCode?: string; bankName?: string;
+      emergencyContactName?: string; emergencyContactPhone?: string;
+      photoUrl?: string; notes?: string;
+    },
+  ) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, institutionId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const toDate = (s?: string) => (s ? new Date(s) : null);
+
+    return this.prisma.staffProfile.upsert({
+      where: { userId },
+      create: {
+        institutionId, userId,
+        employeeId: dto.employeeId || null,
+        designation: dto.designation || null,
+        department: dto.department || null,
+        dateOfJoining: toDate(dto.dateOfJoining),
+        dateOfBirth: toDate(dto.dateOfBirth),
+        gender: dto.gender || null,
+        qualification: dto.qualification || null,
+        experience: dto.experience || null,
+        address: dto.address || null,
+        bloodGroup: dto.bloodGroup || null,
+        aadharNumber: dto.aadharNumber || null,
+        panNumber: dto.panNumber || null,
+        bankAccount: dto.bankAccount || null,
+        ifscCode: dto.ifscCode || null,
+        bankName: dto.bankName || null,
+        emergencyContactName: dto.emergencyContactName || null,
+        emergencyContactPhone: dto.emergencyContactPhone || null,
+        photoUrl: dto.photoUrl || null,
+        notes: dto.notes || null,
+      },
+      update: {
+        ...(dto.employeeId !== undefined && { employeeId: dto.employeeId || null }),
+        ...(dto.designation !== undefined && { designation: dto.designation || null }),
+        ...(dto.department !== undefined && { department: dto.department || null }),
+        ...(dto.dateOfJoining !== undefined && { dateOfJoining: toDate(dto.dateOfJoining) }),
+        ...(dto.dateOfBirth !== undefined && { dateOfBirth: toDate(dto.dateOfBirth) }),
+        ...(dto.gender !== undefined && { gender: dto.gender || null }),
+        ...(dto.qualification !== undefined && { qualification: dto.qualification || null }),
+        ...(dto.experience !== undefined && { experience: dto.experience || null }),
+        ...(dto.address !== undefined && { address: dto.address || null }),
+        ...(dto.bloodGroup !== undefined && { bloodGroup: dto.bloodGroup || null }),
+        ...(dto.aadharNumber !== undefined && { aadharNumber: dto.aadharNumber || null }),
+        ...(dto.panNumber !== undefined && { panNumber: dto.panNumber || null }),
+        ...(dto.bankAccount !== undefined && { bankAccount: dto.bankAccount || null }),
+        ...(dto.ifscCode !== undefined && { ifscCode: dto.ifscCode || null }),
+        ...(dto.bankName !== undefined && { bankName: dto.bankName || null }),
+        ...(dto.emergencyContactName !== undefined && { emergencyContactName: dto.emergencyContactName || null }),
+        ...(dto.emergencyContactPhone !== undefined && { emergencyContactPhone: dto.emergencyContactPhone || null }),
+        ...(dto.photoUrl !== undefined && { photoUrl: dto.photoUrl || null }),
+        ...(dto.notes !== undefined && { notes: dto.notes || null }),
+      },
+    });
   }
 }

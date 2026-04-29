@@ -69,7 +69,7 @@ export class AcademicService {
         academicYearId: true,
         classTeacherUserId: true,
         classTeacher: {
-          select: { id: true, email: true, phone: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         _count: { select: { students: true } },
       },
@@ -109,7 +109,7 @@ export class AcademicService {
         academicYearId: true,
         classTeacherUserId: true,
         classTeacher: {
-          select: { id: true, email: true, phone: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         _count: { select: { students: true } },
       },
@@ -178,7 +178,7 @@ export class AcademicService {
       where: { id: unitId, institutionId, deletedAt: null },
       include: {
         classTeacher: {
-          select: { id: true, email: true, phone: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         parent: { select: { id: true, name: true, displayName: true } },
         children: {
@@ -335,7 +335,7 @@ export class AcademicService {
         parentId: true,
         classTeacherUserId: true,
         classTeacher: {
-          select: { id: true, email: true, phone: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         parent: { select: { id: true, name: true, displayName: true } },
         _count: { select: { students: true } },

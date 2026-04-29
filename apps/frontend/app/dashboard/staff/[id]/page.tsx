@@ -35,6 +35,16 @@ type SalaryRecord = {
   grossSalary: number; totalDeductions: number; netSalary: number;
   paidOn?: string; paymentMode?: string;
 };
+type StaffProfile = {
+  id?: string;
+  employeeId?: string; designation?: string; department?: string;
+  dateOfJoining?: string; dateOfBirth?: string; gender?: string;
+  qualification?: string; experience?: string; address?: string;
+  bloodGroup?: string; aadharNumber?: string; panNumber?: string;
+  bankAccount?: string; ifscCode?: string; bankName?: string;
+  emergencyContactName?: string; emergencyContactPhone?: string;
+  photoUrl?: string; notes?: string;
+};
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -86,12 +96,15 @@ export default function StaffProfilePage() {
   const [assignments, setAssignments] = useState<Assignments | null>(null);
   const [salaryProfile, setSalaryProfile] = useState<SalaryProfile | null>(null);
   const [salaryHistory, setSalaryHistory] = useState<SalaryRecord[]>([]);
+  const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
+  const [profileForm, setProfileForm] = useState<StaffProfile>({});
+  const [savingProfile, setSavingProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'assignments' | 'salary'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'assignments' | 'profile' | 'salary'>('overview');
 
   // Role management
   const [newRoleId, setNewRoleId] = useState('');
@@ -125,6 +138,13 @@ export default function StaffProfilePage() {
         setSalaryProfile(history.profile);
         setSalaryHistory(history.records);
       } catch { /* no salary permission or no profile */ }
+
+      // Load staff profile (personal/employment details)
+      try {
+        const prof = await apiFetch(`/users/${id}/staff-profile`) as StaffProfile | null;
+        setStaffProfile(prof);
+        if (prof) setProfileForm(prof);
+      } catch { /* no profile yet */ }
 
     } catch (e: any) {
       setError(e.message || 'Failed to load');
@@ -170,6 +190,20 @@ export default function StaffProfilePage() {
       setResetDone({ username: user.email || user.phone || '—', password: newPwd });
     } catch (e: any) { setError(e.message); }
     finally { setResetting(false); }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true); setError(null);
+    try {
+      const saved = await apiFetch(`/users/${user.id}/staff-profile`, {
+        method: 'PATCH', body: JSON.stringify(profileForm),
+      }) as StaffProfile;
+      setStaffProfile(saved);
+      setProfileForm(saved);
+      showSuccess('Staff profile saved');
+    } catch (e: any) { setError(e.message); }
+    finally { setSavingProfile(false); }
   };
 
   if (loading) return <div className="p-10 text-ds-text3 text-sm">Loading employee profile...</div>;
@@ -276,7 +310,7 @@ export default function StaffProfilePage() {
 
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 mb-4 border-b border-ds-border">
-        {(['overview', 'assignments', 'salary'] as const).map((t) => (
+        {(['overview', 'assignments', 'profile', 'salary'] as const).map((t) => (
           <button key={t} onClick={() => setActiveTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px capitalize ${
               activeTab === t ? 'border-ds-brand text-ds-brand' : 'border-transparent text-ds-text2 hover:text-ds-text1'
@@ -430,6 +464,140 @@ export default function StaffProfilePage() {
           </div>
         </div>
       )}
+
+      {/* ── Profile Tab ───────────────────────────────────────────────────── */}
+      {activeTab === 'profile' && (() => {
+        const inp = 'w-full border border-ds-border-strong rounded-lg px-3 py-2 text-sm bg-ds-surface focus:outline-none focus:ring-2 focus:ring-ds-brand';
+        const pf = (key: keyof StaffProfile) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+          setProfileForm({ ...profileForm, [key]: e.target.value });
+        return (
+          <div className="space-y-4">
+            {/* Employment Details */}
+            <div className="bg-ds-surface border border-ds-border rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-ds-text1 mb-4">Employment Details</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Employee ID</label>
+                  <input className={inp} placeholder="EMP001" value={profileForm.employeeId || ''} onChange={pf('employeeId')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Designation</label>
+                  <input className={inp} placeholder="e.g. Senior Teacher" value={profileForm.designation || ''} onChange={pf('designation')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Department</label>
+                  <input className={inp} placeholder="e.g. Science" value={profileForm.department || ''} onChange={pf('department')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Date of Joining</label>
+                  <input type="date" className={inp} value={profileForm.dateOfJoining ? profileForm.dateOfJoining.slice(0, 10) : ''} onChange={pf('dateOfJoining')} />
+                </div>
+              </div>
+            </div>
+
+            {/* Personal Details */}
+            <div className="bg-ds-surface border border-ds-border rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-ds-text1 mb-4">Personal Details</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Date of Birth</label>
+                  <input type="date" className={inp} value={profileForm.dateOfBirth ? profileForm.dateOfBirth.slice(0, 10) : ''} onChange={pf('dateOfBirth')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Gender</label>
+                  <select className={inp} value={profileForm.gender || ''} onChange={pf('gender')}>
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Blood Group</label>
+                  <select className={inp} value={profileForm.bloodGroup || ''} onChange={pf('bloodGroup')}>
+                    <option value="">Select blood group</option>
+                    {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map((bg) => (
+                      <option key={bg} value={bg}>{bg}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Aadhaar Number</label>
+                  <input className={inp} placeholder="XXXX XXXX XXXX" maxLength={14} value={profileForm.aadharNumber || ''} onChange={pf('aadharNumber')} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Address</label>
+                  <textarea className={inp + ' resize-none'} rows={2} placeholder="Full address" value={profileForm.address || ''} onChange={pf('address')} />
+                </div>
+              </div>
+            </div>
+
+            {/* Qualifications */}
+            <div className="bg-ds-surface border border-ds-border rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-ds-text1 mb-4">Qualifications & Experience</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Qualification</label>
+                  <input className={inp} placeholder="e.g. B.Ed, M.Sc" value={profileForm.qualification || ''} onChange={pf('qualification')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Experience</label>
+                  <input className={inp} placeholder="e.g. 5 years" value={profileForm.experience || ''} onChange={pf('experience')} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Notes</label>
+                  <textarea className={inp + ' resize-none'} rows={2} placeholder="Any additional notes" value={profileForm.notes || ''} onChange={pf('notes')} />
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Details */}
+            <div className="bg-ds-surface border border-ds-border rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-ds-text1 mb-4">Bank Details</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Bank Name</label>
+                  <input className={inp} placeholder="e.g. SBI" value={profileForm.bankName || ''} onChange={pf('bankName')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Account Number</label>
+                  <input className={inp} placeholder="Account number" value={profileForm.bankAccount || ''} onChange={pf('bankAccount')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">IFSC Code</label>
+                  <input className={inp} placeholder="e.g. SBIN0001234" value={profileForm.ifscCode || ''} onChange={(e) => setProfileForm({ ...profileForm, ifscCode: e.target.value.toUpperCase() })} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">PAN Number</label>
+                  <input className={inp} placeholder="ABCDE1234F" maxLength={10} value={profileForm.panNumber || ''} onChange={(e) => setProfileForm({ ...profileForm, panNumber: e.target.value.toUpperCase() })} />
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="bg-ds-surface border border-ds-border rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-ds-text1 mb-4">Emergency Contact</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Contact Name</label>
+                  <input className={inp} placeholder="Full name" value={profileForm.emergencyContactName || ''} onChange={pf('emergencyContactName')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-ds-text2 block mb-1">Contact Phone</label>
+                  <input className={inp} placeholder="Mobile number" value={profileForm.emergencyContactPhone || ''} onChange={pf('emergencyContactPhone')} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button onClick={handleSaveProfile} disabled={savingProfile}
+                className="btn-brand px-6 py-2.5 rounded-lg text-sm font-medium">
+                {savingProfile ? 'Saving...' : staffProfile ? 'Update Profile' : 'Save Profile'}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Salary Tab ────────────────────────────────────────────────────── */}
       {activeTab === 'salary' && (

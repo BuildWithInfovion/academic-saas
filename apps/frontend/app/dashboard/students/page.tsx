@@ -246,6 +246,18 @@ export default function StudentsPage() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm({ ...form, [key]: e.target.value });
 
+  // Title-case handler for name fields (Each Word Capitalized)
+  const sfName = (key: keyof typeof emptyForm) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value.replace(/\b\w/g, (c) => c.toUpperCase());
+      setForm({ ...form, [key]: v });
+    };
+
+  // Uppercase handler for institution/school names
+  const sfUpper = (key: keyof typeof emptyForm) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm({ ...form, [key]: e.target.value.toUpperCase() });
+
   const validate = () => {
     if (!form.firstName.trim()) return 'First name is required';
     if (!form.lastName.trim()) return 'Last name is required';
@@ -716,20 +728,35 @@ export default function StudentsPage() {
           {editingId && <button onClick={resetForm} className="text-sm text-ds-text2 hover:text-ds-text1 underline">Cancel Edit</button>}
         </div>
 
+        {/* Setup guide — shown when basic configuration is missing */}
+        {(academicUnits.length === 0 || academicYears.length === 0) && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="text-sm font-semibold text-amber-800 mb-1">Setup required before admission</p>
+            <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
+              {academicUnits.length === 0 && (
+                <li>No classes configured — <a href="/dashboard/classes" className="underline font-medium">Go to Classes</a> to add LKG, Class 1, etc.</li>
+              )}
+              {academicYears.length === 0 && (
+                <li>No academic year set up — <a href="/dashboard/settings" className="underline font-medium">Go to Settings</a> to add 2025-26.</li>
+              )}
+            </ul>
+          </div>
+        )}
+
         {/* ── Section 1: Admission Details ── */}
         <p className={sec}>1. Admission Details</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div>
-            <label className={lbl}>Class Admitted To *{academicUnits.length === 0 && <span className="text-red-500 ml-1">(no classes configured)</span>}</label>
+            <label className={lbl}>Class Admitted To *</label>
             <select className={inp} value={form.academicUnitId} onChange={sf('academicUnitId')}>
-              <option value="">{academicUnits.length === 0 ? 'No classes available' : 'Select Class'}</option>
+              <option value="">{academicUnits.length === 0 ? '— No classes configured —' : 'Select Class'}</option>
               {academicUnits.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
             </select>
           </div>
           <div>
             <label className={lbl}>Academic Year</label>
             <select className={inp} value={currentYearId} onChange={(e) => setCurrentYearId(e.target.value)}>
-              <option value="">Select Year</option>
+              <option value="">{academicYears.length === 0 ? '— No academic year —' : 'Select Year'}</option>
               {academicYears.map((y) => <option key={y.id} value={y.id}>{y.name}{y.isCurrent ? ' (Current)' : ''}</option>)}
             </select>
           </div>
@@ -745,17 +772,17 @@ export default function StudentsPage() {
           <div>
             <label className={lbl}>First Name *</label>
             <input className={inp} placeholder="e.g. Priya" value={form.firstName}
-              onChange={(e) => setForm({ ...form, firstName: e.target.value.replace(/[^a-zA-Z\s]/g, '') })} />
+              onChange={(e) => setForm({ ...form, firstName: e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, (c) => c.toUpperCase()) })} />
           </div>
           <div>
             <label className={lbl}>Middle Name</label>
             <input className={inp} placeholder="Optional" value={form.middleName}
-              onChange={(e) => setForm({ ...form, middleName: e.target.value.replace(/[^a-zA-Z\s]/g, '') })} />
+              onChange={(e) => setForm({ ...form, middleName: e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, (c) => c.toUpperCase()) })} />
           </div>
           <div>
             <label className={lbl}>Last Name / Surname *</label>
             <input className={inp} placeholder="e.g. Sharma" value={form.lastName}
-              onChange={(e) => setForm({ ...form, lastName: e.target.value.replace(/[^a-zA-Z\s]/g, '') })} />
+              onChange={(e) => setForm({ ...form, lastName: e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, (c) => c.toUpperCase()) })} />
           </div>
           <div>
             <label className={lbl}>Date of Birth *</label>
@@ -826,7 +853,8 @@ export default function StudentsPage() {
           </div>
           <div className="sm:col-span-1">
             <label className={lbl}>Previous School Name</label>
-            <input className={inp} placeholder="Name of previous school" value={form.tcPreviousInstitution} onChange={sf('tcPreviousInstitution')} />
+            <input className={inp} placeholder="Name of previous school" value={form.tcPreviousInstitution}
+              onChange={(e) => setForm({ ...form, tcPreviousInstitution: e.target.value.replace(/\b\w/g, (c) => c.toUpperCase()) })} />
           </div>
           <div>
             <label className={lbl}>Class Last Studied</label>
@@ -853,7 +881,7 @@ export default function StudentsPage() {
           <div>
             <label className={lbl}>Father&apos;s Full Name *</label>
             <input className={inp} placeholder="As per official records" value={form.fatherName}
-              onChange={(e) => setForm({ ...form, fatherName: e.target.value.replace(/[^a-zA-Z\s.]/g, '') })} />
+              onChange={(e) => setForm({ ...form, fatherName: e.target.value.replace(/[^a-zA-Z\s.]/g, '').replace(/\b\w/g, (c) => c.toUpperCase()) })} />
           </div>
           <div>
             <label className={lbl}>Occupation</label>
@@ -891,7 +919,7 @@ export default function StudentsPage() {
           <div>
             <label className={lbl}>Mother&apos;s Full Name *</label>
             <input className={inp} placeholder="As per official records" value={form.motherName}
-              onChange={(e) => setForm({ ...form, motherName: e.target.value.replace(/[^a-zA-Z\s.]/g, '') })} />
+              onChange={(e) => setForm({ ...form, motherName: e.target.value.replace(/[^a-zA-Z\s.]/g, '').replace(/\b\w/g, (c) => c.toUpperCase()) })} />
           </div>
           <div>
             <label className={lbl}>Occupation</label>
@@ -1543,11 +1571,28 @@ export default function StudentsPage() {
                     <p className="text-sm font-medium text-ds-info-text mb-2">How it works</p>
                     <ol className="text-xs text-ds-info-text space-y-1 list-decimal list-inside">
                       <li>Download the CSV template and fill in your students&apos; data from your ledger / register</li>
-                      <li>Class names must match what&apos;s set in Settings → Class Structure (e.g. &quot;Class 5&quot;, &quot;LKG&quot;)</li>
+                      <li>Class names must exactly match your configured classes (see list below)</li>
                       <li>A parent portal account is auto-created for each unique mobile number</li>
                       <li>Upload the CSV — a preview is shown before any records are created</li>
                     </ol>
                   </div>
+                  {academicUnits.length > 0 && (
+                    <div className="bg-ds-bg2 border border-ds-border rounded-lg p-3">
+                      <p className="text-xs font-semibold text-ds-text2 mb-2">Available class names for CSV</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {academicUnits.map((u) => (
+                          <span key={u.id} className="px-2 py-0.5 bg-ds-surface border border-ds-border rounded text-xs font-mono text-ds-text1">
+                            {u.displayName || u.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {academicUnits.length === 0 && (
+                    <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 text-sm text-ds-warning-text">
+                      No classes configured yet. <a href="/dashboard/classes" className="underline font-medium">Set up classes</a> before importing students.
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs font-medium text-ds-text2 mb-2">Step 1 — Download the template</p>
                     <button

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/auth.store';
 
 interface Subject { id: string; name: string; code?: string; }
 interface AcademicUnit { id: string; name: string; displayName?: string; }
-interface Teacher { id: string; email: string | null; phone: string | null; }
+interface Teacher { id: string; name: string | null; email: string | null; phone: string | null; }
 interface UnitSubject {
   id: string; subjectId: string; teacherUserId?: string | null;
   isClassTeacher: boolean; subject: Subject;
@@ -71,7 +71,7 @@ const SUBJECT_CATALOGUE: { group: string; color: string; bg: string; border: str
 
 function teacherLabel(t: Teacher | null | undefined) {
   if (!t) return '';
-  return t.email || t.phone || t.id;
+  return t.name || t.email || t.phone || t.id;
 }
 
 export default function SubjectsPage() {

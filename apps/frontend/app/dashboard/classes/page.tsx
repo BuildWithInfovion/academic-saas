@@ -11,7 +11,7 @@ interface ClassUnit {
   classTeacher: ClassTeacher | null; parent: ParentUnit | null;
 }
 interface TeacherUser {
-  id: string; email: string | null; phone: string | null;
+  id: string; name: string | null; email: string | null; phone: string | null;
   roles: { role: { code: string; label: string } }[];
 }
 interface AcademicUnit { id: string; name: string; displayName: string | null; level: number; parentId: string | null; }
@@ -33,6 +33,7 @@ export default function ClassesPage() {
   // Assign panel
   const [assigningUnit, setAssigningUnit] = useState<ClassUnit | null>(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [teacherSearch, setTeacherSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Create wizard
@@ -70,6 +71,7 @@ export default function ClassesPage() {
   const openAssign = (unit: ClassUnit) => {
     setAssigningUnit(unit);
     setSelectedTeacherId(unit.classTeacherUserId ?? '');
+    setTeacherSearch('');
   };
 
   const saveClassTeacher = async () => {
@@ -160,7 +162,7 @@ export default function ClassesPage() {
     }
   };
 
-  const teacherLabel = (t: TeacherUser) => t.email || t.phone || t.id.slice(-6);
+  const teacherLabel = (t: TeacherUser) => t.name || t.email || t.phone || t.id.slice(-6);
 
   // Top-level units (no parent) — for "class" dropdown in section creation
   const topLevelUnits = allUnits.filter((u) => u.parentId === null && !u.displayName?.includes('deleted'));
@@ -229,7 +231,7 @@ export default function ClassesPage() {
                       {cls.classTeacher ? (
                         <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-ds-success-text border border-green-200 rounded-full px-2 py-0.5 mt-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-                          {cls.classTeacher.email || cls.classTeacher.phone}
+                          {cls.classTeacher.name || cls.classTeacher.email || cls.classTeacher.phone}
                         </span>
                       ) : (
                         <span className="text-xs text-ds-warning-text bg-ds-warning-bg border border-ds-warning-border rounded-full px-2 py-0.5 mt-1 inline-block">
@@ -272,7 +274,7 @@ export default function ClassesPage() {
               {assigningUnit.classTeacher && (
                 <div className="bg-ds-success-bg border border-ds-success-border rounded-lg p-3">
                   <p className="text-xs font-semibold text-ds-success-text mb-0.5">Currently Assigned</p>
-                  <p className="text-sm text-ds-success-text">{assigningUnit.classTeacher.email || assigningUnit.classTeacher.phone}</p>
+                  <p className="text-sm text-ds-success-text">{assigningUnit.classTeacher.name || assigningUnit.classTeacher.email || assigningUnit.classTeacher.phone}</p>
                 </div>
               )}
               <div>
@@ -280,12 +282,37 @@ export default function ClassesPage() {
                 {teachers.length === 0 ? (
                   <p className="text-sm text-ds-text3">No teachers found. Add teacher users from the Staff page first.</p>
                 ) : (
-                  <select className={inp} value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)}>
-                    <option value="">— Remove class teacher —</option>
-                    {teachers.map((t) => (
-                      <option key={t.id} value={t.id}>{teacherLabel(t)}</option>
-                    ))}
-                  </select>
+                  <div className="space-y-2">
+                    <input
+                      className={inp}
+                      placeholder="Search by name or email..."
+                      value={teacherSearch}
+                      onChange={(e) => setTeacherSearch(e.target.value)}
+                    />
+                    <div className="max-h-48 overflow-y-auto border border-ds-border rounded-lg divide-y divide-ds-border">
+                      <button
+                        onClick={() => setSelectedTeacherId('')}
+                        className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${selectedTeacherId === '' ? 'bg-ds-brand text-white' : 'hover:bg-ds-bg2 text-ds-text3'}`}
+                      >— Remove class teacher —</button>
+                      {teachers
+                        .filter((t) => {
+                          if (!teacherSearch.trim()) return true;
+                          const q = teacherSearch.toLowerCase();
+                          return (t.name || '').toLowerCase().includes(q) || (t.email || '').toLowerCase().includes(q) || (t.phone || '').includes(q);
+                        })
+                        .map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setSelectedTeacherId(t.id)}
+                            className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${selectedTeacherId === t.id ? 'bg-ds-brand text-white' : 'hover:bg-ds-bg2 text-ds-text1'}`}
+                          >
+                            <div className="font-medium">{t.name || t.email || t.phone}</div>
+                            {t.name && t.email && <div className={`text-xs ${selectedTeacherId === t.id ? 'text-white/70' : 'text-ds-text3'}`}>{t.email}</div>}
+                          </button>
+                        ))
+                      }
+                    </div>
+                  </div>
                 )}
               </div>
               <p className="text-xs text-ds-text3">

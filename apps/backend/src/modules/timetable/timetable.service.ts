@@ -69,7 +69,7 @@ export class TimetableService {
       teacherIds.length > 0
         ? await this.prisma.user.findMany({
             where: { id: { in: teacherIds }, institutionId },
-            select: { id: true, email: true, phone: true },
+            select: { id: true, name: true, email: true, phone: true },
           })
         : [];
     const teacherMap = new Map(teachers.map((t) => [t.id, t]));
