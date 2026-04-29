@@ -105,7 +105,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         break;
       case 'P2024':
         status = HttpStatus.SERVICE_UNAVAILABLE;
-        message = 'Database is waking up — please wait a few seconds and try again.';
+        message = 'Database connection timed out — please try again.';
         break;
       case 'P2028':
         status = HttpStatus.SERVICE_UNAVAILABLE;
@@ -131,7 +131,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       case 'P1008':
       case 'P1017':
         status = HttpStatus.SERVICE_UNAVAILABLE;
-        message = 'Database is waking up — please wait a few seconds and try again.';
+        message = 'Database connection timed out — please try again.';
         break;
     }
 

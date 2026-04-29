@@ -83,7 +83,7 @@ export class StudentService {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  // Advisory locks were removed — Neon's PgBouncer (transaction mode) does not
+  // Advisory locks were removed — Supabase pgBouncer (transaction mode) does not
   // support pg_advisory_xact_lock. Uniqueness is enforced by the DB constraint
   // @@unique([institutionId, admissionNo]); a P2002 on collision is caught below.
   private async generateAdmissionNoInTx(

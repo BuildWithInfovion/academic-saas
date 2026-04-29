@@ -105,8 +105,8 @@ export class FeesService {
     }
 
     // Generate receipt number inside a transaction. Advisory locks are NOT used
-    // because Neon runs PgBouncer in transaction-pooling mode which rejects them
-    // (P2010). Uniqueness is enforced by the DB @@unique([institutionId, receiptNo])
+    // because Supabase pgBouncer (transaction-pooling mode) rejects them (P2010).
+    // Uniqueness is enforced by the DB @@unique([institutionId, receiptNo])
     // constraint; a P2002 on the rare collision is caught by the caller.
     try {
       return await this.prisma.$transaction(async (tx) => {

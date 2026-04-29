@@ -12,7 +12,6 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
-  private keepAliveTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     super({
@@ -37,11 +36,9 @@ export class PrismaService
     });
 
     this.registerSoftDeleteMiddleware();
-    this.startKeepAlive();
   }
 
   async onModuleDestroy() {
-    if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
     await this.$disconnect();
   }
 
@@ -71,43 +68,9 @@ export class PrismaService
     }
   }
 
-  // ── Keep-alive ping every 3.5 min (Neon free tier suspends at 5 min) ────────
-  // Reconnect with enough retries to survive Neon's cold-start (~5-10 s).
-
-  private reconnecting = false;
-
-  private startKeepAlive() {
-    this.keepAliveTimer = setInterval(
-      () =>
-        void this.$queryRaw`SELECT 1`.catch(() => {
-          if (this.reconnecting) return;
-          this.reconnecting = true;
-          this.logger.warn('Keep-alive ping failed — reconnecting to Neon…');
-          void this.$disconnect()
-            .catch(() => {
-              /* ignore disconnect errors */
-            })
-            .then(() => this.connectWithRetry(10, 2000))
-            .then(() => {
-              this.reconnecting = false;
-              this.logger.log('Reconnected after keep-alive failure');
-            })
-            .catch((err: unknown) => {
-              this.reconnecting = false;
-              this.logger.error(
-                'Reconnect after keep-alive failure also failed',
-                err instanceof Error ? err.message : String(err),
-              );
-            });
-        }),
-      3.5 * 60 * 1000,
-    );
-    this.keepAliveTimer.unref?.();
-  }
-
   /**
    * Retry a block up to `maxAttempts` times on Prisma connection-pool errors.
-   * Neon cold-start surfaces as P2024 on the first request after auto-suspend.
+   * P2024 on Supabase pgBouncer means connection timeout or pool exhaustion.
    */
   async withConnectionRetry<T>(
     fn: () => Promise<T>,
@@ -142,7 +105,20 @@ export class PrismaService
   // ── Soft Delete Middleware ─────────────────────────────────────────────────
 
   private registerSoftDeleteMiddleware() {
-    const softDeleteModels = ['Student', 'User', 'Institution'];
+    const softDeleteModels = [
+      'Student',
+      'User',
+      'Institution',
+      'AcademicUnit',
+      'Inquiry',
+      'Announcement',
+      'Subject',
+      'FeeHead',
+      'FeeStructure',
+      'Exam',
+      'CalendarEvent',
+      'StudentDocument',
+    ];
 
     /* eslint-disable
        @typescript-eslint/no-unsafe-assignment,
