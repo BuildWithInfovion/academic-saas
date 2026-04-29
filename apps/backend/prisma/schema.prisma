@@ -21,6 +21,10 @@ model Institution {
   email           String?
   website         String?
   board           String?
+  logoUrl         String?
+  principalName   String?
+  tagline         String?
+  affiliationNo   String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?

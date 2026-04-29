@@ -15,6 +15,43 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 
 const CLASS_1_UNIT_NAMES = ['class_1', 'class1', 'i', '1'];
 
+export interface ImportStudentRowDto {
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  gender?: string;
+  dateOfBirth?: string;   // YYYY-MM-DD
+  className: string;      // resolved to academicUnitId by fuzzy match
+  oldAdmissionNo?: string;
+  admissionDate?: string; // YYYY-MM-DD
+  fatherName?: string;
+  motherName?: string;
+  parentPhone?: string;
+  address?: string;
+  religion?: string;
+  casteCategory?: string;
+  bloodGroup?: string;
+}
+
+function resolveUnit(
+  units: { id: string; name: string; displayName?: string | null }[],
+  className: string,
+): { id: string; name: string } | null {
+  const q = className.toLowerCase().replace(/[\s_-]/g, '');
+  for (const u of units) {
+    const n = u.name.toLowerCase().replace(/[\s_-]/g, '');
+    const d = (u.displayName ?? '').toLowerCase().replace(/[\s_-]/g, '');
+    if (n === q || d === q) return u;
+  }
+  // Partial / contains fallback
+  for (const u of units) {
+    const n = u.name.toLowerCase().replace(/[\s_-]/g, '');
+    const d = (u.displayName ?? '').toLowerCase().replace(/[\s_-]/g, '');
+    if (n.includes(q) || q.includes(n) || d.includes(q) || q.includes(d)) return u;
+  }
+  return null;
+}
+
 export interface AdmissionFeeDto {
   paid: boolean;
   amountPaid?: number;
@@ -299,6 +336,106 @@ export class StudentService {
       // legacy compat
       feePayment: result.feePayments[0] ?? null,
     };
+  }
+
+  // ── BULK IMPORT (legacy ledger migration) ────────────────────────────────
+
+  async importStudents(
+    institutionId: string,
+    rows: ImportStudentRowDto[],
+  ): Promise<{ created: number; skipped: number; errors: { row: number; error: string }[] }> {
+    const [units, parentRole] = await Promise.all([
+      this.prisma.academicUnit.findMany({
+        where: { institutionId, deletedAt: null },
+        select: { id: true, name: true, displayName: true },
+      }),
+      this.prisma.role.findFirst({ where: { institutionId, code: 'parent' } }),
+    ]);
+
+    const results = { created: 0, skipped: 0, errors: [] as { row: number; error: string }[] };
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 2; // 1-indexed + header row
+
+      const firstName = row.firstName?.trim();
+      const lastName  = row.lastName?.trim();
+      if (!firstName || !lastName) {
+        results.errors.push({ row: rowNum, error: 'First name and last name are required' });
+        results.skipped++;
+        continue;
+      }
+
+      const unit = resolveUnit(units, row.className ?? '');
+      if (!unit) {
+        results.errors.push({ row: rowNum, error: `Class "${row.className}" not found — check class names in Settings` });
+        results.skipped++;
+        continue;
+      }
+
+      try {
+        await this.prisma.withConnectionRetry(() =>
+          this.prisma.$transaction(async (tx) => {
+            const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
+            const rollNo = await this.generateRollNoInTx(tx, unit.id);
+
+            let parentUserId: string | undefined;
+            const phone = row.parentPhone?.replace(/\s/g, '') || null;
+            if (phone) {
+              let parentUser = await tx.user.findFirst({
+                where: { institutionId, phone, deletedAt: null },
+              });
+              if (!parentUser) {
+                const pwd = this.generatePassword();
+                const hash = await bcrypt.hash(pwd, 12);
+                parentUser = await tx.user.create({
+                  data: { institutionId, phone, passwordHash: hash, isActive: true },
+                });
+                if (parentRole) {
+                  await tx.userRole.create({
+                    data: { userId: parentUser.id, roleId: parentRole.id, institutionId },
+                  });
+                }
+              }
+              parentUserId = parentUser.id;
+            }
+
+            await tx.student.create({
+              data: {
+                institutionId,
+                admissionNo,
+                rollNo,
+                firstName,
+                middleName: row.middleName?.trim() || null,
+                lastName,
+                gender: row.gender?.toLowerCase() || null,
+                dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
+                fatherName: row.fatherName?.trim() || null,
+                motherName: row.motherName?.trim() || null,
+                parentPhone: phone,
+                address: row.address?.trim() || null,
+                religion: row.religion?.trim() || null,
+                casteCategory: row.casteCategory?.trim() || null,
+                bloodGroup: row.bloodGroup?.trim() || null,
+                academicUnitId: unit.id,
+                admissionDate: row.admissionDate ? new Date(row.admissionDate) : new Date(),
+                status: 'active',
+                nationality: 'Indian',
+                parentUserId,
+                tcFromPrevious: 'not_applicable',
+              },
+            });
+          }, { timeout: 15000, maxWait: 10000 }),
+        );
+        results.created++;
+      } catch (err: any) {
+        const msg = err?.message?.slice(0, 120) ?? 'Unknown error';
+        results.errors.push({ row: rowNum, error: msg });
+        results.skipped++;
+      }
+    }
+
+    return results;
   }
 
   // ── BASIC CREATE (kept for backwards compat) ──────────────────────────────

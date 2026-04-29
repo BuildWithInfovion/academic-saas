@@ -58,6 +58,23 @@ export class StorageService implements OnModuleInit {
     };
   }
 
+  generateLogoSignature(institutionId: string): SignatureResult {
+    const timestamp = Math.round(Date.now() / 1000);
+    const folder = `${institutionId}/branding`;
+    const paramsToSign: Record<string, string | number> = { folder, timestamp };
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      this.config.get<string>('CLOUDINARY_API_SECRET')!,
+    );
+    return {
+      signature,
+      timestamp,
+      apiKey: this.config.get<string>('CLOUDINARY_API_KEY')!,
+      cloudName: this.config.get<string>('CLOUDINARY_CLOUD_NAME')!,
+      folder,
+    };
+  }
+
   // Server-side upload — used when backend needs to upload a buffer directly
   // (e.g. generated PDFs, TC documents).
   async uploadBuffer(

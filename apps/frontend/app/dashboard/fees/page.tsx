@@ -11,7 +11,7 @@ interface Student { id: string; firstName: string; lastName: string; admissionNo
 interface FeePayment { id: string; receiptNo: string; amount: number; paymentMode: string; paidOn: string; feeHead: FeeHead; remarks?: string; }
 interface FeeStructure { id: string; feeHeadId: string; amount: number; installmentName?: string; dueDate?: string; feeHead: FeeHead; }
 interface Defaulter { id: string; firstName: string; lastName: string; admissionNo: string; due: number; paid: number; balance: number; }
-interface Institution { name: string; board?: string; address?: string; phone?: string; email?: string; }
+interface Institution { name: string; board?: string; address?: string; phone?: string; email?: string; logoUrl?: string; principalName?: string; tagline?: string; affiliationNo?: string; }
 interface InstallmentDue {
   feeStructureId: string; feeHeadId: string; feeHeadName: string;
   installmentName: string; dueDate?: string | null;
@@ -37,14 +37,18 @@ function printFeeReceipt(payment: FeePayment, student: Student, institution: Ins
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:30px}
-  .receipt{max-width:520px;margin:0 auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
-  .letterhead{background:#0f172a;color:#fff;padding:20px 24px;text-align:center}
-  .letterhead h1{font-size:17px;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
-  .letterhead .sub{font-size:11px;opacity:.65;line-height:1.5}
+  .receipt{max-width:540px;margin:0 auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+  .letterhead{background:#0f172a;color:#fff;padding:18px 24px;display:flex;align-items:center;gap:14px}
+  .letterhead img{width:52px;height:52px;object-fit:contain;border-radius:4px;background:#fff;padding:3px;flex-shrink:0}
+  .letterhead .logo-placeholder{width:52px;height:52px;border-radius:4px;background:rgba(255,255,255,.1);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,.5);text-align:center;line-height:1.2}
+  .letterhead-text{flex:1;min-width:0}
+  .letterhead h1{font-size:16px;font-weight:700;letter-spacing:.3px;margin-bottom:2px;line-height:1.2}
+  .letterhead .tagline{font-size:10px;opacity:.6;font-style:italic;margin-bottom:3px}
+  .letterhead .sub{font-size:10px;opacity:.55;line-height:1.6}
   .receipt-header{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
   .receipt-header .rno{font-size:13px;font-weight:700;color:#0f172a}
   .receipt-header .rdate{font-size:12px;color:#64748b}
-  .section{padding:18px 24px}
+  .section{padding:16px 24px}
   .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px}
   .row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f1f5f9}
   .row:last-child{border:none}
@@ -54,15 +58,22 @@ function printFeeReceipt(payment: FeePayment, student: Student, institution: Ins
   .amount-box .lbl{font-size:12px;color:#166534;font-weight:600}
   .amount-box .amt{font-size:26px;font-weight:800;color:#15803d}
   .footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px 20px;border-top:1px solid #f1f5f9;line-height:1.6}
-  @media print{body{background:#fff;padding:0}.receipt{box-shadow:none;border-radius:0;border:1px solid #ccc};-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .footer .principal{font-size:11px;color:#64748b;margin-bottom:4px}
+  @media print{body{background:#fff;padding:0}.receipt{box-shadow:none;border-radius:0;border:none};-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </style></head><body>
 <div class="receipt">
   <div class="letterhead">
-    <h1>${esc(institution.name)}</h1>
-    <div class="sub">
-      ${institution.board ? `${esc(institution.board)}<br>` : ''}
-      ${institution.address ? `${esc(institution.address)}<br>` : ''}
-      ${[institution.phone ? `Ph: ${esc(institution.phone)}` : '', institution.email ? `Email: ${esc(institution.email)}` : ''].filter(Boolean).join('  ·  ')}
+    ${institution.logoUrl
+      ? `<img src="${esc(institution.logoUrl)}" alt="Logo" />`
+      : `<div class="logo-placeholder">School<br/>Logo</div>`}
+    <div class="letterhead-text">
+      <h1>${esc(institution.name)}</h1>
+      ${institution.tagline ? `<div class="tagline">${esc(institution.tagline)}</div>` : ''}
+      <div class="sub">
+        ${[institution.board, institution.affiliationNo ? `Affil: ${institution.affiliationNo}` : ''].filter(Boolean).join(' · ')}${(institution.board || institution.affiliationNo) ? '<br>' : ''}
+        ${institution.address ? `${esc(institution.address)}<br>` : ''}
+        ${[institution.phone ? `Ph: ${esc(institution.phone)}` : '', institution.email ? `Email: ${esc(institution.email)}` : ''].filter(Boolean).join('  ·  ')}
+      </div>
     </div>
   </div>
   <div class="receipt-header">
@@ -85,7 +96,8 @@ function printFeeReceipt(payment: FeePayment, student: Student, institution: Ins
     <span class="amt">₹${payment.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
   </div>
   <div class="footer">
-    This is a computer-generated receipt and does not require a signature.<br>
+    ${institution.principalName ? `<div class="principal">Authorised by: ${esc(institution.principalName)}</div>` : ''}
+    This is a computer-generated receipt and does not require a physical signature.<br>
     Issued by ${esc(institution.name)}
   </div>
 </div>

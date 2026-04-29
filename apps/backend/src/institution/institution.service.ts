@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../common/storage/storage.service';
 
 export interface CreateInstitutionDto {
   name: string;
@@ -63,7 +64,16 @@ const COLLEGE_SUBJECTS = [
 
 @Injectable()
 export class InstitutionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private storage: StorageService) {}
+
+  getLogoSignature(institutionId: string) {
+    if (!this.storage.isConfigured()) {
+      throw new ServiceUnavailableException(
+        'File storage is not configured. Set CLOUDINARY_* environment variables.',
+      );
+    }
+    return this.storage.generateLogoSignature(institutionId);
+  }
 
   async create(createInstitutionDto: CreateInstitutionDto) {
     return this.prisma.institution.create({
@@ -87,6 +97,10 @@ export class InstitutionService {
     email?: string;
     website?: string;
     board?: string;
+    logoUrl?: string;
+    principalName?: string;
+    tagline?: string;
+    affiliationNo?: string;
   }) {
     return this.prisma.institution.update({
       where: { id: institutionId },

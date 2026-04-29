@@ -20,6 +20,10 @@ interface UpdateInstitutionDto {
   email?: string;
   website?: string;
   board?: string;
+  logoUrl?: string;
+  principalName?: string;
+  tagline?: string;
+  affiliationNo?: string;
 }
 
 @Controller('institution')
@@ -52,6 +56,14 @@ export class InstitutionController {
   async getMe(@Req() req: any) {
     const institutionId = req.tenant?.institutionId ?? req.user?.institutionId;
     return this.institutionService.findById(institutionId);
+  }
+
+  // GET /institution/me/logo-signature — Cloudinary signed upload URL for school logo
+  @Get('me/logo-signature')
+  @UseGuards(AuthGuard, TenantGuard)
+  async getLogoSignature(@Req() req: any) {
+    const institutionId = req.tenant?.institutionId ?? req.user?.institutionId;
+    return this.institutionService.getLogoSignature(institutionId);
   }
 
   // PATCH /institution/me — update current tenant's institution profile

@@ -8,6 +8,7 @@ import { validatePassword, checkPasswordStrength } from '@/lib/password-utils';
 type Institution = {
   id: string; name: string; code: string; institutionType: string;
   address?: string; phone?: string; email?: string; website?: string; board?: string;
+  logoUrl?: string; principalName?: string; tagline?: string; affiliationNo?: string;
 };
 type AcademicYear = { id: string; name: string; startDate: string; endDate: string; isCurrent: boolean };
 type AcademicUnit = { id: string; name: string; displayName?: string; level: number; parentId?: string };
@@ -103,24 +104,61 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
   const [inst, setInst] = useState<Institution | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
-  const [form, setForm] = useState({ name: '', institutionType: '', address: '', phone: '', email: '', website: '', board: '' });
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [form, setForm] = useState({
+    name: '', institutionType: '', address: '', phone: '', email: '',
+    website: '', board: '', logoUrl: '', principalName: '', tagline: '', affiliationNo: '',
+  });
+
+  const sf = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }));
 
   useEffect(() => {
     apiFetch('/institution/me')
       .then((data) => {
         const d = data as Institution;
         setInst(d);
-        setForm({ name: d.name ?? '', institutionType: d.institutionType ?? '', address: d.address ?? '', phone: d.phone ?? '', email: d.email ?? '', website: d.website ?? '', board: d.board ?? '' });
+        setForm({
+          name: d.name ?? '', institutionType: d.institutionType ?? '',
+          address: d.address ?? '', phone: d.phone ?? '', email: d.email ?? '',
+          website: d.website ?? '', board: d.board ?? '',
+          logoUrl: d.logoUrl ?? '', principalName: d.principalName ?? '',
+          tagline: d.tagline ?? '', affiliationNo: d.affiliationNo ?? '',
+        });
       })
       .catch((e: any) => showError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showError('Please upload an image file (PNG, JPG, SVG)'); return; }
+    if (file.size > 2 * 1024 * 1024) { showError('Logo must be under 2 MB'); return; }
+    setUploadingLogo(true);
+    try {
+      const sig = await apiFetch('/institution/me/logo-signature') as any;
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('api_key', sig.apiKey);
+      fd.append('timestamp', String(sig.timestamp));
+      fd.append('signature', sig.signature);
+      fd.append('folder', sig.folder);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!json.secure_url) throw new Error(json.error?.message ?? 'Upload failed');
+      const newLogoUrl = json.secure_url;
+      await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify({ logoUrl: newLogoUrl }) });
+      setForm((f) => ({ ...f, logoUrl: newLogoUrl }));
+      showSuccess('Logo uploaded successfully');
+    } catch (e: any) { showError(e.message || 'Logo upload failed'); }
+    finally { setUploadingLogo(false); }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify(form) });
-      showSuccess('Institution profile updated');
+      showSuccess('School profile saved');
     } catch (e: any) { showError(e.message); }
     finally { setSaving(false); }
   };
@@ -128,49 +166,123 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
   if (loading) return <p className="text-sm text-ds-text3">Loading...</p>;
 
   return (
-    <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2">
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Institution Name *</label>
-          <input className={inp} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Type</label>
-          <select className={inp} value={form.institutionType} onChange={(e) => setForm((f) => ({ ...f, institutionType: e.target.value }))}>
-            <option value="school">School</option>
-            <option value="college">College</option>
-            <option value="coaching">Coaching</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Affiliation Board</label>
-          <input className={inp} placeholder="e.g. CBSE, ICSE, SSC" value={form.board} onChange={(e) => setForm((f) => ({ ...f, board: e.target.value }))} />
-        </div>
-        <div className="col-span-2">
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Address</label>
-          <input className={inp} placeholder="Full address" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Phone</label>
-          <input className={inp} placeholder="Contact number" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Email</label>
-          <input type="email" className={inp} placeholder="institution@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Website</label>
-          <input className={inp} placeholder="https://yourschool.edu.in" value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Login Code</label>
-          <input className={inp + ' bg-ds-bg2 text-ds-text3'} value={inst?.code ?? ''} readOnly />
-          <p className="text-[10px] text-ds-text3 mt-1">Contact platform admin to change the login code.</p>
+    <div className="space-y-6">
+      {/* Document / PDF Preview Header */}
+      <div className="bg-ds-bg2 border border-ds-border rounded-xl p-5">
+        <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3">Preview — How it appears on receipts &amp; documents</p>
+        <div className="bg-white border border-slate-200 rounded-lg p-4 flex items-center gap-4">
+          {form.logoUrl ? (
+            <img src={form.logoUrl} alt="School logo" className="h-14 w-14 object-contain rounded" />
+          ) : (
+            <div className="h-14 w-14 rounded bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-xs text-slate-400 text-center leading-tight">School<br/>Logo</div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-slate-900 text-base leading-tight truncate">{form.name || 'School Name'}</p>
+            {form.tagline && <p className="text-xs text-slate-500 mt-0.5 italic">{form.tagline}</p>}
+            <p className="text-xs text-slate-500 mt-1">
+              {[form.board, form.affiliationNo ? `Affil. No: ${form.affiliationNo}` : ''].filter(Boolean).join(' · ')}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {[form.address, form.phone ? `Ph: ${form.phone}` : '', form.email].filter(Boolean).join(' · ')}
+            </p>
+          </div>
         </div>
       </div>
-      <button onClick={handleSave} disabled={saving}
-        className="btn-brand mt-6 px-6 py-2.5 rounded-lg">
-        {saving ? 'Saving...' : 'Save Changes'}
+
+      {/* Logo Upload */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-ds-text1 mb-4">School Logo</h3>
+        <div className="flex items-center gap-4">
+          {form.logoUrl ? (
+            <img src={form.logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded border border-ds-border bg-ds-bg2 p-1" />
+          ) : (
+            <div className="h-16 w-16 rounded border-2 border-dashed border-ds-border flex items-center justify-center text-xs text-ds-text3 text-center leading-tight bg-ds-bg2">No logo</div>
+          )}
+          <div>
+            <label className="cursor-pointer">
+              <span className={`inline-block px-4 py-2 rounded-lg border border-ds-border text-sm font-medium text-ds-text1 hover:bg-ds-bg2 transition-colors ${uploadingLogo ? 'opacity-50 pointer-events-none' : ''}`}>
+                {uploadingLogo ? 'Uploading...' : form.logoUrl ? 'Replace Logo' : 'Upload Logo'}
+              </span>
+              <input type="file" accept="image/*" className="hidden" disabled={uploadingLogo}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ''; }} />
+            </label>
+            <p className="text-xs text-ds-text3 mt-1.5">PNG, JPG or SVG · Max 2 MB · Appears on all receipts and documents</p>
+          </div>
+          {form.logoUrl && (
+            <button onClick={async () => {
+              await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify({ logoUrl: '' }) });
+              setForm((f) => ({ ...f, logoUrl: '' }));
+              showSuccess('Logo removed');
+            }} className="text-xs text-ds-error-text hover:underline ml-auto">Remove</button>
+          )}
+        </div>
+      </div>
+
+      {/* Identity & Branding */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-ds-text1 mb-4">Identity &amp; Branding</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-ds-text2 block mb-1">School / Institution Name *</label>
+            <input className={inp} value={form.name} onChange={sf('name')} placeholder="e.g. St. Mary's High School" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Institution Type</label>
+            <select className={inp} value={form.institutionType} onChange={sf('institutionType')}>
+              <option value="school">School</option>
+              <option value="college">College</option>
+              <option value="coaching">Coaching Institute</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Affiliation Board</label>
+            <input className={inp} placeholder="e.g. CBSE, ICSE, SSC, State Board" value={form.board} onChange={sf('board')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Affiliation / Registration No</label>
+            <input className={inp} placeholder="e.g. CBSE/AFF/1234567" value={form.affiliationNo} onChange={sf('affiliationNo')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Principal / Director Name</label>
+            <input className={inp} placeholder="Name shown on TC and reports" value={form.principalName} onChange={sf('principalName')} />
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Tagline / Motto</label>
+            <input className={inp} placeholder="e.g. Nurturing Excellence Since 1990" value={form.tagline} onChange={sf('tagline')} />
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Details */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-ds-text1 mb-4">Contact Details</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Address</label>
+            <input className={inp} placeholder="Full postal address" value={form.address} onChange={sf('address')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Phone</label>
+            <input className={inp} placeholder="Contact number" value={form.phone} onChange={sf('phone')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Email</label>
+            <input type="email" className={inp} placeholder="school@email.com" value={form.email} onChange={sf('email')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Website</label>
+            <input className={inp} placeholder="https://yourschool.edu.in" value={form.website} onChange={sf('website')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Login Code</label>
+            <input className={inp + ' bg-ds-bg2 text-ds-text3'} value={inst?.code ?? ''} readOnly />
+            <p className="text-[10px] text-ds-text3 mt-1">Contact platform admin to change.</p>
+          </div>
+        </div>
+      </div>
+
+      <button onClick={handleSave} disabled={saving} className="btn-brand px-8 py-2.5 rounded-lg">
+        {saving ? 'Saving...' : 'Save All Changes'}
       </button>
     </div>
   );

@@ -11,9 +11,11 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   Req,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { StudentService } from './student.service';
-import type { ConfirmAdmissionDto } from './student.service';
+import type { ConfirmAdmissionDto, ImportStudentRowDto } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
@@ -62,6 +64,29 @@ export class StudentController {
   @Permissions('users.read')
   findUnlinkedParents(@Tenant() tenant: TenantContext, @Query('limit') limit?: string) {
     return this.studentService.findUnlinkedParents(tenant.institutionId, limit ? parseInt(limit) : 100);
+  }
+
+  // ── LEDGER IMPORT ─────────────────────────────────────────────────────────
+
+  // GET /students/import-template — CSV template for legacy student migration
+  @Get('import-template')
+  @Permissions('users.write')
+  getImportTemplate(@Res() res: Response) {
+    const csv = [
+      'First Name*,Last Name*,Middle Name,Gender (Male/Female/Other),Date of Birth (DD-MM-YYYY),Class*,Old Admission No,Admission Date (DD-MM-YYYY),Father Name,Mother Name,Parent Mobile,Address,Religion,Caste Category,Blood Group',
+      'Ramesh,Sharma,Kumar,Male,15-06-2015,Class 5,OLD-001,01-06-2023,Rajesh Sharma,Sunita Sharma,9876543210,123 MG Road Mumbai,Hindu,General,A+',
+      'Priya,Verma,,Female,20-08-2014,Class 6,,01-06-2022,Suresh Verma,Kavita Verma,9123456789,,,,',
+    ].join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="student-import-template.csv"');
+    return res.send(csv);
+  }
+
+  // POST /students/import — batch create students from ledger data (JSON rows from frontend CSV parse)
+  @Post('import')
+  @Permissions('users.write')
+  importStudents(@Tenant() tenant: TenantContext, @Body() body: { rows: ImportStudentRowDto[] }) {
+    return this.studentService.importStudents(tenant.institutionId, body.rows || []);
   }
 
   // ── ADMISSION ──────────────────────────────────────────────────────────────
