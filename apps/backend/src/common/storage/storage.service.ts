@@ -59,6 +59,10 @@ export class StorageService implements OnModuleInit {
   }
 
   generateLogoSignature(institutionId: string): SignatureResult {
+    return this.generateBrandingSignature(institutionId, 'logo');
+  }
+
+  generateBrandingSignature(institutionId: string, asset: string): SignatureResult {
     const timestamp = Math.round(Date.now() / 1000);
     const folder = `${institutionId}/branding`;
     const paramsToSign: Record<string, string | number> = { folder, timestamp };

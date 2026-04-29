@@ -24,6 +24,24 @@ interface UpdateInstitutionDto {
   principalName?: string;
   tagline?: string;
   affiliationNo?: string;
+  // Compliance
+  udiseCode?: string;
+  gstin?: string;
+  pan?: string;
+  recognitionNo?: string;
+  foundedYear?: number;
+  mediumOfInstruction?: string;
+  schoolType?: string;
+  managementType?: string;
+  // Branding
+  stampUrl?: string;
+  signatureUrl?: string;
+  // Bank details
+  bankName?: string;
+  bankAccountNo?: string;
+  bankIfsc?: string;
+  bankBranch?: string;
+  bankAccountHolder?: string;
 }
 
 @Controller('institution')
@@ -63,7 +81,16 @@ export class InstitutionController {
   @UseGuards(AuthGuard, TenantGuard)
   async getLogoSignature(@Req() req: any) {
     const institutionId = req.tenant?.institutionId ?? req.user?.institutionId;
-    return this.institutionService.getLogoSignature(institutionId);
+    return this.institutionService.getBrandingSignature(institutionId, 'logo');
+  }
+
+  // GET /institution/me/branding-signature?asset=stamp|signat — for stamp/signature uploads
+  @Get('me/branding-signature')
+  @UseGuards(AuthGuard, TenantGuard)
+  async getBrandingSignature(@Req() req: any) {
+    const institutionId = req.tenant?.institutionId ?? req.user?.institutionId;
+    const asset = (req.query?.asset as string) || 'logo';
+    return this.institutionService.getBrandingSignature(institutionId, asset);
   }
 
   // PATCH /institution/me — update current tenant's institution profile

@@ -55,6 +55,14 @@ interface TC {
     address?: string;
     phone?: string;
     email?: string;
+    website?: string;
+    logoUrl?: string;
+    stampUrl?: string;
+    signatureUrl?: string;
+    affiliationNo?: string;
+    principalName?: string;
+    udiseCode?: string;
+    gstin?: string;
   };
 }
 
@@ -147,18 +155,28 @@ function TcDocument({ tc }: { tc: TC }) {
       style={{ fontFamily: 'Georgia, serif', fontSize: 13, lineHeight: 1.7 }}
     >
       {/* School letterhead */}
-      <div className="text-center border-b-2 border-gray-800 pb-4 mb-5">
-        <p className="text-2xl font-bold uppercase tracking-wide">{institution?.name ?? '—'}</p>
-        {institution?.board && (
-          <p className="text-sm text-ds-text2 mt-0.5">Affiliated to {institution.board}</p>
+      <div className="border-b-2 border-gray-800 pb-4 mb-5" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {institution?.logoUrl && (
+          <img src={institution.logoUrl} alt="Logo" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0 }} />
         )}
-        {institution?.address && (
-          <p className="text-xs text-ds-text2 mt-0.5">{institution.address}</p>
-        )}
-        <div className="flex justify-center gap-6 text-xs text-ds-text2 mt-1">
-          {institution?.phone && <span>Ph: {institution.phone}</span>}
-          {institution?.email && <span>Email: {institution.email}</span>}
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <p className="text-2xl font-bold uppercase tracking-wide">{institution?.name ?? '—'}</p>
+          {institution?.board && (
+            <p className="text-sm text-ds-text2 mt-0.5">Affiliated to {institution.board}{institution.affiliationNo ? ` · Affil No: ${institution.affiliationNo}` : ''}</p>
+          )}
+          {institution?.address && (
+            <p className="text-xs text-ds-text2 mt-0.5">{institution.address}</p>
+          )}
+          <div className="flex justify-center gap-6 text-xs text-ds-text2 mt-1">
+            {institution?.phone && <span>Ph: {institution.phone}</span>}
+            {institution?.email && <span>Email: {institution.email}</span>}
+            {institution?.website && <span>{institution.website}</span>}
+            {institution?.udiseCode && <span>UDISE: {institution.udiseCode}</span>}
+          </div>
         </div>
+        {institution?.stampUrl && (
+          <img src={institution.stampUrl} alt="Stamp" style={{ width: 60, height: 60, objectFit: 'contain', opacity: 0.8, flexShrink: 0 }} />
+        )}
       </div>
 
       {/* Certificate title */}
@@ -189,19 +207,22 @@ function TcDocument({ tc }: { tc: TC }) {
       </table>
 
       {/* Signature lines */}
-      <div className="flex justify-between mt-12 pt-2">
+      <div className="flex justify-between mt-12 pt-2 items-end">
         <div className="text-center text-xs text-ds-text2">
           <div style={{ borderTop: '1px solid #6b7280', width: 160, marginBottom: 4 }} />
           Signature of Class Teacher
         </div>
         <div className="text-center text-xs text-ds-text2">
+          {institution?.signatureUrl && (
+            <img src={institution.signatureUrl} alt="Signature" style={{ maxHeight: 44, maxWidth: 140, objectFit: 'contain', marginBottom: 2 }} />
+          )}
           <div style={{ borderTop: '1px solid #6b7280', width: 200, marginBottom: 4 }} />
-          Principal / Manager — Sign &amp; Seal
+          {institution?.principalName ? institution.principalName : 'Principal'} — Sign &amp; Seal
         </div>
       </div>
 
       <p style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', marginTop: 28 }}>
-        Certified that the above information is correct as per the school records. — {institution?.name}
+        Certified that the above information is correct as per the school records. — {institution?.name}{institution?.gstin ? `  ·  GSTIN: ${institution.gstin}` : ''}
       </p>
     </div>
   );
@@ -302,25 +323,112 @@ export default function TcPage() {
   };
 
   const doPrint = () => {
-    const el = document.getElementById('tc-print-area');
-    if (!el) return;
-    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!printTc) return;
+    const tc = printTc;
+    const inst = tc.institution;
+
+    function esc(s?: string | null) {
+      if (!s) return '';
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function fmt(d?: string | null) {
+      return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+    }
+    function dobFmt(d?: string | null) {
+      if (!d) return '—';
+      const dt = new Date(d);
+      const dd = String(dt.getDate()).padStart(2, '0');
+      const mm = String(dt.getMonth() + 1).padStart(2, '0');
+      const yyyy = dt.getFullYear();
+      return `${dd}/${mm}/${yyyy}   (${dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })})`;
+    }
+    const admissionWithClass = tc.admissionDate ? `${fmt(tc.admissionDate)} — ${tc.classLastStudied}` : '—';
+    const examLine = tc.lastExamName ? `${tc.lastExamName} — ${tc.lastExamResult ?? 'N/A'}` : '—';
+    const rows: [string, string][] = [
+      ['1.  Name of Pupil', tc.studentName],
+      ["2.  Mother's Name", tc.motherName ?? '—'],
+      ["3.  Father's / Guardian's Name", tc.fatherName ?? '—'],
+      ['4.  Nationality', tc.nationality ?? '—'],
+      ['5.  Religion', tc.religion ?? '—'],
+      ['6.  Caste / Category', tc.casteCategory ?? '—'],
+      ['7.  Gender', tc.gender ?? '—'],
+      ['8.  Blood Group', tc.bloodGroup ?? '—'],
+      ['9.  Date of first admission in the school with class', admissionWithClass],
+      ['10. Date of Birth (in figures & words)', dobFmt(tc.dateOfBirth)],
+      ['11. Class in which the pupil last studied', tc.classLastStudied],
+      ['12. School/Board Annual Examination last taken with result', examLine],
+      ['13. Subjects Studied', tc.subjectsStudied ?? '—'],
+      ['14. Whether qualified for promotion to higher class', tc.promotionEligible ?? '—'],
+      ['15. Month up to which the student has paid fees', tc.feesPaidUpToMonth ?? '—'],
+      ['16. Total No. of working days in the session', tc.workingDays != null ? String(tc.workingDays) : '—'],
+      ['17. Total No. of working days present', tc.presentDays != null ? String(tc.presentDays) : '—'],
+      ['18. General conduct', tc.conductGrade],
+      ['19. Date of application for certificate', fmt(tc.requestedAt)],
+      ['20. Date of issue of certificate', fmt(tc.issuedAt)],
+      ['21. Reasons for leaving the school', tc.reason ?? '—'],
+    ];
+    const rowsHtml = rows.map(([label, value]) =>
+      `<tr><td class="label-col">${esc(label)}</td><td>:&nbsp;&nbsp;${esc(value)}</td></tr>`
+    ).join('');
+    const subLine = [inst?.board ? `Affiliated to ${esc(inst.board)}` : '', inst?.affiliationNo ? `Affil No: ${esc(inst.affiliationNo)}` : '', inst?.udiseCode ? `UDISE: ${esc(inst.udiseCode)}` : ''].filter(Boolean).join('  ·  ');
+    const contactLine = [inst?.address ? esc(inst.address) : '', inst?.phone ? `Ph: ${esc(inst.phone)}` : '', inst?.email ? `Email: ${esc(inst.email)}` : '', inst?.website ? esc(inst.website) : ''].filter(Boolean).join('  ·  ');
+
+    const html = `<!DOCTYPE html><html><head><title>Transfer Certificate — ${esc(tc.tcNumber ?? tc.admissionNo)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,serif;font-size:13px;color:#111;margin:40px;line-height:1.7}
+  .letterhead{display:flex;align-items:center;gap:16px;border-bottom:2px solid #333;padding-bottom:14px;margin-bottom:20px}
+  .lh-logo{width:62px;height:62px;object-fit:contain;flex-shrink:0}
+  .lh-center{flex:1;text-align:center}
+  .lh-center h2{font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+  .lh-center .sub{font-size:11px;color:#4b5563;line-height:1.7}
+  .lh-stamp{width:62px;height:62px;object-fit:contain;flex-shrink:0;opacity:.8}
+  h1{text-align:center;font-size:15px;text-transform:uppercase;letter-spacing:.18em;text-decoration:underline;margin-bottom:20px}
+  .meta{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;margin-bottom:36px;border-top:1px solid #d1d5db}
+  td{padding:7px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top;font-size:12.5px}
+  .label-col{width:320px;color:#374151;font-weight:500}
+  .sig-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:12px}
+  .sig-block{text-align:center;font-size:11px;color:#6b7280}
+  .sig-block img{display:block;max-height:44px;max-width:140px;object-fit:contain;margin:0 auto 3px}
+  .sig-line{border-top:1px solid #6b7280;width:180px;margin:0 auto 4px}
+  .footnote{font-size:10px;color:#9ca3af;text-align:center;margin-top:28px}
+  @media print{body{margin:20px}@page{margin:18mm}}
+</style></head><body>
+  <div class="letterhead">
+    ${inst?.logoUrl ? `<img class="lh-logo" src="${esc(inst.logoUrl)}" alt="Logo" />` : '<div style="width:62px;flex-shrink:0"></div>'}
+    <div class="lh-center">
+      <h2>${esc(inst?.name ?? '—')}</h2>
+      ${subLine ? `<div class="sub">${subLine}</div>` : ''}
+      ${contactLine ? `<div class="sub">${contactLine}</div>` : ''}
+    </div>
+    ${inst?.stampUrl ? `<img class="lh-stamp" src="${esc(inst.stampUrl)}" alt="Stamp" />` : '<div style="width:62px;flex-shrink:0"></div>'}
+  </div>
+  <h1>Transfer Certificate</h1>
+  <div class="meta">
+    <span>TC No:&nbsp;<strong>${esc(tc.tcNumber ?? '____________')}</strong></span>
+    <span>Admission No:&nbsp;<strong>${esc(tc.admissionNo)}</strong></span>
+  </div>
+  <table><tbody>${rowsHtml}</tbody></table>
+  <div class="sig-row">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      Signature of Class Teacher
+    </div>
+    <div class="sig-block">
+      ${inst?.signatureUrl ? `<img src="${esc(inst.signatureUrl)}" alt="Signature" />` : ''}
+      <div class="sig-line"></div>
+      ${inst?.principalName ? esc(inst.principalName) : 'Principal'} — Sign &amp; Seal
+    </div>
+  </div>
+  <div class="footnote">Certified that the above information is correct as per the school records. — ${esc(inst?.name ?? '')}${inst?.gstin ? `  ·  GSTIN: ${esc(inst.gstin)}` : ''}</div>
+<script>window.onload=function(){window.print();}</script></body></html>`;
+
+    const w = window.open('', '_blank', 'width=820,height=960');
     if (!w) return;
-    w.document.write(`
-      <html><head><title>Transfer Certificate</title>
-      <style>
-        body { font-family: Georgia, serif; font-size: 13px; margin: 40px; color: #111; }
-        table { width: 100%; border-collapse: collapse; }
-        td { padding: 6px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
-        h1 { text-align: center; font-size: 15px; text-transform: uppercase; letter-spacing: 0.15em; text-decoration: underline; margin-bottom: 20px; }
-        .letterhead { text-align: center; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; }
-        .letterhead h2 { font-size: 18px; text-transform: uppercase; margin: 0; }
-      </style>
-      </head><body>${el.innerHTML}</body></html>
-    `);
+    w.document.write(html);
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); }, 400);
   };
 
   const displayed = list;

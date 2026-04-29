@@ -9,6 +9,10 @@ type Institution = {
   id: string; name: string; code: string; institutionType: string;
   address?: string; phone?: string; email?: string; website?: string; board?: string;
   logoUrl?: string; principalName?: string; tagline?: string; affiliationNo?: string;
+  udiseCode?: string; gstin?: string; pan?: string; recognitionNo?: string;
+  foundedYear?: number; mediumOfInstruction?: string; schoolType?: string; managementType?: string;
+  stampUrl?: string; signatureUrl?: string;
+  bankName?: string; bankAccountNo?: string; bankIfsc?: string; bankBranch?: string; bankAccountHolder?: string;
 };
 type AcademicYear = { id: string; name: string; startDate: string; endDate: string; isCurrent: boolean };
 type AcademicUnit = { id: string; name: string; displayName?: string; level: number; parentId?: string };
@@ -103,14 +107,19 @@ export default function PrincipalSettingsPage() {
 function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => void; showError: (m: string) => void }) {
   const [inst, setInst] = useState<Institution | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving]   = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<'logo' | 'stamp' | 'signat' | null>(null);
+
   const [form, setForm] = useState({
     name: '', institutionType: '', address: '', phone: '', email: '',
     website: '', board: '', logoUrl: '', principalName: '', tagline: '', affiliationNo: '',
+    udiseCode: '', gstin: '', pan: '', recognitionNo: '',
+    foundedYear: '', mediumOfInstruction: '', schoolType: '', managementType: '',
+    stampUrl: '', signatureUrl: '',
+    bankName: '', bankAccountNo: '', bankIfsc: '', bankBranch: '', bankAccountHolder: '',
   });
 
-  const sf = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const sf = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   useEffect(() => {
@@ -124,19 +133,27 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
           website: d.website ?? '', board: d.board ?? '',
           logoUrl: d.logoUrl ?? '', principalName: d.principalName ?? '',
           tagline: d.tagline ?? '', affiliationNo: d.affiliationNo ?? '',
+          udiseCode: d.udiseCode ?? '', gstin: d.gstin ?? '', pan: d.pan ?? '',
+          recognitionNo: d.recognitionNo ?? '',
+          foundedYear: d.foundedYear ? String(d.foundedYear) : '',
+          mediumOfInstruction: d.mediumOfInstruction ?? '',
+          schoolType: d.schoolType ?? '', managementType: d.managementType ?? '',
+          stampUrl: d.stampUrl ?? '', signatureUrl: d.signatureUrl ?? '',
+          bankName: d.bankName ?? '', bankAccountNo: d.bankAccountNo ?? '',
+          bankIfsc: d.bankIfsc ?? '', bankBranch: d.bankBranch ?? '',
+          bankAccountHolder: d.bankAccountHolder ?? '',
         });
       })
       .catch((e: any) => showError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const handleLogoUpload = async (file: File) => {
-    if (!file) return;
+  const handleImageUpload = async (file: File, field: 'logoUrl' | 'stampUrl' | 'signatureUrl', asset: string, uploadKey: 'logo' | 'stamp' | 'signat') => {
     if (!file.type.startsWith('image/')) { showError('Please upload an image file (PNG, JPG, SVG)'); return; }
-    if (file.size > 2 * 1024 * 1024) { showError('Logo must be under 2 MB'); return; }
-    setUploadingLogo(true);
+    if (file.size > 2 * 1024 * 1024) { showError('File must be under 2 MB'); return; }
+    setUploading(uploadKey);
     try {
-      const sig = await apiFetch('/institution/me/logo-signature') as any;
+      const sig = await apiFetch(`/institution/me/branding-signature?asset=${asset}`) as any;
       const fd = new FormData();
       fd.append('file', file);
       fd.append('api_key', sig.apiKey);
@@ -146,75 +163,104 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
       const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd });
       const json = await res.json();
       if (!json.secure_url) throw new Error(json.error?.message ?? 'Upload failed');
-      const newLogoUrl = json.secure_url;
-      await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify({ logoUrl: newLogoUrl }) });
-      setForm((f) => ({ ...f, logoUrl: newLogoUrl }));
-      showSuccess('Logo uploaded successfully');
-    } catch (e: any) { showError(e.message || 'Logo upload failed'); }
-    finally { setUploadingLogo(false); }
+      await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify({ [field]: json.secure_url }) });
+      setForm((f) => ({ ...f, [field]: json.secure_url }));
+      showSuccess('Image uploaded successfully');
+    } catch (e: any) { showError(e.message || 'Upload failed'); }
+    finally { setUploading(null); }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify(form) });
-      showSuccess('School profile saved');
+      const payload = {
+        ...form,
+        foundedYear: form.foundedYear ? parseInt(form.foundedYear) : undefined,
+      };
+      await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify(payload) });
+      showSuccess('School profile saved successfully');
     } catch (e: any) { showError(e.message); }
     finally { setSaving(false); }
   };
 
-  if (loading) return <p className="text-sm text-ds-text3">Loading...</p>;
+  const ImageUploader = ({ field, asset, uploadKey, label, hint }: {
+    field: 'logoUrl' | 'stampUrl' | 'signatureUrl'; asset: string; uploadKey: 'logo' | 'stamp' | 'signat';
+    label: string; hint: string;
+  }) => (
+    <div className="flex items-center gap-4">
+      {form[field] ? (
+        <img src={form[field]} alt={label} className="h-16 w-16 object-contain rounded border border-ds-border bg-white p-1" />
+      ) : (
+        <div className="h-16 w-16 rounded border-2 border-dashed border-ds-border flex items-center justify-center text-xs text-ds-text3 text-center leading-tight bg-ds-bg2">{label}</div>
+      )}
+      <div className="flex-1">
+        <label className="cursor-pointer">
+          <span className={`inline-block px-4 py-2 rounded-lg border border-ds-border text-sm font-medium text-ds-text1 hover:bg-ds-bg2 transition-colors ${uploading === uploadKey ? 'opacity-50 pointer-events-none' : ''}`}>
+            {uploading === uploadKey ? 'Uploading…' : form[field] ? `Replace ${label}` : `Upload ${label}`}
+          </span>
+          <input type="file" accept="image/*" className="hidden" disabled={uploading !== null}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, field, asset, uploadKey); e.target.value = ''; }} />
+        </label>
+        <p className="text-xs text-ds-text3 mt-1.5">{hint}</p>
+      </div>
+      {form[field] && (
+        <button onClick={async () => {
+          await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify({ [field]: '' }) });
+          setForm((f) => ({ ...f, [field]: '' }));
+          showSuccess(`${label} removed`);
+        }} className="text-xs text-ds-error-text hover:underline shrink-0">Remove</button>
+      )}
+    </div>
+  );
+
+  if (loading) return <p className="text-sm text-ds-text3">Loading…</p>;
 
   return (
     <div className="space-y-6">
-      {/* Document / PDF Preview Header */}
+      {/* Live Document Preview */}
       <div className="bg-ds-bg2 border border-ds-border rounded-xl p-5">
-        <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3">Preview — How it appears on receipts &amp; documents</p>
+        <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3">Preview — Letterhead on receipts &amp; documents</p>
         <div className="bg-white border border-slate-200 rounded-lg p-4 flex items-center gap-4">
           {form.logoUrl ? (
-            <img src={form.logoUrl} alt="School logo" className="h-14 w-14 object-contain rounded" />
+            <img src={form.logoUrl} alt="Logo" className="h-14 w-14 object-contain rounded shrink-0" />
           ) : (
-            <div className="h-14 w-14 rounded bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-xs text-slate-400 text-center leading-tight">School<br/>Logo</div>
+            <div className="h-14 w-14 rounded bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-xs text-slate-400 text-center leading-tight shrink-0">School<br/>Logo</div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-slate-900 text-base leading-tight truncate">{form.name || 'School Name'}</p>
-            {form.tagline && <p className="text-xs text-slate-500 mt-0.5 italic">{form.tagline}</p>}
+            <p className="font-bold text-slate-900 text-base leading-tight">{form.name || 'School Name'}</p>
+            {form.tagline && <p className="text-xs text-slate-500 italic mt-0.5">{form.tagline}</p>}
             <p className="text-xs text-slate-500 mt-1">
-              {[form.board, form.affiliationNo ? `Affil. No: ${form.affiliationNo}` : ''].filter(Boolean).join(' · ')}
+              {[form.board, form.affiliationNo ? `Affil: ${form.affiliationNo}` : '', form.udiseCode ? `UDISE: ${form.udiseCode}` : ''].filter(Boolean).join(' · ')}
             </p>
             <p className="text-xs text-slate-400 mt-0.5">
-              {[form.address, form.phone ? `Ph: ${form.phone}` : '', form.email].filter(Boolean).join(' · ')}
+              {[form.address, form.phone ? `Ph: ${form.phone}` : '', form.email, form.website].filter(Boolean).join(' · ')}
             </p>
           </div>
+          {form.stampUrl && (
+            <img src={form.stampUrl} alt="Stamp" className="h-14 w-14 object-contain opacity-70 shrink-0" />
+          )}
         </div>
+        {(form.bankName || form.bankAccountNo) && (
+          <div className="mt-2 bg-white border border-slate-200 rounded-lg px-4 py-2 text-xs text-slate-500">
+            <span className="font-medium text-slate-700">Bank:</span> {[form.bankName, form.bankAccountNo ? `A/C ${form.bankAccountNo}` : '', form.bankIfsc, form.bankBranch].filter(Boolean).join(' · ')}
+          </div>
+        )}
       </div>
 
-      {/* Logo Upload */}
-      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
-        <h3 className="text-sm font-semibold text-ds-text1 mb-4">School Logo</h3>
-        <div className="flex items-center gap-4">
-          {form.logoUrl ? (
-            <img src={form.logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded border border-ds-border bg-ds-bg2 p-1" />
-          ) : (
-            <div className="h-16 w-16 rounded border-2 border-dashed border-ds-border flex items-center justify-center text-xs text-ds-text3 text-center leading-tight bg-ds-bg2">No logo</div>
-          )}
-          <div>
-            <label className="cursor-pointer">
-              <span className={`inline-block px-4 py-2 rounded-lg border border-ds-border text-sm font-medium text-ds-text1 hover:bg-ds-bg2 transition-colors ${uploadingLogo ? 'opacity-50 pointer-events-none' : ''}`}>
-                {uploadingLogo ? 'Uploading...' : form.logoUrl ? 'Replace Logo' : 'Upload Logo'}
-              </span>
-              <input type="file" accept="image/*" className="hidden" disabled={uploadingLogo}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ''; }} />
-            </label>
-            <p className="text-xs text-ds-text3 mt-1.5">PNG, JPG or SVG · Max 2 MB · Appears on all receipts and documents</p>
-          </div>
-          {form.logoUrl && (
-            <button onClick={async () => {
-              await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify({ logoUrl: '' }) });
-              setForm((f) => ({ ...f, logoUrl: '' }));
-              showSuccess('Logo removed');
-            }} className="text-xs text-ds-error-text hover:underline ml-auto">Remove</button>
-          )}
+      {/* Logo & Branding Images */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6 space-y-5">
+        <h3 className="text-sm font-semibold text-ds-text1">School Logo &amp; Official Stamp</h3>
+        <div>
+          <p className="text-xs font-medium text-ds-text2 mb-2">School Logo <span className="text-ds-text3 font-normal">— appears in letterhead on all documents</span></p>
+          <ImageUploader field="logoUrl" asset="logo" uploadKey="logo" label="Logo" hint="PNG, JPG or SVG · Max 2 MB · Used on receipts, TC, certificates" />
+        </div>
+        <div className="border-t border-ds-border pt-5">
+          <p className="text-xs font-medium text-ds-text2 mb-2">Official Stamp / Seal <span className="text-ds-text3 font-normal">— printed on TC, bonafide &amp; formal documents</span></p>
+          <ImageUploader field="stampUrl" asset="stamp" uploadKey="stamp" label="Stamp" hint="Upload a transparent PNG of your school seal · Max 2 MB" />
+        </div>
+        <div className="border-t border-ds-border pt-5">
+          <p className="text-xs font-medium text-ds-text2 mb-2">Principal Signature <span className="text-ds-text3 font-normal">— printed on formal documents and TC</span></p>
+          <ImageUploader field="signatureUrl" asset="signat" uploadKey="signat" label="Signature" hint="Upload a transparent PNG of the principal's signature · Max 2 MB" />
         </div>
       </div>
 
@@ -235,6 +281,15 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
             </select>
           </div>
           <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">School Type</label>
+            <select className={inp} value={form.schoolType} onChange={sf('schoolType')}>
+              <option value="">Select…</option>
+              <option value="Co-ed">Co-educational</option>
+              <option value="Boys">Boys Only</option>
+              <option value="Girls">Girls Only</option>
+            </select>
+          </div>
+          <div>
             <label className="text-xs font-medium text-ds-text2 block mb-1">Affiliation Board</label>
             <input className={inp} placeholder="e.g. CBSE, ICSE, SSC, State Board" value={form.board} onChange={sf('board')} />
           </div>
@@ -245,6 +300,40 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
           <div>
             <label className="text-xs font-medium text-ds-text2 block mb-1">Principal / Director Name</label>
             <input className={inp} placeholder="Name shown on TC and reports" value={form.principalName} onChange={sf('principalName')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Year of Establishment</label>
+            <input className={inp} type="number" placeholder="e.g. 1995" value={form.foundedYear} onChange={sf('foundedYear')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Medium of Instruction</label>
+            <select className={inp} value={form.mediumOfInstruction} onChange={sf('mediumOfInstruction')}>
+              <option value="">Select…</option>
+              <option value="English">English</option>
+              <option value="Hindi">Hindi</option>
+              <option value="English & Hindi">English &amp; Hindi</option>
+              <option value="Marathi">Marathi</option>
+              <option value="Gujarati">Gujarati</option>
+              <option value="Tamil">Tamil</option>
+              <option value="Telugu">Telugu</option>
+              <option value="Kannada">Kannada</option>
+              <option value="Malayalam">Malayalam</option>
+              <option value="Bengali">Bengali</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Management Type</label>
+            <select className={inp} value={form.managementType} onChange={sf('managementType')}>
+              <option value="">Select…</option>
+              <option value="Private Unaided">Private Unaided</option>
+              <option value="Private Aided">Private Aided</option>
+              <option value="Government">Government</option>
+              <option value="Government Aided">Government Aided</option>
+              <option value="Central Government">Central Government</option>
+              <option value="Trust">Trust / NGO</option>
+              <option value="Minority">Minority Institution</option>
+            </select>
           </div>
           <div className="col-span-2">
             <label className="text-xs font-medium text-ds-text2 block mb-1">Tagline / Motto</label>
@@ -281,8 +370,60 @@ function ProfileTab({ showSuccess, showError }: { showSuccess: (m: string) => vo
         </div>
       </div>
 
+      {/* Legal & Compliance */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-ds-text1 mb-1">Legal &amp; Compliance</h3>
+        <p className="text-xs text-ds-text3 mb-4">Required for official documents, government submissions, and audit records.</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">UDISE+ Code</label>
+            <input className={inp} placeholder="11-digit UDISE code" value={form.udiseCode} onChange={sf('udiseCode')} maxLength={11} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">State Recognition No.</label>
+            <input className={inp} placeholder="State / district recognition number" value={form.recognitionNo} onChange={sf('recognitionNo')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">GST Number (GSTIN)</label>
+            <input className={inp} placeholder="15-digit GSTIN (if registered)" value={form.gstin} onChange={sf('gstin')} maxLength={15} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">PAN Number</label>
+            <input className={inp} placeholder="10-character PAN" value={form.pan} onChange={sf('pan')} maxLength={10} style={{ textTransform: 'uppercase' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Bank Details */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-ds-text1 mb-1">Bank Account Details</h3>
+        <p className="text-xs text-ds-text3 mb-4">Printed at the bottom of fee receipts for online transfer payments.</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Bank Name</label>
+            <input className={inp} placeholder="e.g. State Bank of India" value={form.bankName} onChange={sf('bankName')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Account Holder Name</label>
+            <input className={inp} placeholder="Name on the account" value={form.bankAccountHolder} onChange={sf('bankAccountHolder')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Account Number</label>
+            <input className={inp} placeholder="Bank account number" value={form.bankAccountNo} onChange={sf('bankAccountNo')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">IFSC Code</label>
+            <input className={inp} placeholder="e.g. SBIN0001234" value={form.bankIfsc} onChange={sf('bankIfsc')} style={{ textTransform: 'uppercase' }} />
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Branch</label>
+            <input className={inp} placeholder="Branch name and city" value={form.bankBranch} onChange={sf('bankBranch')} />
+          </div>
+        </div>
+      </div>
+
       <button onClick={handleSave} disabled={saving} className="btn-brand px-8 py-2.5 rounded-lg">
-        {saving ? 'Saving...' : 'Save All Changes'}
+        {saving ? 'Saving…' : 'Save All Changes'}
       </button>
     </div>
   );

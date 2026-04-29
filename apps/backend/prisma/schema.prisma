@@ -25,6 +25,28 @@ model Institution {
   principalName   String?
   tagline         String?
   affiliationNo   String?
+
+  // Legal & Compliance (India-specific)
+  udiseCode           String?  // UDISE+ government identifier
+  gstin               String?  // GST registration number
+  pan                 String?  // PAN for financial documents
+  recognitionNo       String?  // State/board recognition number
+  foundedYear         Int?     // Year of establishment
+  mediumOfInstruction String?  // English / Hindi / Both / Regional
+  schoolType          String?  // Co-ed / Boys / Girls
+  managementType      String?  // Private / Government / Aided / Unaided
+
+  // Document Branding
+  stampUrl            String?  // School seal / official stamp image
+  signatureUrl        String?  // Principal signature image
+
+  // Bank Details (printed on fee receipts)
+  bankName            String?
+  bankAccountNo       String?
+  bankIfsc            String?
+  bankBranch          String?
+  bankAccountHolder   String?
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?

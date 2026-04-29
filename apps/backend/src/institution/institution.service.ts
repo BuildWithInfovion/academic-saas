@@ -67,12 +67,16 @@ export class InstitutionService {
   constructor(private prisma: PrismaService, private storage: StorageService) {}
 
   getLogoSignature(institutionId: string) {
+    return this.getBrandingSignature(institutionId, 'logo');
+  }
+
+  getBrandingSignature(institutionId: string, asset: string) {
     if (!this.storage.isConfigured()) {
       throw new ServiceUnavailableException(
         'File storage is not configured. Set CLOUDINARY_* environment variables.',
       );
     }
-    return this.storage.generateLogoSignature(institutionId);
+    return this.storage.generateBrandingSignature(institutionId, asset);
   }
 
   async create(createInstitutionDto: CreateInstitutionDto) {
@@ -90,17 +94,13 @@ export class InstitutionService {
   }
 
   async updateProfile(institutionId: string, dto: {
-    name?: string;
-    institutionType?: string;
-    address?: string;
-    phone?: string;
-    email?: string;
-    website?: string;
-    board?: string;
-    logoUrl?: string;
-    principalName?: string;
-    tagline?: string;
-    affiliationNo?: string;
+    name?: string; institutionType?: string;
+    address?: string; phone?: string; email?: string; website?: string;
+    board?: string; logoUrl?: string; principalName?: string; tagline?: string; affiliationNo?: string;
+    udiseCode?: string; gstin?: string; pan?: string; recognitionNo?: string;
+    foundedYear?: number; mediumOfInstruction?: string; schoolType?: string; managementType?: string;
+    stampUrl?: string; signatureUrl?: string;
+    bankName?: string; bankAccountNo?: string; bankIfsc?: string; bankBranch?: string; bankAccountHolder?: string;
   }) {
     return this.prisma.institution.update({
       where: { id: institutionId },
