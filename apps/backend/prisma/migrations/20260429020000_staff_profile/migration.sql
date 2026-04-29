@@ -30,9 +30,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS "staff_profiles_userId_key" ON "staff_profiles
 CREATE INDEX IF NOT EXISTS "staff_profiles_institutionId_idx" ON "staff_profiles"("institutionId");
 
 ALTER TABLE "staff_profiles"
-  ADD CONSTRAINT IF NOT EXISTS "staff_profiles_institutionId_fkey"
+  ADD CONSTRAINT "staff_profiles_institutionId_fkey"
   FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "staff_profiles"
-  ADD CONSTRAINT IF NOT EXISTS "staff_profiles_userId_fkey"
+  ADD CONSTRAINT "staff_profiles_userId_fkey"
   FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
