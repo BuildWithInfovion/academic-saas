@@ -61,6 +61,11 @@ model Institution {
   salaryRecords          SalaryRecord[]
   studentDocuments       StudentDocument[]
   staffProfiles          StaffProfile[]
+  // Fee Plan System V2
+  feeCategories          FeeCategory[]     @relation("InstitutionFeeCategories")
+  feePlans               FeePlan[]         @relation("InstitutionFeePlans")
+  feeCollections         FeeCollection[]   @relation("InstitutionFeeCollections")
+  feeConcessions         FeeConcession[]   @relation("InstitutionFeeConcessions")
 
   @@map("institutions")
 }
@@ -162,6 +167,8 @@ model Student {
   examResults           ExamResult[]
   transferCertificates  TransferCertificate[]
   documents             StudentDocument[]
+  feeCollections        FeeCollection[]   @relation("StudentFeeCollections")
+  feeConcessions        FeeConcession[]   @relation("StudentFeeConcessions")
 
   @@unique([institutionId, admissionNo])
   @@index([institutionId])
@@ -186,6 +193,7 @@ model AcademicYear {
   academicUnits AcademicUnit[]
   feeStructures FeeStructure[]
   exams         Exam[]
+  feePlans      FeePlan[]      @relation("AcademicYearFeePlans")
 
   @@unique([institutionId, name])
   @@index([institutionId])
@@ -222,6 +230,7 @@ model AcademicUnit {
   examSubjects        ExamSubject[]
   timetableSlots      TimetableSlot[]
   timetableCovers     TimetableCover[]
+  feePlanClassMaps    FeePlanClassMap[]
 
   @@index([institutionId])
   @@index([parentId])
@@ -294,6 +303,8 @@ model User {
   salaryRecords         SalaryRecord[]
 
   staffProfile          StaffProfile?
+  feeCollections        FeeCollection[]   @relation("FeeCollectionCollector")
+  approvedConcessions   FeeConcession[]   @relation("FeeConcessionsApprover")
 
   @@index([institutionId])
   @@index([email])                      // login lookups — auth.service queries by email
@@ -1141,4 +1152,142 @@ model StudentDocument {
   @@index([studentId])
   @@index([institutionId, studentId])
   @@map("student_documents")
+}
+
+// ── FEE MANAGEMENT V2 — Plan-based System ────────────────────────────────────
+// Schools create a FeePlan (with items + installments), assign it to classes,
+// optionally grant per-student concessions, then record FeeCollections against
+// specific installments. Replaces the per-class FeeStructure setup flow.
+
+model FeeCategory {
+  id            String    @id @default(cuid())
+  institutionId String
+  name          String
+  type          String    @default("CUSTOM") // TUITION|TRANSPORT|EXAM|LAB|LIBRARY|ACTIVITY|SPORTS|DEVELOPMENT|HOSTEL|CUSTOM
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  institution  Institution   @relation("InstitutionFeeCategories", fields: [institutionId], references: [id], onDelete: Cascade)
+  planItems    FeePlanItem[]
+  collections  FeeCollection[]
+
+  @@unique([institutionId, name])
+  @@index([institutionId])
+  @@map("fee_categories")
+}
+
+model FeePlan {
+  id             String    @id @default(cuid())
+  institutionId  String
+  academicYearId String
+  name           String
+  description    String?
+  isActive       Boolean   @default(true)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  institution  Institution   @relation("InstitutionFeePlans", fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear  @relation("AcademicYearFeePlans", fields: [academicYearId], references: [id])
+  items        FeePlanItem[]
+  classMaps    FeePlanClassMap[]
+
+  @@unique([institutionId, name, academicYearId])
+  @@index([institutionId])
+  @@index([academicYearId])
+  @@map("fee_plans")
+}
+
+model FeePlanItem {
+  id            String  @id @default(cuid())
+  feePlanId     String
+  feeCategoryId String
+  totalAmount   Float
+
+  feePlan      FeePlan            @relation(fields: [feePlanId], references: [id], onDelete: Cascade)
+  feeCategory  FeeCategory        @relation(fields: [feeCategoryId], references: [id])
+  installments FeePlanInstallment[]
+  collections  FeeCollection[]
+  concessions  FeeConcession[]
+
+  @@unique([feePlanId, feeCategoryId])
+  @@map("fee_plan_items")
+}
+
+model FeePlanInstallment {
+  id            String    @id @default(cuid())
+  feePlanItemId String
+  label         String    // "Term 1", "Q1", "Annual"
+  amount        Float
+  dueDate       DateTime? @db.Date
+  sortOrder     Int       @default(0)
+
+  feePlanItem FeePlanItem     @relation(fields: [feePlanItemId], references: [id], onDelete: Cascade)
+  collections FeeCollection[]
+
+  @@unique([feePlanItemId, label])
+  @@map("fee_plan_installments")
+}
+
+model FeePlanClassMap {
+  id             String @id @default(cuid())
+  feePlanId      String
+  academicUnitId String
+
+  feePlan      FeePlan      @relation(fields: [feePlanId], references: [id], onDelete: Cascade)
+  academicUnit AcademicUnit @relation(fields: [academicUnitId], references: [id], onDelete: Cascade)
+
+  @@unique([feePlanId, academicUnitId])
+  @@map("fee_plan_class_maps")
+}
+
+model FeeConcession {
+  id               String   @id @default(cuid())
+  institutionId    String
+  studentId        String
+  feePlanItemId    String
+  amount           Float
+  reason           String
+  approvedByUserId String?
+  createdAt        DateTime @default(now())
+
+  institution  Institution @relation("InstitutionFeeConcessions", fields: [institutionId], references: [id], onDelete: Cascade)
+  student      Student     @relation("StudentFeeConcessions", fields: [studentId], references: [id], onDelete: Cascade)
+  feePlanItem  FeePlanItem @relation(fields: [feePlanItemId], references: [id], onDelete: Cascade)
+  approvedBy   User?       @relation("FeeConcessionsApprover", fields: [approvedByUserId], references: [id])
+
+  @@index([institutionId])
+  @@index([studentId])
+  @@map("fee_concessions")
+}
+
+model FeeCollection {
+  id                   String    @id @default(cuid())
+  institutionId        String
+  studentId            String
+  feePlanItemId        String?
+  feePlanInstallmentId String?
+  feeCategoryId        String
+  academicYearId       String?
+  amount               Float
+  paymentMode          String    @default("cash")
+  receiptNo            String
+  paidOn               DateTime  @db.Date
+  remarks              String?
+  collectedByUserId    String?
+  createdAt            DateTime  @default(now())
+
+  institution        Institution        @relation("InstitutionFeeCollections", fields: [institutionId], references: [id], onDelete: Cascade)
+  student            Student            @relation("StudentFeeCollections", fields: [studentId], references: [id], onDelete: Cascade)
+  feePlanItem        FeePlanItem?       @relation(fields: [feePlanItemId], references: [id])
+  feePlanInstallment FeePlanInstallment? @relation(fields: [feePlanInstallmentId], references: [id])
+  feeCategory        FeeCategory        @relation(fields: [feeCategoryId], references: [id])
+  collectedBy        User?              @relation("FeeCollectionCollector", fields: [collectedByUserId], references: [id])
+
+  @@unique([institutionId, receiptNo])
+  @@index([institutionId])
+  @@index([studentId])
+  @@index([paidOn])
+  @@index([academicYearId])
+  @@index([feePlanInstallmentId])
+  @@map("fee_collections")
 }

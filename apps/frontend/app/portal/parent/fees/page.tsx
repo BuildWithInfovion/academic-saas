@@ -4,94 +4,41 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 
-type Institution = { name: string; board?: string; address?: string; phone?: string; email?: string };
-
-function esc(s: string | null | undefined): string {
-  if (!s) return '';
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function printFeeReceipt(payment: Payment, child: Child, institution: Institution) {
-  const date = new Date(payment.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-  const payModeLabel: Record<string, string> = {
-    cash: 'Cash', upi: 'UPI', cheque: 'Cheque', bank_transfer: 'Bank Transfer', dd: 'Demand Draft',
-  };
-  const className = child.academicUnit?.displayName || child.academicUnit?.name || '';
-  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${esc(payment.receiptNo)}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:30px}
-  .receipt{max-width:520px;margin:0 auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
-  .letterhead{background:#0f172a;color:#fff;padding:20px 24px;text-align:center}
-  .letterhead h1{font-size:17px;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
-  .letterhead .sub{font-size:11px;opacity:.65;line-height:1.5}
-  .receipt-header{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
-  .receipt-header .rno{font-size:13px;font-weight:700;color:#0f172a}
-  .receipt-header .rdate{font-size:12px;color:#64748b}
-  .section{padding:18px 24px}
-  .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px}
-  .row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f1f5f9}
-  .row:last-child{border:none}
-  .label{color:#64748b;font-size:12px}
-  .value{font-weight:600;font-size:12px;text-align:right;max-width:60%}
-  .amount-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:8px;padding:14px 18px;margin:0 24px 20px;display:flex;justify-content:space-between;align-items:center}
-  .amount-box .lbl{font-size:12px;color:#166534;font-weight:600}
-  .amount-box .amt{font-size:26px;font-weight:800;color:#15803d}
-  .footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px 20px;border-top:1px solid #f1f5f9;line-height:1.6}
-  @media print{body{background:#fff;padding:0}.receipt{box-shadow:none;border-radius:0;border:1px solid #ccc};-webkit-print-color-adjust:exact;print-color-adjust:exact}
-</style></head><body>
-<div class="receipt">
-  <div class="letterhead">
-    <h1>${esc(institution.name)}</h1>
-    <div class="sub">
-      ${institution.board ? `${esc(institution.board)}<br>` : ''}
-      ${institution.address ? `${esc(institution.address)}<br>` : ''}
-      ${[institution.phone ? `Ph: ${esc(institution.phone)}` : '', institution.email ? `Email: ${esc(institution.email)}` : ''].filter(Boolean).join('  ·  ')}
-    </div>
-  </div>
-  <div class="receipt-header">
-    <span class="rno">Receipt No: ${esc(payment.receiptNo)}</span>
-    <span class="rdate">${date}</span>
-  </div>
-  <div class="section">
-    <div class="section-title">Student Details</div>
-    <div class="row"><span class="label">Student Name</span><span class="value">${esc(child.firstName)} ${esc(child.lastName)}</span></div>
-    <div class="row"><span class="label">Admission No</span><span class="value">${esc(child.admissionNo)}</span></div>
-    ${className ? `<div class="row"><span class="label">Class / Section</span><span class="value">${esc(className)}</span></div>` : ''}
-  </div>
-  <div class="section" style="padding-top:0">
-    <div class="section-title">Payment Details</div>
-    <div class="row"><span class="label">Fee Head</span><span class="value">${esc(payment.feeHead?.name ?? '—')}</span></div>
-    <div class="row"><span class="label">Payment Mode</span><span class="value">${esc(payModeLabel[payment.paymentMode] ?? payment.paymentMode?.toUpperCase())}</span></div>
-    ${payment.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${esc(payment.remarks)}</span></div>` : ''}
-  </div>
-  <div class="amount-box">
-    <span class="lbl">Amount Paid</span>
-    <span class="amt">₹${payment.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-  </div>
-  <div class="footer">
-    This is a computer-generated receipt and does not require a signature.<br>
-    Issued by ${esc(institution.name)}
-  </div>
-</div>
-<script>window.onload=function(){window.print();}</script>
-</body></html>`;
-  const w = window.open('', '_blank', 'width=600,height=800');
-  if (w) { w.document.write(html); w.document.close(); }
-}
+type Institution = { name: string; board?: string; address?: string; phone?: string; email?: string; logoUrl?: string; principalName?: string };
 
 type Child = {
   id: string; firstName: string; lastName: string; admissionNo: string;
   academicUnit?: { displayName?: string; name?: string };
 };
-type Payment = {
+
+type LedgerInstallment = {
+  id: string; label: string; amount: number; dueDate?: string | null;
+  concession: number; netAmount: number; paid: number; balance: number;
+  status: 'paid' | 'partial' | 'due' | 'overdue';
+};
+
+type LedgerItem = {
+  feePlanItemId: string; feeCategoryId: string; categoryName: string;
+  totalAmount: number; concession: number; netAmount: number;
+  installments: LedgerInstallment[]; totalPaid: number; totalBalance: number;
+};
+
+type Ledger = {
+  student: { id: string; name: string; admissionNo: string; className: string };
+  plan: { id: string; name: string } | null;
+  items: LedgerItem[];
+  totalAnnual: number; totalConcession: number; totalNet: number;
+  totalPaid: number; totalBalance: number;
+};
+
+type CollectionEntry = {
   id: string; receiptNo: string; amount: number; paymentMode: string;
-  paidOn: string; remarks?: string; feeHead: { name: string };
+  paidOn: string; categoryName: string; installmentLabel?: string | null;
+  remarks?: string | null; source: 'legacy' | 'v2';
 };
-type Balance = {
-  totalDue: number; totalPaid: number; balance: number;
-  breakdown: { feeHeadName: string; due: number; paid: number; balance: number }[];
-};
+
+type AcademicYear = { id: string; name: string; isCurrent: boolean };
+
 type ChildDue = {
   studentId: string; studentName: string; admissionNo: string; className: string;
   upcomingDues: {
@@ -100,17 +47,29 @@ type ChildDue = {
   }[];
 };
 
+function fmt(n: number) { return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
+
+const STATUS_CHIP: Record<string, { bg: string; color: string; label: string }> = {
+  paid:    { bg: '#dcfce7', color: '#15803d', label: 'Paid' },
+  partial: { bg: '#fef9c3', color: '#854d0e', label: 'Partial' },
+  due:     { bg: '#dbeafe', color: '#1d4ed8', label: 'Due' },
+  overdue: { bg: '#fee2e2', color: '#dc2626', label: 'Overdue' },
+};
+
 export default function ParentFeesPage() {
   const user = usePortalAuthStore((s) => s.user);
+  const [notLinked, setNotLinked] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('');
-  const [notLinked, setNotLinked] = useState(false);
-  const [currentYearId, setCurrentYearId] = useState('');
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [balance, setBalance] = useState<Balance | null>(null);
+  const [years, setYears] = useState<AcademicYear[]>([]);
+  const [yearId, setYearId] = useState('');
+  const [ledger, setLedger] = useState<Ledger | null>(null);
+  const [history, setHistory] = useState<CollectionEntry[]>([]);
+  const [histTotal, setHistTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [institution, setInstitution] = useState<Institution>({ name: user?.institutionName ?? 'School' });
   const [childDues, setChildDues] = useState<ChildDue[]>([]);
+  const [activeTab, setActiveTab] = useState<'ledger' | 'history'>('ledger');
 
   useEffect(() => {
     Promise.all([
@@ -119,13 +78,15 @@ export default function ParentFeesPage() {
       apiFetch('/academic/institution'),
       apiFetch('/fees/my-children/upcoming-dues').catch(() => []),
     ])
-      .then(([kids, years, inst, dues]) => {
-        const children = Array.isArray(kids) ? kids : [];
-        setChildren(children);
-        if (children.length > 0) setSelectedChildId(children[0].id);
-        if (children.length === 0) setNotLinked(true);
-        const current = years.find((y: any) => y.isCurrent) ?? years[0];
-        if (current) setCurrentYearId(current.id);
+      .then(([kids, yrs, inst, dues]) => {
+        const childList = Array.isArray(kids) ? kids : [];
+        setChildren(childList);
+        if (childList.length === 0) { setNotLinked(true); return; }
+        setSelectedChildId(childList[0].id);
+        const yearList = Array.isArray(yrs) ? yrs : [];
+        setYears(yearList);
+        const cur = yearList.find((y: AcademicYear) => y.isCurrent) ?? yearList[0];
+        if (cur) setYearId(cur.id);
         if (inst) setInstitution(inst as Institution);
         setChildDues(Array.isArray(dues) ? dues : []);
       })
@@ -133,22 +94,21 @@ export default function ParentFeesPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedChildId) return;
+    if (!selectedChildId || !yearId) return;
     setLoading(true);
     Promise.all([
-      apiFetch(`/fees/payments/student/${selectedChildId}`),
-      currentYearId
-        ? apiFetch(`/fees/payments/student/${selectedChildId}/balance?yearId=${currentYearId}`)
-        : Promise.resolve(null),
+      apiFetch(`/fees/ledger/student/${selectedChildId}?yearId=${yearId}`),
+      apiFetch(`/fees/collections/student/${selectedChildId}`),
     ])
-      .then(([paymentsRes, bal]) => {
-        const list = Array.isArray(paymentsRes) ? paymentsRes : (paymentsRes as any)?.payments ?? [];
-        setPayments(list);
-        setBalance(bal);
+      .then(([ldg, hist]) => {
+        setLedger(ldg as Ledger);
+        const payments = (hist as any)?.payments ?? [];
+        setHistory(payments);
+        setHistTotal((hist as any)?.total ?? 0);
       })
-      .catch(() => {})
+      .catch(() => { setLedger(null); setHistory([]); })
       .finally(() => setLoading(false));
-  }, [selectedChildId, currentYearId]);
+  }, [selectedChildId, yearId]);
 
   if (notLinked) {
     return (
@@ -160,57 +120,51 @@ export default function ParentFeesPage() {
     );
   }
 
-  // Flatten all upcoming dues across children, excluding already-paid ones
+  // Upcoming dues from legacy endpoint — still useful as a quick alert
   const unpaidDues = childDues.flatMap((cd) =>
-    cd.upcomingDues
-      .filter((d) => !d.isPaid)
-      .map((d) => ({ ...d, studentName: cd.studentName, className: cd.className }))
+    cd.upcomingDues.filter((d) => !d.isPaid).map((d) => ({ ...d, studentName: cd.studentName, className: cd.className }))
   ).sort((a, b) => a.daysFromToday - b.daysFromToday);
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Child's Fee Status</h1>
-      <p className="text-sm text-ds-text3 mb-6">Fee dues and payment history</p>
+      <h1 className="text-2xl font-bold text-ds-text1 mb-1">Fee Status</h1>
+      <p className="text-sm text-ds-text3 mb-6">Fee dues and payment history for your child</p>
 
-      {/* Upcoming Due Dates Alert Panel */}
+      {/* Upcoming due alerts */}
       {unpaidDues.length > 0 && (
-        <div className="mb-6 bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-ds-border flex items-center gap-2">
-            <span className="font-semibold text-ds-text1 text-sm">Upcoming Fee Dues</span>
+        <div className="mb-6 rounded-xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--border)' }}>
+            <span className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Upcoming Due Dates</span>
             {unpaidDues.some((d) => d.daysFromToday < 0) && (
-              <span className="text-xs bg-ds-error-bg text-ds-error-text font-medium px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">
                 {unpaidDues.filter((d) => d.daysFromToday < 0).length} overdue
               </span>
             )}
           </div>
-          <div className="divide-y divide-ds-border">
-            {unpaidDues.map((d, i) => {
+          <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+            {unpaidDues.slice(0, 5).map((d, i) => {
               const overdue = d.daysFromToday < 0;
-              const today   = d.daysFromToday === 0;
-              const urgent  = d.daysFromToday <= 7 && d.daysFromToday >= 0;
+              const today = d.daysFromToday === 0;
+              const urgent = d.daysFromToday <= 7 && d.daysFromToday >= 0;
               const timingLabel = overdue
                 ? `${Math.abs(d.daysFromToday)} day${Math.abs(d.daysFromToday) !== 1 ? 's' : ''} overdue`
                 : today ? 'Due today'
                 : `Due in ${d.daysFromToday} day${d.daysFromToday !== 1 ? 's' : ''}`;
-              const timingCls = overdue
-                ? 'bg-ds-error-bg text-ds-error-text'
-                : urgent ? 'bg-ds-warning-bg text-ds-warning-text'
-                : 'bg-ds-info-bg text-ds-info-text';
-
+              const chipCls = overdue ? 'bg-red-100 text-red-700' : urgent ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-700';
               return (
-                <div key={i} className={`px-5 py-3 flex items-center justify-between ${overdue ? 'bg-red-50/40' : ''}`}>
+                <div key={i} className={`px-5 py-3 flex items-center justify-between ${overdue ? 'bg-red-50/30' : ''}`}>
                   <div>
-                    <p className="text-sm font-medium text-ds-text1">
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
                       {d.feeHeadName}
-                      {d.installmentName && <span className="text-ds-text3 font-normal"> · {d.installmentName}</span>}
+                      {d.installmentName && <span style={{ color: 'var(--text-3)', fontWeight: 400 }}> · {d.installmentName}</span>}
                     </p>
-                    <p className="text-xs text-ds-text2 mt-0.5">
-                      {d.studentName} · {d.className} · Due {new Date(d.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-2)' }}>
+                      {d.studentName} · Due {new Date(d.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${timingCls}`}>{timingLabel}</span>
-                    <span className="text-sm font-semibold text-ds-text1">₹{d.amount.toLocaleString('en-IN')}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${chipCls}`}>{timingLabel}</span>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{fmt(d.amount)}</span>
                   </div>
                 </div>
               );
@@ -219,117 +173,187 @@ export default function ParentFeesPage() {
         </div>
       )}
 
+      {/* Child selector */}
       {children.length > 1 && (
-        <div className="mb-5">
-          <label className="text-xs font-medium text-ds-text2 block mb-1">Child</label>
+        <div className="mb-5 flex gap-3 items-center">
+          <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Child</label>
           <select value={selectedChildId} onChange={(e) => setSelectedChildId(e.target.value)}
-            className="border border-ds-border-strong rounded-lg p-2 text-sm bg-ds-surface focus:outline-none">
+            className="field" style={{ width: 'auto' }}>
             {children.map((c) => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
+          </select>
+          <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Year</label>
+          <select value={yearId} onChange={(e) => setYearId(e.target.value)}
+            className="field" style={{ width: 'auto' }}>
+            {years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+          </select>
+        </div>
+      )}
+      {children.length === 1 && years.length > 1 && (
+        <div className="mb-5 flex gap-3 items-center">
+          <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Academic Year</label>
+          <select value={yearId} onChange={(e) => setYearId(e.target.value)}
+            className="field" style={{ width: 'auto' }}>
+            {years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
           </select>
         </div>
       )}
 
       {loading ? (
-        <p className="text-sm text-ds-text3">Loading...</p>
+        <p className="py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>Loading…</p>
       ) : (
         <>
-          {balance && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-                <p className="text-2xl font-bold text-ds-text1">₹{(balance.totalDue ?? 0).toLocaleString('en-IN')}</p>
-                <p className="text-sm text-ds-text2 mt-1">Total Due</p>
-              </div>
-              <div className="bg-ds-success-bg border border-ds-success-border rounded-xl p-5">
-                <p className="text-2xl font-bold text-ds-success-text">₹{(balance.totalPaid ?? 0).toLocaleString('en-IN')}</p>
-                <p className="text-sm text-ds-success-text font-medium mt-1">Total Paid</p>
-              </div>
-              <div className={`rounded-xl border p-5 ${(balance.balance ?? 0) > 0 ? 'bg-ds-error-bg border-ds-error-border' : 'bg-ds-success-bg border-ds-success-border'}`}>
-                <p className={`text-2xl font-bold ${(balance.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
-                  ₹{(balance.balance ?? 0).toLocaleString('en-IN')}
-                </p>
-                <p className={`text-sm font-medium mt-1 ${(balance.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
-                  {(balance.balance ?? 0) > 0 ? 'Outstanding' : 'No Dues'}
-                </p>
-              </div>
+          {/* Summary cards */}
+          {ledger && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+              {[
+                { label: 'Annual Fee', val: ledger.totalAnnual, cls: '' },
+                { label: 'Concession', val: ledger.totalConcession, cls: 'text-indigo-600' },
+                { label: 'Total Paid', val: ledger.totalPaid, cls: 'text-green-700' },
+                { label: 'Balance Due', val: ledger.totalBalance, cls: ledger.totalBalance > 0 ? 'text-red-600' : 'text-green-700' },
+              ].map(({ label, val, cls }) => (
+                <div key={label} className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                  <p className={`text-xl font-bold ${cls}`} style={!cls ? { color: 'var(--text-1)' } : {}}>{fmt(val)}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>{label}</p>
+                </div>
+              ))}
             </div>
           )}
 
-          {balance?.breakdown && balance.breakdown.length > 0 && (
-            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden mb-6">
-              <div className="px-5 py-4 border-b border-ds-border">
-                <h2 className="font-semibold text-ds-text1 text-sm">Fee Breakdown</h2>
-              </div>
-              <table className="w-full text-sm">
-                <thead className="bg-ds-bg2">
-                  <tr>
-                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Fee Head</th>
-                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Due</th>
-                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Paid</th>
-                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Balance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ds-border">
-                  {balance.breakdown.map((b, i) => (
-                    <tr key={i}>
-                      <td className="px-5 py-3 text-ds-text1 font-medium">{b.feeHeadName}</td>
-                      <td className="px-5 py-3 text-right text-ds-text2">₹{(b.due ?? 0).toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right text-ds-text2">₹{(b.paid ?? 0).toLocaleString('en-IN')}</td>
-                      <td className={`px-5 py-3 text-right font-semibold ${(b.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
-                        ₹{(b.balance ?? 0).toLocaleString('en-IN')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-ds-border">
-              <h2 className="font-semibold text-ds-text1 text-sm">Payment History</h2>
-              <p className="text-xs text-ds-text3 mt-0.5">{payments.length} payment(s)</p>
-            </div>
-            {payments.length === 0 ? (
-              <p className="p-8 text-center text-sm text-ds-text3">No payments recorded.</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-ds-bg2">
-                  <tr>
-                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Receipt No</th>
-                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Fee Head</th>
-                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Date</th>
-                    <th className="text-left px-5 py-3 text-ds-text2 font-medium text-xs">Mode</th>
-                    <th className="text-right px-5 py-3 text-ds-text2 font-medium text-xs">Amount</th>
-                    <th className="px-5 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ds-border">
-                  {payments.map((p) => {
-                    const child = children.find((c) => c.id === selectedChildId) ?? children[0];
-                    return (
-                    <tr key={p.id}>
-                      <td className="px-5 py-3 text-ds-text2 font-mono text-xs">{p.receiptNo}</td>
-                      <td className="px-5 py-3 text-ds-text1">{p.feeHead?.name ?? '—'}</td>
-                      <td className="px-5 py-3 text-ds-text2">
-                        {new Date(p.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="px-5 py-3 text-ds-text2 capitalize">{p.paymentMode}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-ds-text1">₹{p.amount.toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right">
-                        <button
-                          onClick={() => child && printFeeReceipt(p, child, institution)}
-                          className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                        >
-                          Print
-                        </button>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+          {/* Tabs */}
+          <div className="flex gap-1 mb-5 p-1 rounded-xl w-fit" style={{ background: 'var(--bg-2)' }}>
+            {([['ledger', 'Installment Details'], ['history', 'Payment History']] as const).map(([key, label]) => (
+              <button key={key} onClick={() => setActiveTab(key)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTab === key ? 'bg-ds-surface text-ds-text1 shadow-sm' : 'text-ds-text2 hover:text-ds-text1'}`}>
+                {label}
+              </button>
+            ))}
           </div>
+
+          {activeTab === 'ledger' && (
+            <>
+              {!ledger ? (
+                <p className="py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>No fee data available.</p>
+              ) : !ledger.plan ? (
+                <div className="rounded-xl p-5 text-sm text-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-3)' }}>
+                  No fee plan assigned for this academic year. Please contact the school.
+                </div>
+              ) : (
+                <>
+                  {ledger.plan && (
+                    <p className="text-xs mb-3" style={{ color: 'var(--text-3)' }}>
+                      Fee Plan: <span className="font-medium" style={{ color: 'var(--text-2)' }}>{ledger.plan.name}</span>
+                    </p>
+                  )}
+                  {ledger.items.map((item) => (
+                    <div key={item.feePlanItemId} className="rounded-xl overflow-hidden mb-4"
+                      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                      <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+                        <div>
+                          <span className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{item.categoryName}</span>
+                          {item.concession > 0 && (
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                              Concession {fmt(item.concession)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right text-xs" style={{ color: 'var(--text-3)' }}>
+                          Paid {fmt(item.totalPaid)} of {fmt(item.netAmount)}
+                          {item.totalBalance > 0 && (
+                            <span className="ml-2 font-semibold text-red-600">Balance {fmt(item.totalBalance)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <table className="w-full text-sm">
+                        <thead style={{ background: 'var(--bg-2)' }}>
+                          <tr>
+                            <th className="text-left px-5 py-2.5 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Installment</th>
+                            <th className="text-right px-5 py-2.5 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Amount</th>
+                            <th className="text-right px-5 py-2.5 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Paid</th>
+                            <th className="text-right px-5 py-2.5 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Balance</th>
+                            <th className="px-5 py-2.5 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {item.installments.map((inst) => {
+                            const chip = STATUS_CHIP[inst.status] ?? STATUS_CHIP.due;
+                            return (
+                              <tr key={inst.id} className="border-b" style={{ borderColor: 'var(--border)' }}>
+                                <td className="px-5 py-3">
+                                  <span className="text-xs font-medium" style={{ color: 'var(--text-1)' }}>{inst.label}</span>
+                                  {inst.dueDate && (
+                                    <span className="block text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                                      Due {new Date(inst.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-3 text-right text-xs" style={{ color: 'var(--text-2)' }}>{fmt(inst.netAmount)}</td>
+                                <td className="px-5 py-3 text-right text-xs font-medium text-green-700">{fmt(inst.paid)}</td>
+                                <td className="px-5 py-3 text-right text-xs font-semibold" style={{ color: inst.balance > 0 ? '#dc2626' : '#15803d' }}>
+                                  {fmt(inst.balance)}
+                                </td>
+                                <td className="px-5 py-3">
+                                  <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                    style={{ background: chip.bg, color: chip.color }}>
+                                    {chip.label}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="rounded-xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Payment History</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                  {history.length} payment(s) · Total {fmt(histTotal)}
+                </p>
+              </div>
+              {history.length === 0 ? (
+                <p className="p-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>No payments recorded.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead style={{ background: 'var(--bg-2)' }}>
+                      <tr>
+                        <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Receipt No</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Fee / Installment</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Date</th>
+                        <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Mode</th>
+                        <th className="text-right px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.map((c) => (
+                        <tr key={c.id} className="border-b" style={{ borderColor: 'var(--border)' }}>
+                          <td className="px-5 py-3 font-mono text-xs" style={{ color: 'var(--text-3)' }}>{c.receiptNo}</td>
+                          <td className="px-5 py-3 text-xs" style={{ color: 'var(--text-1)' }}>
+                            {c.categoryName}
+                            {c.installmentLabel && <span style={{ color: 'var(--text-3)' }}> · {c.installmentLabel}</span>}
+                          </td>
+                          <td className="px-5 py-3 text-xs" style={{ color: 'var(--text-2)' }}>
+                            {new Date(c.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="px-5 py-3 text-xs capitalize" style={{ color: 'var(--text-2)' }}>{c.paymentMode}</td>
+                          <td className="px-5 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-1)' }}>
+                            {fmt(c.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

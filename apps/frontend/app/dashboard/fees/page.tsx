@@ -1,1109 +1,1106 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 
-interface FeeHead { id: string; name: string; isCustom: boolean; }
-interface AcademicUnit { id: string; name: string; displayName?: string; }
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface FeeCategory { id: string; name: string; type: string; }
 interface AcademicYear { id: string; name: string; isCurrent: boolean; }
-interface Student { id: string; firstName: string; lastName: string; admissionNo: string; academicUnitId?: string; }
-interface FeePayment { id: string; receiptNo: string; amount: number; paymentMode: string; paidOn: string; feeHead: FeeHead; remarks?: string; }
-interface FeeStructure { id: string; feeHeadId: string; amount: number; installmentName?: string; dueDate?: string; feeHead: FeeHead; }
-interface Defaulter { id: string; firstName: string; lastName: string; admissionNo: string; due: number; paid: number; balance: number; }
+interface AcademicUnit { id: string; name: string; displayName?: string; }
+
+interface FeePlanInstallment { id: string; label: string; amount: number; dueDate?: string | null; sortOrder: number; }
+interface FeePlanItem { id: string; feeCategoryId: string; feeCategory: FeeCategory; totalAmount: number; installments: FeePlanInstallment[]; }
+interface FeePlanClassMap { id: string; academicUnitId: string; academicUnit: AcademicUnit; }
+interface FeePlan { id: string; name: string; description?: string; isActive: boolean; academicYearId: string; academicYear: { id: string; name: string }; items: FeePlanItem[]; classMaps: FeePlanClassMap[]; }
+
+interface LedgerInstallment { id: string; label: string; amount: number; dueDate?: string | null; concession: number; netAmount: number; paid: number; balance: number; status: 'paid' | 'partial' | 'due' | 'overdue'; isOverdue: boolean; }
+interface LedgerItem { feePlanItemId: string; feeCategoryId: string; categoryName: string; totalAmount: number; concession: number; netAmount: number; installments: LedgerInstallment[]; totalPaid: number; totalBalance: number; }
+interface Ledger { student: { id: string; name: string; admissionNo: string; className: string }; plan: { id: string; name: string } | null; items: LedgerItem[]; totalAnnual: number; totalConcession: number; totalNet: number; totalPaid: number; totalBalance: number; }
+
+interface StudentSearch { id: string; firstName: string; lastName: string; admissionNo: string; academicUnit?: { name: string; displayName?: string }; }
+interface Concession { id: string; amount: number; reason: string; createdAt: string; feePlanItem: { id: string; feeCategory: { name: string }; feePlan: { name: string } }; }
+interface DailyEntry { id: string; receiptNo: string; amount: number; paymentMode: string; paidOn: string; categoryName: string; student: { firstName: string; lastName: string; admissionNo: string }; source: string; }
+interface Defaulter { id: string; firstName: string; lastName: string; admissionNo: string; className?: string; due: number; paid: number; balance: number; }
 interface Institution { name: string; board?: string; address?: string; phone?: string; email?: string; logoUrl?: string; principalName?: string; tagline?: string; affiliationNo?: string; }
-interface InstallmentDue {
-  feeStructureId: string; feeHeadId: string; feeHeadName: string;
-  installmentName: string; dueDate?: string | null;
-  due: number; paid: number; balance: number;
-  status: 'paid' | 'partial' | 'unpaid'; isOverdue: boolean;
-}
 
-const MODE_OPTIONS = ['cash', 'online', 'cheque', 'dd', 'neft', 'upi'];
-const STANDARD_FEE_HEADS = ['Tuition Fee', 'Library Fee', 'Lab Fee', 'Activity Fee', 'Sports Fee', 'Exam Fee', 'Development Fee', 'Transport Fee'];
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-function esc(s: string | null | undefined): string {
+const MODES = ['cash', 'upi', 'cheque', 'neft', 'dd', 'online'] as const;
+const MODE_LABEL: Record<string, string> = { cash: 'Cash', upi: 'UPI', cheque: 'Cheque', neft: 'NEFT', dd: 'Demand Draft', online: 'Online' };
+const CATEGORY_TYPES = ['TUITION', 'TRANSPORT', 'EXAM', 'LAB', 'LIBRARY', 'ACTIVITY', 'SPORTS', 'DEVELOPMENT', 'HOSTEL', 'CUSTOM'];
+const STANDARD_CATEGORIES = [
+  { name: 'Tuition Fee', type: 'TUITION' }, { name: 'Transport Fee', type: 'TRANSPORT' },
+  { name: 'Exam Fee', type: 'EXAM' }, { name: 'Lab Fee', type: 'LAB' },
+  { name: 'Library Fee', type: 'LIBRARY' }, { name: 'Activity Fee', type: 'ACTIVITY' },
+  { name: 'Sports Fee', type: 'SPORTS' }, { name: 'Development Fee', type: 'DEVELOPMENT' },
+];
+
+const STATUS_CHIP: Record<string, string> = {
+  paid: 'bg-green-100 text-green-800',
+  partial: 'bg-yellow-100 text-yellow-800',
+  due: 'bg-blue-100 text-blue-800',
+  overdue: 'bg-red-100 text-red-700',
+};
+
+function esc(s: string | null | undefined) {
   if (!s) return '';
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function printFeeReceipt(payment: FeePayment, student: Student, institution: Institution) {
-  const date = new Date(payment.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-  const payModeLabel: Record<string, string> = {
-    cash: 'Cash', upi: 'UPI', cheque: 'Cheque',
-    bank_transfer: 'Bank Transfer', dd: 'Demand Draft', online: 'Online', neft: 'NEFT',
-  };
-  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${esc(payment.receiptNo)}</title>
+function fmt(n: number) { return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+// ── Receipt Printing ──────────────────────────────────────────────────────────
+
+function printReceipt(params: { receiptNo: string; amount: number; paymentMode: string; paidOn: string; categoryName: string; installmentLabel?: string; remarks?: string; studentName: string; admissionNo: string; className: string; institution: Institution }) {
+  const { receiptNo, amount, paymentMode, paidOn, categoryName, installmentLabel, remarks, studentName, admissionNo, className, institution } = params;
+  const date = new Date(paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${esc(receiptNo)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:30px}
   .receipt{max-width:540px;margin:0 auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
   .letterhead{background:#0f172a;color:#fff;padding:18px 24px;display:flex;align-items:center;gap:14px}
   .letterhead img{width:52px;height:52px;object-fit:contain;border-radius:4px;background:#fff;padding:3px;flex-shrink:0}
-  .letterhead .logo-placeholder{width:52px;height:52px;border-radius:4px;background:rgba(255,255,255,.1);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,.5);text-align:center;line-height:1.2}
-  .letterhead-text{flex:1;min-width:0}
-  .letterhead h1{font-size:16px;font-weight:700;letter-spacing:.3px;margin-bottom:2px;line-height:1.2}
-  .letterhead .tagline{font-size:10px;opacity:.6;font-style:italic;margin-bottom:3px}
-  .letterhead .sub{font-size:10px;opacity:.55;line-height:1.6}
-  .receipt-header{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
-  .receipt-header .rno{font-size:13px;font-weight:700;color:#0f172a}
-  .receipt-header .rdate{font-size:12px;color:#64748b}
+  .letterhead .logo-ph{width:52px;height:52px;border-radius:4px;background:rgba(255,255,255,.1);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,.5);text-align:center;line-height:1.2}
+  .lh-text{flex:1;min-width:0}
+  .lh-text h1{font-size:16px;font-weight:700;margin-bottom:2px}
+  .lh-text .tagline{font-size:10px;opacity:.6;font-style:italic;margin-bottom:3px}
+  .lh-text .sub{font-size:10px;opacity:.55;line-height:1.6}
+  .rhead{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
+  .rno{font-size:13px;font-weight:700;color:#0f172a} .rdate{font-size:12px;color:#64748b}
   .section{padding:16px 24px}
-  .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px}
-  .row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f1f5f9}
+  .stitle{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px}
+  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9}
   .row:last-child{border:none}
-  .label{color:#64748b;font-size:12px}
-  .value{font-weight:600;font-size:12px;text-align:right;max-width:60%}
-  .amount-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:8px;padding:14px 18px;margin:0 24px 20px;display:flex;justify-content:space-between;align-items:center}
-  .amount-box .lbl{font-size:12px;color:#166534;font-weight:600}
-  .amount-box .amt{font-size:26px;font-weight:800;color:#15803d}
+  .label{color:#64748b;font-size:12px} .value{font-weight:600;font-size:12px;text-align:right;max-width:60%}
+  .amt-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:8px;padding:14px 18px;margin:0 24px 20px;display:flex;justify-content:space-between;align-items:center}
+  .amt-box .lbl{font-size:12px;color:#166534;font-weight:600} .amt-box .amt{font-size:26px;font-weight:800;color:#15803d}
   .footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px 20px;border-top:1px solid #f1f5f9;line-height:1.6}
-  .footer .principal{font-size:11px;color:#64748b;margin-bottom:4px}
   @media print{body{background:#fff;padding:0}.receipt{box-shadow:none;border-radius:0;border:none};-webkit-print-color-adjust:exact;print-color-adjust:exact}
-</style></head><body>
-<div class="receipt">
+</style></head><body><div class="receipt">
   <div class="letterhead">
-    ${institution.logoUrl
-      ? `<img src="${esc(institution.logoUrl)}" alt="Logo" />`
-      : `<div class="logo-placeholder">School<br/>Logo</div>`}
-    <div class="letterhead-text">
+    ${institution.logoUrl ? `<img src="${esc(institution.logoUrl)}" alt="Logo" />` : `<div class="logo-ph">School<br/>Logo</div>`}
+    <div class="lh-text">
       <h1>${esc(institution.name)}</h1>
       ${institution.tagline ? `<div class="tagline">${esc(institution.tagline)}</div>` : ''}
-      <div class="sub">
-        ${[institution.board, institution.affiliationNo ? `Affil: ${institution.affiliationNo}` : ''].filter(Boolean).join(' · ')}${(institution.board || institution.affiliationNo) ? '<br>' : ''}
-        ${institution.address ? `${esc(institution.address)}<br>` : ''}
-        ${[institution.phone ? `Ph: ${esc(institution.phone)}` : '', institution.email ? `Email: ${esc(institution.email)}` : ''].filter(Boolean).join('  ·  ')}
-      </div>
+      <div class="sub">${[institution.board, institution.affiliationNo ? `Affil: ${institution.affiliationNo}` : ''].filter(Boolean).join(' · ')}${(institution.board || institution.affiliationNo) ? '<br>' : ''}${institution.address ? `${esc(institution.address)}<br>` : ''}${[institution.phone ? `Ph: ${esc(institution.phone)}` : '', institution.email ? `Email: ${esc(institution.email)}` : ''].filter(Boolean).join(' · ')}</div>
     </div>
   </div>
-  <div class="receipt-header">
-    <span class="rno">Receipt No: ${esc(payment.receiptNo)}</span>
-    <span class="rdate">${date}</span>
+  <div class="rhead"><span class="rno">Receipt No: ${esc(receiptNo)}</span><span class="rdate">${date}</span></div>
+  <div class="section"><div class="stitle">Student Details</div>
+    <div class="row"><span class="label">Name</span><span class="value">${esc(studentName)}</span></div>
+    <div class="row"><span class="label">Admission No.</span><span class="value">${esc(admissionNo)}</span></div>
+    <div class="row"><span class="label">Class</span><span class="value">${esc(className)}</span></div>
   </div>
-  <div class="section">
-    <div class="section-title">Student Details</div>
-    <div class="row"><span class="label">Student Name</span><span class="value">${esc(student.firstName + ' ' + student.lastName)}</span></div>
-    <div class="row"><span class="label">Admission No</span><span class="value">${esc(student.admissionNo)}</span></div>
+  <div class="section"><div class="stitle">Payment Details</div>
+    <div class="row"><span class="label">Fee Category</span><span class="value">${esc(categoryName)}</span></div>
+    ${installmentLabel ? `<div class="row"><span class="label">Installment</span><span class="value">${esc(installmentLabel)}</span></div>` : ''}
+    <div class="row"><span class="label">Payment Mode</span><span class="value">${esc(MODE_LABEL[paymentMode] ?? paymentMode)}</span></div>
+    ${remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${esc(remarks)}</span></div>` : ''}
   </div>
-  <div class="section" style="padding-top:0">
-    <div class="section-title">Payment Details</div>
-    <div class="row"><span class="label">Fee Head</span><span class="value">${esc(payment.feeHead?.name ?? '—')}</span></div>
-    <div class="row"><span class="label">Payment Mode</span><span class="value">${esc(payModeLabel[payment.paymentMode] ?? payment.paymentMode?.toUpperCase())}</span></div>
-    ${payment.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${esc(payment.remarks)}</span></div>` : ''}
-  </div>
-  <div class="amount-box">
-    <span class="lbl">Amount Paid</span>
-    <span class="amt">₹${payment.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-  </div>
-  <div class="footer">
-    ${institution.principalName ? `<div class="principal">Authorised by: ${esc(institution.principalName)}</div>` : ''}
-    This is a computer-generated receipt and does not require a physical signature.<br>
-    Issued by ${esc(institution.name)}
-  </div>
-</div>
-<script>window.onload=function(){window.print();}</script>
-</body></html>`;
-  const w = window.open('', '_blank', 'width=600,height=800');
-  if (w) { w.document.write(html); w.document.close(); }
+  <div class="amt-box"><span class="lbl">Amount Paid</span><span class="amt">${fmt(amount)}</span></div>
+  <div class="footer">${institution.principalName ? `<div style="font-size:11px;color:#64748b;margin-bottom:4px">Principal: ${esc(institution.principalName)}</div>` : ''}Computer-generated receipt — no signature required<br>${esc(institution.name)}</div>
+</div></body></html>`;
+  const w = window.open('', '_blank', 'width=620,height=780');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 400);
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function FeesPage() {
-  const user = useAuthStore((s) => s.user);
-  const [tab, setTab] = useState<'collect' | 'structure' | 'defaulters' | 'heads' | 'daily' | 'alerts'>('collect');
-
-  const [feeHeads, setFeeHeads] = useState<FeeHead[]>([]);
-  const [units, setUnits] = useState<AcademicUnit[]>([]);
+  const { user } = useAuthStore();
+  const [tab, setTab] = useState<'collect' | 'plans' | 'concessions' | 'reports' | 'categories'>('collect');
   const [years, setYears] = useState<AcademicYear[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [currentYearId, setCurrentYearId] = useState('');
+  const [units, setUnits] = useState<AcademicUnit[]>([]);
   const [institution, setInstitution] = useState<Institution | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 3000); };
-
-  // ── Collect Fee ────────────────────────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [studentPayments, setStudentPayments] = useState<FeePayment[]>([]);
-  const [paymentTotal, setPaymentTotal] = useState(0);
-  const [pForm, setPForm] = useState({ feeHeadId: '', amount: '', paymentMode: 'cash', paidOn: new Date().toISOString().split('T')[0], remarks: '' });
-  const [paying, setPaying] = useState(false);
-  // Installment-based collect (new)
-  const [installmentDues, setInstallmentDues] = useState<{ installments: InstallmentDue[]; totalDue: number; totalPaid: number; outstanding: number } | null>(null);
-  const [loadingDues, setLoadingDues] = useState(false);
-  const [checkedInstallments, setCheckedInstallments] = useState<Record<string, boolean>>({});
-  const [overrideAmounts, setOverrideAmounts] = useState<Record<string, string>>({});
-  const [bulkMode, setBulkMode] = useState<'cash' | 'online' | 'cheque' | 'dd' | 'neft' | 'upi'>('cash');
-  const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0]);
-  const [bulkRemarks, setBulkRemarks] = useState('');
-  const [collectingBulk, setCollectingBulk] = useState(false);
-
-  // ── Fee Structure ──────────────────────────────────────────────────────────
-  const [structUnit, setStructUnit] = useState('');
-  const [structures, setStructures] = useState<FeeStructure[]>([]);
-  const [structForm, setStructForm] = useState({ feeHeadId: '', amount: '', installmentName: '', dueDate: '' });
-  const [savingStruct, setSavingStruct] = useState(false);
-  const [loadingStructures, setLoadingStructures] = useState(false);
-
-  // ── Defaulters ─────────────────────────────────────────────────────────────
-  const [defUnit, setDefUnit] = useState('');
-  const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
-  const [loadingDef, setLoadingDef] = useState(false);
-
-  // ── Fee Heads ──────────────────────────────────────────────────────────────
-  const [newHeadName, setNewHeadName] = useState('');
-  const [addingHead, setAddingHead] = useState(false);
-
-  // ── Daily Collection ───────────────────────────────────────────────────────
-  const [dailyDate, setDailyDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dailyData, setDailyData] = useState<{ payments: any[]; total: number } | null>(null);
-
-  // ── Due Alerts ─────────────────────────────────────────────────────────────
-  type AlertItem = {
-    feeStructureId: string; feeHeadName: string; installmentName: string | null;
-    dueDate: string; daysFromToday: number; amount: number;
-    className: string; studentsInClass: number; totalAmount: number;
-  };
-  type AlertData = {
-    overdue: AlertItem[]; thisWeek: AlertItem[]; thisMonth: AlertItem[];
-    summary: { overdueCount: number; thisWeekCount: number; thisMonthCount: number; overdueAmount: number };
-  };
-  const [alertData, setAlertData] = useState<AlertData | null>(null);
-  const [loadingAlerts, setLoadingAlerts] = useState(false);
+  const currentYear = years.find((y) => y.isCurrent) ?? years[0];
 
   useEffect(() => {
-    if (!user?.institutionId) return;
-    Promise.all([
-      apiFetch('/fees/heads'),
-      apiFetch('/academic/units/leaf'),
-      apiFetch('/academic/years'),
-      apiFetch('/academic/institution').catch(() => null),
-    ]).then(([heads, u, y, inst]) => {
-      setFeeHeads(Array.isArray(heads) ? heads : []);
-      setUnits(Array.isArray(u) ? u : u.data || []);
-      const ys: AcademicYear[] = Array.isArray(y) ? y : y.data || [];
-      setYears(ys);
-      const cur = ys.find((yr) => yr.isCurrent);
-      if (cur) setCurrentYearId(cur.id);
-      if (inst?.name) setInstitution(inst);
-    }).catch(() => {});
-  }, [user?.institutionId]);
+    void Promise.all([
+      apiFetch<AcademicYear[]>('/academic/years').then(setYears),
+      apiFetch<{ units: AcademicUnit[] }>('/academic/units').then((r) => setUnits(r.units ?? [])),
+      apiFetch<Institution>('/institution/profile').then(setInstitution),
+    ]);
+  }, []);
 
-  useEffect(() => {
-    if (!user?.institutionId) return;
-    apiFetch('/students?page=1&limit=500').then((res) => {
-      setStudents(res.data || res || []);
-    }).catch(() => {});
-  }, [user?.institutionId]);
-
-  useEffect(() => {
-    const handle = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery.trim());
-    }, 250);
-
-    return () => clearTimeout(handle);
-  }, [searchQuery]);
-
-  // ── Collect Fee handlers ───────────────────────────────────────────────────
-  const filteredStudents = debouncedSearchQuery.length >= 2
-    ? students.filter((s) =>
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        s.admissionNo.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
-      ).slice(0, 12)
-    : [];
-
-  const selectStudent = async (s: Student) => {
-    setSelectedStudent(s);
-    setSearchQuery(`${s.firstName} ${s.lastName} (${s.admissionNo})`);
-    setInstallmentDues(null);
-    setCheckedInstallments({});
-    setOverrideAmounts({});
-    // Load payment history
-    apiFetch(`/fees/payments/student/${s.id}`)
-      .then((res) => { setStudentPayments(res.payments || []); setPaymentTotal(res.total || 0); })
-      .catch(() => setStudentPayments([]));
-    // Load installment dues
-    if (currentYearId) {
-      setLoadingDues(true);
-      apiFetch(`/fees/payments/student/${s.id}/installments?yearId=${currentYearId}`)
-        .then((res: any) => {
-          setInstallmentDues(res);
-          // Auto-check unpaid/partial installments
-          const autoCheck: Record<string, boolean> = {};
-          for (const inst of (res.installments ?? [])) {
-            if (inst.status !== 'paid') autoCheck[inst.feeStructureId] = true;
-          }
-          setCheckedInstallments(autoCheck);
-        })
-        .catch(() => setInstallmentDues(null))
-        .finally(() => setLoadingDues(false));
-    }
-  };
-
-  const collectSelected = async () => {
-    if (!selectedStudent || !currentYearId) return;
-    const items = (installmentDues?.installments ?? [])
-      .filter((inst) => checkedInstallments[inst.feeStructureId])
-      .map((inst) => ({
-        feeHeadId: inst.feeHeadId,
-        feeStructureId: inst.feeStructureId,
-        installmentName: inst.installmentName,
-        amount: parseFloat(overrideAmounts[inst.feeStructureId] ?? String(inst.balance > 0 ? inst.balance : inst.due)),
-      }))
-      .filter((item) => item.amount > 0);
-    if (!items.length) return setError('Select at least one installment to collect');
-    setCollectingBulk(true);
-    setError(null);
-    try {
-      const res = await apiFetch('/fees/payments/bulk', {
-        method: 'POST',
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-          academicYearId: currentYearId,
-          items,
-          paymentMode: bulkMode,
-          paidOn: bulkDate,
-          remarks: bulkRemarks || undefined,
-        }),
-      });
-      showSuccess(`₹${(res.totalCollected ?? 0).toLocaleString('en-IN')} collected successfully — ${items.length} receipt(s) generated`);
-      // Refresh installment dues and payment history
-      const [dues, hist] = await Promise.all([
-        apiFetch(`/fees/payments/student/${selectedStudent.id}/installments?yearId=${currentYearId}`),
-        apiFetch(`/fees/payments/student/${selectedStudent.id}`),
-      ]);
-      setInstallmentDues(dues);
-      setStudentPayments(hist.payments || []);
-      setPaymentTotal(hist.total || 0);
-      setCheckedInstallments({});
-      setOverrideAmounts({});
-      setBulkRemarks('');
-    } catch (e: any) {
-      setError(e.message || 'Failed to collect payment');
-    } finally {
-      setCollectingBulk(false);
-    }
-  };
-
-  const recordPayment = async () => {
-    if (!selectedStudent) return setError('Select a student first');
-    if (!pForm.feeHeadId) return setError('Select a fee head');
-    if (!pForm.amount || parseFloat(pForm.amount) <= 0) return setError('Enter a valid amount');
-    if (pForm.paidOn && pForm.paidOn > new Date().toISOString().split('T')[0]) return setError('Payment date cannot be in the future');
-    setPaying(true);
-    setError(null);
-    try {
-      await apiFetch('/fees/payments', {
-        method: 'POST',
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-          feeHeadId: pForm.feeHeadId,
-          academicYearId: currentYearId || undefined,
-          amount: parseFloat(pForm.amount),
-          paymentMode: pForm.paymentMode,
-          paidOn: pForm.paidOn,
-          remarks: pForm.remarks || undefined,
-        }),
-      });
-      showSuccess('Payment recorded');
-      setPForm((f) => ({ ...f, amount: '', remarks: '' }));
-      const res = await apiFetch(`/fees/payments/student/${selectedStudent.id}`);
-      setStudentPayments(res.payments || []);
-      setPaymentTotal(res.total || 0);
-    } catch (e: any) {
-      setError(e.message || 'Failed to record payment');
-    } finally {
-      setPaying(false);
-    }
-  };
-
-  // ── Fee Structure handlers ─────────────────────────────────────────────────
-  const loadStructures = async (unitId: string) => {
-    if (!unitId || !currentYearId) return;
-    setLoadingStructures(true);
-    try {
-      const res = await apiFetch(`/fees/structures?unitId=${unitId}&yearId=${currentYearId}`);
-      setStructures(Array.isArray(res) ? res : []);
-    } catch { setStructures([]); }
-    finally { setLoadingStructures(false); }
-  };
-
-  useEffect(() => {
-    if (structUnit && currentYearId) loadStructures(structUnit);
-  }, [structUnit, currentYearId]);
-
-  const saveStructure = async () => {
-    if (!structUnit || !structForm.feeHeadId || !structForm.amount) return setError('Fill class, fee head, and amount');
-    if (parseFloat(structForm.amount) <= 0) return setError('Amount must be greater than 0');
-    if (!currentYearId) return setError('No active academic year');
-    setSavingStruct(true);
-    setError(null);
-    try {
-      await apiFetch('/fees/structures', {
-        method: 'POST',
-        body: JSON.stringify({
-          academicUnitId: structUnit,
-          academicYearId: currentYearId,
-          feeHeadId: structForm.feeHeadId,
-          amount: parseFloat(structForm.amount),
-          installmentName: structForm.installmentName || undefined,
-          dueDate: structForm.dueDate || undefined,
-        }),
-      });
-      showSuccess('Fee structure saved');
-      setStructForm({ feeHeadId: '', amount: '', installmentName: '', dueDate: '' });
-      await loadStructures(structUnit);
-    } catch (e: any) {
-      setError(e.message || 'Failed to save');
-    } finally {
-      setSavingStruct(false);
-    }
-  };
-
-  const deleteStructure = async (id: string) => {
-    if (!confirm('Remove this fee structure entry?')) return;
-    try {
-      await apiFetch(`/fees/structures/${id}`, { method: 'DELETE' });
-      setStructures((prev) => prev.filter((s) => s.id !== id));
-      showSuccess('Removed');
-    } catch (e: any) { setError(e.message || 'Failed'); }
-  };
-
-  const totalFeeForClass = structures.reduce((sum, s) => sum + s.amount, 0);
-
-  // ── Defaulters handlers ────────────────────────────────────────────────────
-  const loadDefaulters = async () => {
-    if (!currentYearId) return setError('No academic year selected');
-    setLoadingDef(true);
-    setError(null);
-    try {
-      const url = defUnit
-        ? `/fees/defaulters?yearId=${currentYearId}&unitId=${defUnit}`
-        : `/fees/defaulters?yearId=${currentYearId}`;
-      const res = await apiFetch(url);
-      setDefaulters(Array.isArray(res) ? res : []);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load defaulters');
-    } finally {
-      setLoadingDef(false);
-    }
-  };
-
-  // ── Fee Head handlers ──────────────────────────────────────────────────────
-  const addFeeHead = async (name: string) => {
-    if (!name.trim()) return;
-    setAddingHead(true);
-    try {
-      const head = await apiFetch('/fees/heads', {
-        method: 'POST',
-        body: JSON.stringify({ name: name.trim() }),
-      });
-      setFeeHeads((prev) => [...prev, head]);
-      setNewHeadName('');
-      showSuccess(`"${name}" added`);
-    } catch (e: any) {
-      setError(e.message || 'Failed to add fee head');
-    } finally {
-      setAddingHead(false);
-    }
-  };
-
-  const deleteFeeHead = async (id: string) => {
-    if (!confirm('Delete this fee head?')) return;
-    try {
-      await apiFetch(`/fees/heads/${id}`, { method: 'DELETE' });
-      setFeeHeads((prev) => prev.filter((h) => h.id !== id));
-      showSuccess('Fee head deleted');
-    } catch (e: any) {
-      setError(e.message || 'Failed');
-    }
-  };
-
-  // ── Due Alerts handler ─────────────────────────────────────────────────────
-  const loadDueAlerts = async () => {
-    setLoadingAlerts(true);
-    setError(null);
-    try {
-      const url = currentYearId ? `/fees/due-alerts?yearId=${currentYearId}` : '/fees/due-alerts';
-      const res = await apiFetch(url);
-      setAlertData(res as AlertData);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load due alerts');
-    } finally {
-      setLoadingAlerts(false);
-    }
-  };
-
-  // ── Daily Collection ───────────────────────────────────────────────────────
-  const loadDailyCollection = async () => {
-    try {
-      const res = await apiFetch(`/fees/payments/daily?date=${dailyDate}`);
-      setDailyData(res);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load daily collection');
-    }
-  };
-
-  const inp = 'border border-ds-border-strong p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
-  const lbl = 'text-xs font-medium text-ds-text2 block mb-1';
-  const tabBtn = (t: typeof tab) =>
-    `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === t ? 'border-black text-black' : 'border-transparent text-ds-text2 hover:text-ds-text1'}`;
+  const tabs = [
+    { key: 'collect', label: 'Collect Fee' },
+    { key: 'plans', label: 'Fee Plans' },
+    { key: 'concessions', label: 'Concessions' },
+    { key: 'reports', label: 'Reports' },
+    { key: 'categories', label: 'Categories' },
+  ] as const;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-ds-text1 mb-4">Fee Management</h1>
-
-      {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
-      {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-ds-border mb-6 overflow-x-auto">
-        <button className={tabBtn('collect')} onClick={() => setTab('collect')}>Collect Fee</button>
-        <button className={tabBtn('structure')} onClick={() => setTab('structure')}>Fee Structure</button>
-        <button className={tabBtn('defaulters')} onClick={() => { setTab('defaulters'); }}>Defaulters</button>
-        <button className={tabBtn('daily')} onClick={() => { setTab('daily'); loadDailyCollection(); }}>Daily Collection</button>
-        <button className={tabBtn('heads')} onClick={() => setTab('heads')}>Fee Heads</button>
-        <button className={tabBtn('alerts')} onClick={() => { setTab('alerts'); loadDueAlerts(); }}>
-          Due Alerts
-          {alertData && alertData.summary.overdueCount > 0 && (
-            <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
-              {alertData.summary.overdueCount}
-            </span>
-          )}
-        </button>
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Fee Management</h1>
+        <p className="text-slate-500 text-sm mt-1">Manage fee plans, collect payments, and track outstanding dues</p>
       </div>
 
-      {/* ── Collect Fee ── */}
-      {tab === 'collect' && (
-        <div className="space-y-5">
-          {/* Student search */}
-          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Find Student</p>
-            <div className="relative">
-              <input className={inp} placeholder="Search by name or admission no…"
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setSelectedStudent(null); setInstallmentDues(null); }}
-              />
-              {searchQuery.trim().length === 1 && !selectedStudent && (
-                <p className="mt-2 text-xs text-ds-text3">Type at least 2 characters to search.</p>
-              )}
-              {filteredStudents.length > 0 && !selectedStudent && (
-                <div className="absolute z-10 w-full bg-ds-surface border border-ds-border rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
-                  {filteredStudents.map((s) => (
-                    <button key={s.id} onClick={() => selectStudent(s)}
-                      className="w-full text-left px-4 py-2.5 hover:bg-ds-bg2 text-sm border-b border-ds-border last:border-0">
-                      <span className="font-medium">{s.firstName} {s.lastName}</span>
-                      <span className="text-ds-text3 text-xs ml-2 font-mono">{s.admissionNo}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {debouncedSearchQuery.length >= 2 && filteredStudents.length === 0 && !selectedStudent && (
-                <p className="mt-2 text-xs text-ds-text3">No matching students found.</p>
-              )}
+      {/* Tab Bar */}
+      <div className="flex gap-1 border-b border-slate-200 mb-6 overflow-x-auto">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${tab === t.key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'collect' && <CollectTab years={years} institution={institution} />}
+      {tab === 'plans' && <PlansTab years={years} units={units} />}
+      {tab === 'concessions' && <ConcessionsTab years={years} />}
+      {tab === 'reports' && <ReportsTab years={years} units={units} institution={institution} />}
+      {tab === 'categories' && <CategoriesTab />}
+    </div>
+  );
+}
+
+// ── Collect Tab ───────────────────────────────────────────────────────────────
+
+function CollectTab({ years, institution }: { years: AcademicYear[]; institution: Institution | null }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<StudentSearch[]>([]);
+  const [selected, setSelected] = useState<StudentSearch | null>(null);
+  const [ledger, setLedger] = useState<Ledger | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [selectedInstallments, setSelectedInstallments] = useState<Set<string>>(new Set());
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [payMode, setPayMode] = useState<string>('cash');
+  const [payDate, setPayDate] = useState(todayStr());
+  const [remarks, setRemarks] = useState('');
+  const [collecting, setCollecting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const currentYear = years.find((y) => y.isCurrent) ?? years[0];
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  useEffect(() => {
+    if (query.length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      setLoading(true);
+      try { const r = await apiFetch<{ students: StudentSearch[] }>(`/students/search?q=${encodeURIComponent(query)}&limit=8`); setResults(r.students ?? []); }
+      catch { setResults([]); } finally { setLoading(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const selectStudent = useCallback(async (s: StudentSearch) => {
+    setSelected(s); setResults([]); setQuery(''); setSelectedInstallments(new Set()); setOverrides({});
+    if (!currentYear) return;
+    setLedgerLoading(true);
+    try {
+      const l = await apiFetch<Ledger>(`/fees/ledger/student/${s.id}?yearId=${currentYear.id}`);
+      setLedger(l);
+      // Auto-select all unpaid/partial installments
+      const autoSelect = new Set<string>();
+      for (const item of l.items) {
+        for (const inst of item.installments) {
+          if (inst.status !== 'paid') autoSelect.add(inst.id);
+        }
+      }
+      setSelectedInstallments(autoSelect);
+    } catch { setLedger(null); } finally { setLedgerLoading(false); }
+  }, [currentYear]);
+
+  const toggleInstallment = (id: string) => {
+    setSelectedInstallments((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const getInstallmentAmount = (inst: LedgerInstallment) => {
+    const override = overrides[inst.id];
+    if (override) return parseFloat(override) || 0;
+    return inst.balance;
+  };
+
+  const selectedTotal = ledger
+    ? ledger.items.flatMap((i) => i.installments).filter((inst) => selectedInstallments.has(inst.id)).reduce((s, inst) => s + getInstallmentAmount(inst), 0)
+    : 0;
+
+  const handleCollect = async () => {
+    if (!selected || !ledger?.plan || selectedInstallments.size === 0 || !currentYear) return;
+    setCollecting(true);
+    try {
+      const items = ledger.items.flatMap((item) =>
+        item.installments
+          .filter((inst) => selectedInstallments.has(inst.id))
+          .map((inst) => ({
+            feePlanInstallmentId: inst.id,
+            feePlanItemId: item.feePlanItemId,
+            feeCategoryId: item.feeCategoryId,
+            amount: getInstallmentAmount(inst),
+          }))
+      );
+      const res = await apiFetch<{ collections: { receiptNo: string; amount: number; paidOn: string; feePlanInstallment?: { label: string }; feeCategory: { name: string } }[]; totalCollected: number }>('/fees/collections', {
+        method: 'POST',
+        body: JSON.stringify({ studentId: selected.id, academicYearId: currentYear.id, items, paymentMode: payMode, paidOn: payDate, remarks: remarks || undefined }),
+      });
+      showToast(`Collected ${fmt(res.totalCollected)} — ${res.collections.length} receipt(s) generated`);
+      // Print receipts
+      if (institution) {
+        for (const c of res.collections) {
+          printReceipt({ receiptNo: c.receiptNo, amount: c.amount, paymentMode: payMode, paidOn: c.paidOn, categoryName: c.feeCategory.name, installmentLabel: c.feePlanInstallment?.label, remarks, studentName: ledger.student.name, admissionNo: ledger.student.admissionNo, className: ledger.student.className, institution });
+        }
+      }
+      // Refresh ledger
+      const l = await apiFetch<Ledger>(`/fees/ledger/student/${selected.id}?yearId=${currentYear.id}`);
+      setLedger(l); setSelectedInstallments(new Set()); setOverrides({}); setRemarks('');
+    } catch (e: any) { showToast(e.message ?? 'Collection failed'); } finally { setCollecting(false); }
+  };
+
+  const className = (unit?: { name: string; displayName?: string }) => unit?.displayName || unit?.name || '—';
+
+  return (
+    <div className="space-y-5">
+      {toast && <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium">{toast}</div>}
+
+      {/* Student Search */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <h2 className="font-semibold text-slate-800 mb-3">Search Student</h2>
+        <div className="relative max-w-lg">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Type name or admission number…"
+            className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          {loading && <div className="absolute right-3 top-3 w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />}
+          {results.length > 0 && (
+            <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-20 overflow-hidden">
+              {results.map((s) => (
+                <button key={s.id} onClick={() => void selectStudent(s)} className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 flex items-center gap-3 border-b border-slate-100 last:border-0">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0">{s.firstName[0]}{s.lastName[0]}</div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">{s.firstName} {s.lastName}</div>
+                    <div className="text-xs text-slate-500">{s.admissionNo} · {className(s.academicUnit)}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Selected Student + Ledger */}
+      {ledgerLoading && <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Loading fee ledger…</div>}
+
+      {!ledgerLoading && selected && ledger && (
+        <div className="space-y-4">
+          {/* Student Header */}
+          <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-center gap-4">
+            <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold text-lg shrink-0">{ledger.student.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-slate-900 text-lg">{ledger.student.name}</div>
+              <div className="text-sm text-slate-500">{ledger.student.admissionNo} · {ledger.student.className}</div>
+              {ledger.plan && <div className="text-xs text-indigo-600 mt-0.5">Plan: {ledger.plan.name}</div>}
+            </div>
+            <div className="text-right shrink-0">
+              {ledger.totalBalance > 0
+                ? <div><div className="text-2xl font-bold text-red-600">{fmt(ledger.totalBalance)}</div><div className="text-xs text-slate-500">outstanding</div></div>
+                : <div><div className="text-2xl font-bold text-green-600">Cleared</div><div className="text-xs text-slate-500">no dues</div></div>}
             </div>
           </div>
 
-          {/* Installment dues + collect */}
-          {selectedStudent && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <div className="lg:col-span-2 space-y-4">
-                {/* Fee dues checklist */}
-                <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-                  <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-ds-text1 text-sm">{selectedStudent.firstName} {selectedStudent.lastName}</p>
-                      <p className="text-xs text-ds-text3 font-mono mt-0.5">{selectedStudent.admissionNo}</p>
-                    </div>
-                    {installmentDues && (
-                      <div className="text-right">
-                        <p className="text-xs text-ds-text2">Outstanding</p>
-                        <p className={`text-lg font-bold ${installmentDues.outstanding > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                          ₹{installmentDues.outstanding.toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+          {/* No Plan */}
+          {!ledger.plan && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center">
+              <div className="text-amber-700 font-medium">No fee plan assigned to this student's class</div>
+              <div className="text-amber-600 text-sm mt-1">Go to the <strong>Fee Plans</strong> tab to create a plan and assign it to {ledger.student.className}.</div>
+            </div>
+          )}
 
-                  {loadingDues ? (
-                    <div className="p-6 text-center text-ds-text3 text-sm">Loading fee dues…</div>
-                  ) : !installmentDues || installmentDues.installments.length === 0 ? (
-                    <div className="p-6 text-center text-ds-text3 text-sm">
-                      No fee structure defined for this student&apos;s class.
-                      <br /><span className="text-xs">Set up the fee structure in the &quot;Fee Structure&quot; tab first.</span>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="px-5 py-2 bg-ds-bg2 flex items-center gap-3 border-b border-ds-border">
-                        <input
-                          type="checkbox"
-                          checked={installmentDues.installments.filter((i) => i.status !== 'paid').every((i) => checkedInstallments[i.feeStructureId])}
-                          onChange={(e) => {
-                            const next: Record<string, boolean> = {};
-                            installmentDues.installments.filter((i) => i.status !== 'paid').forEach((i) => { next[i.feeStructureId] = e.target.checked; });
-                            setCheckedInstallments(next);
-                          }}
-                          className="rounded"
-                        />
-                        <span className="text-xs font-medium text-ds-text2">Select all pending</span>
-                      </div>
-                      {installmentDues.installments.map((inst) => (
-                        <div key={inst.feeStructureId}
-                          className={`flex items-center gap-3 px-5 py-3 border-b border-ds-border last:border-0 ${inst.status === 'paid' ? 'opacity-50' : ''}`}
-                        >
-                          <input
-                            type="checkbox"
-                            disabled={inst.status === 'paid'}
-                            checked={!!checkedInstallments[inst.feeStructureId]}
-                            onChange={(e) => setCheckedInstallments((prev) => ({ ...prev, [inst.feeStructureId]: e.target.checked }))}
-                            className="rounded flex-shrink-0"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-ds-text1">{inst.feeHeadName}</span>
-                              <span className="text-xs text-ds-text3">— {inst.installmentName}</span>
-                              {inst.isOverdue && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-semibold">OVERDUE</span>}
-                            </div>
-                            <div className="flex gap-3 mt-0.5">
-                              {inst.dueDate && <span className="text-xs text-ds-text3">Due {new Date(inst.dueDate).toLocaleDateString('en-IN')}</span>}
-                              <span className="text-xs text-ds-text3">Total ₹{inst.due.toLocaleString('en-IN')}</span>
-                              {inst.paid > 0 && <span className="text-xs text-emerald-600">Paid ₹{inst.paid.toLocaleString('en-IN')}</span>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {inst.status === 'paid' ? (
-                              <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">Paid</span>
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-ds-text3">₹</span>
+          {/* Fee Ledger Table */}
+          {ledger.plan && ledger.items.length > 0 && (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-semibold text-slate-800">Fee Ledger</h3>
+                <div className="flex gap-2 text-xs text-slate-500">
+                  <span className="bg-slate-100 px-2 py-1 rounded">Annual: {fmt(ledger.totalAnnual)}</span>
+                  {ledger.totalConcession > 0 && <span className="bg-green-100 text-green-700 px-2 py-1 rounded">Concession: {fmt(ledger.totalConcession)}</span>}
+                  <span className="bg-slate-100 px-2 py-1 rounded">Net: {fmt(ledger.totalNet)}</span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                      <th className="text-left px-4 py-2.5 w-8"></th>
+                      <th className="text-left px-4 py-2.5">Category</th>
+                      <th className="text-left px-4 py-2.5">Installment</th>
+                      <th className="text-left px-4 py-2.5">Due Date</th>
+                      <th className="text-right px-4 py-2.5">Net Due</th>
+                      <th className="text-right px-4 py-2.5">Paid</th>
+                      <th className="text-right px-4 py-2.5">Balance</th>
+                      <th className="text-center px-4 py-2.5">Status</th>
+                      <th className="text-right px-4 py-2.5">Collect</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {ledger.items.map((item) =>
+                      item.installments.map((inst, idx) => {
+                        const checked = selectedInstallments.has(inst.id);
+                        return (
+                          <tr key={inst.id} className={`hover:bg-slate-50 ${inst.isOverdue && inst.status !== 'paid' ? 'bg-red-50/40' : ''}`}>
+                            <td className="px-4 py-2.5">
+                              {inst.status !== 'paid' && (
+                                <input type="checkbox" checked={checked} onChange={() => toggleInstallment(inst.id)} className="rounded border-slate-300 text-indigo-600" />
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 font-medium text-slate-800">{idx === 0 ? item.categoryName : ''}</td>
+                            <td className="px-4 py-2.5 text-slate-600">{inst.label}</td>
+                            <td className="px-4 py-2.5 text-slate-500">{inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-700">{fmt(inst.netAmount)}</td>
+                            <td className="px-4 py-2.5 text-right text-green-700">{inst.paid > 0 ? fmt(inst.paid) : '—'}</td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-slate-900">{fmt(inst.balance)}</td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CHIP[inst.status]}`}>{inst.status.charAt(0).toUpperCase() + inst.status.slice(1)}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              {inst.status !== 'paid' && checked && (
                                 <input
                                   type="number"
-                                  min="1"
-                                  step="1"
-                                  className="w-24 border border-ds-border-strong rounded p-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ds-brand"
-                                  placeholder={String(inst.balance)}
-                                  value={overrideAmounts[inst.feeStructureId] ?? ''}
-                                  onChange={(e) => setOverrideAmounts((prev) => ({ ...prev, [inst.feeStructureId]: e.target.value }))}
-                                  disabled={!checkedInstallments[inst.feeStructureId]}
+                                  value={overrides[inst.id] ?? inst.balance}
+                                  onChange={(e) => setOverrides((p) => ({ ...p, [inst.id]: e.target.value }))}
+                                  className="w-24 border border-slate-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                  min={1}
                                 />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Collect footer */}
-                {installmentDues && installmentDues.installments.some((i) => i.status !== 'paid') && (
-                  <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-                    <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Collection Details</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                      <div>
-                        <label className={lbl}>Payment Mode</label>
-                        <select className={inp} value={bulkMode} onChange={(e) => setBulkMode(e.target.value as any)}>
-                          {MODE_OPTIONS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className={lbl}>Date</label>
-                        <input type="date" className={inp} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className={lbl}>Remarks (optional)</label>
-                        <input className={inp} placeholder="e.g. Cash received" value={bulkRemarks} onChange={(e) => setBulkRemarks(e.target.value)} />
-                      </div>
-                    </div>
-                    {/* Summary of what will be collected */}
-                    {Object.values(checkedInstallments).some(Boolean) && (
-                      <div className="bg-ds-bg2 rounded-lg p-3 mb-3 text-sm">
-                        {(installmentDues?.installments ?? []).filter((i) => checkedInstallments[i.feeStructureId]).map((i) => {
-                          const amt = parseFloat(overrideAmounts[i.feeStructureId] ?? String(i.balance > 0 ? i.balance : i.due));
-                          return (
-                            <div key={i.feeStructureId} className="flex justify-between py-0.5">
-                              <span className="text-ds-text2">{i.feeHeadName} — {i.installmentName}</span>
-                              <span className="font-medium">₹{amt.toLocaleString('en-IN')}</span>
-                            </div>
-                          );
-                        })}
-                        <div className="flex justify-between pt-2 mt-1 border-t border-ds-border font-semibold">
-                          <span>Total to collect</span>
-                          <span className="text-ds-brand">
-                            ₹{(installmentDues?.installments ?? [])
-                              .filter((i) => checkedInstallments[i.feeStructureId])
-                              .reduce((s, i) => s + parseFloat(overrideAmounts[i.feeStructureId] ?? String(i.balance > 0 ? i.balance : i.due)), 0)
-                              .toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
-                    <button
-                      onClick={collectSelected}
-                      disabled={collectingBulk || !Object.values(checkedInstallments).some(Boolean)}
-                      className="w-full btn-brand px-4 py-2.5 rounded-lg text-sm font-semibold"
-                    >
-                      {collectingBulk ? 'Processing…' : `Collect Selected (${Object.values(checkedInstallments).filter(Boolean).length})`}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Collection Bar */}
+              {selectedInstallments.size > 0 && (
+                <div className="px-5 py-4 bg-indigo-50 border-t border-indigo-100 flex flex-wrap items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-indigo-700 font-medium">{selectedInstallments.size} installment(s) selected · Total: <span className="font-bold text-lg">{fmt(selectedTotal)}</span></div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {MODES.map((m) => (
+                      <button key={m} onClick={() => setPayMode(m)} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${payMode === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}>{MODE_LABEL[m]}</button>
+                    ))}
+                    <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                    <input value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Remarks (optional)" className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-40 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                    <button onClick={() => void handleCollect()} disabled={collecting || selectedTotal <= 0} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      {collecting ? 'Processing…' : `Collect ${fmt(selectedTotal)}`}
                     </button>
                   </div>
-                )}
-              </div>
-
-              {/* Payment history sidebar */}
-              <div>
-                <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5 sticky top-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider">Payment History</p>
-                    {paymentTotal > 0 && <span className="text-sm font-semibold text-emerald-600">₹{paymentTotal.toLocaleString('en-IN')}</span>}
-                  </div>
-                  {studentPayments.length === 0 ? (
-                    <p className="text-sm text-ds-text3 text-center py-6">No payments recorded yet</p>
-                  ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {studentPayments.map((p) => (
-                        <div key={p.id} className="bg-ds-bg2 rounded-lg p-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-sm font-medium text-ds-text1">{p.feeHead.name}</p>
-                              <p className="text-xs text-ds-text2 font-mono mt-0.5">{p.receiptNo}</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-semibold text-ds-text1">₹{p.amount.toLocaleString('en-IN')}</span>
-                              <button
-                                onClick={() => printFeeReceipt(p, selectedStudent!, institution ?? { name: user?.institutionName ?? 'School' })}
-                                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
-                                Print
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex gap-3 mt-1">
-                            <span className="text-xs text-ds-text3">{new Date(p.paidOn).toLocaleDateString('en-IN')}</span>
-                            <span className="text-xs text-ds-text3 uppercase">{p.paymentMode}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* ── Fee Structure ── */}
-      {tab === 'structure' && (
-        <div className="space-y-5">
-          <div className="bg-ds-info-bg border border-ds-info-border rounded-lg p-4 text-sm text-ds-info-text">
-            Set the annual fee amount per fee head for each class. This defines what each student in a class owes.
+// ── Plans Tab ─────────────────────────────────────────────────────────────────
+
+function PlansTab({ years, units }: { years: AcademicYear[]; units: AcademicUnit[] }) {
+  const currentYear = years.find((y) => y.isCurrent) ?? years[0];
+  const [selYear, setSelYear] = useState<string>('');
+  const [plans, setPlans] = useState<FeePlan[]>([]);
+  const [categories, setCategories] = useState<FeeCategory[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<FeePlan | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newPlanName, setNewPlanName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [editingItem, setEditingItem] = useState<{ planId: string; itemId?: string } | null>(null);
+  const [editItemCat, setEditItemCat] = useState('');
+  const [editItemAmt, setEditItemAmt] = useState('');
+  const [addingInst, setAddingInst] = useState<{ itemId: string } | null>(null);
+  const [instLabel, setInstLabel] = useState('');
+  const [instAmt, setInstAmt] = useState('');
+  const [instDate, setInstDate] = useState('');
+  const [assigningPlan, setAssigningPlan] = useState<string | null>(null);
+  const [assignedUnits, setAssignedUnits] = useState<Set<string>>(new Set());
+  const [copyingPlan, setCopyingPlan] = useState<FeePlan | null>(null);
+  const [copyTargetYear, setCopyTargetYear] = useState('');
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  const yearId = selYear || currentYear?.id || '';
+
+  useEffect(() => { if (currentYear) setSelYear(currentYear.id); }, [currentYear]);
+
+  const loadPlans = useCallback(async () => {
+    if (!yearId) return;
+    setLoading(true);
+    try { const p = await apiFetch<FeePlan[]>(`/fees/plans?yearId=${yearId}`); setPlans(p); }
+    catch { } finally { setLoading(false); }
+  }, [yearId]);
+
+  useEffect(() => { void loadPlans(); }, [loadPlans]);
+  useEffect(() => { void apiFetch<FeeCategory[]>('/fees/categories').then(setCategories); }, []);
+
+  const createPlan = async () => {
+    if (!newPlanName.trim() || !yearId) return;
+    try {
+      await apiFetch('/fees/plans', { method: 'POST', body: JSON.stringify({ name: newPlanName.trim(), academicYearId: yearId }) });
+      setNewPlanName(''); setCreating(false); await loadPlans();
+    } catch (e: any) { showToast(e.message); }
+  };
+
+  const deletePlan = async (planId: string) => {
+    if (!confirm('Delete this fee plan?')) return;
+    await apiFetch(`/fees/plans/${planId}`, { method: 'DELETE' }); await loadPlans();
+    if (selectedPlan?.id === planId) setSelectedPlan(null);
+  };
+
+  const addItem = async () => {
+    if (!selectedPlan || !editItemCat || !editItemAmt) return;
+    try {
+      await apiFetch(`/fees/plans/${selectedPlan.id}/items`, { method: 'POST', body: JSON.stringify({ feeCategoryId: editItemCat, totalAmount: parseFloat(editItemAmt) }) });
+      setEditingItem(null); setEditItemCat(''); setEditItemAmt('');
+      const p = await apiFetch<FeePlan>(`/fees/plans/${selectedPlan.id}`); setSelectedPlan(p); await loadPlans();
+    } catch (e: any) { showToast(e.message); }
+  };
+
+  const deleteItem = async (itemId: string) => {
+    if (!selectedPlan || !confirm('Remove this fee item?')) return;
+    try { await apiFetch(`/fees/plans/${selectedPlan.id}/items/${itemId}`, { method: 'DELETE' }); const p = await apiFetch<FeePlan>(`/fees/plans/${selectedPlan.id}`); setSelectedPlan(p); await loadPlans(); }
+    catch (e: any) { showToast(e.message); }
+  };
+
+  const addInst = async () => {
+    if (!selectedPlan || !addingInst || !instLabel || !instAmt) return;
+    try {
+      await apiFetch(`/fees/plans/${selectedPlan.id}/items/${addingInst.itemId}/installments`, { method: 'POST', body: JSON.stringify({ label: instLabel, amount: parseFloat(instAmt), dueDate: instDate || undefined }) });
+      setAddingInst(null); setInstLabel(''); setInstAmt(''); setInstDate('');
+      const p = await apiFetch<FeePlan>(`/fees/plans/${selectedPlan.id}`); setSelectedPlan(p);
+    } catch (e: any) { showToast(e.message); }
+  };
+
+  const deleteInst = async (itemId: string, instId: string) => {
+    if (!selectedPlan || !confirm('Delete this installment?')) return;
+    try { await apiFetch(`/fees/plans/${selectedPlan.id}/items/${itemId}/installments/${instId}`, { method: 'DELETE' }); const p = await apiFetch<FeePlan>(`/fees/plans/${selectedPlan.id}`); setSelectedPlan(p); }
+    catch (e: any) { showToast(e.message); }
+  };
+
+  const openAssign = (plan: FeePlan) => {
+    setAssigningPlan(plan.id);
+    setAssignedUnits(new Set(plan.classMaps.map((c) => c.academicUnitId)));
+  };
+
+  const saveAssign = async () => {
+    if (!assigningPlan) return;
+    try {
+      await apiFetch(`/fees/plans/${assigningPlan}/classes`, { method: 'POST', body: JSON.stringify({ academicUnitIds: [...assignedUnits] }) });
+      setAssigningPlan(null); await loadPlans();
+      if (selectedPlan?.id === assigningPlan) { const p = await apiFetch<FeePlan>(`/fees/plans/${assigningPlan}`); setSelectedPlan(p); }
+    } catch (e: any) { showToast(e.message); }
+  };
+
+  const handleCopy = async () => {
+    if (!copyingPlan || !copyTargetYear) return;
+    try {
+      await apiFetch(`/fees/plans/${copyingPlan.id}/copy`, { method: 'POST', body: JSON.stringify({ targetAcademicYearId: copyTargetYear }) });
+      showToast('Plan copied!'); setCopyingPlan(null); setCopyTargetYear(''); await loadPlans();
+    } catch (e: any) { showToast(e.message); }
+  };
+
+  const unitName = (u: AcademicUnit) => u.displayName || u.name;
+  const totalFee = (plan: FeePlan) => plan.items.reduce((s, i) => s + i.totalAmount, 0);
+
+  return (
+    <div className="space-y-4">
+      {toast && <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium">{toast}</div>}
+
+      {/* Assign Classes Modal */}
+      {assigningPlan && (
+        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="font-bold text-slate-900 mb-4">Assign Classes to Plan</h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {units.map((u) => (
+                <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer">
+                  <input type="checkbox" checked={assignedUnits.has(u.id)} onChange={() => setAssignedUnits((p) => { const n = new Set(p); if (n.has(u.id)) n.delete(u.id); else n.add(u.id); return n; })} className="rounded border-slate-300 text-indigo-600" />
+                  <span className="text-sm text-slate-800">{unitName(u)}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setAssigningPlan(null)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button onClick={() => void saveAssign()} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Save</button>
+            </div>
           </div>
+        </div>
+      )}
 
-          {/* Controls */}
-          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-            <div className="flex gap-4 items-end flex-wrap mb-4">
-              <div className="flex-1 min-w-[200px]">
-                <label className={lbl}>Class *</label>
-                <select className={inp} value={structUnit} onChange={(e) => setStructUnit(e.target.value)}>
-                  <option value="">Select Class</option>
-                  {units.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
-                </select>
-              </div>
+      {/* Copy Plan Modal */}
+      {copyingPlan && (
+        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="font-bold text-slate-900 mb-4">Copy Plan to Another Year</h3>
+            <p className="text-sm text-slate-500 mb-4">Copying: <strong>{copyingPlan.name}</strong></p>
+            <select value={copyTargetYear} onChange={(e) => setCopyTargetYear(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-5">
+              <option value="">Select target year…</option>
+              {years.filter((y) => y.id !== copyingPlan.academicYearId).map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+            </select>
+            <div className="flex gap-3">
+              <button onClick={() => { setCopyingPlan(null); setCopyTargetYear(''); }} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button onClick={() => void handleCopy()} disabled={!copyTargetYear} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">Copy</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 className="font-semibold text-slate-800 text-lg flex-1">Fee Plans</h2>
+        <select value={selYear} onChange={(e) => setSelYear(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          {years.map((y) => <option key={y.id} value={y.id}>{y.name}{y.isCurrent ? ' (Current)' : ''}</option>)}
+        </select>
+        <button onClick={() => setCreating(true)} className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">+ New Plan</button>
+      </div>
+
+      {creating && (
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex gap-3 items-end">
+          <div className="flex-1">
+            <label className="text-xs font-medium text-slate-600 mb-1 block">Plan Name</label>
+            <input value={newPlanName} onChange={(e) => setNewPlanName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void createPlan()} placeholder="e.g. Regular Students Plan" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
+          </div>
+          <button onClick={() => void createPlan()} className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">Create</button>
+          <button onClick={() => { setCreating(false); setNewPlanName(''); }} className="px-4 py-2 border border-slate-300 text-sm text-slate-700 rounded-lg hover:bg-slate-50">Cancel</button>
+        </div>
+      )}
+
+      {loading && <div className="text-center py-10 text-slate-400 text-sm">Loading plans…</div>}
+
+      {!loading && plans.length === 0 && (
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <div className="text-slate-400 text-sm">No fee plans for this academic year.</div>
+          <div className="text-slate-400 text-xs mt-1">Create one to start collecting fees using the plan-based system.</div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {plans.map((plan) => (
+          <div key={plan.id} className={`bg-white rounded-xl border-2 p-5 cursor-pointer transition-all ${selectedPlan?.id === plan.id ? 'border-indigo-500 shadow-lg' : 'border-slate-200 hover:border-slate-300'}`} onClick={() => setSelectedPlan(plan)}>
+            <div className="flex items-start justify-between mb-3">
               <div>
-                <label className={lbl}>Academic Year</label>
-                <select className={inp} value={currentYearId} onChange={(e) => setCurrentYearId(e.target.value)}>
-                  {years.map((y) => <option key={y.id} value={y.id}>{y.name}{y.isCurrent ? ' ✓' : ''}</option>)}
-                </select>
+                <div className="font-semibold text-slate-900">{plan.name}</div>
+                {plan.description && <div className="text-xs text-slate-500 mt-0.5">{plan.description}</div>}
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button onClick={(e) => { e.stopPropagation(); setCopyingPlan(plan); setCopyTargetYear(''); }} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Copy to another year">⧉</button>
+                <button onClick={(e) => { e.stopPropagation(); void deletePlan(plan.id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete">✕</button>
               </div>
             </div>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between text-slate-600"><span>Fee items</span><span className="font-medium">{plan.items.length}</span></div>
+              <div className="flex justify-between text-slate-600"><span>Annual total</span><span className="font-medium text-slate-900">{fmt(totalFee(plan))}</span></div>
+              <div className="flex justify-between text-slate-600"><span>Classes</span><span className="font-medium">{plan.classMaps.length > 0 ? plan.classMaps.map((c) => unitName(c.academicUnit)).join(', ') : <span className="text-amber-600">None assigned</span>}</span></div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); openAssign(plan); }} className="mt-3 w-full px-3 py-1.5 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50">Assign Classes</button>
+          </div>
+        ))}
+      </div>
 
-            {structUnit && (
-              <>
-                <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Add Fee Entry</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+      {/* Plan Editor */}
+      {selectedPlan && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-800">Editing: {selectedPlan.name}</h3>
+            <div className="text-sm text-slate-500">Annual total: <span className="font-semibold text-slate-900">{fmt(totalFee(selectedPlan))}</span></div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {selectedPlan.items.map((item) => (
+              <div key={item.id} className="p-5">
+                <div className="flex items-center justify-between mb-3">
                   <div>
-                    <label className={lbl}>Fee Head *</label>
-                    <select className={inp} value={structForm.feeHeadId}
-                      onChange={(e) => setStructForm((f) => ({ ...f, feeHeadId: e.target.value }))}>
-                      <option value="">Select</option>
-                      {feeHeads.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+                    <span className="font-medium text-slate-900">{item.feeCategory.name}</span>
+                    <span className="text-xs text-slate-500 ml-2">({item.feeCategory.type})</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-slate-800">{fmt(item.totalAmount)}</span>
+                    <button onClick={() => void deleteItem(item.id)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                  </div>
+                </div>
+                {/* Installments */}
+                <div className="space-y-1.5 ml-4">
+                  {item.installments.map((inst) => (
+                    <div key={inst.id} className="flex items-center gap-3 text-sm">
+                      <div className="w-2 h-2 rounded-full bg-slate-300 shrink-0" />
+                      <span className="text-slate-700 flex-1">{inst.label}</span>
+                      <span className="text-slate-500">{inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'No due date'}</span>
+                      <span className="font-medium text-slate-800">{fmt(inst.amount)}</span>
+                      <button onClick={() => void deleteInst(item.id, inst.id)} className="text-xs text-red-400 hover:text-red-600">✕</button>
+                    </div>
+                  ))}
+                  {addingInst?.itemId === item.id ? (
+                    <div className="flex gap-2 ml-5 flex-wrap">
+                      <input value={instLabel} onChange={(e) => setInstLabel(e.target.value)} placeholder="Label (e.g. Term 1)" className="border border-slate-300 rounded px-2 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                      <input type="number" value={instAmt} onChange={(e) => setInstAmt(e.target.value)} placeholder="Amount" className="border border-slate-300 rounded px-2 py-1 text-xs w-24 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                      <input type="date" value={instDate} onChange={(e) => setInstDate(e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                      <button onClick={() => void addInst()} className="px-2 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700">Add</button>
+                      <button onClick={() => setAddingInst(null)} className="px-2 py-1 border border-slate-300 text-xs rounded hover:bg-slate-50">Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setAddingInst({ itemId: item.id }); setInstLabel(''); setInstAmt(''); setInstDate(''); }} className="ml-5 text-xs text-indigo-600 hover:text-indigo-800">+ Add installment</button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Add Item Row */}
+            <div className="p-5">
+              {editingItem?.planId === selectedPlan.id ? (
+                <div className="flex gap-3 flex-wrap items-end">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Fee Category</label>
+                    <select value={editItemCat} onChange={(e) => setEditItemCat(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                      <option value="">Select category…</option>
+                      {categories.filter((c) => !selectedPlan.items.find((i) => i.feeCategoryId === c.id)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className={lbl}>Amount (₹) *</label>
-                    <input type="number" className={inp} min="0" placeholder="e.g. 5000"
-                      value={structForm.amount}
-                      onChange={(e) => setStructForm((f) => ({ ...f, amount: e.target.value }))} />
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Annual Amount (₹)</label>
+                    <input type="number" value={editItemAmt} onChange={(e) => setEditItemAmt(e.target.value)} placeholder="e.g. 12000" className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                   </div>
-                  <div>
-                    <label className={lbl}>Installment</label>
-                    <input className={inp} placeholder="e.g. Term 1, Annual"
-                      value={structForm.installmentName}
-                      onChange={(e) => setStructForm((f) => ({ ...f, installmentName: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className={lbl}>Due Date</label>
-                    <input type="date" className={inp}
-                      value={structForm.dueDate}
-                      onChange={(e) => setStructForm((f) => ({ ...f, dueDate: e.target.value }))} />
-                  </div>
+                  <button onClick={() => void addItem()} className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">Add</button>
+                  <button onClick={() => setEditingItem(null)} className="px-4 py-2 border border-slate-300 text-sm text-slate-700 rounded-lg hover:bg-slate-50">Cancel</button>
                 </div>
-                <button onClick={saveStructure} disabled={savingStruct || !structForm.feeHeadId || !structForm.amount}
-                  className="mt-3 btn-brand px-5 py-2 rounded-lg">
-                  {savingStruct ? 'Saving...' : '+ Add to Structure'}
+              ) : (
+                <button onClick={() => { setEditingItem({ planId: selectedPlan.id }); setEditItemCat(''); setEditItemAmt(''); }} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Add Fee Item</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Concessions Tab ───────────────────────────────────────────────────────────
+
+function ConcessionsTab({ years }: { years: AcademicYear[] }) {
+  const currentYear = years.find((y) => y.isCurrent) ?? years[0];
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<StudentSearch[]>([]);
+  const [selected, setSelected] = useState<StudentSearch | null>(null);
+  const [ledger, setLedger] = useState<Ledger | null>(null);
+  const [concessions, setConcessions] = useState<Concession[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [addItem, setAddItem] = useState<LedgerItem | null>(null);
+  const [conAmount, setConAmount] = useState('');
+  const [conReason, setConReason] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  useEffect(() => {
+    if (query.length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      try { const r = await apiFetch<{ students: StudentSearch[] }>(`/students/search?q=${encodeURIComponent(query)}&limit=8`); setResults(r.students ?? []); } catch { }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const selectStudent = async (s: StudentSearch) => {
+    setSelected(s); setResults([]); setQuery(''); setAddItem(null);
+    if (!currentYear) return;
+    setLoading(true);
+    try {
+      const [l, c] = await Promise.all([
+        apiFetch<Ledger>(`/fees/ledger/student/${s.id}?yearId=${currentYear.id}`),
+        apiFetch<Concession[]>(`/fees/concessions/student/${s.id}`),
+      ]);
+      setLedger(l); setConcessions(c);
+    } catch { } finally { setLoading(false); }
+  };
+
+  const handleAddConcession = async () => {
+    if (!selected || !addItem || !conAmount || !conReason) return;
+    setSaving(true);
+    try {
+      await apiFetch('/fees/concessions', { method: 'POST', body: JSON.stringify({ studentId: selected.id, feePlanItemId: addItem.feePlanItemId, amount: parseFloat(conAmount), reason: conReason }) });
+      showToast('Concession added');
+      setAddItem(null); setConAmount(''); setConReason('');
+      const c = await apiFetch<Concession[]>(`/fees/concessions/student/${selected.id}`); setConcessions(c);
+    } catch (e: any) { showToast(e.message); } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Remove this concession?')) return;
+    await apiFetch(`/fees/concessions/${id}`, { method: 'DELETE' });
+    const c = await apiFetch<Concession[]>(`/fees/concessions/student/${selected!.id}`); setConcessions(c);
+  };
+
+  return (
+    <div className="space-y-5">
+      {toast && <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium">{toast}</div>}
+
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <h2 className="font-semibold text-slate-800 mb-3">Search Student</h2>
+        <div className="relative max-w-lg">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Type name or admission number…" className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          {results.length > 0 && (
+            <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-20 overflow-hidden">
+              {results.map((s) => (
+                <button key={s.id} onClick={() => void selectStudent(s)} className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 flex items-center gap-3 border-b border-slate-100 last:border-0">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0">{s.firstName[0]}{s.lastName[0]}</div>
+                  <div><div className="text-sm font-medium text-slate-900">{s.firstName} {s.lastName}</div><div className="text-xs text-slate-500">{s.admissionNo}</div></div>
                 </button>
-              </>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {loading && <div className="text-center py-8 text-slate-400 text-sm">Loading…</div>}
+
+      {selected && !loading && ledger && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Add Concession Panel */}
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <h3 className="font-semibold text-slate-800 mb-4">Add Concession for {ledger.student.name}</h3>
+            {!ledger.plan && <p className="text-sm text-amber-600">No fee plan assigned to this student's class.</p>}
+            {ledger.plan && ledger.items.length > 0 && (
+              <div className="space-y-3">
+                {ledger.items.map((item) => (
+                  <div key={item.feePlanItemId} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div>
+                      <div className="text-sm font-medium text-slate-800">{item.categoryName}</div>
+                      <div className="text-xs text-slate-500">Annual: {fmt(item.totalAmount)} · Current concession: {fmt(item.concession)}</div>
+                    </div>
+                    <button onClick={() => { setAddItem(item); setConAmount(''); setConReason(''); }} className="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50">Add</button>
+                  </div>
+                ))}
+                {addItem && (
+                  <div className="border border-indigo-200 rounded-xl p-4 bg-indigo-50 space-y-3">
+                    <div className="text-sm font-semibold text-indigo-800">Adding concession for: {addItem.categoryName}</div>
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="text-xs font-medium text-slate-600 mb-1 block">Amount (₹)</label>
+                        <input type="number" value={conAmount} onChange={(e) => setConAmount(e.target.value)} placeholder="e.g. 500" max={addItem.totalAmount} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 mb-1 block">Reason</label>
+                      <input value={conReason} onChange={(e) => setConReason(e.target.value)} placeholder="e.g. Scholarship, EWS, Sibling discount" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={() => void handleAddConcession()} disabled={saving || !conAmount || !conReason} className="flex-1 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Concession</button>
+                      <button onClick={() => setAddItem(null)} className="px-4 py-2 border border-slate-300 text-sm text-slate-700 rounded-lg hover:bg-slate-50">Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Structure table */}
-          {structUnit && (
-            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
-                <span className="font-medium text-ds-text1">
-                  Fee Structure — {units.find((u) => u.id === structUnit)?.displayName || units.find((u) => u.id === structUnit)?.name}
-                </span>
-                {totalFeeForClass > 0 && (
-                  <span className="text-sm font-semibold text-ds-text1">
-                    Total Annual: ₹{totalFeeForClass.toLocaleString('en-IN')}
-                  </span>
-                )}
-              </div>
-
-              {loadingStructures ? (
-                <div className="p-6 text-center text-ds-text3 text-sm">Loading...</div>
-              ) : structures.length === 0 ? (
-                <div className="p-8 text-center text-ds-text3 text-sm">
-                  No fee structure defined for this class yet. Add fee entries above.
-                </div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-ds-bg2">
-                    <tr>
-                      <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Fee Head</th>
-                      <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Installment</th>
-                      <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Due Date</th>
-                      <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Amount (₹)</th>
-                      <th className="px-5 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ds-border">
-                    {structures.map((s) => (
-                      <tr key={s.id} className="hover:bg-ds-bg2">
-                        <td className="px-5 py-3 font-medium text-ds-text1">{s.feeHead.name}</td>
-                        <td className="px-5 py-3 text-ds-text2 text-xs">{s.installmentName || 'Annual'}</td>
-                        <td className="px-5 py-3 text-ds-text2 text-xs">
-                          {s.dueDate ? new Date(s.dueDate).toLocaleDateString('en-IN') : '—'}
-                        </td>
-                        <td className="px-5 py-3 text-right font-semibold text-ds-text1">
-                          ₹{s.amount.toLocaleString('en-IN')}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <button onClick={() => deleteStructure(s.id)}
-                            className="text-xs text-red-500 hover:text-ds-error-text">Remove</button>
-                        </td>
-                      </tr>
-                    ))}
-                    <tr className="bg-ds-bg2 font-semibold">
-                      <td className="px-5 py-3 text-ds-text1" colSpan={3}>Total</td>
-                      <td className="px-5 py-3 text-right text-ds-text1">₹{totalFeeForClass.toLocaleString('en-IN')}</td>
-                      <td></td>
-                    </tr>
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Defaulters ── */}
-      {tab === 'defaulters' && (
-        <div className="space-y-5">
-          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-            <div className="flex gap-4 items-end flex-wrap">
-              <div>
-                <label className={lbl}>Academic Year</label>
-                <select className={inp} value={currentYearId} onChange={(e) => setCurrentYearId(e.target.value)}>
-                  {years.map((y) => <option key={y.id} value={y.id}>{y.name}{y.isCurrent ? ' ✓' : ''}</option>)}
-                </select>
-              </div>
-              <div className="flex-1 min-w-[200px]">
-                <label className={lbl}>Class (optional — leave blank for all classes)</label>
-                <select className={inp} value={defUnit} onChange={(e) => setDefUnit(e.target.value)}>
-                  <option value="">All Classes</option>
-                  {units.map((u) => <option key={u.id} value={u.id}>{u.displayName || u.name}</option>)}
-                </select>
-              </div>
-              <button onClick={loadDefaulters} disabled={loadingDef || !currentYearId}
-                className="btn-brand px-4 py-2 rounded-lg">
-                {loadingDef ? 'Loading...' : 'Load Defaulters'}
-              </button>
-            </div>
-          </div>
-
-          {defaulters.length === 0 && !loadingDef ? (
-            <div className="text-center py-16 text-ds-text3 text-sm">
-              Click &ldquo;Load Defaulters&rdquo; to see students with outstanding balance.
-            </div>
-          ) : (
-            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
-                <span className="font-medium text-ds-text1">{defaulters.length} student(s) with outstanding balance</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-ds-error-text">
-                    Total Due: ₹{defaulters.reduce((s, d) => s + d.balance, 0).toLocaleString('en-IN')}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const rows = defaulters.map((d) => [d.admissionNo, d.firstName + ' ' + d.lastName, d.due, d.paid, d.balance]);
-                      const csv = [['Adm No','Student Name','Total Due','Paid','Balance'], ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-                      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-                      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `fee-defaulters-${new Date().toISOString().slice(0,10)}.csv` });
-                      a.click(); URL.revokeObjectURL(a.href);
-                    }}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border"
-                    style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-                  >
-                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Export CSV
-                  </button>
-                </div>
-              </div>
-              <table className="w-full text-sm">
-                <thead className="bg-ds-bg2">
-                  <tr>
-                    <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Student</th>
-                    <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Total Due (₹)</th>
-                    <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Paid (₹)</th>
-                    <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Balance (₹)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ds-border">
-                  {defaulters.map((d) => (
-                    <tr key={d.id} className="hover:bg-ds-bg2">
-                      <td className="px-5 py-3">
-                        <div className="font-medium text-ds-text1">{d.firstName} {d.lastName}</div>
-                        <div className="text-xs text-ds-text3 font-mono">{d.admissionNo}</div>
-                      </td>
-                      <td className="px-5 py-3 text-right text-ds-text1">₹{d.due.toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right text-ds-success-text">₹{d.paid.toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-ds-error-text">₹{d.balance.toLocaleString('en-IN')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Daily Collection ── */}
-      {tab === 'daily' && (
-        <div>
-          <div className="flex gap-3 items-end mb-5">
-            <div>
-              <label className={lbl}>Date</label>
-              <input type="date" className={inp} value={dailyDate} onChange={(e) => setDailyDate(e.target.value)} />
-            </div>
-            <button onClick={loadDailyCollection}
-              className="btn-brand px-4 py-2 rounded-lg">
-              Load
-            </button>
-          </div>
-          {dailyData && (
-            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-ds-border flex justify-between">
-                <span className="font-medium text-ds-text1">
-                  {new Date(dailyDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </span>
-                <span className="font-semibold text-ds-success-text">Total: ₹{dailyData.total.toLocaleString('en-IN')}</span>
-              </div>
-              {dailyData.payments.length === 0 ? (
-                <p className="p-8 text-center text-ds-text3 text-sm">No collections on this date</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-ds-bg2">
-                    <tr>
-                      {['Receipt No', 'Student', 'Fee Head', 'Amount', 'Mode'].map((h) => (
-                        <th key={h} className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ds-border">
-                    {dailyData.payments.map((p: any) => (
-                      <tr key={p.id}>
-                        <td className="px-5 py-3 font-mono text-xs text-ds-text2">{p.receiptNo}</td>
-                        <td className="px-5 py-3 font-medium">{p.student.firstName} {p.student.lastName}</td>
-                        <td className="px-5 py-3 text-ds-text2">{p.feeHead.name}</td>
-                        <td className="px-5 py-3 font-semibold">₹{p.amount.toLocaleString('en-IN')}</td>
-                        <td className="px-5 py-3 text-ds-text2 uppercase text-xs">{p.paymentMode}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Due Alerts ── */}
-      {tab === 'alerts' && (
-        <div className="space-y-5">
-          {loadingAlerts ? (
-            <p className="text-sm text-ds-text3">Loading...</p>
-          ) : !alertData ? (
-            <p className="text-sm text-ds-text3">Click the tab to load alerts.</p>
-          ) : (
-            <>
-              {/* Summary strip */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-ds-error-bg border border-ds-error-border rounded-xl p-4">
-                  <p className="text-2xl font-bold text-ds-error-text">{alertData.summary.overdueCount}</p>
-                  <p className="text-xs text-ds-error-text font-medium mt-1">Overdue Installments</p>
-                  {alertData.summary.overdueAmount > 0 && (
-                    <p className="text-xs text-red-500 mt-0.5">₹{alertData.summary.overdueAmount.toLocaleString('en-IN')} outstanding</p>
-                  )}
-                </div>
-                <div className="bg-ds-warning-bg border border-ds-warning-border rounded-xl p-4">
-                  <p className="text-2xl font-bold text-ds-warning-text">{alertData.summary.thisWeekCount}</p>
-                  <p className="text-xs text-ds-warning-text font-medium mt-1">Due This Week</p>
-                </div>
-                <div className="bg-ds-info-bg border border-ds-info-border rounded-xl p-4">
-                  <p className="text-2xl font-bold text-ds-info-text">{alertData.summary.thisMonthCount}</p>
-                  <p className="text-xs text-ds-brand font-medium mt-1">Due This Month</p>
-                </div>
-              </div>
-
-              {alertData.summary.overdueCount === 0 && alertData.summary.thisWeekCount === 0 && alertData.summary.thisMonthCount === 0 && (
-                <div className="text-center py-12 text-ds-text3 text-sm">
-                  No upcoming fee due dates in the next 30 days.
-                  <br />
-                  <span className="text-xs">Set due dates on fee structures to see alerts here.</span>
-                </div>
-              )}
-
-              {/* Alert table helper */}
-              {(['overdue', 'thisWeek', 'thisMonth'] as const).map((section) => {
-                const items = alertData[section];
-                if (items.length === 0) return null;
-                const config = {
-                  overdue:   { label: 'Overdue', headerCls: 'bg-red-600',   badgeCls: 'bg-ds-error-bg text-ds-error-text',   dayLabel: (d: number) => `${Math.abs(d)}d overdue` },
-                  thisWeek:  { label: 'Due This Week',  headerCls: 'bg-amber-500', badgeCls: 'bg-ds-warning-bg text-ds-warning-text', dayLabel: (d: number) => d === 0 ? 'Today' : `In ${d}d` },
-                  thisMonth: { label: 'Due This Month', headerCls: 'bg-blue-600',  badgeCls: 'bg-ds-info-bg text-ds-info-text',  dayLabel: (d: number) => `In ${d}d` },
-                }[section];
-
-                return (
-                  <div key={section} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-                    <div className={`px-5 py-3 text-white text-sm font-semibold ${config.headerCls}`}>
-                      {config.label} — {items.length} installment{items.length !== 1 ? 's' : ''}
-                    </div>
-                    <table className="w-full text-sm">
-                      <thead className="bg-ds-bg2">
-                        <tr>
-                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Class</th>
-                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Fee Head</th>
-                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Installment</th>
-                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-left">Due Date</th>
-                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-center">Timing</th>
-                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Amount / Student</th>
-                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Students</th>
-                          <th className="px-5 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider text-right">Total Due</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-ds-border">
-                        {items.map((item) => (
-                          <tr key={item.feeStructureId} className="hover:bg-ds-bg2">
-                            <td className="px-5 py-3 font-medium text-ds-text1">{item.className}</td>
-                            <td className="px-5 py-3 text-ds-text1">{item.feeHeadName}</td>
-                            <td className="px-5 py-3 text-ds-text2 text-xs">{item.installmentName || 'Annual'}</td>
-                            <td className="px-5 py-3 text-ds-text2 text-xs">
-                              {new Date(item.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </td>
-                            <td className="px-5 py-3 text-center">
-                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.badgeCls}`}>
-                                {config.dayLabel(item.daysFromToday)}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-right text-ds-text1">₹{item.amount.toLocaleString('en-IN')}</td>
-                            <td className="px-5 py-3 text-right text-ds-text2">{item.studentsInClass}</td>
-                            <td className="px-5 py-3 text-right font-semibold text-ds-text1">₹{item.totalAmount.toLocaleString('en-IN')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+          {/* Existing Concessions */}
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <h3 className="font-semibold text-slate-800 mb-4">Existing Concessions</h3>
+            {concessions.length === 0 && <div className="text-sm text-slate-400 py-6 text-center">No concessions for this student</div>}
+            <div className="space-y-2">
+              {concessions.map((c) => (
+                <div key={c.id} className="flex items-center gap-3 p-3 bg-green-50 border border-green-100 rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-800">{c.feePlanItem.feeCategory.name}</div>
+                    <div className="text-xs text-slate-500">{c.feePlanItem.feePlan.name} · {c.reason}</div>
                   </div>
-                );
-              })}
+                  <div className="font-bold text-green-700 shrink-0">{fmt(c.amount)}</div>
+                  <button onClick={() => void handleDelete(c.id)} className="text-red-400 hover:text-red-600 shrink-0">✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-              <div className="flex justify-end">
-                <button onClick={loadDueAlerts}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
-                  Refresh
-                </button>
+// ── Reports Tab ───────────────────────────────────────────────────────────────
+
+function ReportsTab({ years, units, institution }: { years: AcademicYear[]; units: AcademicUnit[]; institution: Institution | null }) {
+  const currentYear = years.find((y) => y.isCurrent) ?? years[0];
+  const [reportTab, setReportTab] = useState<'daily' | 'defaulters' | 'trend'>('daily');
+  const [selYear, setSelYear] = useState<string>('');
+  const [selUnit, setSelUnit] = useState<string>('');
+  const [date, setDate] = useState(todayStr());
+  const [dailyData, setDailyData] = useState<{ payments: DailyEntry[]; total: number } | null>(null);
+  const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
+  const [trend, setTrend] = useState<{ month: string; label: string; amount: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => { if (currentYear) setSelYear(currentYear.id); }, [currentYear]);
+
+  useEffect(() => {
+    if (reportTab === 'daily') { void loadDaily(); }
+    else if (reportTab === 'defaulters') { void loadDefaulters(); }
+    else { void loadTrend(); }
+  }, [reportTab, date, selYear, selUnit]);
+
+  const loadDaily = async () => {
+    setLoading(true);
+    try { setDailyData(await apiFetch(`/fees/payments/daily?date=${date}`)); } catch { } finally { setLoading(false); }
+  };
+
+  const loadDefaulters = async () => {
+    if (!selYear) return;
+    setLoading(true);
+    try {
+      const d = await apiFetch<Defaulter[]>(`/fees/v2/defaulters?yearId=${selYear}${selUnit ? `&unitId=${selUnit}` : ''}`);
+      setDefaulters(d);
+    } catch { setDefaulters([]); } finally { setLoading(false); }
+  };
+
+  const loadTrend = async () => {
+    setLoading(true);
+    try { setTrend(await apiFetch('/fees/payments/monthly-trend?months=6')); } catch { } finally { setLoading(false); }
+  };
+
+  const exportCSV = () => {
+    const rows = [['Student Name', 'Admission No', 'Class', 'Total Due', 'Paid', 'Outstanding'].join(','), ...defaulters.map((d) => [`"${d.firstName} ${d.lastName}"`, d.admissionNo, `"${d.className ?? ''}"`, d.due.toFixed(2), d.paid.toFixed(2), d.balance.toFixed(2)].join(','))];
+    const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `defaulters_${selYear}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const unitName = (u: AcademicUnit) => u.displayName || u.name;
+  const modeLabel = (m: string) => MODE_LABEL[m] ?? m;
+  const maxTrend = Math.max(...trend.map((t) => t.amount), 1);
+
+  const subTabs = [
+    { key: 'daily', label: 'Daily Collection' },
+    { key: 'defaulters', label: 'Defaulters' },
+    { key: 'trend', label: 'Monthly Trend' },
+  ] as const;
+
+  return (
+    <div className="space-y-5">
+      <div className="flex gap-1 border-b border-slate-200">
+        {subTabs.map((t) => (
+          <button key={t.key} onClick={() => setReportTab(t.key)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${reportTab === t.key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>{t.label}</button>
+        ))}
+      </div>
+
+      {reportTab === 'daily' && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-4">
+            <h3 className="font-semibold text-slate-800 flex-1">Daily Collection</h3>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <button onClick={() => void loadDaily()} className="px-3 py-2 border border-slate-300 text-sm rounded-lg hover:bg-slate-50">Refresh</button>
+          </div>
+          {loading ? <div className="py-10 text-center text-slate-400 text-sm">Loading…</div> : dailyData && (
+            <>
+              <div className="px-5 py-3 bg-green-50 border-b border-green-100 flex items-center justify-between">
+                <span className="text-sm text-green-700 font-medium">{dailyData.payments.length} transaction(s)</span>
+                <span className="text-xl font-bold text-green-800">{fmt(dailyData.total)}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-slate-50 text-xs text-slate-500 uppercase">{['Receipt No', 'Student', 'Category', 'Mode', 'Amount'].map((h) => <th key={h} className="text-left px-4 py-2.5">{h}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {dailyData.payments.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-2.5 font-mono text-xs text-indigo-600">{p.receiptNo}</td>
+                        <td className="px-4 py-2.5"><div className="font-medium text-slate-800">{p.student.firstName} {p.student.lastName}</div><div className="text-xs text-slate-500">{p.student.admissionNo}</div></td>
+                        <td className="px-4 py-2.5 text-slate-600">{p.categoryName}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{modeLabel(p.paymentMode)}</td>
+                        <td className="px-4 py-2.5 font-semibold text-slate-900">{fmt(p.amount)}</td>
+                      </tr>
+                    ))}
+                    {dailyData.payments.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm">No collections on this date</td></tr>}
+                  </tbody>
+                </table>
               </div>
             </>
           )}
         </div>
       )}
 
-      {/* ── Fee Heads ── */}
-      {tab === 'heads' && (
-        <div className="max-w-lg space-y-4">
-          {/* Quick-add standard heads */}
-          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Standard Fee Heads</p>
-            <p className="text-xs text-ds-text2 mb-3">Click to add any that are not already in your list:</p>
-            <div className="flex flex-wrap gap-2">
-              {STANDARD_FEE_HEADS.filter((name) => !feeHeads.some((h) => h.name === name)).map((name) => (
-                <button key={name} onClick={() => addFeeHead(name)} disabled={addingHead}
-                  className="px-3 py-1.5 border border-dashed border-ds-border-strong rounded-lg text-xs text-ds-text2 hover:border-black hover:text-black transition-colors disabled:opacity-50">
-                  + {name}
-                </button>
-              ))}
-              {STANDARD_FEE_HEADS.every((name) => feeHeads.some((h) => h.name === name)) && (
-                <p className="text-xs text-ds-text3">All standard heads added.</p>
+      {reportTab === 'defaulters' && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+            <h3 className="font-semibold text-slate-800 flex-1">Defaulters Report</h3>
+            <select value={selYear} onChange={(e) => setSelYear(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              {years.map((y) => <option key={y.id} value={y.id}>{y.name}{y.isCurrent ? ' (Current)' : ''}</option>)}
+            </select>
+            <select value={selUnit} onChange={(e) => setSelUnit(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">All Classes</option>
+              {units.map((u) => <option key={u.id} value={u.id}>{unitName(u)}</option>)}
+            </select>
+            {defaulters.length > 0 && <button onClick={exportCSV} className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700">Export CSV</button>}
+          </div>
+          {loading ? <div className="py-10 text-center text-slate-400 text-sm">Loading…</div> : (
+            <>
+              {defaulters.length > 0 && (
+                <div className="px-5 py-3 bg-red-50 border-b border-red-100 flex items-center justify-between">
+                  <span className="text-sm text-red-700 font-medium">{defaulters.length} student(s) with outstanding dues</span>
+                  <span className="text-xl font-bold text-red-700">{fmt(defaulters.reduce((s, d) => s + d.balance, 0))}</span>
+                </div>
               )}
-            </div>
-          </div>
-
-          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
-            <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Add Custom Head</p>
-            <div className="flex gap-2">
-              <input className={inp + ' flex-1'} placeholder="e.g. Uniform Fee, Computer Fee"
-                value={newHeadName} onChange={(e) => setNewHeadName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') addFeeHead(newHeadName); }} />
-              <button onClick={() => addFeeHead(newHeadName)} disabled={addingHead || !newHeadName.trim()}
-                className="btn-brand px-4 py-2 rounded-lg">
-                {addingHead ? '...' : 'Add'}
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-ds-border">
-              <span className="text-sm font-medium text-ds-text1">All Fee Heads ({feeHeads.length})</span>
-            </div>
-            {feeHeads.length === 0 ? (
-              <p className="p-6 text-center text-ds-text3 text-sm">No fee heads configured. Add standard heads above.</p>
-            ) : (
-              <ul className="divide-y divide-ds-border">
-                {feeHeads.map((h) => (
-                  <li key={h.id} className="flex items-center justify-between px-5 py-3 hover:bg-ds-bg2">
-                    <span className="text-sm font-medium text-ds-text1">{h.name}</span>
-                    <div className="flex items-center gap-3">
-                      {h.isCustom && <span className="text-xs text-ds-text3 bg-ds-bg2 px-2 py-0.5 rounded">Custom</span>}
-                      <button onClick={() => deleteFeeHead(h.id)} className="text-xs text-red-500 hover:text-ds-error-text">Delete</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-slate-50 text-xs text-slate-500 uppercase">{['Student', 'Class', 'Total Due', 'Paid', 'Outstanding'].map((h) => <th key={h} className="text-left px-4 py-2.5">{h}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {defaulters.map((d) => (
+                      <tr key={d.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-2.5"><div className="font-medium text-slate-800">{d.firstName} {d.lastName}</div><div className="text-xs text-slate-500">{d.admissionNo}</div></td>
+                        <td className="px-4 py-2.5 text-slate-600">{d.className ?? '—'}</td>
+                        <td className="px-4 py-2.5 text-slate-700">{fmt(d.due)}</td>
+                        <td className="px-4 py-2.5 text-green-700">{fmt(d.paid)}</td>
+                        <td className="px-4 py-2.5 font-bold text-red-600">{fmt(d.balance)}</td>
+                      </tr>
+                    ))}
+                    {defaulters.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm">No defaulters — all dues are cleared!</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
+
+      {reportTab === 'trend' && (
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 className="font-semibold text-slate-800 mb-5">Monthly Collection Trend (Last 6 Months)</h3>
+          {loading ? <div className="text-center py-8 text-slate-400 text-sm">Loading…</div> : (
+            <div className="space-y-3">
+              {trend.map((t) => (
+                <div key={t.month} className="flex items-center gap-4">
+                  <div className="text-sm text-slate-600 w-14 shrink-0">{t.label}</div>
+                  <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${(t.amount / maxTrend) * 100}%` }} />
+                  </div>
+                  <div className="text-sm font-semibold text-slate-800 w-28 text-right">{fmt(t.amount)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Categories Tab ────────────────────────────────────────────────────────────
+
+function CategoriesTab() {
+  const [categories, setCategories] = useState<FeeCategory[]>([]);
+  const [newName, setNewName] = useState('');
+  const [newType, setNewType] = useState('CUSTOM');
+  const [adding, setAdding] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  const load = () => apiFetch<FeeCategory[]>('/fees/categories').then(setCategories);
+  useEffect(() => { void load(); }, []);
+
+  const addStandard = async (name: string, type: string) => {
+    try { await apiFetch('/fees/categories', { method: 'POST', body: JSON.stringify({ name, type }) }); await load(); }
+    catch (e: any) { if (!e.message?.includes('already exists')) showToast(e.message); }
+  };
+
+  const addCustom = async () => {
+    if (!newName.trim()) return;
+    try { await apiFetch('/fees/categories', { method: 'POST', body: JSON.stringify({ name: newName.trim(), type: newType }) }); setNewName(''); setAdding(false); await load(); }
+    catch (e: any) { showToast(e.message); }
+  };
+
+  const deleteCat = async (id: string) => {
+    if (!confirm('Delete this category?')) return;
+    try { await apiFetch(`/fees/categories/${id}`, { method: 'DELETE' }); await load(); }
+    catch (e: any) { showToast(e.message); }
+  };
+
+  const TYPE_COLORS: Record<string, string> = { TUITION: 'bg-blue-100 text-blue-800', TRANSPORT: 'bg-orange-100 text-orange-800', EXAM: 'bg-purple-100 text-purple-800', LAB: 'bg-teal-100 text-teal-800', LIBRARY: 'bg-emerald-100 text-emerald-800', ACTIVITY: 'bg-pink-100 text-pink-800', SPORTS: 'bg-yellow-100 text-yellow-800', DEVELOPMENT: 'bg-indigo-100 text-indigo-800', HOSTEL: 'bg-cyan-100 text-cyan-800', CUSTOM: 'bg-slate-100 text-slate-700' };
+
+  return (
+    <div className="space-y-5">
+      {toast && <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium">{toast}</div>}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Quick-Add Standard */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 className="font-semibold text-slate-800 mb-4">Quick-Add Standard Categories</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {STANDARD_CATEGORIES.map((s) => {
+              const exists = categories.some((c) => c.name === s.name);
+              return (
+                <button key={s.name} onClick={() => void addStandard(s.name, s.type)} disabled={exists} className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${exists ? 'bg-green-50 border-green-200 text-green-700 cursor-default' : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700'}`}>
+                  {exists ? '✓ ' : '+ '}{s.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Add Custom */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 className="font-semibold text-slate-800 mb-4">Add Custom Category</h3>
+          {adding ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Name</label>
+                <input value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void addCustom()} placeholder="Category name" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">Type</label>
+                <select value={newType} onChange={(e) => setNewType(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  {CATEGORY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => void addCustom()} className="flex-1 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">Add</button>
+                <button onClick={() => { setAdding(false); setNewName(''); }} className="px-4 py-2 border border-slate-300 text-sm text-slate-700 rounded-lg hover:bg-slate-50">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setAdding(true)} className="w-full py-8 border-2 border-dashed border-slate-300 rounded-xl text-sm text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">+ Add Custom Category</button>
+          )}
+        </div>
+      </div>
+
+      {/* Category List */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <h3 className="font-semibold text-slate-800">All Categories ({categories.length})</h3>
+        </div>
+        {categories.length === 0 ? (
+          <div className="py-10 text-center text-slate-400 text-sm">No categories yet. Add standard categories above.</div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {categories.map((c) => (
+              <div key={c.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50">
+                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[c.type] ?? TYPE_COLORS['CUSTOM']}`}>{c.type}</span>
+                <span className="flex-1 text-sm text-slate-800 font-medium">{c.name}</span>
+                <button onClick={() => void deleteCat(c.id)} className="text-slate-400 hover:text-red-500 text-sm px-2 py-1 rounded hover:bg-red-50">Delete</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,412 +1,550 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 
-type Institution = { name: string; board?: string; address?: string; phone?: string; email?: string };
+type Institution = { name: string; board?: string; address?: string; phone?: string; email?: string; logoUrl?: string; principalName?: string; tagline?: string; affiliationNo?: string };
+
+type StudentHit = {
+  id: string; firstName: string; lastName: string; admissionNo: string;
+  academicUnit?: { displayName?: string; name?: string };
+};
+
+type LedgerInstallment = {
+  id: string; label: string; amount: number; dueDate?: string | null;
+  concession: number; netAmount: number; paid: number; balance: number;
+  status: 'paid' | 'partial' | 'due' | 'overdue';
+};
+
+type LedgerItem = {
+  feePlanItemId: string; feeCategoryId: string; categoryName: string;
+  totalAmount: number; concession: number; netAmount: number;
+  installments: LedgerInstallment[]; totalPaid: number; totalBalance: number;
+};
+
+type Ledger = {
+  student: { id: string; name: string; admissionNo: string; className: string };
+  plan: { id: string; name: string } | null;
+  items: LedgerItem[];
+  totalAnnual: number; totalConcession: number; totalNet: number;
+  totalPaid: number; totalBalance: number;
+};
+
+type CollectionEntry = {
+  id: string; receiptNo: string; amount: number; paymentMode: string;
+  paidOn: string; categoryName: string; installmentLabel?: string | null;
+  remarks?: string | null; source: 'legacy' | 'v2';
+};
+
+type AcademicYear = { id: string; name: string; isCurrent: boolean };
 
 function esc(s: string | null | undefined): string {
   if (!s) return '';
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function printFeeReceipt(
-  payment: Payment,
-  studentName: string,
-  admissionNo: string,
-  studentClass: string,
-  institution: Institution,
-) {
-  const date = new Date(payment.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-  const payModeLabel: Record<string, string> = {
-    cash: 'Cash', upi: 'UPI', cheque: 'Cheque',
-    bank_transfer: 'Bank Transfer', dd: 'Demand Draft',
-  };
-  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${esc(payment.receiptNo)}</title>
+function fmt(n: number) { return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
+
+const MODES = ['cash', 'upi', 'cheque', 'neft', 'dd', 'online'] as const;
+const MODE_LABEL: Record<string, string> = { cash: 'Cash', upi: 'UPI', cheque: 'Cheque', neft: 'NEFT', dd: 'Demand Draft', online: 'Online' };
+
+const STATUS_CHIP: Record<string, { bg: string; color: string; label: string }> = {
+  paid:    { bg: '#dcfce7', color: '#15803d', label: 'Paid' },
+  partial: { bg: '#fef9c3', color: '#854d0e', label: 'Partial' },
+  due:     { bg: '#dbeafe', color: '#1d4ed8', label: 'Due' },
+  overdue: { bg: '#fee2e2', color: '#dc2626', label: 'Overdue' },
+};
+
+function printReceipt(params: {
+  collections: { receiptNo: string; amount: number; paymentMode: string; categoryName: string; installmentLabel?: string }[];
+  student: { name: string; admissionNo: string; className: string };
+  paidOn: string; remarks?: string; institution: Institution;
+}) {
+  const { collections, student, paidOn, remarks, institution } = params;
+  const date = new Date(paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  const total = collections.reduce((s, c) => s + c.amount, 0);
+  const receiptNo = collections[0]?.receiptNo ?? '';
+  const payMode = MODE_LABEL[collections[0]?.paymentMode ?? ''] ?? collections[0]?.paymentMode?.toUpperCase() ?? '';
+  const itemRows = collections.map((c) =>
+    `<div class="row"><span class="label">${esc(c.categoryName)}${c.installmentLabel ? ` · ${esc(c.installmentLabel)}` : ''}</span><span class="value">${fmt(c.amount)}</span></div>`
+  ).join('');
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${esc(receiptNo)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9;padding:30px}
-  .receipt{max-width:520px;margin:0 auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
-  .letterhead{background:#0f172a;color:#fff;padding:20px 24px;text-align:center}
-  .letterhead h1{font-size:17px;font-weight:700;letter-spacing:.5px;margin-bottom:3px}
-  .letterhead .sub{font-size:11px;opacity:.65;line-height:1.5}
-  .receipt-header{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
-  .receipt-header .rno{font-size:13px;font-weight:700;color:#0f172a}
-  .receipt-header .rdate{font-size:12px;color:#64748b}
-  .section{padding:18px 24px}
-  .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px}
-  .row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f1f5f9}
+  .receipt{max-width:540px;margin:0 auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+  .letterhead{background:#0f172a;color:#fff;padding:18px 24px;display:flex;align-items:center;gap:14px}
+  .letterhead img{width:52px;height:52px;object-fit:contain;border-radius:4px;background:#fff;padding:3px;flex-shrink:0}
+  .logo-ph{width:52px;height:52px;border-radius:4px;background:rgba(255,255,255,.1);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,.5);text-align:center;line-height:1.2}
+  .lh-text{flex:1;min-width:0}
+  .lh-text h1{font-size:16px;font-weight:700;margin-bottom:2px}
+  .lh-text .tagline{font-size:10px;opacity:.6;font-style:italic;margin-bottom:3px}
+  .lh-text .sub{font-size:10px;opacity:.55;line-height:1.6}
+  .rhead{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
+  .rno{font-size:13px;font-weight:700;color:#0f172a} .rdate{font-size:12px;color:#64748b}
+  .section{padding:16px 24px}
+  .stitle{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px}
+  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9}
   .row:last-child{border:none}
-  .label{color:#64748b;font-size:12px}
-  .value{font-weight:600;font-size:12px;text-align:right;max-width:60%}
-  .amount-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:8px;padding:14px 18px;margin:0 24px 20px;display:flex;justify-content:space-between;align-items:center}
-  .amount-box .lbl{font-size:12px;color:#166534;font-weight:600}
-  .amount-box .amt{font-size:26px;font-weight:800;color:#15803d}
+  .label{color:#64748b;font-size:12px} .value{font-weight:600;font-size:12px;text-align:right;max-width:60%}
+  .amt-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:8px;padding:14px 18px;margin:0 24px 20px;display:flex;justify-content:space-between;align-items:center}
+  .amt-box .lbl{font-size:12px;color:#166534;font-weight:600} .amt-box .amt{font-size:26px;font-weight:800;color:#15803d}
   .footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px 20px;border-top:1px solid #f1f5f9;line-height:1.6}
-  @media print{body{background:#fff;padding:0}.receipt{box-shadow:none;border-radius:0;border:1px solid #ccc};-webkit-print-color-adjust:exact;print-color-adjust:exact}
-</style></head><body>
-<div class="receipt">
+  @media print{body{background:#fff;padding:0}.receipt{box-shadow:none;border-radius:0;border:none};-webkit-print-color-adjust:exact;print-color-adjust:exact}
+</style></head><body><div class="receipt">
   <div class="letterhead">
-    <h1>${esc(institution.name)}</h1>
-    <div class="sub">
-      ${institution.board ? `${esc(institution.board)}<br>` : ''}
-      ${institution.address ? `${esc(institution.address)}<br>` : ''}
-      ${[institution.phone ? `Ph: ${esc(institution.phone)}` : '', institution.email ? `Email: ${esc(institution.email)}` : ''].filter(Boolean).join('  ·  ')}
+    ${institution.logoUrl ? `<img src="${esc(institution.logoUrl)}" alt="Logo" />` : `<div class="logo-ph">School<br/>Logo</div>`}
+    <div class="lh-text">
+      <h1>${esc(institution.name)}</h1>
+      ${institution.tagline ? `<div class="tagline">${esc(institution.tagline)}</div>` : ''}
+      <div class="sub">${[institution.board, institution.affiliationNo ? `Affil: ${institution.affiliationNo}` : ''].filter(Boolean).join(' · ')}${(institution.board || institution.affiliationNo) ? '<br>' : ''}${institution.address ? `${esc(institution.address)}<br>` : ''}${[institution.phone ? `Ph: ${esc(institution.phone)}` : '', institution.email ? `Email: ${esc(institution.email)}` : ''].filter(Boolean).join(' · ')}</div>
     </div>
   </div>
-  <div class="receipt-header">
-    <span class="rno">Receipt No: ${esc(payment.receiptNo)}</span>
-    <span class="rdate">${date}</span>
+  <div class="rhead"><span class="rno">Receipt No: ${esc(receiptNo)}</span><span class="rdate">${date}</span></div>
+  <div class="section"><div class="stitle">Student Details</div>
+    <div class="row"><span class="label">Name</span><span class="value">${esc(student.name)}</span></div>
+    <div class="row"><span class="label">Admission No.</span><span class="value">${esc(student.admissionNo)}</span></div>
+    <div class="row"><span class="label">Class</span><span class="value">${esc(student.className)}</span></div>
   </div>
-  <div class="section">
-    <div class="section-title">Student Details</div>
-    <div class="row"><span class="label">Student Name</span><span class="value">${esc(studentName)}</span></div>
-    <div class="row"><span class="label">Admission No</span><span class="value">${esc(admissionNo)}</span></div>
-    <div class="row"><span class="label">Class / Section</span><span class="value">${esc(studentClass || '—')}</span></div>
+  <div class="section"><div class="stitle">Fee Details</div>
+    ${itemRows}
+    <div class="row"><span class="label">Payment Mode</span><span class="value">${esc(payMode)}</span></div>
+    ${remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${esc(remarks)}</span></div>` : ''}
   </div>
-  <div class="section" style="padding-top:0">
-    <div class="section-title">Payment Details</div>
-    <div class="row"><span class="label">Fee Head</span><span class="value">${esc(payment.feeHead?.name ?? '—')}</span></div>
-    <div class="row"><span class="label">Payment Mode</span><span class="value">${esc(payModeLabel[payment.paymentMode] ?? payment.paymentMode?.toUpperCase())}</span></div>
-    ${payment.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${esc(payment.remarks)}</span></div>` : ''}
-  </div>
-  <div class="amount-box">
-    <span class="lbl">Amount Paid</span>
-    <span class="amt">₹${payment.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-  </div>
-  <div class="footer">
-    This is a computer-generated receipt and does not require a signature.<br>
-    Issued by ${esc(institution.name)}
-  </div>
-</div>
-<script>window.onload=function(){window.print();}</script>
-</body></html>`;
-  const w = window.open('', '_blank', 'width=600,height=800');
-  if (w) { w.document.write(html); w.document.close(); }
+  <div class="amt-box"><span class="lbl">Total Amount Paid</span><span class="amt">${fmt(total)}</span></div>
+  <div class="footer">${institution.principalName ? `<div style="font-size:11px;color:#64748b;margin-bottom:4px">Principal: ${esc(institution.principalName)}</div>` : ''}Computer-generated receipt — no signature required<br>${esc(institution.name)}</div>
+</div><script>window.onload=function(){window.print();}</script></body></html>`;
+  const w = window.open('', '_blank', 'width=620,height=780');
+  if (!w) return;
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(() => { w.print(); }, 400);
 }
-
-type Student = {
-  id: string; firstName: string; lastName: string; admissionNo: string;
-  academicUnit?: { displayName?: string; name?: string };
-};
-type Payment = {
-  id: string; receiptNo: string; amount: number; paymentMode: string;
-  paidOn: string; remarks?: string; feeHead: { name: string };
-};
-type Balance = {
-  totalDue: number; totalPaid: number; balance: number;
-  breakdown: { feeHeadName: string; due: number; paid: number; balance: number }[];
-};
-type FeeHead = { id: string; name: string };
-type AcademicYear = { id: string; name: string; isCurrent: boolean };
 
 export default function AccountantFeesPage() {
   const user = usePortalAuthStore((s) => s.user);
-  const [search, setSearch] = useState('');
-  const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [institution, setInstitution] = useState<Institution>({ name: user?.institutionName ?? 'School' });
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [balance, setBalance] = useState<Balance | null>(null);
-  const [feeHeads, setFeeHeads] = useState<FeeHead[]>([]);
   const [years, setYears] = useState<AcademicYear[]>([]);
-  const [currentYearId, setCurrentYearId] = useState('');
-  const [loadingStudents, setLoadingStudents] = useState(false);
-  const [loadingDetails, setLoadingDetails] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [yearId, setYearId] = useState('');
 
-  // Payment form
-  const [showPayForm, setShowPayForm] = useState(false);
-  const [payForm, setPayForm] = useState({ feeHeadId: '', amount: '', paymentMode: 'cash', remarks: '' });
-  const [paying, setPaying] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<StudentHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [student, setStudent] = useState<StudentSearch | null>(null);
+  const [ledger, setLedger] = useState<Ledger | null>(null);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [payMode, setPayMode] = useState<string>('cash');
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [remarks, setRemarks] = useState('');
+  const [collecting, setCollecting] = useState(false);
+
+  const [history, setHistory] = useState<CollectionEntry[]>([]);
+  const [histTotal, setHistTotal] = useState(0);
+
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  type StudentSearch = StudentHit;
+
+  function showToast(msg: string, ok = true) { setToast({ msg, ok }); setTimeout(() => setToast(null), 4000); }
 
   useEffect(() => {
-    Promise.all([
-      apiFetch('/fees/heads'),
-      apiFetch('/academic/years'),
-      apiFetch('/academic/institution'),
-    ])
-      .then(([heads, yrs, inst]) => {
-        setFeeHeads(Array.isArray(heads) ? heads : []);
-        const yearList = Array.isArray(yrs) ? yrs : [];
-        setYears(yearList);
-        const cur = yearList.find((y: AcademicYear) => y.isCurrent) ?? yearList[0];
-        if (cur) setCurrentYearId(cur.id);
+    Promise.all([apiFetch('/academic/years'), apiFetch('/academic/institution')])
+      .then(([yrs, inst]) => {
+        const list = Array.isArray(yrs) ? yrs : [];
+        setYears(list);
+        const cur = list.find((y: AcademicYear) => y.isCurrent) ?? list[0];
+        if (cur) setYearId(cur.id);
         if (inst) setInstitution(inst as Institution);
       })
       .catch(() => {});
   }, []);
 
-  const searchStudents = useCallback(async () => {
-    if (!search.trim()) return;
-    setLoadingStudents(true); setError(null);
-    try {
-      const res = await apiFetch(`/students?search=${encodeURIComponent(search.trim())}`);
-      setStudents(Array.isArray(res) ? res : (res as any)?.students ?? []);
-    } catch (e: any) {
-      setError(e.message);
-    } finally { setLoadingStudents(false); }
-  }, [search]);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.length < 2) { setResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await apiFetch(`/students?search=${encodeURIComponent(query.trim())}&limit=8`);
+        setResults(Array.isArray(res) ? res : (res as any)?.students ?? []);
+      } catch { setResults([]); }
+      finally { setSearching(false); }
+    }, 300);
+  }, [query]);
 
-  const selectStudent = async (s: Student) => {
-    setSelectedStudent(s);
-    setStudents([]);
-    setSearch('');
-    setLoadingDetails(true);
+  const loadLedger = useCallback(async (s: StudentSearch, yrId: string) => {
+    setLedgerLoading(true);
     try {
-      const [pRes, bal] = await Promise.all([
-        apiFetch(`/fees/payments/student/${s.id}`),
-        currentYearId ? apiFetch(`/fees/payments/student/${s.id}/balance?yearId=${currentYearId}`) : Promise.resolve(null),
+      const [ldg, hist] = await Promise.all([
+        apiFetch(`/fees/ledger/student/${s.id}${yrId ? `?yearId=${yrId}` : ''}`),
+        apiFetch(`/fees/collections/student/${s.id}`),
       ]);
-      const list = Array.isArray(pRes) ? pRes : (pRes as any)?.payments ?? [];
-      setPayments(list);
-      setBalance(bal);
-    } catch { /* ignore */ }
-    finally { setLoadingDetails(false); }
+      setLedger(ldg as Ledger);
+      const payments = (hist as any)?.payments ?? [];
+      setHistory(payments);
+      setHistTotal((hist as any)?.total ?? 0);
+      const autoSelect = new Set<string>();
+      for (const item of (ldg as Ledger).items ?? []) {
+        for (const inst of item.installments) {
+          if (inst.status !== 'paid') autoSelect.add(inst.id);
+        }
+      }
+      setSelectedIds(autoSelect);
+      setOverrides({});
+    } catch (e: any) { showToast(e.message ?? 'Failed to load fee data', false); setLedger(null); }
+    finally { setLedgerLoading(false); }
+  }, []);
+
+  const selectStudent = (s: StudentSearch) => {
+    setStudent(s); setResults([]); setQuery('');
+    setSelectedIds(new Set()); setOverrides({});
+    setPayMode('cash'); setRemarks('');
+    loadLedger(s, yearId);
   };
 
-  const handlePay = async () => {
-    if (!selectedStudent || !payForm.feeHeadId || !payForm.amount) return;
-    if (parseFloat(payForm.amount) <= 0) { setError('Amount must be greater than 0'); return; }
-    setPaying(true); setError(null);
-    try {
-      await apiFetch('/fees/payments', {
-        method: 'POST',
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-          feeHeadId: payForm.feeHeadId,
-          amount: parseFloat(payForm.amount),
-          paymentMode: payForm.paymentMode,
-          remarks: payForm.remarks.trim() || undefined,
-        }),
-      });
-      setSuccess('Payment recorded successfully');
-      setPayForm({ feeHeadId: '', amount: '', paymentMode: 'cash', remarks: '' });
-      setShowPayForm(false);
-      // Reload details
-      await selectStudent(selectedStudent);
-      setTimeout(() => setSuccess(null), 4000);
-    } catch (e: any) {
-      setError(e.message);
-    } finally { setPaying(false); }
+  const clearStudent = () => {
+    setStudent(null); setLedger(null); setHistory([]);
+    setSelectedIds(new Set()); setQuery('');
   };
+
+  const toggleInstallment = (inst: LedgerInstallment) => {
+    if (inst.status === 'paid') return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(inst.id)) next.delete(inst.id); else next.add(inst.id);
+      return next;
+    });
+  };
+
+  const getAmount = (inst: LedgerInstallment): number => {
+    const ov = overrides[inst.id];
+    if (ov !== undefined) return parseFloat(ov) || 0;
+    return inst.balance;
+  };
+
+  const selectedTotal = ledger
+    ? ledger.items.flatMap((i) => i.installments).filter((i) => selectedIds.has(i.id)).reduce((s, i) => s + getAmount(i), 0)
+    : 0;
+
+  const handleCollect = async () => {
+    if (!student || !ledger?.plan || selectedIds.size === 0) return;
+    setCollecting(true);
+    try {
+      const items = ledger.items.flatMap((item) =>
+        item.installments
+          .filter((inst) => selectedIds.has(inst.id))
+          .map((inst) => ({
+            feePlanInstallmentId: inst.id,
+            feePlanItemId: item.feePlanItemId,
+            feeCategoryId: item.feeCategoryId,
+            amount: getAmount(inst),
+          }))
+      );
+      const res = await apiFetch<{ collections: { receiptNo: string; amount: number; paidOn: string; feePlanInstallment?: { label: string }; feeCategory: { name: string } }[]; totalCollected: number }>('/fees/collections', {
+        method: 'POST',
+        body: JSON.stringify({ studentId: student.id, academicYearId: yearId, items, paymentMode: payMode, paidOn: payDate, remarks: remarks || undefined }),
+      });
+      showToast(`Collected ${fmt(res.totalCollected)} — ${res.collections.length} receipt(s) generated`);
+      printReceipt({
+        collections: res.collections.map((c) => ({ receiptNo: c.receiptNo, amount: c.amount, paymentMode: payMode, categoryName: c.feeCategory.name, installmentLabel: c.feePlanInstallment?.label })),
+        student: { name: ledger.student.name, admissionNo: ledger.student.admissionNo, className: ledger.student.className },
+        paidOn: payDate, remarks, institution,
+      });
+      await loadLedger(student, yearId);
+      setRemarks('');
+    } catch (e: any) { showToast(e.message ?? 'Collection failed', false); }
+    finally { setCollecting(false); }
+  };
+
+  const unitLabel = (s: StudentSearch) => s.academicUnit?.displayName || s.academicUnit?.name || '';
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold text-ds-text1 mb-1">Fee Collection</h1>
-      <p className="text-sm text-ds-text3 mb-6">Search students to view dues and record payments</p>
+      <p className="text-sm text-ds-text3 mb-6">Search a student to view dues and collect payments</p>
 
-      {error   && <div className="alert alert-error mb-4 text-sm">{error}</div>}
-      {success && <div className="alert alert-success mb-4 text-sm">{success}</div>}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white ${toast.ok ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.msg}
+        </div>
+      )}
 
       {/* Student search */}
-      <div className="mb-6">
-        <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-2)' }}>Search Student</label>
-        <div className="flex gap-2">
+      {!student && (
+        <div className="mb-6 relative max-w-lg">
+          <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-2)' }}>Search Student</label>
           <input
-            className="field flex-1"
-            placeholder="Name or admission number…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && searchStudents()}
+            className="field w-full"
+            placeholder="Type name or admission number…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
-          <button onClick={searchStudents} disabled={loadingStudents} className="btn-primary px-4 text-sm">
-            {loadingStudents ? 'Searching…' : 'Search'}
-          </button>
-        </div>
-
-        {students.length > 0 && (
-          <div className="mt-2 rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-            {students.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => selectStudent(s)}
-                className="w-full text-left px-4 py-3 text-sm hover:bg-ds-bg2 border-b last:border-0 flex items-center justify-between"
-                style={{ borderColor: 'var(--border)' }}
-              >
-                <span className="font-medium" style={{ color: 'var(--text-1)' }}>{s.firstName} {s.lastName}</span>
-                <span className="text-xs font-mono" style={{ color: 'var(--text-3)' }}>{s.admissionNo}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {selectedStudent && (
-        <>
-          {/* Selected student header */}
-          <div className="flex items-center justify-between mb-5 p-4 rounded-xl" style={{ background: 'rgba(174,85,37,0.06)', border: '1px solid rgba(174,85,37,0.2)' }}>
-            <div>
-              <p className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>
-                {selectedStudent.firstName} {selectedStudent.lastName}
-              </p>
-              <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-3)' }}>{selectedStudent.admissionNo}</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowPayForm((v) => !v)} className="btn-primary text-sm">
-                + Record Payment
-              </button>
-              <button onClick={() => { setSelectedStudent(null); setPayments([]); setBalance(null); setShowPayForm(false); }}
-                className="btn-secondary text-sm">
-                Clear
-              </button>
-            </div>
-          </div>
-
-          {/* Payment form */}
-          {showPayForm && (
-            <div className="rounded-xl p-5 mb-5" style={{ background: 'var(--surface)', border: '1px solid var(--brand)', boxShadow: 'var(--shadow-sm)' }}>
-              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-1)' }}>Record Payment</h3>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-2)' }}>Fee Head</label>
-                  <select className="field" value={payForm.feeHeadId} onChange={(e) => setPayForm((f) => ({ ...f, feeHeadId: e.target.value }))}>
-                    <option value="">Select fee head…</option>
-                    {feeHeads.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-2)' }}>Amount (₹)</label>
-                  <input
-                    type="number" min="1" className="field"
-                    placeholder="0"
-                    value={payForm.amount}
-                    onChange={(e) => setPayForm((f) => ({ ...f, amount: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-2)' }}>Payment Mode</label>
-                  <select className="field" value={payForm.paymentMode} onChange={(e) => setPayForm((f) => ({ ...f, paymentMode: e.target.value }))}>
-                    <option value="cash">Cash</option>
-                    <option value="upi">UPI</option>
-                    <option value="cheque">Cheque</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="dd">DD</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-2)' }}>Remarks (optional)</label>
-                  <input
-                    className="field"
-                    placeholder="Optional remarks…"
-                    value={payForm.remarks}
-                    onChange={(e) => setPayForm((f) => ({ ...f, remarks: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={handlePay} disabled={paying} className="btn-primary text-sm">
-                  {paying ? 'Saving…' : 'Save Payment'}
+          {searching && <div className="absolute right-3 top-8 w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />}
+          {results.length > 0 && (
+            <div className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 shadow-lg"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              {results.map((s) => (
+                <button key={s.id} onClick={() => selectStudent(s)}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-ds-bg2 border-b last:border-0 flex items-center justify-between"
+                  style={{ borderColor: 'var(--border)' }}>
+                  <span className="font-medium" style={{ color: 'var(--text-1)' }}>{s.firstName} {s.lastName}</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--text-3)' }}>
+                    {s.admissionNo}{unitLabel(s) ? ` · ${unitLabel(s)}` : ''}
+                  </span>
                 </button>
-                <button onClick={() => setShowPayForm(false)} className="btn-secondary text-sm">Cancel</button>
-              </div>
+              ))}
             </div>
           )}
+        </div>
+      )}
 
-          {loadingDetails ? (
-            <p className="text-sm" style={{ color: 'var(--text-3)' }}>Loading…</p>
-          ) : (
-            <>
-              {/* Balance summary */}
-              {balance && (
-                <div className="grid grid-cols-3 gap-4 mb-5">
-                  <div className="rounded-xl border p-5" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                    <p className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>₹{(balance.totalDue ?? 0).toLocaleString('en-IN')}</p>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>Total Due</p>
-                  </div>
-                  <div className="rounded-xl border border-green-200 bg-green-50 p-5">
-                    <p className="text-2xl font-bold text-ds-success-text">₹{(balance.totalPaid ?? 0).toLocaleString('en-IN')}</p>
-                    <p className="text-sm mt-1 text-ds-success-text font-medium">Total Paid</p>
-                  </div>
-                  <div className={`rounded-xl border p-5 ${(balance.balance ?? 0) > 0 ? 'bg-ds-error-bg border-ds-error-border' : 'bg-ds-success-bg border-ds-success-border'}`}>
-                    <p className={`text-2xl font-bold ${(balance.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
-                      ₹{(balance.balance ?? 0).toLocaleString('en-IN')}
-                    </p>
-                    <p className={`text-sm font-medium mt-1 ${(balance.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
-                      {(balance.balance ?? 0) > 0 ? 'Outstanding' : 'No Dues'}
-                    </p>
-                  </div>
-                </div>
+      {student && (
+        <div className="space-y-5">
+          {/* Student header */}
+          <div className="flex items-center justify-between p-4 rounded-xl"
+            style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+            <div>
+              <p className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>
+                {student.firstName} {student.lastName}
+              </p>
+              <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-3)' }}>
+                {student.admissionNo}{unitLabel(student) ? ` · ${unitLabel(student)}` : ''}
+              </p>
+              {ledger?.plan && (
+                <p className="text-xs mt-1" style={{ color: '#6366f1' }}>Plan: {ledger.plan.name}</p>
               )}
+            </div>
+            <div className="flex items-center gap-3">
+              <select
+                className="field text-sm"
+                style={{ width: 'auto' }}
+                value={yearId}
+                onChange={(e) => { setYearId(e.target.value); loadLedger(student, e.target.value); }}
+              >
+                {years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+              </select>
+              <button onClick={clearStudent} className="btn-secondary text-sm">Change</button>
+            </div>
+          </div>
 
-              {/* Breakdown */}
-              {balance?.breakdown && balance.breakdown.length > 0 && (
-                <div className="rounded-xl overflow-hidden mb-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                  <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-                    <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Fee Breakdown</h2>
+          {ledgerLoading ? (
+            <div className="py-12 text-center text-sm" style={{ color: 'var(--text-3)' }}>Loading fee ledger…</div>
+          ) : ledger ? (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Annual Fee', val: ledger.totalAnnual, cls: '' },
+                  { label: 'Concession', val: ledger.totalConcession, cls: 'text-indigo-600' },
+                  { label: 'Total Paid', val: ledger.totalPaid, cls: 'text-green-700' },
+                  { label: 'Balance Due', val: ledger.totalBalance, cls: ledger.totalBalance > 0 ? 'text-red-600' : 'text-green-700' },
+                ].map(({ label, val, cls }) => (
+                  <div key={label} className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                    <p className={`text-xl font-bold ${cls}`} style={!cls ? { color: 'var(--text-1)' } : {}}>{fmt(val)}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>{label}</p>
                   </div>
-                  <table className="data-table w-full">
-                    <thead><tr><th>Fee Head</th><th className="text-right">Due</th><th className="text-right">Paid</th><th className="text-right">Balance</th></tr></thead>
-                    <tbody>
-                      {balance.breakdown.map((b, i) => (
-                        <tr key={i}>
-                          <td>{b.feeHeadName}</td>
-                          <td className="text-right">₹{(b.due ?? 0).toLocaleString('en-IN')}</td>
-                          <td className="text-right">₹{(b.paid ?? 0).toLocaleString('en-IN')}</td>
-                          <td className={`text-right font-semibold ${(b.balance ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-success-text'}`}>
-                            ₹{(b.balance ?? 0).toLocaleString('en-IN')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                ))}
+              </div>
+
+              {!ledger.plan ? (
+                <div className="rounded-xl p-5 text-sm text-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-3)' }}>
+                  No fee plan assigned to this student's class. Configure one in the admin Fee Management panel.
                 </div>
+              ) : (
+                <>
+                  {/* Installment table */}
+                  {ledger.items.length > 0 && (
+                    <div className="rounded-xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                      <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+                        <div>
+                          <h3 className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Fee Installments</h3>
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Click to select / deselect installments for collection</p>
+                        </div>
+                        <button
+                          className="text-xs font-medium px-3 py-1 rounded-lg"
+                          style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}
+                          onClick={() => {
+                            const allDue = new Set<string>();
+                            for (const item of ledger.items) {
+                              for (const inst of item.installments) {
+                                if (inst.status !== 'paid') allDue.add(inst.id);
+                              }
+                            }
+                            if (selectedIds.size === allDue.size) setSelectedIds(new Set());
+                            else setSelectedIds(allDue);
+                          }}
+                        >
+                          {selectedIds.size > 0 ? 'Deselect All' : 'Select All Due'}
+                        </button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead style={{ background: 'var(--bg-2)' }}>
+                            <tr>
+                              <th className="w-8 px-3 py-3"></th>
+                              <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Category · Installment</th>
+                              <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Net Due</th>
+                              <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Paid</th>
+                              <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Balance</th>
+                              <th className="px-4 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Status</th>
+                              <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Collect ₹</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ledger.items.flatMap((item) =>
+                              item.installments.map((inst) => {
+                                const chip = STATUS_CHIP[inst.status] ?? STATUS_CHIP.due;
+                                const isSelected = selectedIds.has(inst.id);
+                                const isPaid = inst.status === 'paid';
+                                return (
+                                  <tr
+                                    key={inst.id}
+                                    onClick={() => toggleInstallment(inst)}
+                                    className={`border-b transition-colors ${isPaid ? 'opacity-50 cursor-default' : 'cursor-pointer hover:bg-indigo-50/40'} ${isSelected ? 'bg-indigo-50/60' : ''}`}
+                                    style={{ borderColor: 'var(--border)' }}
+                                  >
+                                    <td className="px-3 py-3 text-center">
+                                      {!isPaid && (
+                                        <input type="checkbox" readOnly checked={isSelected}
+                                          className="w-4 h-4 rounded accent-indigo-600 cursor-pointer" />
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className="font-medium text-xs" style={{ color: 'var(--text-1)' }}>{item.categoryName}</span>
+                                      <span className="text-xs" style={{ color: 'var(--text-3)' }}> · {inst.label}</span>
+                                      {inst.dueDate && (
+                                        <span className="block text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                                          Due {new Date(inst.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-xs" style={{ color: 'var(--text-2)' }}>{fmt(inst.netAmount)}</td>
+                                    <td className="px-4 py-3 text-right text-xs" style={{ color: 'var(--text-2)' }}>{fmt(inst.paid)}</td>
+                                    <td className="px-4 py-3 text-right text-xs font-semibold" style={{ color: inst.balance > 0 ? '#dc2626' : '#15803d' }}>
+                                      {fmt(inst.balance)}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                        style={{ background: chip.bg, color: chip.color }}>
+                                        {chip.label}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                      {isSelected && (
+                                        <input
+                                          type="number" min="1" step="1"
+                                          value={overrides[inst.id] ?? inst.balance}
+                                          onChange={(e) => setOverrides((prev) => ({ ...prev, [inst.id]: e.target.value }))}
+                                          className="field text-right text-xs"
+                                          style={{ width: '100px' }}
+                                        />
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Collection form */}
+                  {selectedIds.size > 0 && (
+                    <div className="rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid #6366f1' }}>
+                      <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--text-1)' }}>
+                        Record Collection — {fmt(selectedTotal)}
+                      </h3>
+                      <div className="mb-4">
+                        <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-2)' }}>Payment Mode</p>
+                        <div className="flex flex-wrap gap-2">
+                          {MODES.map((m) => (
+                            <button key={m} onClick={() => setPayMode(m)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${payMode === m ? 'text-white border-indigo-600 bg-indigo-600' : 'border-ds-border text-ds-text2 hover:border-indigo-400'}`}>
+                              {MODE_LABEL[m]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                          <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-2)' }}>Payment Date</label>
+                          <input type="date" className="field w-full text-sm" value={payDate}
+                            onChange={(e) => setPayDate(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-2)' }}>Remarks (optional)</label>
+                          <input className="field w-full text-sm" placeholder="e.g. Cash received"
+                            value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleCollect}
+                        disabled={collecting || selectedTotal <= 0}
+                        className="btn-primary w-full text-sm"
+                      >
+                        {collecting ? 'Processing…' : `Collect ${fmt(selectedTotal)} via ${MODE_LABEL[payMode]}`}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Payment history */}
               <div className="rounded-xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-                  <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Payment History</h2>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{payments.length} payment(s)</p>
+                <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+                  <div>
+                    <h3 className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Payment History</h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{history.length} payment(s) · Total {fmt(histTotal)}</p>
+                  </div>
                 </div>
-                {payments.length === 0 ? (
-                  <p className="p-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>No payments recorded.</p>
+                {history.length === 0 ? (
+                  <p className="p-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>No payments recorded yet.</p>
                 ) : (
-                  <table className="data-table w-full">
-                    <thead>
-                      <tr>
-                        <th>Receipt No</th>
-                        <th>Fee Head</th>
-                        <th>Date</th>
-                        <th>Mode</th>
-                        <th className="text-right">Amount</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payments.map((p) => (
-                        <tr key={p.id}>
-                          <td className="font-mono text-xs" style={{ color: 'var(--text-3)' }}>{p.receiptNo}</td>
-                          <td>{p.feeHead?.name ?? '—'}</td>
-                          <td className="text-xs">{new Date(p.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                          <td className="capitalize text-xs">{p.paymentMode}</td>
-                          <td className="text-right font-semibold">₹{p.amount.toLocaleString('en-IN')}</td>
-                          <td className="text-right">
-                            <button
-                              onClick={() => selectedStudent && printFeeReceipt(
-                                p,
-                                `${selectedStudent.firstName} ${selectedStudent.lastName}`,
-                                selectedStudent.admissionNo,
-                                selectedStudent.academicUnit?.displayName || selectedStudent.academicUnit?.name || '',
-                                institution,
-                              )}
-                              className="text-xs font-medium hover:underline"
-                              style={{ color: 'var(--brand)' }}
-                            >
-                              Print
-                            </button>
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead style={{ background: 'var(--bg-2)' }}>
+                        <tr>
+                          <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Receipt No</th>
+                          <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Fee / Installment</th>
+                          <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Date</th>
+                          <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Mode</th>
+                          <th className="text-right px-5 py-3 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Amount</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {history.map((c) => (
+                          <tr key={c.id} className="border-b" style={{ borderColor: 'var(--border)' }}>
+                            <td className="px-5 py-3 font-mono text-xs" style={{ color: 'var(--text-3)' }}>{c.receiptNo}</td>
+                            <td className="px-5 py-3 text-xs" style={{ color: 'var(--text-1)' }}>
+                              {c.categoryName}
+                              {c.installmentLabel && <span style={{ color: 'var(--text-3)' }}> · {c.installmentLabel}</span>}
+                            </td>
+                            <td className="px-5 py-3 text-xs" style={{ color: 'var(--text-2)' }}>
+                              {new Date(c.paidOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td className="px-5 py-3 text-xs capitalize" style={{ color: 'var(--text-2)' }}>{c.paymentMode}</td>
+                            <td className="px-5 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-1)' }}>
+                              {fmt(c.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             </>
+          ) : (
+            <p className="py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>No fee data available for this student.</p>
           )}
-        </>
+        </div>
       )}
     </div>
   );
