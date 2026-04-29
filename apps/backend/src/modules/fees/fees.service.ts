@@ -658,7 +658,7 @@ export class FeesService {
     return this.prisma.$transaction(async (tx) => {
       const baseCount = await tx.feeCollection.count({ where: { institutionId } });
       const rcpYear = new Date().getFullYear();
-      const results = [];
+      const results: Awaited<ReturnType<typeof tx.feeCollection.create>>[] = [];
       for (let i = 0; i < dto.items.length; i++) {
         const item = dto.items[i];
         const receiptNo = `FRC-${rcpYear}-${String(baseCount + i + 1).padStart(5, '0')}`;
@@ -732,7 +732,7 @@ export class FeesService {
     const collectionMap = new Map<string, number>(); // studentId:installmentId → amount
     for (const c of collections) collectionMap.set(`${c.studentId}:${c.feePlanInstallmentId}`, (c._sum.amount ?? 0));
 
-    const defaulters = [];
+    const defaulters: { id: string; firstName: string; lastName: string; admissionNo: string; className: string; due: number; paid: number; balance: number }[] = [];
     for (const student of students) {
       const plan = unitToPlan.get(student.academicUnitId ?? '');
       if (!plan) continue;
