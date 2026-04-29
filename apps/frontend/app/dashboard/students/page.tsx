@@ -154,9 +154,10 @@ export default function StudentsPage() {
   const [showFeeStep, setShowFeeStep] = useState(false);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [loadingFees, setLoadingFees] = useState(false);
-  const [feesPaid, setFeesPaid] = useState<'yes' | 'no' | 'partial'>('yes');
+  const [collectNow, setCollectNow] = useState(true);
   const [paymentMode, setPaymentMode] = useState('cash');
   const [feeDueDate, setFeeDueDate] = useState('');
+  const [existingParentInfo, setExistingParentInfo] = useState<{ phone: string } | null>(null);
 
   type FeeLineItem = { feeHeadId: string; name: string; structureAmount: number; amount: string; checked: boolean; };
   const [feeItems, setFeeItems] = useState<FeeLineItem[]>([]);
@@ -254,15 +255,27 @@ export default function StudentsPage() {
     const err = validate();
     if (err) return setError(err);
     setShowFeeStep(true);
-    setFeesPaid('yes');
+    setCollectNow(true);
     setPaymentMode('cash');
     setFeeDueDate('');
     setFeeItems([]);
-    if (form.academicUnitId && currentYearId) {
-      setLoadingFees(true);
-      try {
-        const res = await apiFetch(`/fees/structures?unitId=${form.academicUnitId}&yearId=${currentYearId}`);
-        const structs: FeeStructure[] = Array.isArray(res) ? res : [];
+    setExistingParentInfo(null);
+    setLoadingFees(true);
+
+    const feePromise = (form.academicUnitId && currentYearId)
+      ? apiFetch(`/fees/structures?unitId=${form.academicUnitId}&yearId=${currentYearId}`).catch(() => null)
+      : Promise.resolve(null);
+
+    // Sibling detection — check if this parent phone already has a portal account
+    const parentPromise = form.parentPhone
+      ? apiFetch(`/users?phone=${encodeURIComponent(form.parentPhone)}`).catch(() => null)
+      : Promise.resolve(null);
+
+    try {
+      const [feeRes, parentRes] = await Promise.all([feePromise, parentPromise]);
+
+      if (feeRes !== null) {
+        const structs: FeeStructure[] = Array.isArray(feeRes) ? feeRes : [];
         setFeeStructures(structs);
         if (structs.length > 0) {
           const items = structs.map((s) => ({
@@ -278,7 +291,16 @@ export default function StudentsPage() {
         } else {
           setFeeItems(feeHeads.map((fh) => ({ feeHeadId: fh.id, name: fh.name, structureAmount: 0, amount: '', checked: false })));
         }
-      } catch { setFeeStructures([]); setFeeItems([]); } finally { setLoadingFees(false); }
+      }
+
+      if (Array.isArray(parentRes) && parentRes.length > 0) {
+        setExistingParentInfo({ phone: form.parentPhone });
+      }
+    } catch {
+      setFeeStructures([]);
+      setFeeItems([]);
+    } finally {
+      setLoadingFees(false);
     }
   };
 
@@ -331,7 +353,7 @@ export default function StudentsPage() {
         medicalConditions: form.medicalConditions.trim() || undefined,
       };
 
-      if (feesPaid === 'yes' || feesPaid === 'partial') {
+      if (collectNow) {
         const paidItems = feeItems.filter((i) => i.checked && parseFloat(i.amount) > 0);
         if (paidItems.length > 0) {
           payload.admissionFees = paidItems.map((i) => ({
@@ -341,7 +363,7 @@ export default function StudentsPage() {
             academicYearId: currentYearId || undefined,
           }));
         }
-      } else if (feesPaid === 'no') {
+      } else {
         payload.admissionFee = { paid: false, dueDate: feeDueDate || undefined };
       }
 
@@ -999,6 +1021,7 @@ export default function StudentsPage() {
       {showFeeStep && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-ds-surface rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
+            {/* Header */}
             <div className="px-6 py-5 border-b border-ds-border">
               <h2 className="font-semibold text-ds-text1">Step 2 — Fee &amp; Admission Confirmation</h2>
               <p className="text-xs text-ds-text3 mt-0.5">
@@ -1006,108 +1029,164 @@ export default function StudentsPage() {
                 {form.academicUnitId && ` → ${academicUnits.find((u) => u.id === form.academicUnitId)?.displayName || ''}`}
               </p>
             </div>
+
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              {/* Fee Structure Reference */}
               {loadingFees ? (
                 <p className="text-sm text-ds-text3">Loading fee structure...</p>
               ) : feeStructures.length > 0 ? (
                 <div>
-                  <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-2">Class Fee Structure</p>
+                  <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-2">Annual Fee Structure</p>
                   <div className="bg-ds-bg2 rounded-lg divide-y divide-ds-border text-sm">
                     {feeStructures.map((s) => (
                       <div key={s.id} className="flex justify-between px-4 py-2.5">
-                        <span className="text-ds-text1">{s.feeHead.name}{s.installmentName ? ` (${s.installmentName})` : ''}</span>
+                        <span className="text-ds-text2">{s.feeHead.name}{s.installmentName ? ` (${s.installmentName})` : ''}</span>
                         <span className="font-medium text-ds-text1">₹{s.amount.toLocaleString('en-IN')}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between px-4 py-2.5 font-semibold">
-                      <span>Total Due</span>
+                    <div className="flex justify-between px-4 py-2.5 font-semibold text-ds-text1">
+                      <span>Total Annual Fees</span>
                       <span>₹{totalFeeStructure.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : !loadingFees ? (
                 <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 text-xs text-ds-warning-text">
-                  No fee structure configured for this class. Set it up in the Fees section after admission.
+                  No fee structure configured for this class. You can set it up in the Fees section after admission.
+                </div>
+              ) : null}
+
+              {/* Sibling detection warning */}
+              {existingParentInfo && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2.5">
+                  <span className="text-amber-500 shrink-0 text-base leading-none mt-0.5">⚠</span>
+                  <div>
+                    <p className="text-xs font-semibold text-amber-800">Sibling Detected</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      A parent account for <strong>{existingParentInfo.phone}</strong> already exists (from a previously admitted sibling).
+                      Their portal account will be reused — no new account or password will be created.
+                    </p>
+                  </div>
                 </div>
               )}
 
+              {/* Payment section */}
               <div>
-                <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3">Admission Fee Payment</p>
-                <div className="flex gap-2 mb-4">
-                  {[{ val: 'yes', label: 'Paid in Full' }, { val: 'partial', label: 'Partial Payment' }, { val: 'no', label: 'Due Later' }].map((opt) => (
-                    <button key={opt.val} onClick={() => setFeesPaid(opt.val as any)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${feesPaid === opt.val ? 'bg-ds-brand text-white border-ds-brand-dark' : 'bg-ds-surface text-ds-text2 border-ds-border-strong hover:border-gray-400'}`}>
-                      {opt.label}
-                    </button>
-                  ))}
+                <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3">Payment at Admission</p>
+
+                {/* Collect Now / Defer toggle */}
+                <div className="flex rounded-lg border border-ds-border overflow-hidden mb-4">
+                  <button
+                    onClick={() => setCollectNow(true)}
+                    className={`flex-1 py-2.5 text-sm font-medium transition-colors ${collectNow ? 'bg-ds-brand text-white' : 'bg-ds-surface text-ds-text2 hover:bg-ds-bg2'}`}>
+                    Collect Fees Now
+                  </button>
+                  <button
+                    onClick={() => setCollectNow(false)}
+                    className={`flex-1 py-2.5 text-sm font-medium border-l border-ds-border transition-colors ${!collectNow ? 'bg-ds-brand text-white' : 'bg-ds-surface text-ds-text2 hover:bg-ds-bg2'}`}>
+                    No Payment Today
+                  </button>
                 </div>
-                {(feesPaid === 'yes' || feesPaid === 'partial') && (
+
+                {collectNow && (
                   <div className="space-y-3">
-                    <div>
-                      <label className={lbl}>Select Fees Being Paid</label>
-                      <div className="space-y-2 mt-1">
-                        {feeItems.map((item, idx) => (
-                          <div key={item.feeHeadId} className={`rounded-lg border transition-colors ${item.checked ? 'border-gray-800 bg-ds-bg2' : 'border-ds-border bg-ds-surface'}`}>
-                            <div className="flex items-center justify-between px-4 py-3 cursor-pointer"
-                              onClick={() => setFeeItems((prev) => prev.map((it, i) =>
-                                i === idx ? { ...it, checked: !it.checked, amount: !it.checked && it.structureAmount ? String(it.structureAmount) : it.amount } : it
-                              ))}>
-                              <div className="flex items-center gap-3">
-                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${item.checked ? 'bg-ds-brand border-ds-brand' : 'border-ds-border-strong'}`}>
-                                  {item.checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}><polyline points="1.5,6 4.5,9 10.5,3" /></svg>}
-                                </div>
-                                <span className="text-sm font-medium text-ds-text1">{item.name}</span>
-                              </div>
-                              {item.structureAmount > 0 && <span className="text-sm text-ds-text2">₹{item.structureAmount.toLocaleString('en-IN')}</span>}
-                            </div>
-                            {item.checked && (
-                              <div className="px-4 pb-3">
-                                <input type="number" className={inp} placeholder="Amount paid (₹)" value={item.amount}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => setFeeItems((prev) => prev.map((it, i) => i === idx ? { ...it, amount: e.target.value } : it))} />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                    {feeItems.length > 0 && (
+                      <div className="flex justify-between items-center">
+                        <label className={lbl}>Select fees being collected</label>
+                        <button
+                          type="button"
+                          onClick={() => setFeeItems((prev) => prev.map((it) => ({
+                            ...it,
+                            checked: true,
+                            amount: it.structureAmount > 0 ? String(it.structureAmount) : it.amount,
+                          })))}
+                          className="text-xs text-ds-brand hover:underline font-medium">
+                          Mark All as Paid
+                        </button>
                       </div>
-                      {feeItems.some((i) => i.checked) && (
-                        <div className="mt-2 flex justify-between text-sm font-semibold text-ds-text1 px-1">
-                          <span>Total collecting now</span>
-                          <span>₹{feeItems.filter((i) => i.checked).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0).toLocaleString('en-IN')}</span>
+                    )}
+                    {feeItems.length === 0 && (
+                      <p className="text-xs text-ds-text3">No fee heads available. Add them in the Fees section first.</p>
+                    )}
+                    <div className="space-y-2">
+                      {feeItems.map((item, idx) => (
+                        <div key={item.feeHeadId} className={`rounded-lg border transition-colors ${item.checked ? 'border-ds-brand bg-ds-bg2' : 'border-ds-border bg-ds-surface'}`}>
+                          <div className="flex items-center justify-between px-4 py-3 cursor-pointer"
+                            onClick={() => setFeeItems((prev) => prev.map((it, i) =>
+                              i === idx ? { ...it, checked: !it.checked, amount: !it.checked && it.structureAmount ? String(it.structureAmount) : it.amount } : it
+                            ))}>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${item.checked ? 'bg-ds-brand border-ds-brand' : 'border-ds-border-strong'}`}>
+                                {item.checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}><polyline points="1.5,6 4.5,9 10.5,3" /></svg>}
+                              </div>
+                              <span className="text-sm font-medium text-ds-text1">{item.name}</span>
+                            </div>
+                            {item.structureAmount > 0 && <span className="text-sm text-ds-text2">₹{item.structureAmount.toLocaleString('en-IN')}</span>}
+                          </div>
+                          {item.checked && (
+                            <div className="px-4 pb-3">
+                              <input type="number" className={inp} placeholder="Amount collected (₹)" value={item.amount}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => setFeeItems((prev) => prev.map((it, i) => i === idx ? { ...it, amount: e.target.value } : it))} />
+                            </div>
+                          )}
                         </div>
-                      )}
+                      ))}
                     </div>
+                    {feeItems.some((i) => i.checked) && (
+                      <div className="flex justify-between text-sm font-semibold text-ds-text1 bg-ds-bg2 px-4 py-2.5 rounded-lg">
+                        <span>Collecting at admission</span>
+                        <span className="text-ds-brand">₹{feeItems.filter((i) => i.checked).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
                     {feeItems.some((i) => i.checked) && (
                       <div>
                         <label className={lbl}>Payment Mode</label>
                         <select className={inp} value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
-                          {['cash','upi','cheque','dd','neft'].map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+                          <option value="cash">Cash</option>
+                          <option value="upi">UPI</option>
+                          <option value="cheque">Cheque</option>
+                          <option value="dd">DD (Demand Draft)</option>
+                          <option value="neft">NEFT / RTGS</option>
                         </select>
                       </div>
                     )}
                   </div>
                 )}
-                {feesPaid === 'no' && (
-                  <div>
-                    <label className={lbl}>Fee Due Date</label>
-                    <input className={inp} type="date" value={feeDueDate} onChange={(e) => setFeeDueDate(e.target.value)} />
-                    <p className="text-xs text-ds-text3 mt-1">Admission proceeds. Fee must be collected by this date.</p>
+
+                {!collectNow && (
+                  <div className="bg-ds-bg2 rounded-lg p-4 space-y-3">
+                    <p className="text-sm text-ds-text2">
+                      Admission will be confirmed without any payment today. Fees can be recorded later from the <strong>Fees</strong> section.
+                    </p>
+                    <div>
+                      <label className={lbl}>Fee Due Date (optional)</label>
+                      <input className={inp} type="date" value={feeDueDate} onChange={(e) => setFeeDueDate(e.target.value)} />
+                    </div>
                   </div>
                 )}
               </div>
 
+              {/* Parent portal info */}
               <div className="bg-ds-info-bg border border-ds-info-border rounded-lg p-3">
                 <p className="text-xs font-semibold text-ds-info-text mb-0.5">Parent Portal Account</p>
-                <p className="text-xs text-ds-brand">
-                  A parent portal account will be auto-created using <strong>{form.parentPhone}</strong> as the login.
-                  A one-time password will be generated for you to share.
-                </p>
+                {existingParentInfo ? (
+                  <p className="text-xs text-ds-brand">
+                    Existing account for <strong>{form.parentPhone}</strong> will be linked to this student (sibling reuse — no new password generated).
+                  </p>
+                ) : (
+                  <p className="text-xs text-ds-brand">
+                    A new parent portal account will be created with <strong>{form.parentPhone}</strong> as the login ID. A one-time password will be shown after confirmation — share it with the parent.
+                  </p>
+                )}
               </div>
+
               {error && <p className="text-ds-error-text text-sm">{error}</p>}
             </div>
+
             <div className="px-6 py-4 border-t border-ds-border flex gap-3">
               <button onClick={confirmAdmission} disabled={confirming} className="btn-brand flex-1 py-2.5 rounded-lg">
-                {confirming ? 'Confirming...' : 'Confirm Admission & Create Portal Access'}
+                {confirming ? 'Confirming...' : 'Confirm Admission'}
               </button>
               <button onClick={() => { setShowFeeStep(false); setError(null); }} className="px-5 py-2.5 border border-ds-border-strong rounded-lg text-sm hover:bg-ds-bg2">
                 Back
