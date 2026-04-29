@@ -9,100 +9,159 @@ import {
 } from 'class-validator';
 
 export class CreateStudentDto {
-  @IsString()
-  @IsNotEmpty()
+  // ── Student Name ───────────────────────────────────────────────────────────
+  @IsString() @IsNotEmpty()
   firstName: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsOptional() @IsString()
+  middleName?: string;
+
+  @IsString() @IsNotEmpty()
   lastName: string;
 
-  @IsOptional()
-  @IsDateString()
+  // ── Personal ───────────────────────────────────────────────────────────────
+  @IsOptional() @IsDateString()
   dateOfBirth?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
+  placeOfBirth?: string;
+
+  @IsOptional() @IsString()
   gender?: string;
 
+  @IsOptional() @IsString()
+  motherTongue?: string;
+
   @IsOptional()
-  @Matches(/^[6-9]\d{9}$/, {
-    message: 'Phone must be a valid 10-digit Indian number',
-  })
+  @Matches(/^[6-9]\d{9}$/, { message: 'Phone must be a valid 10-digit Indian number' })
   phone?: string;
 
-  @IsOptional()
-  @IsEmail()
+  @IsOptional() @IsEmail()
   email?: string;
 
-  @IsString()
-  @IsNotEmpty()
-  address: string;
-
-  @IsString()
-  @IsNotEmpty()
+  // ── Father ────────────────────────────────────────────────────────────────
+  @IsString() @IsNotEmpty()
   fatherName: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsOptional() @IsString()
+  fatherOccupation?: string;
+
+  @IsOptional() @IsString()
+  fatherQualification?: string;
+
+  @IsOptional() @IsEmail()
+  fatherEmail?: string;
+
+  @IsOptional() @IsString()
+  fatherAadhar?: string;
+
+  // ── Mother ────────────────────────────────────────────────────────────────
+  @IsString() @IsNotEmpty()
   motherName: string;
 
-  @Matches(/^[6-9]\d{9}$/, {
-    message: 'Parent phone must be a valid 10-digit Indian number',
-  })
+  @IsOptional() @IsString()
+  motherOccupation?: string;
+
+  @IsOptional() @IsString()
+  motherQualification?: string;
+
+  @IsOptional() @IsEmail()
+  motherEmail?: string;
+
+  @IsOptional() @IsString()
+  motherAadhar?: string;
+
+  // ── Contacts ──────────────────────────────────────────────────────────────
+  @Matches(/^[6-9]\d{9}$/, { message: 'Parent phone must be a valid 10-digit Indian number' })
   parentPhone: string;
 
   @IsOptional()
-  @Matches(/^[6-9]\d{9}$/, {
-    message: 'Secondary phone must be a valid 10-digit Indian number',
-  })
+  @Matches(/^[6-9]\d{9}$/, { message: 'Secondary phone must be a valid 10-digit Indian number' })
   secondaryPhone?: string;
 
+  // ── Financial ─────────────────────────────────────────────────────────────
+  @IsOptional() @IsString()
+  annualIncome?: string;
+
+  @IsOptional() @IsBoolean()
+  isEwsCategory?: boolean;
+
+  // ── Emergency Contact ─────────────────────────────────────────────────────
+  @IsOptional() @IsString()
+  emergencyContactName?: string;
+
+  @IsOptional() @IsString()
+  emergencyContactRelation?: string;
+
   @IsOptional()
-  @IsDateString()
+  @Matches(/^[6-9]\d{9}$/, { message: 'Emergency contact must be a valid 10-digit Indian number' })
+  emergencyContactPhone?: string;
+
+  // ── Address ───────────────────────────────────────────────────────────────
+  @IsOptional() @IsString()
+  address?: string;
+
+  @IsOptional() @IsString()
+  locality?: string;
+
+  @IsOptional() @IsString()
+  city?: string;
+
+  @IsOptional() @IsString()
+  state?: string;
+
+  @IsOptional() @IsString()
+  pinCode?: string;
+
+  // ── Admission ─────────────────────────────────────────────────────────────
+  @IsOptional() @IsDateString()
   admissionDate?: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString() @IsNotEmpty()
   academicUnitId: string;
 
-  @IsOptional()
-  @IsString()
-  bloodGroup?: string;
-
-  @IsOptional()
-  @IsString()
-  nationality?: string;
-
-  @IsOptional()
-  @IsString()
-  religion?: string;
-
-  @IsOptional()
-  @IsString()
-  casteCategory?: string;
-
-  @IsOptional()
-  @IsString()
-  aadharNumber?: string;
-
-  @IsOptional()
-  @IsString()
+  // ── Previous School / TC ──────────────────────────────────────────────────
+  @IsOptional() @IsString()
   tcFromPrevious?: string;
 
-  @IsOptional()
-  @IsDateString()
+  @IsOptional() @IsDateString()
   tcReceivedDate?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   tcPreviousInstitution?: string;
 
-  @IsOptional()
-  @IsBoolean()
+  @IsOptional() @IsString()
+  previousClass?: string;
+
+  @IsOptional() @IsString()
+  previousBoard?: string;
+
+  @IsOptional() @IsString()
+  previousMarks?: string;
+
+  // ── Demographics ──────────────────────────────────────────────────────────
+  @IsOptional() @IsString()
+  bloodGroup?: string;
+
+  @IsOptional() @IsString()
+  nationality?: string;
+
+  @IsOptional() @IsString()
+  religion?: string;
+
+  @IsOptional() @IsString()
+  casteCategory?: string;
+
+  @IsOptional() @IsString()
+  aadharNumber?: string;
+
+  // ── Health ────────────────────────────────────────────────────────────────
+  @IsOptional() @IsBoolean()
   hasDisability?: boolean;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   disabilityDetails?: string;
+
+  @IsOptional() @IsString()
+  medicalConditions?: string;
 }
