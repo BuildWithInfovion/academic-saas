@@ -129,7 +129,7 @@ export class FeesService {
         },
         include: { feeHead: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
       });
-    });
+    }, { timeout: 15000, maxWait: 10000 });
   }
 
   // Returns every installment for the student's class with paid/unpaid status
@@ -209,9 +209,11 @@ export class FeesService {
 
     return this.prisma.$transaction(async (tx) => {
       const results: Record<string, unknown>[] = [];
-      for (const item of dto.items) {
-        const count = await tx.feePayment.count({ where: { institutionId } });
-        const receiptNo = `RCP-${new Date().getFullYear()}-${String(count + 1).padStart(5, '0')}`;
+      const baseCount = await tx.feePayment.count({ where: { institutionId } });
+      const rcpYear = new Date().getFullYear();
+      for (let i = 0; i < dto.items.length; i++) {
+        const item = dto.items[i];
+        const receiptNo = `RCP-${rcpYear}-${String(baseCount + i + 1).padStart(5, '0')}`;
         const payment = await tx.feePayment.create({
           data: {
             institutionId,
@@ -232,7 +234,7 @@ export class FeesService {
       }
       const totalCollected = dto.items.reduce((s, i) => s + i.amount, 0);
       return { payments: results, totalCollected, student };
-    });
+    }, { timeout: 15000, maxWait: 10000 });
   }
 
   // C-05: parentUserId — if provided, validates the student belongs to that parent before returning data.

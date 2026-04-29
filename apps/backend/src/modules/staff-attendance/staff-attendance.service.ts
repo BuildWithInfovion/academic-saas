@@ -213,7 +213,7 @@ export class StaffAttendanceService {
       }
 
       return result;
-    });
+    }, { timeout: 15000, maxWait: 10000 });
 
     return updated;
   }

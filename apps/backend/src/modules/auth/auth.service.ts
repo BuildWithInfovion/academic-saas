@@ -426,20 +426,20 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.refreshToken.update({
+    await this.prisma.$transaction([
+      this.prisma.refreshToken.update({
         where: { id: storedToken.id },
         data: { isRevoked: true },
-      });
-      await tx.refreshToken.create({
+      }),
+      this.prisma.refreshToken.create({
         data: {
           userId: user.id,
           institutionId: user.institutionId,
           tokenHash: newTokenHash,
           expiresAt,
         },
-      });
-    });
+      }),
+    ]);
 
     return {
       accessToken: newAccessToken,
@@ -795,16 +795,16 @@ export class AuthService {
     const newPassword = this.generatePassword();
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
+    await this.prisma.$transaction([
+      this.prisma.user.update({
         where: { id: request.userId },
         data: { passwordHash },
-      });
-      await tx.passwordResetRequest.update({
+      }),
+      this.prisma.passwordResetRequest.update({
         where: { id: requestId },
         data: { status: 'approved' },
-      });
-    });
+      }),
+    ]);
     return { newPassword };
   }
 

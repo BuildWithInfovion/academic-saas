@@ -735,7 +735,7 @@ export class AcademicService {
         where: { id: newYear!.id },
         data: { isCurrent: true },
       });
-    });
+    }, { timeout: 60000, maxWait: 10000 });
 
     return { studentsPromoted, studentsGraduated, studentsHeldBackReset, newYearId: newYear.id, newYearName: newYear.name };
   }

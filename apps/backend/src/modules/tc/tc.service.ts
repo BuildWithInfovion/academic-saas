@@ -389,6 +389,6 @@ export class TcService {
       }
 
       return issued;
-    });
+    }, { timeout: 15000, maxWait: 10000 });
   }
 }
