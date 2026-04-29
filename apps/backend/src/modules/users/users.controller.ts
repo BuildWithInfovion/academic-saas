@@ -19,6 +19,7 @@ import type { TenantContext } from '../../common/guards/tenant.guard';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import type { AuthenticatedRequest } from '../../common/types/authenticated-request';
 
 @UseGuards(AuthGuard, RolesGuard) // ✅ Secured 
 @Controller('users')
@@ -59,7 +60,7 @@ export class UsersController {
   @Post('me/change-password')
   async changePassword(
     @Tenant() tenant: TenantContext,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body('oldPassword') oldPassword: string,
     @Body('newPassword') newPassword: string,
   ) {
@@ -99,16 +100,15 @@ export class UsersController {
   @Permissions('users.assignRole')
   assignRole(
     @Tenant() tenant: TenantContext,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('userId') userId: string,
     @Body('roleId') roleId: string,
   ) {
-    const callerRoles: string[] = req.user?.roles ?? [];
     return this.usersService.assignRole(
       tenant.institutionId,
       userId,
       roleId,
-      callerRoles,
+      req.user.roles,
     );
   }
 }

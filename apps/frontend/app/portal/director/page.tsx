@@ -21,6 +21,7 @@ function formatINR(n: number) {
 
 export default function DirectorOverviewPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ students: 0, staff: 0, boys: 0, girls: 0 });
   const [currentYear, setCurrentYear] = useState<AcademicYear | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -74,8 +75,37 @@ export default function DirectorOverviewPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto animate-pulse">
+        <div className="mb-6">
+          <div className="h-7 w-48 bg-ds-border rounded" />
+          <div className="h-4 w-64 bg-ds-border rounded mt-2" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-ds-surface rounded-xl border border-ds-border p-4">
+              <div className="h-7 w-16 bg-ds-border rounded mb-2" />
+              <div className="h-4 w-24 bg-ds-border rounded" />
+              <div className="h-3 w-20 bg-ds-border rounded mt-1" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-xl border bg-ds-surface p-4">
+              <div className="h-10 w-12 bg-ds-border rounded mb-2" />
+              <div className="h-4 w-28 bg-ds-border rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">

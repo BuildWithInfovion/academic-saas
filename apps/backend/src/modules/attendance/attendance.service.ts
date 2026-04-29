@@ -366,13 +366,15 @@ export class AttendanceService {
     });
 
     // Aggregate per-student in memory — O(records) not O(students × records)
-    const counts = new Map<string, { present: number; absent: number; late: number; leave: number; total: number }>();
+    type StatusCounts = { present: number; absent: number; late: number; leave: number; total: number };
+    const counts = new Map<string, StatusCounts>();
     for (const rec of allRecords) {
       if (!counts.has(rec.studentId)) {
         counts.set(rec.studentId, { present: 0, absent: 0, late: 0, leave: 0, total: 0 });
       }
       const c = counts.get(rec.studentId)!;
-      (c as any)[rec.status] = ((c as any)[rec.status] ?? 0) + 1;
+      const key = rec.status as keyof Omit<StatusCounts, 'total'>;
+      if (key in c) c[key]++;
       c.total++;
     }
 

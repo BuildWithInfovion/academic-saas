@@ -100,19 +100,12 @@ export class UsersService {
 
   async findAll(institutionId: string) {
     return this.prisma.user.findMany({
-      where: {
-        institutionId,
-        deletedAt: null,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
-        roles: {
-          include: {
-            role: true,
-          },
-        },
+      where: { institutionId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, name: true, email: true, phone: true,
+        isActive: true, lastLoginAt: true, totpEnabled: true, createdAt: true,
+        roles: { include: { role: true } },
       },
     });
   }
@@ -145,36 +138,6 @@ export class UsersService {
       },
       orderBy: { createdAt: 'asc' },
       select: { id: true, email: true, phone: true },
-    });
-  }
-
-  async findByEmail(institutionId: string, email: string) {
-    return this.prisma.user.findFirst({
-      where: {
-        email,
-        institutionId,
-        deletedAt: null,
-      },
-      include: {
-        roles: {
-          include: {
-            role: true,
-          },
-        },
-      },
-    });
-  }
-
-  async findByEmailOrPhone(institutionId: string, identifier: string) {
-    return this.prisma.user.findFirst({
-      where: {
-        institutionId,
-        deletedAt: null,
-        OR: [{ email: identifier }, { phone: identifier }],
-      },
-      include: {
-        roles: { include: { role: true } },
-      },
     });
   }
 

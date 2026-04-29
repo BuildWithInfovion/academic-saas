@@ -108,28 +108,33 @@ export class FeesService {
     // because Neon runs PgBouncer in transaction-pooling mode which rejects them
     // (P2010). Uniqueness is enforced by the DB @@unique([institutionId, receiptNo])
     // constraint; a P2002 on the rare collision is caught by the caller.
-    return this.prisma.$transaction(async (tx) => {
-      const count = await tx.feePayment.count({ where: { institutionId } });
-      const year = new Date().getFullYear();
-      const receiptNo = `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const count = await tx.feePayment.count({ where: { institutionId } });
+        const year = new Date().getFullYear();
+        const receiptNo = `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
 
-      return tx.feePayment.create({
-        data: {
-          institutionId,
-          studentId: dto.studentId,
-          feeHeadId: dto.feeHeadId,
-          feeStructureId: dto.feeStructureId ?? null,
-          installmentName: dto.installmentName ?? null,
-          academicYearId: dto.academicYearId,
-          amount: dto.amount,
-          paymentMode: dto.paymentMode,
-          receiptNo,
-          paidOn: new Date(dto.paidOn),
-          remarks: dto.remarks,
-        },
-        include: { feeHead: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
-      });
-    }, { timeout: 15000, maxWait: 10000 });
+        return tx.feePayment.create({
+          data: {
+            institutionId,
+            studentId: dto.studentId,
+            feeHeadId: dto.feeHeadId,
+            feeStructureId: dto.feeStructureId ?? null,
+            installmentName: dto.installmentName ?? null,
+            academicYearId: dto.academicYearId,
+            amount: dto.amount,
+            paymentMode: dto.paymentMode,
+            receiptNo,
+            paidOn: new Date(dto.paidOn),
+            remarks: dto.remarks,
+          },
+          include: { feeHead: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
+        });
+      }, { timeout: 15000, maxWait: 10000 });
+    } catch (e: any) {
+      if (e?.code === 'P2002') throw new ConflictException('Receipt number conflict — please retry');
+      throw e;
+    }
   }
 
   // Returns every installment for the student's class with paid/unpaid status
@@ -598,19 +603,28 @@ export class FeesService {
    */
   // Monthly fee collection trend — last N months (default 6) for dashboard chart
   async getMonthlyTrend(institutionId: string, months = 6) {
-    const result: { month: string; label: string; amount: number }[] = [];
     const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    const end   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const payments = await this.prisma.feePayment.findMany({
+      where: { institutionId, paidOn: { gte: start, lt: end } },
+      select: { paidOn: true, amount: true },
+    });
+
+    const amountByMonth = new Map<string, number>();
+    for (const p of payments) {
+      const d = new Date(p.paidOn);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      amountByMonth.set(key, (amountByMonth.get(key) ?? 0) + p.amount);
+    }
+
+    const result: { month: string; label: string; amount: number }[] = [];
     for (let i = months - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const start = new Date(d.getFullYear(), d.getMonth(), 1);
-      const end   = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-      const agg = await this.prisma.feePayment.aggregate({
-        where: { institutionId, paidOn: { gte: start, lt: end } },
-        _sum: { amount: true },
-      });
       const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleString('en-IN', { month: 'short', year: '2-digit' });
-      result.push({ month: monthStr, label, amount: agg._sum.amount ?? 0 });
+      result.push({ month: monthStr, label, amount: amountByMonth.get(monthStr) ?? 0 });
     }
     return result;
   }

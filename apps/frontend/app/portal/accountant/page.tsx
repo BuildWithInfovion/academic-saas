@@ -35,8 +35,9 @@ export default function AccountantOverviewPage() {
   }, []);
 
   const quickActions = [
-    { label: 'Fee Collection', desc: 'View & record payments', path: '/portal/accountant/fees', gradient: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)' },
-    { label: 'My Attendance',  desc: 'Mark your daily attendance', path: '/portal/accountant/staff-attendance', gradient: 'linear-gradient(135deg, #6b432f 0%, #3a1f0c 100%)' },
+    { label: 'Fee Collection',  desc: 'View & record payments',         path: '/portal/accountant/fees',              gradient: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)' },
+    { label: 'My Attendance',   desc: 'Mark your daily attendance',      path: '/portal/accountant/staff-attendance',  gradient: 'linear-gradient(135deg, #6b432f 0%, #3a1f0c 100%)' },
+    { label: 'Announcements',   desc: 'Notices from school management',  path: '/portal/accountant/announcements',     gradient: 'linear-gradient(135deg, #dc924b 0%, #ae7040 100%)' },
   ];
 
   return (
@@ -45,7 +46,7 @@ export default function AccountantOverviewPage() {
       <p className="text-sm text-ds-text3 mb-6">{todayDate}</p>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {quickActions.map((a) => (
           <button
             key={a.label}
