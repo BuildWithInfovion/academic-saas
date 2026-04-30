@@ -6,11 +6,12 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { OnboardClientDto } from './dto/onboard-client.dto';
+import { DEFAULT_FEE_HEADS, SCHOOL_SUBJECTS, COLLEGE_SUBJECTS } from '../common/constants/seed-defaults';
+import { generatePassword } from '../common/utils/generate-password';
 
 const DEFAULT_ROLES = [
   {
@@ -116,25 +117,6 @@ const SCHOOL_CLASSES = [
   { name: 'class_10', displayName: 'Class 10' },
   { name: 'class_11', displayName: 'Class 11' },
   { name: 'class_12', displayName: 'Class 12' },
-];
-
-const DEFAULT_FEE_HEADS = [
-  'Tuition Fee', 'Exam Fee', 'Library Fee', 'Lab Fee', 'Sports Fee',
-  'Activity Fee', 'Development Fee', 'Admission Fee', 'Transport Fee', 'Hostel Fee',
-];
-
-const SCHOOL_SUBJECTS = [
-  'English', 'Hindi', 'Mathematics', 'Environmental Studies', 'General Knowledge',
-  'Science', 'Social Studies', 'Sanskrit', 'Marathi', 'Drawing & Craft',
-  'Physics', 'Chemistry', 'Biology', 'History', 'Geography',
-  'Political Science', 'Economics', 'Computer Science', 'Accountancy',
-  'Business Studies', 'Information Technology', 'Physical Education',
-];
-
-const COLLEGE_SUBJECTS = [
-  'English Communication', 'Mathematics', 'Physics', 'Chemistry', 'Biology',
-  'Computer Applications', 'Statistics', 'Economics', 'Commerce', 'Management',
-  'Environmental Studies', 'Soft Skills',
 ];
 
 @Injectable()
@@ -603,13 +585,13 @@ export class PlatformService {
 
     // 2. Operator credentials
     const operatorEmail = dto.adminEmail || `admin@${code}.in`;
-    const rawPassword = this.generatePassword();
+    const rawPassword = generatePassword();
     const passwordHash = await bcrypt.hash(rawPassword, 12);
 
     // 2b. Director credentials (optional — only if directorEmail/Phone provided)
     const hasDirector = !!(dto.directorEmail || dto.directorPhone);
     const directorEmail = dto.directorEmail || (hasDirector ? `director@${code}.in` : null);
-    const rawDirectorPassword = hasDirector ? this.generatePassword() : null;
+    const rawDirectorPassword = hasDirector ? generatePassword() : null;
     const directorPasswordHash = rawDirectorPassword
       ? await bcrypt.hash(rawDirectorPassword, 12)
       : null;
@@ -796,16 +778,6 @@ export class PlatformService {
       this.prisma.$transaction(feeOps),
       this.prisma.$transaction(subOps),
     ]);
-  }
-
-  private generatePassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    // Use crypto.randomBytes for cryptographically secure randomness.
-    // Math.random() is not CSPRNG and its output can be predicted.
-    return Array.from(
-      crypto.randomBytes(10),
-      (byte) => chars[byte % chars.length],
-    ).join('');
   }
 
   private buildInstitutionCode(codeOverride: string | undefined, institutionName: string): string {

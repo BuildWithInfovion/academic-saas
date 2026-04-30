@@ -10,10 +10,13 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
+import type { JwtUser } from '../../common/types/authenticated-request';
+
+type AuthedReq = Request & { user: JwtUser };
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -107,8 +110,8 @@ export class AuthController {
    */
   @UseGuards(AuthGuard)
   @Get('totp/status')
-  async totpStatus(@Req() req: any) {
-    return this.authService.getTotpStatus(req.user.userId as string);
+  async totpStatus(@Req() req: AuthedReq) {
+    return this.authService.getTotpStatus(req.user.userId);
   }
 
   /**
@@ -118,8 +121,8 @@ export class AuthController {
    */
   @UseGuards(AuthGuard)
   @Post('totp/setup')
-  async totpSetup(@Req() req: any) {
-    return this.authService.setupTotp(req.user.userId as string);
+  async totpSetup(@Req() req: AuthedReq) {
+    return this.authService.setupTotp(req.user.userId);
   }
 
   /**
@@ -130,9 +133,9 @@ export class AuthController {
    */
   @UseGuards(AuthGuard)
   @Post('totp/confirm')
-  async totpConfirm(@Req() req: any, @Body('code') code: string) {
+  async totpConfirm(@Req() req: AuthedReq, @Body('code') code: string) {
     return this.authService.confirmTotp(
-      req.user.userId as string,
+      req.user.userId,
       (code ?? '').replace(/\s/g, ''),
     );
   }
@@ -144,9 +147,9 @@ export class AuthController {
    */
   @UseGuards(AuthGuard)
   @Delete('totp')
-  async totpDisable(@Req() req: any, @Body('code') code: string) {
+  async totpDisable(@Req() req: AuthedReq, @Body('code') code: string) {
     await this.authService.disableTotp(
-      req.user.userId as string,
+      req.user.userId,
       (code ?? '').replace(/\s/g, ''),
     );
     return { message: 'Two-factor authentication disabled' };
@@ -156,12 +159,12 @@ export class AuthController {
 
   @Post('refresh')
   async refresh(
-    @Req() req: any,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @Body('refreshToken') bodyToken?: string,
   ) {
-    const reqCookies = req.cookies as Record<string, string> | undefined;
-    const refreshToken = bodyToken ?? reqCookies?.auth_rt;
+    const reqCookies = (req.cookies ?? {}) as Record<string, string>;
+    const refreshToken = bodyToken ?? reqCookies['auth_rt'];
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
     const result = await this.authService.refreshByToken(refreshToken);
@@ -173,9 +176,12 @@ export class AuthController {
   }
 
   @Post('refresh-op')
-  async refreshOp(@Req() req: any, @Res({ passthrough: true }) res: Response) {
-    const reqCookies = req.cookies as Record<string, string> | undefined;
-    const refreshToken = reqCookies?.auth_rt_op;
+  async refreshOp(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const reqCookies = (req.cookies ?? {}) as Record<string, string>;
+    const refreshToken = reqCookies['auth_rt_op'];
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
     const result = await this.authService.refreshByToken(refreshToken);
@@ -190,14 +196,14 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Post('logout')
-  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: AuthedReq,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     res.clearCookie('auth_rt', RT_COOKIE_OPTIONS);
     res.clearCookie('auth_rt_op', RT_COOKIE_OPTIONS);
     // institutionId comes from the JWT payload — no TenantMiddleware needed for logout
-    return this.authService.logout(
-      req.user.userId as string,
-      req.user.institutionId as string,
-    );
+    return this.authService.logout(req.user.userId, req.user.institutionId);
   }
 
   // ── Password reset (self-service via email OTP) ────────────────────────────

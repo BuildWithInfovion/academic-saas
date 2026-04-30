@@ -120,6 +120,7 @@ export class MessagingService {
   // Send a message in a conversation
   async sendMessage(institutionId: string, conversationId: string, senderId: string, content: string) {
     if (!content?.trim()) throw new BadRequestException('Message content is required');
+    if (content.trim().length > 2000) throw new BadRequestException('Message content cannot exceed 2000 characters');
     const conv = await this.prisma.conversation.findFirst({
       where: { id: conversationId, institutionId },
       select: { id: true, parentUserId: true, teacherUserId: true },
@@ -141,15 +142,14 @@ export class MessagingService {
     return message;
   }
 
-  // Count unread messages for a user
+  // Count unread messages for a user — single query via nested relation filter
   async getUnreadCount(institutionId: string, userId: string) {
-    const myConvs = await this.prisma.conversation.findMany({
-      where: { institutionId, OR: [{ parentUserId: userId }, { teacherUserId: userId }] },
-      select: { id: true },
-    });
     const count = await this.prisma.message.count({
       where: {
-        conversationId: { in: myConvs.map((c) => c.id) },
+        conversation: {
+          institutionId,
+          OR: [{ parentUserId: userId }, { teacherUserId: userId }],
+        },
         senderId: { not: userId },
         readAt: null,
       },

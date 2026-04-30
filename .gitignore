@@ -1,3 +1,7 @@
+# Marketing / docs HTML files — not source code, exclude from Docker builds
+GTM-Guide-Document.html
+Infovion-Product-Brochure.html
+
 # Logs
 logs
 *.log

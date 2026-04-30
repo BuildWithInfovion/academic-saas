@@ -12,6 +12,7 @@ import * as qrcode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { EmailService } from './email.service';
+import { generatePassword } from '../../common/utils/generate-password';
 
 type RoleWithPermissions = {
   role: { code: string; permissions: unknown };
@@ -737,7 +738,7 @@ export class AuthService {
     if (!user)
       throw new NotFoundException('Parent user not found in this institution');
 
-    const newPassword = this.generatePassword();
+    const newPassword = generatePassword();
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await this.prisma.user.update({
       where: { id: user.id },
@@ -763,7 +764,7 @@ export class AuthService {
     if (!user)
       throw new NotFoundException('User not found in this institution');
 
-    const newPassword = this.generatePassword();
+    const newPassword = generatePassword();
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await this.prisma.user.update({
       where: { id: user.id },
@@ -792,7 +793,7 @@ export class AuthService {
     });
     if (!request) throw new NotFoundException('Reset request not found');
 
-    const newPassword = this.generatePassword();
+    const newPassword = generatePassword();
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
     await this.prisma.$transaction([
@@ -897,12 +898,6 @@ export class AuthService {
       throw new BadRequestException(
         'Password must contain at least one number',
       );
-  }
-
-  private generatePassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const bytes = crypto.randomBytes(8);
-    return Array.from(bytes, (b) => chars[b % chars.length]).join('');
   }
 
   private hashToken(token: string) {

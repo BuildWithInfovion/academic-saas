@@ -40,7 +40,16 @@ export class AuditLogInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap((response) => {
+        // Only log state-changing requests — GET responses can be large and add no audit value
+        if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return;
         if (!tenant?.institutionId) return;
+
+        const pathSegments = url.split('?')[0].split('/').filter(Boolean);
+        const entityType = pathSegments[0] ?? null;
+        const lastSegment = pathSegments[pathSegments.length - 1];
+        const entityId =
+          ((response as Record<string, unknown>)?.['id'] as string | null) ??
+          (pathSegments.length >= 2 ? lastSegment : null);
 
         // Fire-and-forget: audit log must never add latency to the API response.
         // setImmediate defers the DB write until after the response is flushed.
@@ -50,8 +59,8 @@ export class AuditLogInterceptor implements NestInterceptor {
               institutionId: tenant.institutionId,
               userId: user?.userId,
               action: `${method} ${url}`,
-              entityType: url.split('/')[1], // e.g. students, users
-              entityId: response?.id || null,
+              entityType,
+              entityId: entityId ?? null,
               newValue: stripSensitive(response),
               ipAddress: ip,
             })

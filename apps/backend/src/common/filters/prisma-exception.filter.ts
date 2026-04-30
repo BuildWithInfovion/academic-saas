@@ -76,9 +76,6 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     const knownErr = exception as Prisma.PrismaClientKnownRequestError;
 
-    // Always expose the error code so developers can diagnose from DevTools
-    message = `Database error [${knownErr.code}]`;
-
     switch (knownErr.code) {
       case 'P2002': {
         const target = Array.isArray(knownErr.meta?.['target'])

@@ -113,7 +113,6 @@ export class AppModule implements NestModule {
         { path: 'platform/*path', method: RequestMethod.ALL },
         { path: 'support/*path', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
-        { path: 'ping', method: RequestMethod.ALL },
       )
       .forRoutes('*');
   }

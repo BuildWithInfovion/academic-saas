@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../common/storage/storage.service';
+import { DEFAULT_FEE_HEADS, SCHOOL_SUBJECTS, COLLEGE_SUBJECTS } from '../common/constants/seed-defaults';
 
 export interface CreateInstitutionDto {
   name: string;
@@ -8,59 +9,6 @@ export interface CreateInstitutionDto {
   planCode: string;
   institutionType: string;
 }
-
-const DEFAULT_FEE_HEADS = [
-  'Tuition Fee',
-  'Exam Fee',
-  'Library Fee',
-  'Lab Fee',
-  'Sports Fee',
-  'Activity Fee',
-  'Development Fee',
-  'Admission Fee',
-  'Transport Fee',
-  'Hostel Fee',
-];
-
-const SCHOOL_SUBJECTS = [
-  'English',
-  'Hindi',
-  'Mathematics',
-  'Environmental Studies',
-  'General Knowledge',
-  'Science',
-  'Social Studies',
-  'Sanskrit',
-  'Marathi',
-  'Drawing & Craft',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'History',
-  'Geography',
-  'Political Science',
-  'Economics',
-  'Computer Science',
-  'Accountancy',
-  'Business Studies',
-  'Information Technology',
-  'Physical Education',
-];
-
-const COLLEGE_SUBJECTS = [
-  'English Communication',
-  'Mathematics',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'Computer Applications',
-  'Statistics',
-  'Economics',
-  'Commerce',
-  'Management',
-  'Environmental Studies',
-  'Soft Skills',
-];
 
 @Injectable()
 export class InstitutionService {
