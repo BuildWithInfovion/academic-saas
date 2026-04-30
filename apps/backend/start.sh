@@ -12,6 +12,9 @@ const { execSync } = require('child_process');
 const EDITED = [
   '20260410000000_add_institution_profile_fields',
   '20260413000000_update_roles_add_accountant_staff',
+  '20260429020000_staff_profile',
+  '20260429030000_fee_plan_system',
+  '20260430120000_messaging',
 ];
 
 for (const name of EDITED) {
