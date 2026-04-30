@@ -29,10 +29,16 @@ CREATE TABLE IF NOT EXISTS "staff_profiles" (
 CREATE UNIQUE INDEX IF NOT EXISTS "staff_profiles_userId_key" ON "staff_profiles"("userId");
 CREATE INDEX IF NOT EXISTS "staff_profiles_institutionId_idx" ON "staff_profiles"("institutionId");
 
-ALTER TABLE "staff_profiles"
-  ADD CONSTRAINT "staff_profiles_institutionId_fkey"
-  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "staff_profiles"
+    ADD CONSTRAINT "staff_profiles_institutionId_fkey"
+    FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-ALTER TABLE "staff_profiles"
-  ADD CONSTRAINT "staff_profiles_userId_fkey"
-  FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "staff_profiles"
+    ADD CONSTRAINT "staff_profiles_userId_fkey"
+    FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
