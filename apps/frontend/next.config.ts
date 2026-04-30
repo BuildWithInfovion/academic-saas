@@ -14,9 +14,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 
   // Compress all responses (gzip/br)
   compress: true,

@@ -578,12 +578,13 @@ export default function StudentsPage() {
     setLinking(true);
     setError(null);
     try {
-      const upper = 'ABCDEFGHJKMNPQRSTUVWXYZ';
-      const lower = 'abcdefghjkmnpqrstuvwxyz';
-      const digits = '23456789';
-      const all = upper + lower + digits;
-      const rand = (s: string) => s[Math.floor(Math.random() * s.length)];
-      const tempPwd = rand(upper) + rand(lower) + rand(digits) + Array.from({ length: 5 }, () => rand(all)).join('');
+      const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const randChar = (s: string) => {
+        const arr = new Uint8Array(1);
+        crypto.getRandomValues(arr);
+        return s[arr[0] % s.length];
+      };
+      const tempPwd = Array.from({ length: 10 }, () => randChar(CHARS)).join('');
       const newUser = await apiFetch('/users', {
         method: 'POST', body: JSON.stringify({ phone, password: tempPwd, role: 'parent' }),
       }) as { id: string };

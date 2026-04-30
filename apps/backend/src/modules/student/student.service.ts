@@ -9,11 +9,20 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
+import { generatePassword } from '../../common/utils/generate-password';
 
-const CLASS_1_UNIT_NAMES = ['class_1', 'class1', 'i', '1'];
+// Classes where TC from previous school is not applicable.
+// Includes all common Indian pre-primary levels + Class 1 (first formal year).
+const TC_NOT_REQUIRED_NAMES = [
+  // Pre-primary
+  'nursery', 'lkg', 'ukg', 'kg', 'preprimary', 'pre-primary',
+  'pp', 'pp1', 'pp2', 'jr', 'jrkg', 'srkg', 'playgroup', 'playschool',
+  'kindergarten', 'preschool',
+  // Class 1 variants
+  'class_1', 'class1', 'classi', 'i', '1', 'one', 'classone',
+];
 
 export interface ImportStudentRowDto {
   firstName: string;
@@ -103,32 +112,13 @@ export class StudentService {
     return String(count + 1).padStart(2, '0');
   }
 
-  private generatePassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    // Use crypto.randomBytes for cryptographically secure randomness.
-    // Math.random() is not CSPRNG and its output can be predicted.
-    return Array.from(
-      crypto.randomBytes(8),
-      (byte) => chars[byte % chars.length],
-    ).join('');
-  }
-
-  private async generateReceiptNoInTx(
-    tx: Prisma.TransactionClient,
-    institutionId: string,
-  ): Promise<string> {
-    const count = await tx.feePayment.count({ where: { institutionId } });
-    const year = new Date().getFullYear();
-    return `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
-  }
-
   private async validateTc(institutionId: string, dto: CreateStudentDto): Promise<string> {
     const unit = await this.prisma.academicUnit.findFirst({
       where: { id: dto.academicUnitId, institutionId, deletedAt: null },
     });
 
     const isClass1 = unit
-      ? CLASS_1_UNIT_NAMES.includes(unit.name.toLowerCase().trim())
+      ? TC_NOT_REQUIRED_NAMES.includes(unit.name.toLowerCase().replace(/[\s_-]/g, ''))
       : false;
 
     if (isClass1) return 'not_applicable';
@@ -160,182 +150,188 @@ export class StudentService {
       : null;
 
     // Generate parent credentials
-    const generatedPassword = this.generatePassword();
+    const generatedPassword = generatePassword();
     const passwordHash = await bcrypt.hash(generatedPassword, 12);
 
     this.logger.log(`[confirmAdmission] institution=${institutionId} parentPhone=${dto.parentPhone ?? 'none'} fees=${dto.admissionFees?.length ?? 0}`);
 
-    let result: { student: any; parentUser: any; isNewParentUser: boolean; feePayments: any[] };
-    try {
-      result = await this.prisma.withConnectionRetry(() => this.prisma.$transaction(async (tx) => {
-        this.logger.debug('[confirmAdmission] tx:start — generating admission/roll numbers');
-        const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
-        const rollNo = dto.academicUnitId
-          ? await this.generateRollNoInTx(tx, dto.academicUnitId)
-          : undefined;
-        this.logger.debug(`[confirmAdmission] tx:numbers — admissionNo=${admissionNo} rollNo=${rollNo}`);
+    // Retry on P2002 (unique constraint): admissionNo or receiptNo collision from
+    // concurrent admissions. Each retry regenerates the numbers inside a new tx.
+    const MAX_ATTEMPTS = 5;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const result = await this.prisma.withConnectionRetry(() =>
+          this.prisma.$transaction(async (tx) => {
+            this.logger.debug('[confirmAdmission] tx:start — generating admission/roll numbers');
+            const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
+            const rollNo = dto.academicUnitId
+              ? await this.generateRollNoInTx(tx, dto.academicUnitId)
+              : undefined;
+            this.logger.debug(`[confirmAdmission] tx:numbers — admissionNo=${admissionNo} rollNo=${rollNo}`);
 
-        // 1. Create or reuse parent user FIRST — so we have the ID for student.create
-        let parentUser = existingParentUser;
-        let isNewParentUser = false;
+            // 1. Create or reuse parent user FIRST — so we have the ID for student.create
+            let parentUser = existingParentUser;
+            let isNewParentUser = false;
 
-        if (!parentUser) {
-          this.logger.debug('[confirmAdmission] tx:user.create — creating new parent user');
-          parentUser = await tx.user.create({
-            data: {
-              institutionId,
-              phone: dto.parentPhone,
-              passwordHash,
-              isActive: true,
-            },
-          });
-          isNewParentUser = true;
-          this.logger.debug(`[confirmAdmission] tx:user.created — userId=${parentUser.id}`);
+            if (!parentUser) {
+              this.logger.debug('[confirmAdmission] tx:user.create — creating new parent user');
+              parentUser = await tx.user.create({
+                data: { institutionId, phone: dto.parentPhone, passwordHash, isActive: true },
+              });
+              isNewParentUser = true;
+              this.logger.debug(`[confirmAdmission] tx:user.created — userId=${parentUser.id}`);
 
-          if (parentRole) {
-            await tx.userRole.create({
-              data: { userId: parentUser.id, roleId: parentRole.id, institutionId },
-            });
-            this.logger.debug('[confirmAdmission] tx:userRole.created');
-          }
-        } else {
-          this.logger.debug(`[confirmAdmission] tx:user.reused — userId=${parentUser.id}`);
-        }
+              if (parentRole) {
+                await tx.userRole.create({
+                  data: { userId: parentUser.id, roleId: parentRole.id, institutionId },
+                });
+                this.logger.debug('[confirmAdmission] tx:userRole.created');
+              }
+            } else {
+              this.logger.debug(`[confirmAdmission] tx:user.reused — userId=${parentUser.id}`);
+            }
 
-        // 2. Create student with parentUserId already set — no separate UPDATE needed
-        this.logger.debug('[confirmAdmission] tx:student.create — creating student record');
-        const student = await tx.student.create({
-          data: {
-            institutionId,
-            admissionNo,
-            rollNo,
-            firstName: dto.firstName,
-            middleName: dto.middleName,
-            lastName: dto.lastName,
-            dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
-            placeOfBirth: dto.placeOfBirth,
-            gender: dto.gender,
-            phone: dto.phone,
-            email: dto.email,
-            motherTongue: dto.motherTongue,
-            fatherName: dto.fatherName,
-            fatherOccupation: dto.fatherOccupation,
-            fatherQualification: dto.fatherQualification,
-            fatherEmail: dto.fatherEmail,
-            fatherAadhar: dto.fatherAadhar,
-            motherName: dto.motherName,
-            motherOccupation: dto.motherOccupation,
-            motherQualification: dto.motherQualification,
-            motherEmail: dto.motherEmail,
-            motherAadhar: dto.motherAadhar,
-            parentPhone: dto.parentPhone,
-            secondaryPhone: dto.secondaryPhone,
-            annualIncome: dto.annualIncome,
-            isEwsCategory: dto.isEwsCategory ?? false,
-            emergencyContactName: dto.emergencyContactName,
-            emergencyContactRelation: dto.emergencyContactRelation,
-            emergencyContactPhone: dto.emergencyContactPhone,
-            address: dto.address,
-            locality: dto.locality,
-            city: dto.city,
-            state: dto.state,
-            pinCode: dto.pinCode,
-            admissionDate: dto.admissionDate ? new Date(dto.admissionDate) : new Date(),
-            academicUnitId: dto.academicUnitId,
-            bloodGroup: dto.bloodGroup,
-            nationality: dto.nationality ?? 'Indian',
-            religion: dto.religion,
-            casteCategory: dto.casteCategory,
-            aadharNumber: dto.aadharNumber,
-            hasDisability: dto.hasDisability ?? false,
-            disabilityDetails: dto.disabilityDetails,
-            medicalConditions: dto.medicalConditions,
-            tcFromPrevious,
-            tcReceivedDate: dto.tcReceivedDate ? new Date(dto.tcReceivedDate) : undefined,
-            tcPreviousInstitution: dto.tcPreviousInstitution,
-            previousClass: dto.previousClass,
-            previousBoard: dto.previousBoard,
-            previousMarks: dto.previousMarks,
-            status: 'active',
-            parentUserId: parentUser.id,
-          },
-        });
-        this.logger.debug(`[confirmAdmission] tx:student.created — studentId=${student.id}`);
-
-        // 3. Normalise to multi-item list (handles both new array and legacy single)
-        const feeItems: AdmissionFeeItemDto[] = [];
-
-        if (dto.admissionFees && dto.admissionFees.length > 0) {
-          for (const item of dto.admissionFees) {
-            if (item.feeHeadId && item.amountPaid > 0) feeItems.push(item);
-          }
-        } else if (
-          dto.admissionFee?.paid &&
-          dto.admissionFee.amountPaid &&
-          dto.admissionFee.amountPaid > 0 &&
-          dto.admissionFee.feeHeadId
-        ) {
-          feeItems.push({
-            feeHeadId: dto.admissionFee.feeHeadId,
-            amountPaid: dto.admissionFee.amountPaid,
-            paymentMode: dto.admissionFee.paymentMode,
-            academicYearId: dto.admissionFee.academicYearId,
-          });
-        }
-        this.logger.debug(`[confirmAdmission] tx:fees — ${feeItems.length} fee item(s) to create`);
-
-        // 4. Create one FeePayment per selected fee head.
-        // Count existing receipts once and increment locally to avoid N COUNT queries in the loop.
-        const feePayments: Record<string, unknown>[] = [];
-        if (feeItems.length > 0) {
-          const receiptBaseCount = await tx.feePayment.count({ where: { institutionId } });
-          const rcpYear = new Date().getFullYear();
-          for (let i = 0; i < feeItems.length; i++) {
-            const item = feeItems[i];
-            const receiptNo = `RCP-${rcpYear}-${String(receiptBaseCount + i + 1).padStart(5, '0')}`;
-            this.logger.debug(`[confirmAdmission] tx:feePayment.create — feeHeadId=${item.feeHeadId} amount=${item.amountPaid} receipt=${receiptNo}`);
-            const payment = await tx.feePayment.create({
+            // 2. Create student with parentUserId already set — no separate UPDATE needed
+            this.logger.debug('[confirmAdmission] tx:student.create — creating student record');
+            const student = await tx.student.create({
               data: {
                 institutionId,
-                studentId: student.id,
-                feeHeadId: item.feeHeadId,
-                academicYearId: item.academicYearId,
-                amount: item.amountPaid,
-                paymentMode: item.paymentMode ?? 'cash',
-                receiptNo,
-                paidOn: new Date(),
-                remarks: 'Admission fee payment',
+                admissionNo,
+                rollNo,
+                firstName: dto.firstName,
+                middleName: dto.middleName,
+                lastName: dto.lastName,
+                dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+                placeOfBirth: dto.placeOfBirth,
+                gender: dto.gender,
+                phone: dto.phone,
+                email: dto.email,
+                motherTongue: dto.motherTongue,
+                fatherName: dto.fatherName,
+                fatherOccupation: dto.fatherOccupation,
+                fatherQualification: dto.fatherQualification,
+                fatherEmail: dto.fatherEmail,
+                fatherAadhar: dto.fatherAadhar,
+                motherName: dto.motherName,
+                motherOccupation: dto.motherOccupation,
+                motherQualification: dto.motherQualification,
+                motherEmail: dto.motherEmail,
+                motherAadhar: dto.motherAadhar,
+                parentPhone: dto.parentPhone,
+                secondaryPhone: dto.secondaryPhone,
+                annualIncome: dto.annualIncome,
+                isEwsCategory: dto.isEwsCategory ?? false,
+                emergencyContactName: dto.emergencyContactName,
+                emergencyContactRelation: dto.emergencyContactRelation,
+                emergencyContactPhone: dto.emergencyContactPhone,
+                address: dto.address,
+                locality: dto.locality,
+                city: dto.city,
+                state: dto.state,
+                pinCode: dto.pinCode,
+                admissionDate: dto.admissionDate ? new Date(dto.admissionDate) : new Date(),
+                academicUnitId: dto.academicUnitId,
+                bloodGroup: dto.bloodGroup,
+                nationality: dto.nationality ?? 'Indian',
+                religion: dto.religion,
+                casteCategory: dto.casteCategory,
+                aadharNumber: dto.aadharNumber,
+                hasDisability: dto.hasDisability ?? false,
+                disabilityDetails: dto.disabilityDetails,
+                medicalConditions: dto.medicalConditions,
+                tcFromPrevious,
+                tcReceivedDate: dto.tcReceivedDate ? new Date(dto.tcReceivedDate) : undefined,
+                tcPreviousInstitution: dto.tcPreviousInstitution,
+                previousClass: dto.previousClass,
+                previousBoard: dto.previousBoard,
+                previousMarks: dto.previousMarks,
+                status: 'active',
+                parentUserId: parentUser.id,
               },
-              include: { feeHead: true },
             });
-            this.logger.debug(`[confirmAdmission] tx:feePayment.created — receiptNo=${receiptNo}`);
-            feePayments.push(payment as unknown as Record<string, unknown>);
-          }
+            this.logger.debug(`[confirmAdmission] tx:student.created — studentId=${student.id}`);
+
+            // 3. Normalise to multi-item list (handles both new array and legacy single)
+            const feeItems: AdmissionFeeItemDto[] = [];
+
+            if (dto.admissionFees && dto.admissionFees.length > 0) {
+              for (const item of dto.admissionFees) {
+                if (item.feeHeadId && item.amountPaid > 0) feeItems.push(item);
+              }
+            } else if (
+              dto.admissionFee?.paid &&
+              dto.admissionFee.amountPaid &&
+              dto.admissionFee.amountPaid > 0 &&
+              dto.admissionFee.feeHeadId
+            ) {
+              feeItems.push({
+                feeHeadId: dto.admissionFee.feeHeadId,
+                amountPaid: dto.admissionFee.amountPaid,
+                paymentMode: dto.admissionFee.paymentMode,
+                academicYearId: dto.admissionFee.academicYearId,
+              });
+            }
+            this.logger.debug(`[confirmAdmission] tx:fees — ${feeItems.length} fee item(s) to create`);
+
+            // 4. Create one FeePayment per selected fee head.
+            // Count existing receipts once and increment locally to avoid N COUNT queries.
+            const feePayments: Record<string, unknown>[] = [];
+            if (feeItems.length > 0) {
+              const receiptBaseCount = await tx.feePayment.count({ where: { institutionId } });
+              const rcpYear = new Date().getFullYear();
+              for (let i = 0; i < feeItems.length; i++) {
+                const item = feeItems[i];
+                const receiptNo = `RCP-${rcpYear}-${String(receiptBaseCount + i + 1).padStart(5, '0')}`;
+                this.logger.debug(`[confirmAdmission] tx:feePayment.create — feeHeadId=${item.feeHeadId} amount=${item.amountPaid} receipt=${receiptNo}`);
+                const payment = await tx.feePayment.create({
+                  data: {
+                    institutionId,
+                    studentId: student.id,
+                    feeHeadId: item.feeHeadId,
+                    academicYearId: item.academicYearId,
+                    amount: item.amountPaid,
+                    paymentMode: item.paymentMode ?? 'cash',
+                    receiptNo,
+                    paidOn: new Date(),
+                    remarks: 'Admission fee payment',
+                  },
+                  include: { feeHead: true },
+                });
+                this.logger.debug(`[confirmAdmission] tx:feePayment.created — receiptNo=${receiptNo}`);
+                feePayments.push(payment as unknown as Record<string, unknown>);
+              }
+            }
+
+            return { student, parentUser, isNewParentUser, feePayments };
+          }, { timeout: 15000, maxWait: 10000 }),
+        );
+
+        return {
+          student: result.student,
+          admissionNo: result.student.admissionNo,
+          rollNo: result.student.rollNo,
+          parentCredentials: {
+            userId: result.parentUser.id,
+            phone: result.parentUser.phone,
+            isNew: result.isNewParentUser,
+            generatedPassword: result.isNewParentUser ? generatedPassword : null,
+          },
+          feePayments: result.feePayments,
+          feePayment: result.feePayments[0] ?? null,
+        };
+      } catch (err: unknown) {
+        const code = (err as any)?.code;
+        if (code === 'P2002' && attempt < MAX_ATTEMPTS) {
+          this.logger.warn(`[confirmAdmission] P2002 on attempt ${attempt}/${MAX_ATTEMPTS} — retrying`);
+          continue;
         }
-
-        return { student, parentUser, isNewParentUser, feePayments };
-      }, { timeout: 15000, maxWait: 10000 }));
-    } catch (err: unknown) {
-      const code = (err as any)?.code;
-      const msg = (err as any)?.message ?? String(err);
-      this.logger.error(`[confirmAdmission] FAILED — code=${code ?? 'none'} msg=${msg.slice(0, 300)}`);
-      throw err;
+        const msg = (err as any)?.message ?? String(err);
+        this.logger.error(`[confirmAdmission] FAILED — code=${code ?? 'none'} msg=${msg.slice(0, 300)}`);
+        throw err;
+      }
     }
-
-    return {
-      student: result.student,
-      admissionNo: result.student.admissionNo,
-      rollNo: result.student.rollNo,
-      parentCredentials: {
-        userId: result.parentUser.id,
-        phone: result.parentUser.phone,
-        isNew: result.isNewParentUser,
-        generatedPassword: result.isNewParentUser ? generatedPassword : null,
-      },
-      feePayments: result.feePayments,
-      // legacy compat
-      feePayment: result.feePayments[0] ?? null,
-    };
+    // Unreachable — loop always returns or throws
+    throw new ConflictException('Admission conflict after retries — please try again');
   }
 
   // ── BULK IMPORT (legacy ledger migration) ────────────────────────────────
@@ -386,7 +382,7 @@ export class StudentService {
                 where: { institutionId, phone, deletedAt: null },
               });
               if (!parentUser) {
-                const pwd = this.generatePassword();
+                const pwd = generatePassword();
                 const hash = await bcrypt.hash(pwd, 12);
                 parentUser = await tx.user.create({
                   data: { institutionId, phone, passwordHash: hash, isActive: true },

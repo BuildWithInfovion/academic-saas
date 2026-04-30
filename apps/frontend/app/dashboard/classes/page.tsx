@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 
-interface ClassTeacher { id: string; email: string | null; phone: string | null; }
+interface ClassTeacher { id: string; name: string | null; email: string | null; phone: string | null; }
 interface ParentUnit { id: string; name: string; displayName: string | null; }
 interface ClassUnit {
   id: string; name: string; displayName: string | null; level: number;
