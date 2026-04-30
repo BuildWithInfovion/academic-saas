@@ -199,10 +199,10 @@ export class AuthService {
     const isValidTotp = totpVerify(trimmedCode, user.totpSecret);
 
     if (!isValidTotp) {
-      // Try backup codes
+      // Try backup codes — strip hyphens to match the format used at generation time
       const codeHash = crypto
         .createHash('sha256')
-        .update(trimmedCode)
+        .update(trimmedCode.replace(/-/g, ''))
         .digest('hex');
       const backupIndex = user.totpBackupCodes.indexOf(codeHash);
 
@@ -310,7 +310,7 @@ export class AuthService {
       return `${part(0)}-${part(1)}`;
     });
     const hashedCodes = rawCodes.map((c) =>
-      crypto.createHash('sha256').update(c.replace('-', '')).digest('hex'),
+      crypto.createHash('sha256').update(c.replace(/-/g, '')).digest('hex'),
     );
 
     await this.prisma.user.update({
@@ -346,7 +346,7 @@ export class AuthService {
     if (!isValidTotp) {
       const codeHash = crypto
         .createHash('sha256')
-        .update(trimmed)
+        .update(trimmed.replace(/-/g, ''))
         .digest('hex');
       if (!user.totpBackupCodes.includes(codeHash)) {
         throw new UnauthorizedException('Invalid code');

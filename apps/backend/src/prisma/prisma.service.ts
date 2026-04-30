@@ -153,6 +153,18 @@ export class PrismaService
         params.args.where = { ...params.args.where, deletedAt: null };
       }
 
+      if (params.action === 'count') {
+        params.args.where = { ...params.args.where, deletedAt: null };
+      }
+
+      if (params.action === 'aggregate') {
+        params.args.where = { ...params.args.where, deletedAt: null };
+      }
+
+      if (params.action === 'groupBy') {
+        params.args.where = { ...params.args.where, deletedAt: null };
+      }
+
       return next(params);
     });
     /* eslint-enable

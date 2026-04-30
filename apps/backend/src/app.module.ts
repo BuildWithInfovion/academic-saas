@@ -102,6 +102,7 @@ export class AppModule implements NestModule {
       .apply(TenantMiddleware)
       .exclude(
         { path: 'auth/login', method: RequestMethod.ALL },
+        { path: 'auth/logout', method: RequestMethod.ALL },
         { path: 'auth/refresh', method: RequestMethod.ALL },
         { path: 'auth/refresh-op', method: RequestMethod.ALL },
         { path: 'auth/forgot-password', method: RequestMethod.ALL },

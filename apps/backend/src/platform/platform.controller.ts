@@ -20,11 +20,13 @@ import { RequestResetDto } from './dto/request-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { PlatformRateLimitGuard } from './guards/platform-rate-limit.guard';
 
+const IS_PROD = process.env.NODE_ENV === 'production';
+
 const PLATFORM_RT_OPTIONS = {
   httpOnly: true,
-  secure: true,
+  secure: IS_PROD,
   sameSite: 'lax' as const,
-  domain: '.buildwithinfovion.com',
+  ...(IS_PROD ? { domain: '.buildwithinfovion.com' } : {}),
   path: '/',
 };
 

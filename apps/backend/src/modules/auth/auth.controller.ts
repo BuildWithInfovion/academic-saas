@@ -77,6 +77,7 @@ export class AuthController {
    * Body: { totpToken, code }
    */
   @Post('totp/authenticate')
+  @UseGuards(LoginRateLimitGuard)
   async totpAuthenticate(
     @Body('totpToken') totpToken: string,
     @Body('code') code: string,
@@ -189,16 +190,13 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Post('logout')
-  async logout(
-    @Tenant() tenant: { institutionId: string },
-    @Req() req: any,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     res.clearCookie('auth_rt', RT_COOKIE_OPTIONS);
     res.clearCookie('auth_rt_op', RT_COOKIE_OPTIONS);
+    // institutionId comes from the JWT payload — no TenantMiddleware needed for logout
     return this.authService.logout(
       req.user.userId as string,
-      tenant.institutionId,
+      req.user.institutionId as string,
     );
   }
 

@@ -17,8 +17,6 @@ export class MessagingService {
       select: {
         id: true,
         name: true,
-        email: true,
-        phone: true,
         staffProfile: { select: { designation: true, department: true } },
         classTeacherOf: { select: { displayName: true, name: true }, take: 1 },
       },

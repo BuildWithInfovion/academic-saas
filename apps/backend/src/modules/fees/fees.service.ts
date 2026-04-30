@@ -2,6 +2,7 @@ import {
   Injectable, NotFoundException, ConflictException,
   BadRequestException, ForbiddenException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateFeeHeadDto, CreateFeeStructureDto, RecordPaymentDto, RecordBulkPaymentDto,
@@ -88,20 +89,24 @@ export class FeesService {
     if (!student) throw new NotFoundException('Student not found');
     const feeHead = await this.prisma.feeHead.findFirst({ where: { id: dto.feeHeadId, institutionId, deletedAt: null } });
     if (!feeHead) throw new NotFoundException('Fee head not found');
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        const count = await tx.feePayment.count({ where: { institutionId } });
-        const year = new Date().getFullYear();
-        const receiptNo = `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
-        return tx.feePayment.create({
-          data: { institutionId, studentId: dto.studentId, feeHeadId: dto.feeHeadId, feeStructureId: dto.feeStructureId ?? null, installmentName: dto.installmentName ?? null, academicYearId: dto.academicYearId, amount: dto.amount, paymentMode: dto.paymentMode, receiptNo, paidOn: new Date(dto.paidOn), remarks: dto.remarks },
-          include: { feeHead: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
-        });
-      }, { timeout: 15000, maxWait: 10000 });
-    } catch (e: any) {
-      if (e?.code === 'P2002') throw new ConflictException('Receipt number conflict — please retry');
-      throw e;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const count = await tx.feePayment.count({ where: { institutionId } });
+          const year = new Date().getFullYear();
+          const receiptNo = `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
+          return tx.feePayment.create({
+            data: { institutionId, studentId: dto.studentId, feeHeadId: dto.feeHeadId, feeStructureId: dto.feeStructureId ?? null, installmentName: dto.installmentName ?? null, academicYearId: dto.academicYearId, amount: dto.amount, paymentMode: dto.paymentMode, receiptNo, paidOn: new Date(dto.paidOn), remarks: dto.remarks },
+            include: { feeHead: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
+          });
+        }, { timeout: 15000, maxWait: 10000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (e: any) {
+        if ((e?.code === 'P2034' || e?.code === 'P2002') && attempt < 4) continue;
+        if (e?.code === 'P2002') throw new ConflictException('Receipt number conflict — please retry');
+        throw e;
+      }
     }
+    throw new ConflictException('Receipt number conflict — please retry');
   }
 
   async recordBulkPayments(institutionId: string, dto: RecordBulkPaymentDto) {
@@ -111,21 +116,30 @@ export class FeesService {
     });
     if (!student) throw new NotFoundException('Student not found');
     if (!dto.items.length) throw new BadRequestException('No payment items provided');
-    return this.prisma.$transaction(async (tx) => {
-      const results: Record<string, unknown>[] = [];
-      const baseCount = await tx.feePayment.count({ where: { institutionId } });
-      const rcpYear = new Date().getFullYear();
-      for (let i = 0; i < dto.items.length; i++) {
-        const item = dto.items[i];
-        const receiptNo = `RCP-${rcpYear}-${String(baseCount + i + 1).padStart(5, '0')}`;
-        const payment = await tx.feePayment.create({
-          data: { institutionId, studentId: dto.studentId, feeHeadId: item.feeHeadId, feeStructureId: item.feeStructureId, installmentName: item.installmentName, academicYearId: dto.academicYearId, amount: item.amount, paymentMode: dto.paymentMode, receiptNo, paidOn: new Date(dto.paidOn), remarks: dto.remarks },
-          include: { feeHead: true },
-        });
-        results.push(payment as unknown as Record<string, unknown>);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const results: Record<string, unknown>[] = [];
+          const baseCount = await tx.feePayment.count({ where: { institutionId } });
+          const rcpYear = new Date().getFullYear();
+          for (let i = 0; i < dto.items.length; i++) {
+            const item = dto.items[i];
+            const receiptNo = `RCP-${rcpYear}-${String(baseCount + i + 1).padStart(5, '0')}`;
+            const payment = await tx.feePayment.create({
+              data: { institutionId, studentId: dto.studentId, feeHeadId: item.feeHeadId, feeStructureId: item.feeStructureId, installmentName: item.installmentName, academicYearId: dto.academicYearId, amount: item.amount, paymentMode: dto.paymentMode, receiptNo, paidOn: new Date(dto.paidOn), remarks: dto.remarks },
+              include: { feeHead: true },
+            });
+            results.push(payment as unknown as Record<string, unknown>);
+          }
+          return { payments: results, totalCollected: dto.items.reduce((s, i) => s + i.amount, 0), student };
+        }, { timeout: 15000, maxWait: 10000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (e: any) {
+        if ((e?.code === 'P2034' || e?.code === 'P2002') && attempt < 4) continue;
+        if (e?.code === 'P2002') throw new ConflictException('Receipt number conflict — please retry');
+        throw e;
       }
-      return { payments: results, totalCollected: dto.items.reduce((s, i) => s + i.amount, 0), student };
-    }, { timeout: 15000, maxWait: 10000 });
+    }
+    throw new ConflictException('Receipt number conflict — please retry');
   }
 
   async getStudentInstallmentDues(institutionId: string, studentId: string, academicYearId: string, parentUserId?: string) {
@@ -213,18 +227,22 @@ export class FeesService {
     ]);
     const todayTotal = (todayLegacy._sum.amount ?? 0) + (todayV2._sum.amount ?? 0);
     const monthTotal = (monthLegacy._sum.amount ?? 0) + (monthV2._sum.amount ?? 0);
-    return { todayTotal, monthTotal, totalStudents: studentCount, totalDue: 0 };
+    return { todayTotal, monthTotal, totalStudents: studentCount };
   }
 
   async getDefaulters(institutionId: string, academicYearId: string, academicUnitId?: string) {
-    const [structures, students, paidGroups] = await Promise.all([
+    const [structures, students, legacyPaidGroups, v2PaidGroups] = await Promise.all([
       this.prisma.feeStructure.findMany({ where: { institutionId, academicYearId, deletedAt: null, ...(academicUnitId ? { academicUnitId } : {}) }, select: { academicUnitId: true, amount: true } }),
       this.prisma.student.findMany({ where: { institutionId, deletedAt: null, status: 'active', ...(academicUnitId ? { academicUnitId } : {}) }, select: { id: true, firstName: true, lastName: true, admissionNo: true, academicUnitId: true } }),
       this.prisma.feePayment.groupBy({ by: ['studentId'], where: { institutionId, academicYearId }, _sum: { amount: true } }),
+      this.prisma.feeCollection.groupBy({ by: ['studentId'], where: { institutionId, academicYearId }, _sum: { amount: true } }),
     ]);
     const dueByUnit = new Map<string, number>();
     for (const st of structures) dueByUnit.set(st.academicUnitId, (dueByUnit.get(st.academicUnitId) ?? 0) + st.amount);
-    const paidByStudent = new Map<string, number>(paidGroups.map((g) => [g.studentId, g._sum.amount ?? 0]));
+    // Combine payments from both legacy and V2 systems
+    const paidByStudent = new Map<string, number>();
+    for (const g of legacyPaidGroups) paidByStudent.set(g.studentId, (paidByStudent.get(g.studentId) ?? 0) + (g._sum.amount ?? 0));
+    for (const g of v2PaidGroups) paidByStudent.set(g.studentId, (paidByStudent.get(g.studentId) ?? 0) + (g._sum.amount ?? 0));
     return students.map((s) => {
       const due = dueByUnit.get(s.academicUnitId ?? '') ?? 0;
       if (due === 0) return null;
@@ -655,21 +673,30 @@ export class FeesService {
     if (!dto.items.length) throw new BadRequestException('No items provided');
     const currentYear = await this.prisma.academicYear.findFirst({ where: { institutionId, isCurrent: true }, select: { id: true } });
 
-    return this.prisma.$transaction(async (tx) => {
-      const baseCount = await tx.feeCollection.count({ where: { institutionId } });
-      const rcpYear = new Date().getFullYear();
-      const results: Awaited<ReturnType<typeof tx.feeCollection.create>>[] = [];
-      for (let i = 0; i < dto.items.length; i++) {
-        const item = dto.items[i];
-        const receiptNo = `FRC-${rcpYear}-${String(baseCount + i + 1).padStart(5, '0')}`;
-        const coll = await tx.feeCollection.create({
-          data: { institutionId, studentId: dto.studentId, feePlanItemId: item.feePlanItemId, feePlanInstallmentId: item.feePlanInstallmentId, feeCategoryId: item.feeCategoryId, academicYearId: dto.academicYearId ?? currentYear?.id, amount: item.amount, paymentMode: dto.paymentMode, receiptNo, paidOn: new Date(dto.paidOn), remarks: dto.remarks, collectedByUserId },
-          include: { feeCategory: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
-        });
-        results.push(coll);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const baseCount = await tx.feeCollection.count({ where: { institutionId } });
+          const rcpYear = new Date().getFullYear();
+          const results: Awaited<ReturnType<typeof tx.feeCollection.create>>[] = [];
+          for (let i = 0; i < dto.items.length; i++) {
+            const item = dto.items[i];
+            const receiptNo = `FRC-${rcpYear}-${String(baseCount + i + 1).padStart(5, '0')}`;
+            const coll = await tx.feeCollection.create({
+              data: { institutionId, studentId: dto.studentId, feePlanItemId: item.feePlanItemId, feePlanInstallmentId: item.feePlanInstallmentId, feeCategoryId: item.feeCategoryId, academicYearId: dto.academicYearId ?? currentYear?.id, amount: item.amount, paymentMode: dto.paymentMode, receiptNo, paidOn: new Date(dto.paidOn), remarks: dto.remarks, collectedByUserId },
+              include: { feeCategory: true, student: { select: { firstName: true, lastName: true, admissionNo: true } } },
+            });
+            results.push(coll);
+          }
+          return { collections: results, totalCollected: dto.items.reduce((s, i) => s + i.amount, 0), student };
+        }, { timeout: 15000, maxWait: 10000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (e: any) {
+        if ((e?.code === 'P2034' || e?.code === 'P2002') && attempt < 4) continue;
+        if (e?.code === 'P2002') throw new ConflictException('Receipt number conflict — please retry');
+        throw e;
       }
-      return { collections: results, totalCollected: dto.items.reduce((s, i) => s + i.amount, 0), student };
-    }, { timeout: 15000, maxWait: 10000 });
+    }
+    throw new ConflictException('Receipt number conflict — please retry');
   }
 
   async getStudentCollections(institutionId: string, studentId: string, parentUserId?: string) {

@@ -57,11 +57,7 @@ export class EmailService {
       this.logger.log(`[EmailService] Reset OTP sent → ${email}`);
     } catch (err) {
       this.logger.error(
-        `[EmailService] Send failed for ${email}: ${(err as Error).message}`,
-      );
-      // Log OTP as emergency fallback so an admin can relay it manually
-      this.logger.warn(
-        `[EMAIL-FALLBACK] Reset OTP for ${email}: ${otp} (email delivery failed)`,
+        `[EmailService] Send failed for ${email}: ${(err as Error).message} — user must retry`,
       );
     }
   }

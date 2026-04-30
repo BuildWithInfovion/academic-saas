@@ -10,6 +10,7 @@ export interface JwtPayload {
   institutionId: string;
   roles: string[];
   permissions: string[];
+  purpose?: string;
 }
 
 // Cache user session data for 60 seconds.
@@ -40,6 +41,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     if (!payload?.sub || !payload?.institutionId) {
       throw new UnauthorizedException('Invalid token payload');
+    }
+
+    // Reject intermediate TOTP pending tokens — they must not authenticate routes
+    if (payload.purpose === 'totp_pending') {
+      throw new UnauthorizedException('Two-factor authentication required');
     }
 
     const cacheKey = `user-session:${payload.sub}:${payload.institutionId}`;
