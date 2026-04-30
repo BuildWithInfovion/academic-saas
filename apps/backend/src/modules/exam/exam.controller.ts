@@ -136,6 +136,17 @@ export class ExamController {
     );
   }
 
+  // GET /exams/:id/class-report-cards?unitId=xxx — batch scorecards for printing
+  @Get(':id/class-report-cards')
+  @Permissions('exams.read')
+  getClassReportCards(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('unitId') unitId: string,
+  ) {
+    return this.examService.getClassReportCards(req.tenant?.institutionId, id, unitId);
+  }
+
   @Get(':id/admit-card/:studentId')
   @Permissions('exams.read')
   getAdmitCard(

@@ -213,7 +213,7 @@ export class FeesService {
     ]);
     const todayTotal = (todayLegacy._sum.amount ?? 0) + (todayV2._sum.amount ?? 0);
     const monthTotal = (monthLegacy._sum.amount ?? 0) + (monthV2._sum.amount ?? 0);
-    return { todayTotal, monthTotal, totalStudents: studentCount };
+    return { todayTotal, monthTotal, totalStudents: studentCount, totalDue: 0 };
   }
 
   async getDefaulters(institutionId: string, academicYearId: string, academicUnitId?: string) {

@@ -64,20 +64,22 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
     const now = new Date();
-    Promise.all([
+    Promise.allSettled([
       apiFetch('/students/count'),
       apiFetch('/academic/years'),
       apiFetch('/fees/payments/summary'),
       apiFetch('/fees/payments/monthly-trend?months=6'),
       apiFetch(`/attendance/class-summary?year=${now.getFullYear()}&month=${now.getMonth() + 1}`),
     ]).then(([s, y, fs, tr, cs]) => {
-      setStats(s as Stats);
-      const years: AcademicYear[] = Array.isArray(y) ? y : ((y as { data?: AcademicYear[] }).data ?? []);
-      setCurrentYear(years.find((yr) => yr.isCurrent) ?? null);
-      setFeeSummary(fs as FeeSummary);
-      setTrend(Array.isArray(tr) ? tr : []);
-      setClassStat(Array.isArray(cs) ? cs.slice(0, 10) : []);
-    }).catch(() => {});
+      if (s.status === 'fulfilled') setStats(s.value as Stats);
+      if (y.status === 'fulfilled') {
+        const years: AcademicYear[] = Array.isArray(y.value) ? y.value : ((y.value as { data?: AcademicYear[] }).data ?? []);
+        setCurrentYear(years.find((yr) => yr.isCurrent) ?? null);
+      }
+      if (fs.status === 'fulfilled') setFeeSummary(fs.value as FeeSummary);
+      if (tr.status === 'fulfilled') setTrend(Array.isArray(tr.value) ? tr.value : []);
+      if (cs.status === 'fulfilled') setClassStat(Array.isArray(cs.value) ? cs.value.slice(0, 10) : []);
+    });
   }, [isAuthenticated]);
 
   if (!isAuthenticated) return <div className="min-h-screen flex items-center justify-center"><p style={{ color: 'var(--text-3)' }}>Redirecting…</p></div>;

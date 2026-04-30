@@ -89,6 +89,9 @@ model Institution {
   feeCollections         FeeCollection[]   @relation("InstitutionFeeCollections")
   feeConcessions         FeeConcession[]   @relation("InstitutionFeeConcessions")
 
+  // Messaging
+  conversations          Conversation[]
+
   @@map("institutions")
 }
 
@@ -191,6 +194,7 @@ model Student {
   documents             StudentDocument[]
   feeCollections        FeeCollection[]   @relation("StudentFeeCollections")
   feeConcessions        FeeConcession[]   @relation("StudentFeeConcessions")
+  conversations         Conversation[]
 
   @@unique([institutionId, admissionNo])
   @@index([institutionId])
@@ -327,6 +331,11 @@ model User {
   staffProfile          StaffProfile?
   feeCollections        FeeCollection[]   @relation("FeeCollectionCollector")
   approvedConcessions   FeeConcession[]   @relation("FeeConcessionsApprover")
+
+  // Messaging
+  parentConversations   Conversation[] @relation("ParentConversations")
+  teacherConversations  Conversation[] @relation("TeacherConversations")
+  sentMessages          Message[]      @relation("SentMessages")
 
   @@index([institutionId])
   @@index([email])                      // login lookups — auth.service queries by email
@@ -1312,4 +1321,47 @@ model FeeCollection {
   @@index([academicYearId])
   @@index([feePlanInstallmentId])
   @@map("fee_collections")
+}
+
+// ── MESSAGING ─────────────────────────────────────────────────────────────────
+// Parent-teacher direct messaging. One conversation per parent-teacher-student
+// combination. Messages are fetched by polling (no WebSocket required).
+
+model Conversation {
+  id              String   @id @default(cuid())
+  institutionId   String
+  parentUserId    String
+  teacherUserId   String
+  studentId       String?
+  subject         String?  // optional topic, e.g. "Homework query"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  parentUser      User        @relation("ParentConversations", fields: [parentUserId], references: [id])
+  teacherUser     User        @relation("TeacherConversations", fields: [teacherUserId], references: [id])
+  student         Student?    @relation(fields: [studentId], references: [id])
+  messages        Message[]
+
+  @@unique([institutionId, parentUserId, teacherUserId, studentId])
+  @@index([institutionId])
+  @@index([parentUserId])
+  @@index([teacherUserId])
+  @@map("conversations")
+}
+
+model Message {
+  id              String   @id @default(cuid())
+  conversationId  String
+  senderId        String
+  content         String
+  readAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User         @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("messages")
 }

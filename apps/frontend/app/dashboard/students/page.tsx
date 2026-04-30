@@ -208,7 +208,8 @@ export default function StudentsPage() {
     try {
       const res = await apiFetch(`/students?page=${p}&limit=${PAGE_SIZE}`) as any;
       setStudents(res.data || res || []);
-      if (res.total !== undefined) setTotalStudents(res.total);
+      const total = res.meta?.total ?? res.total;
+      if (total !== undefined) setTotalStudents(total);
     } catch (err: any) {
       setError(err.message || 'Failed to load students');
     } finally {
@@ -218,22 +219,29 @@ export default function StudentsPage() {
 
   useEffect(() => {
     if (!isReady || !user?.institutionId) return;
-    Promise.all([
+    Promise.allSettled([
       apiFetch(`/students?page=${page}&limit=${PAGE_SIZE}`),
       apiFetch('/academic/units/classes'),
       apiFetch('/academic/years'),
       apiFetch('/fees/heads'),
     ]).then(([s, u, y, fh]) => {
-      const sr = s as any;
-      setStudents(sr.data || sr || []);
-      if (sr.total !== undefined) setTotalStudents(sr.total);
-      setAcademicUnits(Array.isArray(u) ? u : []);
-      const years: AcademicYear[] = Array.isArray(y) ? y : [];
-      setAcademicYears(years);
-      const cur = years.find((yr) => yr.isCurrent);
-      if (cur) setCurrentYearId(cur.id);
-      setFeeHeads(Array.isArray(fh) ? fh : []);
-    }).catch(() => {}).finally(() => setLoading(false));
+      if (s.status === 'fulfilled') {
+        const sr = s.value as any;
+        setStudents(sr.data || sr || []);
+        const total = sr.meta?.total ?? sr.total;
+        if (total !== undefined) setTotalStudents(total);
+      } else {
+        setError(s.reason?.message || 'Failed to load students');
+      }
+      if (u.status === 'fulfilled') setAcademicUnits(Array.isArray(u.value) ? u.value : []);
+      if (y.status === 'fulfilled') {
+        const years: AcademicYear[] = Array.isArray(y.value) ? y.value : [];
+        setAcademicYears(years);
+        const cur = years.find((yr) => yr.isCurrent);
+        if (cur) setCurrentYearId(cur.id);
+      }
+      if (fh.status === 'fulfilled') setFeeHeads(Array.isArray(fh.value) ? fh.value : []);
+    }).finally(() => setLoading(false));
   }, [isReady, user?.institutionId, page]);
 
   const resetForm = () => {

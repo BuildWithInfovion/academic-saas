@@ -67,6 +67,7 @@ const menuGroups = [
     label: 'Finance & Staff',
     items: [
       { label: 'Fees',              path: '/dashboard/fees',              icon: 'fees'      },
+      { label: 'Report Cards',      path: '/dashboard/report-cards',      icon: 'cert'      },
       { label: 'Staff',             path: '/dashboard/staff',             icon: 'staff'     },
       { label: 'Staff Attendance',  path: '/dashboard/staff-attendance',  icon: 'staff_att' },
       { label: 'Staff Salaries',    path: '/dashboard/salary',            icon: 'salary'    },

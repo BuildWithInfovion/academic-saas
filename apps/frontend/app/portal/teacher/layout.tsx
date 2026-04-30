@@ -9,6 +9,7 @@ const menuItems = [
   { label: 'Mark Entry',     path: '/portal/teacher/marks' },
   { label: 'Timetable',      path: '/portal/teacher/timetable' },
   { label: 'Promote',        path: '/portal/teacher/promote' },
+  { label: 'Messages',       path: '/portal/teacher/messages' },
   { label: 'Calendar',       path: '/portal/teacher/calendar' },
   { label: 'My Attendance',  path: '/portal/teacher/staff-attendance' },
   { label: 'Announcements',  path: '/portal/teacher/announcements' },

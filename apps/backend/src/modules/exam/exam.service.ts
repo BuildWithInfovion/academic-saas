@@ -749,6 +749,61 @@ export class ExamService {
 
   // ── Admit Card ────────────────────────────────────────────────────────────
 
+  // Batch: all student scorecards for a class (for report card print)
+  async getClassReportCards(institutionId: string, examId: string, academicUnitId: string) {
+    const [exam, students, examSubjects, allResults, institution, rankData] = await Promise.all([
+      this.prisma.exam.findFirst({
+        where: { id: examId, institutionId, deletedAt: null },
+        include: { academicYear: { select: { name: true } } },
+      }),
+      this.prisma.student.findMany({
+        where: { institutionId, academicUnitId, deletedAt: null, status: 'active' },
+        select: { id: true, firstName: true, lastName: true, admissionNo: true, rollNo: true, academicUnit: { select: { name: true, displayName: true } } },
+        orderBy: { firstName: 'asc' },
+      }),
+      this.prisma.examSubject.findMany({
+        where: { examId, academicUnitId },
+        include: { subject: { select: { id: true, name: true } } },
+      }),
+      this.prisma.examResult.findMany({ where: { institutionId, examId, academicUnitId } }),
+      this.prisma.institution.findUnique({
+        where: { id: institutionId },
+        select: { name: true, board: true, address: true, phone: true, email: true, logoUrl: true, stampUrl: true, signatureUrl: true, principalName: true, affiliationNo: true, udiseCode: true, gstin: true },
+      }),
+      this.getRankData(institutionId, examId, academicUnitId),
+    ]);
+
+    if (!exam) throw new NotFoundException('Exam not found');
+
+    const totalMax = examSubjects.reduce((s, es) => s + es.maxMarks, 0);
+
+    return students.map((student) => {
+      const rows = examSubjects.map((es) => {
+        const result = allResults.find((r) => r.studentId === student.id && r.subjectId === es.subjectId);
+        const marks = result?.marksObtained ?? null;
+        const absent = result?.isAbsent ?? false;
+        const passed = absent ? false : marks !== null ? marks >= es.passingMarks : null;
+        return { subject: es.subject.name, maxMarks: es.maxMarks, marksObtained: absent ? 'AB' : marks !== null ? marks : '—', passed, remarks: result?.remarks };
+      });
+      const numeric = rows.filter((r) => typeof r.marksObtained === 'number');
+      const totalObtained = numeric.reduce((s, r) => s + (r.marksObtained as number), 0);
+      const percentage = totalMax > 0 ? Math.round((totalObtained / totalMax) * 100 * 10) / 10 : 0;
+      const rank = rankData.findIndex((r) => r.studentId === student.id) + 1;
+      return {
+        student,
+        exam: { id: exam.id, name: exam.name, academicYear: exam.academicYear.name },
+        institution,
+        rows,
+        totalMax,
+        totalObtained,
+        percentage,
+        grade: this.getGrade(percentage),
+        rank,
+        totalStudents: students.length,
+      };
+    });
+  }
+
   async getAdmitCard(
     institutionId: string,
     examId: string,

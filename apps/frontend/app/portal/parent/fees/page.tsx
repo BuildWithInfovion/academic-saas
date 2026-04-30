@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
+
+declare global { interface Window { Razorpay: any } }
 
 type Institution = { name: string; board?: string; address?: string; phone?: string; email?: string; logoUrl?: string; principalName?: string };
 
@@ -70,6 +72,94 @@ export default function ParentFeesPage() {
   const [institution, setInstitution] = useState<Institution>({ name: user?.institutionName ?? 'School' });
   const [childDues, setChildDues] = useState<ChildDue[]>([]);
   const [activeTab, setActiveTab] = useState<'ledger' | 'history'>('ledger');
+
+  // Razorpay
+  const [payConfig, setPayConfig] = useState<{ enabled: boolean; keyId: string | null } | null>(null);
+  const [payingInstId, setPayingInstId] = useState<string | null>(null);
+  const [payError, setPayError] = useState('');
+  const rzpScriptRef = useRef(false);
+
+  // Load Razorpay SDK and payment config
+  useEffect(() => {
+    apiFetch('/payments/config').then((cfg: any) => setPayConfig(cfg)).catch(() => {});
+    if (!rzpScriptRef.current && typeof window !== 'undefined') {
+      rzpScriptRef.current = true;
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  const refreshLedger = () => {
+    if (!selectedChildId || !yearId) return;
+    Promise.all([
+      apiFetch(`/fees/ledger/student/${selectedChildId}?yearId=${yearId}`),
+      apiFetch(`/fees/collections/student/${selectedChildId}`),
+    ]).then(([ldg, hist]) => {
+      setLedger(ldg as Ledger);
+      const payments = (hist as any)?.payments ?? [];
+      setHistory(payments);
+      setHistTotal((hist as any)?.total ?? 0);
+    }).catch(() => {});
+  };
+
+  const payOnline = async (item: LedgerItem, inst: LedgerInstallment) => {
+    if (!payConfig?.enabled || !payConfig.keyId || !selectedChildId) return;
+    setPayingInstId(inst.id);
+    setPayError('');
+    try {
+      const order: any = await apiFetch('/payments/razorpay/order', {
+        method: 'POST',
+        body: JSON.stringify({ studentId: selectedChildId, amount: inst.balance }),
+      });
+      const options = {
+        key: payConfig.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: institution.name,
+        description: `${item.categoryName} – ${inst.label}`,
+        order_id: order.orderId,
+        handler: async (response: any) => {
+          try {
+            await apiFetch('/payments/razorpay/verify', {
+              method: 'POST',
+              body: JSON.stringify({
+                studentId: selectedChildId,
+                academicYearId: yearId,
+                items: [{
+                  feePlanInstallmentId: inst.id,
+                  feePlanItemId: item.feePlanItemId,
+                  feeCategoryId: item.feeCategoryId,
+                  amount: inst.balance,
+                }],
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
+            refreshLedger();
+          } catch (e: any) {
+            setPayError(e.message || 'Payment verified but recording failed. Contact school.');
+          } finally {
+            setPayingInstId(null);
+          }
+        },
+        modal: { ondismiss: () => setPayingInstId(null) },
+        prefill: { name: user?.name },
+        theme: { color: '#ae5525' },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (r: any) => {
+        setPayError(r?.error?.description || 'Payment failed. Please try again.');
+        setPayingInstId(null);
+      });
+      rzp.open();
+    } catch (e: any) {
+      setPayError(e.message || 'Could not initiate payment.');
+      setPayingInstId(null);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -198,6 +288,13 @@ export default function ParentFeesPage() {
         </div>
       )}
 
+      {payError && (
+        <div className="mb-4 rounded-xl p-3 text-sm bg-red-50 text-red-700 border border-red-200 flex items-center justify-between">
+          <span>{payError}</span>
+          <button onClick={() => setPayError('')} className="ml-3 text-xs underline">Dismiss</button>
+        </div>
+      )}
+
       {loading ? (
         <p className="py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>Loading…</p>
       ) : (
@@ -271,11 +368,13 @@ export default function ParentFeesPage() {
                             <th className="text-right px-5 py-2.5 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Paid</th>
                             <th className="text-right px-5 py-2.5 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Balance</th>
                             <th className="px-5 py-2.5 text-xs font-medium" style={{ color: 'var(--text-2)' }}>Status</th>
+                            {payConfig?.enabled && <th className="px-5 py-2.5" />}
                           </tr>
                         </thead>
                         <tbody>
                           {item.installments.map((inst) => {
                             const chip = STATUS_CHIP[inst.status] ?? STATUS_CHIP.due;
+                            const canPay = payConfig?.enabled && inst.balance > 0 && inst.status !== 'paid';
                             return (
                               <tr key={inst.id} className="border-b" style={{ borderColor: 'var(--border)' }}>
                                 <td className="px-5 py-3">
@@ -297,6 +396,20 @@ export default function ParentFeesPage() {
                                     {chip.label}
                                   </span>
                                 </td>
+                                {payConfig?.enabled && (
+                                  <td className="px-5 py-3 text-right">
+                                    {canPay && (
+                                      <button
+                                        onClick={() => payOnline(item, inst)}
+                                        disabled={payingInstId === inst.id}
+                                        className="text-xs font-medium px-3 py-1.5 rounded-lg text-white disabled:opacity-50"
+                                        style={{ background: '#ae5525' }}
+                                      >
+                                        {payingInstId === inst.id ? 'Processing…' : 'Pay Online'}
+                                      </button>
+                                    )}
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
