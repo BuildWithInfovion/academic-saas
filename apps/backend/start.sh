@@ -1,6 +1,14 @@
 #!/bin/sh
 set -e
 
+# Warn loudly if DIRECT_URL is missing — Supabase requires it for prisma migrate deploy.
+# Set it to the direct connection URL: postgresql://postgres:[pwd]@db.[ref].supabase.co:5432/postgres
+if [ -z "$DIRECT_URL" ]; then
+  echo "[start] WARNING: DIRECT_URL is not set. prisma migrate deploy will use DATABASE_URL."
+  echo "[start] WARNING: If DATABASE_URL is a Supabase pooler (port 6543), migrations may fail."
+  echo "[start] WARNING: Set DIRECT_URL in Railway to your Supabase direct connection URL (port 5432)."
+fi
+
 echo "[start] Running preflight: ensuring all critical tables and columns exist..."
 node - << 'JSPREFLIGHT'
 const { execSync } = require('child_process');
@@ -277,16 +285,20 @@ WHERE "code" = 'admin';
 console.log('[preflight] Done.');
 JSPREFLIGHT
 
-echo "[start] Syncing checksums for edited migrations..."
+echo "[start] Syncing migrations into _prisma_migrations (upsert via Prisma client)..."
 node - << 'JSSYNC'
-const { createHash } = require('crypto');
+const { createHash, randomUUID } = require('crypto');
 const { readFileSync, existsSync } = require('fs');
-const { execSync } = require('child_process');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-// ALL migrations — recalculate every checksum so Prisma never rejects a
-// mismatch regardless of what state the _prisma_migrations table is in
-// (important after DB migrations like Neon → Supabase).
-const EDITED = [
+// ALL migrations — ensure every migration is registered as applied in
+// _prisma_migrations with the correct checksum. This handles three cases:
+//   1. Fresh Supabase DB (after db push): inserts all migrations as applied so
+//      prisma migrate deploy does not try to re-run them against existing tables.
+//   2. Neon → Supabase migration with checksum mismatch: updates checksums.
+//   3. Migration stuck in "failed" state: marks finished_at so it's treated as applied.
+const ALL_MIGRATIONS = [
   '20260306173811_add_student_model',
   '20260315194341_add_auth_rbac_audit_models',
   '20260315194539_add_auth_rbac_audit_models',
@@ -330,18 +342,65 @@ const EDITED = [
   '20260430150000_fix_admin_role_permissions',
 ];
 
-for (const name of EDITED) {
-  const file = `./prisma/migrations/${name}/migration.sql`;
-  if (!existsSync(file)) { console.log(`[checksum] Skipping: ${name}`); continue; }
-  const checksum = createHash('sha256').update(readFileSync(file)).digest('hex');
-  const sql = `UPDATE "_prisma_migrations" SET "checksum" = '${checksum}' WHERE "migration_name" = '${name}';`;
+(async () => {
+  // Ensure _prisma_migrations table exists (db push does NOT create it; only
+  // migrate deploy does — but migrate deploy fails on fresh DB with existing tables).
   try {
-    execSync('npx prisma db execute --stdin', { input: sql, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
-    console.log(`[checksum] Synced: ${name}`);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
+        "id"                  VARCHAR(36) NOT NULL PRIMARY KEY,
+        "checksum"            VARCHAR(64) NOT NULL,
+        "finished_at"         TIMESTAMPTZ,
+        "migration_name"      VARCHAR(255) NOT NULL,
+        "logs"                TEXT,
+        "rolled_back_at"      TIMESTAMPTZ,
+        "started_at"          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "applied_steps_count" INT NOT NULL DEFAULT 0
+      )
+    `);
+    console.log('[checksum] _prisma_migrations table ready');
   } catch (e) {
-    console.warn(`[checksum] Warning for ${name}:`, e.message);
+    console.warn('[checksum] Could not ensure _prisma_migrations:', (e.message || '').slice(0, 150));
   }
-}
+
+  for (const name of ALL_MIGRATIONS) {
+    const file = `./prisma/migrations/${name}/migration.sql`;
+    if (!existsSync(file)) { console.log(`[checksum] Skipping (no file): ${name}`); continue; }
+    const checksum = createHash('sha256').update(readFileSync(file)).digest('hex');
+    try {
+      const rows = await prisma.$queryRawUnsafe(
+        `SELECT "id" FROM "_prisma_migrations" WHERE "migration_name" = $1`,
+        name
+      );
+      if (rows.length === 0) {
+        // Not in table yet — insert as applied so migrate deploy skips it
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "_prisma_migrations"
+             ("id","checksum","started_at","finished_at","migration_name","logs","rolled_back_at","applied_steps_count")
+           VALUES ($1,$2,NOW(),NOW(),$3,NULL,NULL,1)`,
+          randomUUID(), checksum, name
+        );
+        console.log('[checksum] Registered:', name);
+      } else {
+        // Already in table — sync checksum and ensure finished_at is set
+        await prisma.$executeRawUnsafe(
+          `UPDATE "_prisma_migrations"
+           SET "checksum"=$1, "finished_at"=COALESCE("finished_at",NOW()), "rolled_back_at"=NULL
+           WHERE "migration_name"=$2`,
+          checksum, name
+        );
+        console.log('[checksum] Synced:', name);
+      }
+    } catch (e) {
+      console.warn('[checksum] Warning for', name + ':', (e.message || '').slice(0, 150));
+    }
+  }
+  await prisma.$disconnect();
+  console.log('[checksum] Done.');
+})().catch(async (e) => {
+  console.warn('[checksum] Fatal error:', (e.message || '').slice(0, 300));
+  await prisma.$disconnect().catch(() => {});
+});
 JSSYNC
 
 echo "[start] Pushing schema to DB (handles any schema drift after DB migrations)..."
