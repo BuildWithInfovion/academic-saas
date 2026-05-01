@@ -43,6 +43,8 @@ ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousClass"            TEXT;
 ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousBoard"            TEXT;
 ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousMarks"            TEXT;
 ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "medicalConditions"        TEXT;
+ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "address"                  TEXT;
+ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "siblingGroupId"           TEXT;
 `);
 
 // ── 2. Institution branding + compliance + bank columns ───────────────────────
