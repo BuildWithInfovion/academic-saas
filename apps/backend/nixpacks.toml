@@ -11,4 +11,4 @@ cmds = [
 ]
 
 [start]
-cmd = "node dist/src/main"
+cmd = "node dist/main"
