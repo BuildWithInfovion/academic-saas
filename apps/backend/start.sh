@@ -283,12 +283,51 @@ const { createHash } = require('crypto');
 const { readFileSync, existsSync } = require('fs');
 const { execSync } = require('child_process');
 
+// ALL migrations — recalculate every checksum so Prisma never rejects a
+// mismatch regardless of what state the _prisma_migrations table is in
+// (important after DB migrations like Neon → Supabase).
 const EDITED = [
+  '20260306173811_add_student_model',
+  '20260315194341_add_auth_rbac_audit_models',
+  '20260315194539_add_auth_rbac_audit_models',
+  '20260403200244_add_refresh_tokens',
+  '20260406100501_admission_fields',
+  '20260406102205_academic_unit',
+  '20260406170021_add_address_sibling_academic_year',
+  '20260406170602_add_inquiry',
+  '20260406172549_add_student_demographics',
+  '20260406211252_add_subjects_attendance_fees_exams',
+  '20260406212208_add_exam_result_subject_relation',
+  '20260408000000_add_class_teacher_to_unit',
+  '20260408010000_add_timetable_slots',
+  '20260408020000_subject_teacher_relation',
+  '20260408030000_add_password_reset_requests',
+  '20260408050000_add_platform_admin_subscription',
   '20260410000000_add_institution_profile_fields',
+  '20260412000000_fix_institution_profile_columns',
+  '20260412010000_add_announcements_staff_tables',
   '20260413000000_update_roles_add_accountant_staff',
+  '20260413100000_soft_delete_exam_announcement_feestructure',
+  '20260413150000_add_parent_user_id_to_students',
+  '20260414000000_add_perf_indexes',
+  '20260414100000_platform_admin_last_login',
+  '20260414110000_add_user_id_to_students',
+  '20260417000000_add_support_tickets',
+  '20260418000000_add_calendar_events',
+  '20260418100000_platform_security_hardening',
+  '20260418110000_platform_session_emails',
+  '20260421000000_totp_email_reset_auth',
+  '20260428000000_add_student_documents',
+  '20260428010000_add_name_to_users',
+  '20260428020000_fix_schema_drift',
+  '20260428030000_fix_full_schema_drift',
+  '20260429000000_extend_student_admission_fields',
+  '20260429010000_institution_profile_extended',
   '20260429020000_staff_profile',
   '20260429030000_fee_plan_system',
+  '20260430060000_institution_extended_profile',
   '20260430120000_messaging',
+  '20260430150000_fix_admin_role_permissions',
 ];
 
 for (const name of EDITED) {
