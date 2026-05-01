@@ -103,9 +103,9 @@ const DEFAULT_ROLES = [
 ];
 
 const SCHOOL_CLASSES = [
+  { name: 'nursery',  displayName: 'Nursery' },
   { name: 'lkg',      displayName: 'LKG' },
   { name: 'ukg',      displayName: 'UKG' },
-  { name: 'kg',       displayName: 'KG' },
   { name: 'class_1',  displayName: 'Class 1' },
   { name: 'class_2',  displayName: 'Class 2' },
   { name: 'class_3',  displayName: 'Class 3' },
@@ -118,6 +118,13 @@ const SCHOOL_CLASSES = [
   { name: 'class_10', displayName: 'Class 10' },
   { name: 'class_11', displayName: 'Class 11' },
   { name: 'class_12', displayName: 'Class 12' },
+];
+
+const PRE_SCHOOL_CLASSES = [
+  { name: 'playgroup', displayName: 'Play Group' },
+  { name: 'nursery',   displayName: 'Nursery' },
+  { name: 'lkg',       displayName: 'LKG / Junior KG' },
+  { name: 'ukg',       displayName: 'UKG / Senior KG' },
 ];
 
 @Injectable()
@@ -613,6 +620,14 @@ export class PlatformService {
     // exceed Prisma's 5 s default. maxWait=10s covers connection-pool wait.
     const { institution, operatorUser, subscription } =
       await this.prisma.$transaction(async (tx) => {
+        // Build address from city + state + street components
+        const addressParts = [
+          dto.institutionAddress,
+          dto.city,
+          dto.state,
+        ].filter((p) => p && p.trim());
+        const fullAddress = addressParts.length ? addressParts.join(', ') : null;
+
         const inst = await tx.institution.create({
           data: {
             name: dto.name,
@@ -620,6 +635,18 @@ export class PlatformService {
             planCode: dto.planCode,
             institutionType: dto.institutionType,
             status: 'active',
+            // Contact
+            phone: dto.institutionPhone || null,
+            email: dto.institutionEmail || null,
+            website: dto.website || null,
+            address: fullAddress,
+            // Education profile
+            board: dto.board || null,
+            affiliationNo: dto.affiliationNo || null,
+            mediumOfInstruction: dto.mediumOfInstruction || null,
+            schoolType: dto.schoolGenderType || null,
+            managementType: dto.managementType || null,
+            foundedYear: dto.foundedYear || null,
           },
         });
 
@@ -716,9 +743,14 @@ export class PlatformService {
           },
         });
 
-        if (dto.institutionType === 'school') {
+        const classesToSeed =
+          dto.institutionType === 'school'     ? SCHOOL_CLASSES :
+          dto.institutionType === 'pre_school' ? PRE_SCHOOL_CLASSES :
+          null;
+
+        if (classesToSeed) {
           await tx.academicUnit.createMany({
-            data: SCHOOL_CLASSES.map((cls) => ({
+            data: classesToSeed.map((cls) => ({
               institutionId:  inst.id,
               academicYearId: academicYear.id,
               name:           cls.name,

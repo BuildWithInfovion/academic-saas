@@ -409,5 +409,37 @@ npx prisma db push --skip-generate --accept-data-loss || echo "[start] WARN: db 
 echo "[start] Applying pending migrations..."
 npx prisma migrate deploy || echo "[start] WARN: migrate deploy returned non-zero — continuing"
 
+echo "[start] Seeding platform admins (idempotent)..."
+node - << 'JSSEED'
+const bcrypt = require('bcrypt');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+const ADMINS = [
+  { email: 'sankalp.deshpande@infovion.in', name: 'Sankalp Deshpande', password: 'Infovion@Admin1' },
+  { email: 'pratik.gore@infovion.in',        name: 'Pratik Gore',       password: 'Infovion@Admin2' },
+];
+
+(async () => {
+  for (const admin of ADMINS) {
+    try {
+      const existing = await prisma.platformAdmin.findUnique({ where: { email: admin.email } });
+      if (existing) { console.log('[seed] Already exists:', admin.email); continue; }
+      const passwordHash = await bcrypt.hash(admin.password, 12);
+      await prisma.platformAdmin.create({
+        data: { email: admin.email, name: admin.name, passwordHash, isActive: true },
+      });
+      console.log('[seed] Created platform admin:', admin.email);
+    } catch (e) {
+      console.warn('[seed] Warning for', admin.email + ':', (e.message || '').slice(0, 150));
+    }
+  }
+  await prisma.$disconnect();
+})().catch(async (e) => {
+  console.warn('[seed] Fatal:', (e.message || '').slice(0, 300));
+  await prisma.$disconnect().catch(() => {});
+});
+JSSEED
+
 echo "[start] Starting application..."
 exec node dist/src/main
