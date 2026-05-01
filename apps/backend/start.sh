@@ -23,60 +23,105 @@ async function run(label, statements) {
 }
 
 (async () => {
-  // 1. Student columns
+  // 1. Student columns — ALL schema fields
   await run('student columns', [
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "middleName" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "placeOfBirth" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherTongue" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherOccupation" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherQualification" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherEmail" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherAadhar" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherOccupation" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherQualification" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherEmail" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherAadhar" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "annualIncome" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "isEwsCategory" BOOLEAN NOT NULL DEFAULT false`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactName" TEXT`,
+    // Core lifecycle fields (critical — used in every findMany/count query)
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "status"    TEXT NOT NULL DEFAULT 'active'`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3)`,
+    // User account linking
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "userId"     TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "parentUserId" TEXT`,
+    // Basic fields that may have been added after initial migration
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "rollNo"            TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "phone"             TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "email"             TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherName"        TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherName"        TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "parentPhone"       TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "secondaryPhone"    TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "admissionDate"     TIMESTAMP(3)`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "academicUnitId"    TEXT`,
+    // Demographic
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "nationality"       TEXT DEFAULT 'Indian'`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "religion"          TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "casteCategory"     TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "bloodGroup"        TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "aadharNumber"      TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "hasDisability"     BOOLEAN NOT NULL DEFAULT false`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "disabilityDetails" TEXT`,
+    // TC / Previous school
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "tcFromPrevious"        TEXT DEFAULT 'not_applicable'`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "tcReceivedDate"         TIMESTAMP(3)`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "tcPreviousInstitution"  TEXT`,
+    // Extended fields
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "middleName"               TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "placeOfBirth"             TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherTongue"             TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherOccupation"         TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherQualification"      TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherEmail"              TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherAadhar"             TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherOccupation"         TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherQualification"      TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherEmail"              TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherAadhar"             TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "annualIncome"             TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "isEwsCategory"            BOOLEAN NOT NULL DEFAULT false`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactName"     TEXT`,
     `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactRelation" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactPhone" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "locality" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "city" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "state" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "pinCode" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousClass" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousBoard" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousMarks" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "medicalConditions" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "address" TEXT`,
-    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "siblingGroupId" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactPhone"    TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "locality"                 TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "city"                     TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "state"                    TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "pinCode"                  TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousClass"            TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousBoard"            TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousMarks"            TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "medicalConditions"        TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "address"                  TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "siblingGroupId"           TEXT`,
   ]);
 
-  // 2. Institution columns
+  // 2. Institution columns — ALL schema fields (findMany enumerates every column)
   await run('institution columns', [
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "logoUrl" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "principalName" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "tagline" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "affiliationNo" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "udiseCode" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "gstin" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "pan" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "recognitionNo" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "foundedYear" INTEGER`,
+    // Core fields that may be missing if added after initial migration
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "status"              TEXT NOT NULL DEFAULT 'active'`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "features"            JSONB`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "address"             TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "phone"               TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "email"               TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "website"             TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "board"               TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "deletedAt"           TIMESTAMP(3)`,
+    // Extended profile fields
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "logoUrl"             TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "principalName"       TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "tagline"             TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "affiliationNo"       TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "udiseCode"           TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "gstin"               TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "pan"                 TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "recognitionNo"       TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "foundedYear"         INTEGER`,
     `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "mediumOfInstruction" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "schoolType" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "managementType" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "stampUrl" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "signatureUrl" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankName" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankAccountNo" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankIfsc" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankBranch" TEXT`,
-    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankAccountHolder" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "schoolType"          TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "managementType"      TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "stampUrl"            TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "signatureUrl"        TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankName"            TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankAccountNo"       TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankIfsc"            TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankBranch"          TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankAccountHolder"   TEXT`,
   ]);
 
-  // 3. staff_profiles
+  // 3. Users — critical columns used in every query
+  await run('user columns', [
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "name"      TEXT`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3)`,
+  ]);
+
+  // 4. staff_profiles
   await run('staff_profiles', [
     `CREATE TABLE IF NOT EXISTS "staff_profiles" (
       "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "userId" TEXT NOT NULL,
@@ -467,6 +512,9 @@ const ADMINS = [
   await prisma.$disconnect().catch(() => {});
 });
 JSSEED
+
+echo "[start] Pushing schema to DB (catches any remaining drift)..."
+npx prisma db push --skip-generate --accept-data-loss || echo "[start] WARN: db push returned non-zero — continuing"
 
 echo "[start] Starting application..."
 exec node dist/src/main
