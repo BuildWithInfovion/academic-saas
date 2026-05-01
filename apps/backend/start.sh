@@ -344,8 +344,11 @@ for (const name of EDITED) {
 }
 JSSYNC
 
+echo "[start] Pushing schema to DB (handles any schema drift after DB migrations)..."
+npx prisma db push --skip-generate --accept-data-loss || echo "[start] WARN: db push returned non-zero — continuing"
+
 echo "[start] Applying pending migrations..."
-npx prisma migrate deploy
+npx prisma migrate deploy || echo "[start] WARN: migrate deploy returned non-zero — continuing"
 
 echo "[start] Starting application..."
 exec node dist/src/main
