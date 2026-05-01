@@ -275,7 +275,35 @@ DO $$ BEGIN ALTER TABLE "messages" ADD CONSTRAINT "messages_senderId_fkey"
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 `);
 
-// ── 6. Admin role permissions ─────────────────────────────────────────────────
+// ── 6. Subscriptions table + missing columns ──────────────────────────────────
+run('subscriptions table', `
+CREATE TABLE IF NOT EXISTS "subscriptions" (
+  "id"                TEXT NOT NULL,
+  "institutionId"     TEXT NOT NULL,
+  "planName"          TEXT NOT NULL DEFAULT 'standard',
+  "maxStudents"       INTEGER NOT NULL DEFAULT 500,
+  "pricePerUser"      DOUBLE PRECISION NOT NULL DEFAULT 50,
+  "billingCycleYears" INTEGER NOT NULL DEFAULT 1,
+  "totalAmount"       DOUBLE PRECISION NOT NULL,
+  "startDate"         TIMESTAMP(3) NOT NULL,
+  "endDate"           TIMESTAMP(3) NOT NULL,
+  "status"            TEXT NOT NULL DEFAULT 'active',
+  "amountPaid"        DOUBLE PRECISION,
+  "paidAt"            TIMESTAMP(3),
+  "notes"             TEXT,
+  "createdAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "subscriptions_institutionId_key" ON "subscriptions"("institutionId");
+DO $$ BEGIN ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_institutionId_fkey"
+  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "amountPaid" DOUBLE PRECISION;
+ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "paidAt"     TIMESTAMP(3);
+`);
+
+// ── 7. Admin role permissions ─────────────────────────────────────────────────
 run('admin role permissions', `
 UPDATE "roles"
 SET "permissions" = '["users.read","users.write","users.assignRole","roles.read","students.read","students.write","fees.read","fees.write","attendance.read","attendance.write","exams.read","exams.write","subjects.read","subjects.write","academic.read","academic.write","institution.read","institution.write","inquiry.read","inquiry.write"]'::jsonb
