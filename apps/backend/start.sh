@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 echo "[start] Running schema sync: creating/altering tables via Prisma client..."
 node - << 'JSSQL'
@@ -353,8 +352,11 @@ async function run(label, statements) {
     `DO $$ BEGIN ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_institutionId_fkey"
       FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
-    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "amountPaid" DOUBLE PRECISION`,
-    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "paidAt" TIMESTAMP(3)`,
+    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "amountPaid"        DOUBLE PRECISION`,
+    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "paidAt"            TIMESTAMP(3)`,
+    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "notes"             TEXT`,
+    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "planName"          TEXT NOT NULL DEFAULT 'standard'`,
+    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "billingCycleYears" INTEGER NOT NULL DEFAULT 1`,
   ]);
 
   // 14. Admin role permissions
