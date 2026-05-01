@@ -1,317 +1,331 @@
 #!/bin/sh
 set -e
 
-# Warn loudly if DIRECT_URL is missing — Supabase requires it for prisma migrate deploy.
-# Set it to the direct connection URL: postgresql://postgres:[pwd]@db.[ref].supabase.co:5432/postgres
-if [ -z "$DIRECT_URL" ]; then
-  echo "[start] WARNING: DIRECT_URL is not set. prisma migrate deploy will use DATABASE_URL."
-  echo "[start] WARNING: If DATABASE_URL is a Supabase pooler (port 6543), migrations may fail."
-  echo "[start] WARNING: Set DIRECT_URL in Railway to your Supabase direct connection URL (port 5432)."
-fi
+echo "[start] Running schema sync: creating/altering tables via Prisma client..."
+node - << 'JSSQL'
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-echo "[start] Running preflight: ensuring all critical tables and columns exist..."
-node - << 'JSPREFLIGHT'
-const { execSync } = require('child_process');
-
-function run(label, sql) {
-  try {
-    execSync('npx prisma db execute --stdin', {
-      input: sql, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    console.log('[preflight] OK:', label);
-  } catch (e) {
-    const msg = (e.stderr || e.stdout || e.message || '').toString().slice(0, 300);
-    console.warn('[preflight] WARN (', label, '):', msg);
+async function run(label, statements) {
+  let ok = 0, warned = 0;
+  for (const sql of statements) {
+    const s = sql.trim();
+    if (!s) continue;
+    try {
+      await prisma.$executeRawUnsafe(s);
+      ok++;
+    } catch (e) {
+      console.warn('[sql] WARN (' + label + '):', (e.message || '').slice(0, 200));
+      warned++;
+    }
   }
+  console.log('[sql] ' + label + ': ' + ok + ' ok, ' + warned + ' warned');
 }
 
-// ── 1. New student columns ────────────────────────────────────────────────────
-run('student columns', `
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "middleName"               TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "placeOfBirth"             TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherTongue"             TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherOccupation"         TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherQualification"      TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherEmail"              TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherAadhar"             TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherOccupation"         TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherQualification"      TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherEmail"              TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherAadhar"             TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "annualIncome"             TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "isEwsCategory"            BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactName"     TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactRelation" TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactPhone"    TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "locality"                 TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "city"                     TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "state"                    TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "pinCode"                  TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousClass"            TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousBoard"            TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousMarks"            TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "medicalConditions"        TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "address"                  TEXT;
-ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "siblingGroupId"           TEXT;
-`);
+(async () => {
+  // 1. Student columns
+  await run('student columns', [
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "middleName" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "placeOfBirth" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherTongue" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherOccupation" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherQualification" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherEmail" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "fatherAadhar" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherOccupation" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherQualification" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherEmail" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "motherAadhar" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "annualIncome" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "isEwsCategory" BOOLEAN NOT NULL DEFAULT false`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactName" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactRelation" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "emergencyContactPhone" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "locality" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "city" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "state" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "pinCode" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousClass" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousBoard" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "previousMarks" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "medicalConditions" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "address" TEXT`,
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "siblingGroupId" TEXT`,
+  ]);
 
-// ── 2. Institution branding + compliance + bank columns ───────────────────────
-run('institution columns', `
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "logoUrl"             TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "principalName"       TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "tagline"             TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "affiliationNo"       TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "udiseCode"           TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "gstin"               TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "pan"                 TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "recognitionNo"       TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "foundedYear"         INTEGER;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "mediumOfInstruction" TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "schoolType"          TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "managementType"      TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "stampUrl"            TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "signatureUrl"        TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankName"            TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankAccountNo"       TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankIfsc"            TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankBranch"          TEXT;
-ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankAccountHolder"   TEXT;
-`);
+  // 2. Institution columns
+  await run('institution columns', [
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "logoUrl" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "principalName" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "tagline" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "affiliationNo" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "udiseCode" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "gstin" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "pan" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "recognitionNo" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "foundedYear" INTEGER`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "mediumOfInstruction" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "schoolType" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "managementType" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "stampUrl" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "signatureUrl" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankName" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankAccountNo" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankIfsc" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankBranch" TEXT`,
+    `ALTER TABLE "institutions" ADD COLUMN IF NOT EXISTS "bankAccountHolder" TEXT`,
+  ]);
 
-// ── 3. staff_profiles table ───────────────────────────────────────────────────
-run('staff_profiles table', `
-CREATE TABLE IF NOT EXISTS "staff_profiles" (
-  "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "userId" TEXT NOT NULL,
-  "employeeId" TEXT, "designation" TEXT, "department" TEXT,
-  "dateOfJoining" TIMESTAMP(3), "dateOfBirth" TIMESTAMP(3), "gender" TEXT,
-  "qualification" TEXT, "experience" TEXT, "address" TEXT, "bloodGroup" TEXT,
-  "aadharNumber" TEXT, "panNumber" TEXT, "bankAccount" TEXT, "ifscCode" TEXT,
-  "bankName" TEXT, "emergencyContactName" TEXT, "emergencyContactPhone" TEXT,
-  "photoUrl" TEXT, "notes" TEXT,
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "staff_profiles_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "staff_profiles_userId_key"        ON "staff_profiles"("userId");
-CREATE INDEX        IF NOT EXISTS "staff_profiles_institutionId_idx" ON "staff_profiles"("institutionId");
-`);
-run('staff_profiles fkeys', `
-DO $$ BEGIN ALTER TABLE "staff_profiles" ADD CONSTRAINT "staff_profiles_institutionId_fkey"
-  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "staff_profiles" ADD CONSTRAINT "staff_profiles_userId_fkey"
-  FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
+  // 3. staff_profiles
+  await run('staff_profiles', [
+    `CREATE TABLE IF NOT EXISTS "staff_profiles" (
+      "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "userId" TEXT NOT NULL,
+      "employeeId" TEXT, "designation" TEXT, "department" TEXT,
+      "dateOfJoining" TIMESTAMP(3), "dateOfBirth" TIMESTAMP(3), "gender" TEXT,
+      "qualification" TEXT, "experience" TEXT, "address" TEXT, "bloodGroup" TEXT,
+      "aadharNumber" TEXT, "panNumber" TEXT, "bankAccount" TEXT, "ifscCode" TEXT,
+      "bankName" TEXT, "emergencyContactName" TEXT, "emergencyContactPhone" TEXT,
+      "photoUrl" TEXT, "notes" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "staff_profiles_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "staff_profiles_userId_key" ON "staff_profiles"("userId")`,
+    `CREATE INDEX IF NOT EXISTS "staff_profiles_institutionId_idx" ON "staff_profiles"("institutionId")`,
+    `DO $$ BEGIN ALTER TABLE "staff_profiles" ADD CONSTRAINT "staff_profiles_institutionId_fkey"
+      FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "staff_profiles" ADD CONSTRAINT "staff_profiles_userId_fkey"
+      FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
 
-// ── 4. Fee plan tables ────────────────────────────────────────────────────────
-run('fee_categories table', `
-CREATE TABLE IF NOT EXISTS "fee_categories" (
-  "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "name" TEXT NOT NULL,
-  "type" TEXT NOT NULL DEFAULT 'CUSTOM', "deletedAt" TIMESTAMP(3),
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "fee_categories_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "fee_categories_institutionId_name_key" ON "fee_categories"("institutionId","name");
-CREATE INDEX        IF NOT EXISTS "fee_categories_institutionId_idx"      ON "fee_categories"("institutionId");
-DO $$ BEGIN ALTER TABLE "fee_categories" ADD CONSTRAINT "fee_categories_institutionId_fkey"
-  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
-run('fee_plans table', `
-CREATE TABLE IF NOT EXISTS "fee_plans" (
-  "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "academicYearId" TEXT NOT NULL,
-  "name" TEXT NOT NULL, "description" TEXT, "isActive" BOOLEAN NOT NULL DEFAULT true,
-  "deletedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "fee_plans_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "fee_plans_institutionId_name_academicYearId_key" ON "fee_plans"("institutionId","name","academicYearId");
-CREATE INDEX        IF NOT EXISTS "fee_plans_institutionId_idx"                     ON "fee_plans"("institutionId");
-CREATE INDEX        IF NOT EXISTS "fee_plans_academicYearId_idx"                    ON "fee_plans"("academicYearId");
-DO $$ BEGIN ALTER TABLE "fee_plans" ADD CONSTRAINT "fee_plans_institutionId_fkey"
-  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_plans" ADD CONSTRAINT "fee_plans_academicYearId_fkey"
-  FOREIGN KEY ("academicYearId") REFERENCES "academic_years"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
-run('fee_plan_items table', `
-CREATE TABLE IF NOT EXISTS "fee_plan_items" (
-  "id" TEXT NOT NULL, "feePlanId" TEXT NOT NULL, "feeCategoryId" TEXT NOT NULL,
-  "totalAmount" DOUBLE PRECISION NOT NULL, CONSTRAINT "fee_plan_items_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "fee_plan_items_feePlanId_feeCategoryId_key" ON "fee_plan_items"("feePlanId","feeCategoryId");
-DO $$ BEGIN ALTER TABLE "fee_plan_items" ADD CONSTRAINT "fee_plan_items_feePlanId_fkey"
-  FOREIGN KEY ("feePlanId") REFERENCES "fee_plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_plan_items" ADD CONSTRAINT "fee_plan_items_feeCategoryId_fkey"
-  FOREIGN KEY ("feeCategoryId") REFERENCES "fee_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
-run('fee_plan_installments table', `
-CREATE TABLE IF NOT EXISTS "fee_plan_installments" (
-  "id" TEXT NOT NULL, "feePlanItemId" TEXT NOT NULL, "label" TEXT NOT NULL,
-  "amount" DOUBLE PRECISION NOT NULL, "dueDate" DATE, "sortOrder" INTEGER NOT NULL DEFAULT 0,
-  CONSTRAINT "fee_plan_installments_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "fee_plan_installments_feePlanItemId_label_key" ON "fee_plan_installments"("feePlanItemId","label");
-DO $$ BEGIN ALTER TABLE "fee_plan_installments" ADD CONSTRAINT "fee_plan_installments_feePlanItemId_fkey"
-  FOREIGN KEY ("feePlanItemId") REFERENCES "fee_plan_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
-run('fee_plan_class_maps table', `
-CREATE TABLE IF NOT EXISTS "fee_plan_class_maps" (
-  "id" TEXT NOT NULL, "feePlanId" TEXT NOT NULL, "academicUnitId" TEXT NOT NULL,
-  CONSTRAINT "fee_plan_class_maps_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "fee_plan_class_maps_feePlanId_academicUnitId_key" ON "fee_plan_class_maps"("feePlanId","academicUnitId");
-DO $$ BEGIN ALTER TABLE "fee_plan_class_maps" ADD CONSTRAINT "fee_plan_class_maps_feePlanId_fkey"
-  FOREIGN KEY ("feePlanId") REFERENCES "fee_plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_plan_class_maps" ADD CONSTRAINT "fee_plan_class_maps_academicUnitId_fkey"
-  FOREIGN KEY ("academicUnitId") REFERENCES "academic_units"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
-run('fee_concessions table', `
-CREATE TABLE IF NOT EXISTS "fee_concessions" (
-  "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "studentId" TEXT NOT NULL,
-  "feePlanItemId" TEXT NOT NULL, "amount" DOUBLE PRECISION NOT NULL, "reason" TEXT NOT NULL,
-  "approvedByUserId" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "fee_concessions_pkey" PRIMARY KEY ("id")
-);
-CREATE INDEX IF NOT EXISTS "fee_concessions_institutionId_idx" ON "fee_concessions"("institutionId");
-CREATE INDEX IF NOT EXISTS "fee_concessions_studentId_idx"     ON "fee_concessions"("studentId");
-DO $$ BEGIN ALTER TABLE "fee_concessions" ADD CONSTRAINT "fee_concessions_institutionId_fkey"
-  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_concessions" ADD CONSTRAINT "fee_concessions_studentId_fkey"
-  FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_concessions" ADD CONSTRAINT "fee_concessions_feePlanItemId_fkey"
-  FOREIGN KEY ("feePlanItemId") REFERENCES "fee_plan_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_concessions" ADD CONSTRAINT "fee_concessions_approvedByUserId_fkey"
-  FOREIGN KEY ("approvedByUserId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
-run('fee_collections table', `
-CREATE TABLE IF NOT EXISTS "fee_collections" (
-  "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "studentId" TEXT NOT NULL,
-  "feePlanItemId" TEXT, "feePlanInstallmentId" TEXT, "feeCategoryId" TEXT NOT NULL,
-  "academicYearId" TEXT, "amount" DOUBLE PRECISION NOT NULL,
-  "paymentMode" TEXT NOT NULL DEFAULT 'cash', "receiptNo" TEXT NOT NULL,
-  "paidOn" DATE NOT NULL, "remarks" TEXT, "collectedByUserId" TEXT,
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "fee_collections_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "fee_collections_institutionId_receiptNo_key" ON "fee_collections"("institutionId","receiptNo");
-CREATE INDEX IF NOT EXISTS "fee_collections_institutionId_idx"        ON "fee_collections"("institutionId");
-CREATE INDEX IF NOT EXISTS "fee_collections_studentId_idx"            ON "fee_collections"("studentId");
-CREATE INDEX IF NOT EXISTS "fee_collections_paidOn_idx"               ON "fee_collections"("paidOn");
-CREATE INDEX IF NOT EXISTS "fee_collections_academicYearId_idx"       ON "fee_collections"("academicYearId");
-CREATE INDEX IF NOT EXISTS "fee_collections_feePlanInstallmentId_idx" ON "fee_collections"("feePlanInstallmentId");
-DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_institutionId_fkey"
-  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_studentId_fkey"
-  FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_feePlanItemId_fkey"
-  FOREIGN KEY ("feePlanItemId") REFERENCES "fee_plan_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_feePlanInstallmentId_fkey"
-  FOREIGN KEY ("feePlanInstallmentId") REFERENCES "fee_plan_installments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_feeCategoryId_fkey"
-  FOREIGN KEY ("feeCategoryId") REFERENCES "fee_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_collectedByUserId_fkey"
-  FOREIGN KEY ("collectedByUserId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
+  // 4. fee_categories
+  await run('fee_categories', [
+    `CREATE TABLE IF NOT EXISTS "fee_categories" (
+      "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "name" TEXT NOT NULL,
+      "type" TEXT NOT NULL DEFAULT 'CUSTOM', "deletedAt" TIMESTAMP(3),
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "fee_categories_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "fee_categories_institutionId_name_key" ON "fee_categories"("institutionId","name")`,
+    `CREATE INDEX IF NOT EXISTS "fee_categories_institutionId_idx" ON "fee_categories"("institutionId")`,
+    `DO $$ BEGIN ALTER TABLE "fee_categories" ADD CONSTRAINT "fee_categories_institutionId_fkey"
+      FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
 
-// ── 5. Messaging tables ───────────────────────────────────────────────────────
-run('conversations table', `
-CREATE TABLE IF NOT EXISTS "conversations" (
-  "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL,
-  "parentUserId" TEXT NOT NULL, "teacherUserId" TEXT NOT NULL,
-  "studentId" TEXT, "subject" TEXT,
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "conversations_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "conversations_institutionId_parentUserId_teacherUserId_studentId_key"
-  ON "conversations"("institutionId","parentUserId","teacherUserId","studentId");
-CREATE INDEX IF NOT EXISTS "conversations_institutionId_idx" ON "conversations"("institutionId");
-CREATE INDEX IF NOT EXISTS "conversations_parentUserId_idx"  ON "conversations"("parentUserId");
-CREATE INDEX IF NOT EXISTS "conversations_teacherUserId_idx" ON "conversations"("teacherUserId");
-DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_institutionId_fkey"
-  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_parentUserId_fkey"
-  FOREIGN KEY ("parentUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_teacherUserId_fkey"
-  FOREIGN KEY ("teacherUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_studentId_fkey"
-  FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
-run('messages table', `
-CREATE TABLE IF NOT EXISTS "messages" (
-  "id" TEXT NOT NULL, "conversationId" TEXT NOT NULL, "senderId" TEXT NOT NULL,
-  "content" TEXT NOT NULL, "readAt" TIMESTAMP(3),
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
-);
-CREATE INDEX IF NOT EXISTS "messages_conversationId_idx" ON "messages"("conversationId");
-CREATE INDEX IF NOT EXISTS "messages_senderId_idx"        ON "messages"("senderId");
-DO $$ BEGIN ALTER TABLE "messages" ADD CONSTRAINT "messages_conversationId_fkey"
-  FOREIGN KEY ("conversationId") REFERENCES "conversations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE "messages" ADD CONSTRAINT "messages_senderId_fkey"
-  FOREIGN KEY ("senderId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-`);
+  // 5. fee_plans
+  await run('fee_plans', [
+    `CREATE TABLE IF NOT EXISTS "fee_plans" (
+      "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "academicYearId" TEXT NOT NULL,
+      "name" TEXT NOT NULL, "description" TEXT, "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "deletedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "fee_plans_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "fee_plans_institutionId_name_academicYearId_key" ON "fee_plans"("institutionId","name","academicYearId")`,
+    `CREATE INDEX IF NOT EXISTS "fee_plans_institutionId_idx" ON "fee_plans"("institutionId")`,
+    `CREATE INDEX IF NOT EXISTS "fee_plans_academicYearId_idx" ON "fee_plans"("academicYearId")`,
+    `DO $$ BEGIN ALTER TABLE "fee_plans" ADD CONSTRAINT "fee_plans_institutionId_fkey"
+      FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_plans" ADD CONSTRAINT "fee_plans_academicYearId_fkey"
+      FOREIGN KEY ("academicYearId") REFERENCES "academic_years"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
 
-// ── 6. Subscriptions table + missing columns ──────────────────────────────────
-run('subscriptions table', `
-CREATE TABLE IF NOT EXISTS "subscriptions" (
-  "id"                TEXT NOT NULL,
-  "institutionId"     TEXT NOT NULL,
-  "planName"          TEXT NOT NULL DEFAULT 'standard',
-  "maxStudents"       INTEGER NOT NULL DEFAULT 500,
-  "pricePerUser"      DOUBLE PRECISION NOT NULL DEFAULT 50,
-  "billingCycleYears" INTEGER NOT NULL DEFAULT 1,
-  "totalAmount"       DOUBLE PRECISION NOT NULL,
-  "startDate"         TIMESTAMP(3) NOT NULL,
-  "endDate"           TIMESTAMP(3) NOT NULL,
-  "status"            TEXT NOT NULL DEFAULT 'active',
-  "amountPaid"        DOUBLE PRECISION,
-  "paidAt"            TIMESTAMP(3),
-  "notes"             TEXT,
-  "createdAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "subscriptions_institutionId_key" ON "subscriptions"("institutionId");
-DO $$ BEGIN ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_institutionId_fkey"
-  FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "amountPaid" DOUBLE PRECISION;
-ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "paidAt"     TIMESTAMP(3);
-`);
+  // 6. fee_plan_items
+  await run('fee_plan_items', [
+    `CREATE TABLE IF NOT EXISTS "fee_plan_items" (
+      "id" TEXT NOT NULL, "feePlanId" TEXT NOT NULL, "feeCategoryId" TEXT NOT NULL,
+      "totalAmount" DOUBLE PRECISION NOT NULL, CONSTRAINT "fee_plan_items_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "fee_plan_items_feePlanId_feeCategoryId_key" ON "fee_plan_items"("feePlanId","feeCategoryId")`,
+    `DO $$ BEGIN ALTER TABLE "fee_plan_items" ADD CONSTRAINT "fee_plan_items_feePlanId_fkey"
+      FOREIGN KEY ("feePlanId") REFERENCES "fee_plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_plan_items" ADD CONSTRAINT "fee_plan_items_feeCategoryId_fkey"
+      FOREIGN KEY ("feeCategoryId") REFERENCES "fee_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
 
-// ── 7. Admin role permissions ─────────────────────────────────────────────────
-run('admin role permissions', `
-UPDATE "roles"
-SET "permissions" = '["users.read","users.write","users.assignRole","roles.read","students.read","students.write","fees.read","fees.write","attendance.read","attendance.write","exams.read","exams.write","subjects.read","subjects.write","academic.read","academic.write","institution.read","institution.write","inquiry.read","inquiry.write"]'::jsonb
-WHERE "code" = 'admin';
-`);
+  // 7. fee_plan_installments
+  await run('fee_plan_installments', [
+    `CREATE TABLE IF NOT EXISTS "fee_plan_installments" (
+      "id" TEXT NOT NULL, "feePlanItemId" TEXT NOT NULL, "label" TEXT NOT NULL,
+      "amount" DOUBLE PRECISION NOT NULL, "dueDate" DATE, "sortOrder" INTEGER NOT NULL DEFAULT 0,
+      CONSTRAINT "fee_plan_installments_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "fee_plan_installments_feePlanItemId_label_key" ON "fee_plan_installments"("feePlanItemId","label")`,
+    `DO $$ BEGIN ALTER TABLE "fee_plan_installments" ADD CONSTRAINT "fee_plan_installments_feePlanItemId_fkey"
+      FOREIGN KEY ("feePlanItemId") REFERENCES "fee_plan_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
 
-console.log('[preflight] Done.');
-JSPREFLIGHT
+  // 8. fee_plan_class_maps
+  await run('fee_plan_class_maps', [
+    `CREATE TABLE IF NOT EXISTS "fee_plan_class_maps" (
+      "id" TEXT NOT NULL, "feePlanId" TEXT NOT NULL, "academicUnitId" TEXT NOT NULL,
+      CONSTRAINT "fee_plan_class_maps_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "fee_plan_class_maps_feePlanId_academicUnitId_key" ON "fee_plan_class_maps"("feePlanId","academicUnitId")`,
+    `DO $$ BEGIN ALTER TABLE "fee_plan_class_maps" ADD CONSTRAINT "fee_plan_class_maps_feePlanId_fkey"
+      FOREIGN KEY ("feePlanId") REFERENCES "fee_plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_plan_class_maps" ADD CONSTRAINT "fee_plan_class_maps_academicUnitId_fkey"
+      FOREIGN KEY ("academicUnitId") REFERENCES "academic_units"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
+
+  // 9. fee_concessions
+  await run('fee_concessions', [
+    `CREATE TABLE IF NOT EXISTS "fee_concessions" (
+      "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "studentId" TEXT NOT NULL,
+      "feePlanItemId" TEXT NOT NULL, "amount" DOUBLE PRECISION NOT NULL, "reason" TEXT NOT NULL,
+      "approvedByUserId" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "fee_concessions_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE INDEX IF NOT EXISTS "fee_concessions_institutionId_idx" ON "fee_concessions"("institutionId")`,
+    `CREATE INDEX IF NOT EXISTS "fee_concessions_studentId_idx" ON "fee_concessions"("studentId")`,
+    `DO $$ BEGIN ALTER TABLE "fee_concessions" ADD CONSTRAINT "fee_concessions_institutionId_fkey"
+      FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_concessions" ADD CONSTRAINT "fee_concessions_studentId_fkey"
+      FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_concessions" ADD CONSTRAINT "fee_concessions_feePlanItemId_fkey"
+      FOREIGN KEY ("feePlanItemId") REFERENCES "fee_plan_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_concessions" ADD CONSTRAINT "fee_concessions_approvedByUserId_fkey"
+      FOREIGN KEY ("approvedByUserId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
+
+  // 10. fee_collections
+  await run('fee_collections', [
+    `CREATE TABLE IF NOT EXISTS "fee_collections" (
+      "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL, "studentId" TEXT NOT NULL,
+      "feePlanItemId" TEXT, "feePlanInstallmentId" TEXT, "feeCategoryId" TEXT NOT NULL,
+      "academicYearId" TEXT, "amount" DOUBLE PRECISION NOT NULL,
+      "paymentMode" TEXT NOT NULL DEFAULT 'cash', "receiptNo" TEXT NOT NULL,
+      "paidOn" DATE NOT NULL, "remarks" TEXT, "collectedByUserId" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "fee_collections_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "fee_collections_institutionId_receiptNo_key" ON "fee_collections"("institutionId","receiptNo")`,
+    `CREATE INDEX IF NOT EXISTS "fee_collections_institutionId_idx" ON "fee_collections"("institutionId")`,
+    `CREATE INDEX IF NOT EXISTS "fee_collections_studentId_idx" ON "fee_collections"("studentId")`,
+    `CREATE INDEX IF NOT EXISTS "fee_collections_paidOn_idx" ON "fee_collections"("paidOn")`,
+    `CREATE INDEX IF NOT EXISTS "fee_collections_academicYearId_idx" ON "fee_collections"("academicYearId")`,
+    `CREATE INDEX IF NOT EXISTS "fee_collections_feePlanInstallmentId_idx" ON "fee_collections"("feePlanInstallmentId")`,
+    `DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_institutionId_fkey"
+      FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_studentId_fkey"
+      FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_feePlanItemId_fkey"
+      FOREIGN KEY ("feePlanItemId") REFERENCES "fee_plan_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_feePlanInstallmentId_fkey"
+      FOREIGN KEY ("feePlanInstallmentId") REFERENCES "fee_plan_installments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_feeCategoryId_fkey"
+      FOREIGN KEY ("feeCategoryId") REFERENCES "fee_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "fee_collections" ADD CONSTRAINT "fee_collections_collectedByUserId_fkey"
+      FOREIGN KEY ("collectedByUserId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
+
+  // 11. conversations
+  await run('conversations', [
+    `CREATE TABLE IF NOT EXISTS "conversations" (
+      "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL,
+      "parentUserId" TEXT NOT NULL, "teacherUserId" TEXT NOT NULL,
+      "studentId" TEXT, "subject" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "conversations_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "conversations_institutionId_parentUserId_teacherUserId_studentId_key"
+      ON "conversations"("institutionId","parentUserId","teacherUserId","studentId")`,
+    `CREATE INDEX IF NOT EXISTS "conversations_institutionId_idx" ON "conversations"("institutionId")`,
+    `CREATE INDEX IF NOT EXISTS "conversations_parentUserId_idx" ON "conversations"("parentUserId")`,
+    `CREATE INDEX IF NOT EXISTS "conversations_teacherUserId_idx" ON "conversations"("teacherUserId")`,
+    `DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_institutionId_fkey"
+      FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_parentUserId_fkey"
+      FOREIGN KEY ("parentUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_teacherUserId_fkey"
+      FOREIGN KEY ("teacherUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_studentId_fkey"
+      FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
+
+  // 12. messages
+  await run('messages', [
+    `CREATE TABLE IF NOT EXISTS "messages" (
+      "id" TEXT NOT NULL, "conversationId" TEXT NOT NULL, "senderId" TEXT NOT NULL,
+      "content" TEXT NOT NULL, "readAt" TIMESTAMP(3),
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE INDEX IF NOT EXISTS "messages_conversationId_idx" ON "messages"("conversationId")`,
+    `CREATE INDEX IF NOT EXISTS "messages_senderId_idx" ON "messages"("senderId")`,
+    `DO $$ BEGIN ALTER TABLE "messages" ADD CONSTRAINT "messages_conversationId_fkey"
+      FOREIGN KEY ("conversationId") REFERENCES "conversations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `DO $$ BEGIN ALTER TABLE "messages" ADD CONSTRAINT "messages_senderId_fkey"
+      FOREIGN KEY ("senderId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  ]);
+
+  // 13. subscriptions
+  await run('subscriptions', [
+    `CREATE TABLE IF NOT EXISTS "subscriptions" (
+      "id" TEXT NOT NULL, "institutionId" TEXT NOT NULL,
+      "planName" TEXT NOT NULL DEFAULT 'standard',
+      "maxStudents" INTEGER NOT NULL DEFAULT 500,
+      "pricePerUser" DOUBLE PRECISION NOT NULL DEFAULT 50,
+      "billingCycleYears" INTEGER NOT NULL DEFAULT 1,
+      "totalAmount" DOUBLE PRECISION NOT NULL,
+      "startDate" TIMESTAMP(3) NOT NULL,
+      "endDate" TIMESTAMP(3) NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'active',
+      "amountPaid" DOUBLE PRECISION,
+      "paidAt" TIMESTAMP(3),
+      "notes" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "subscriptions_institutionId_key" ON "subscriptions"("institutionId")`,
+    `DO $$ BEGIN ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_institutionId_fkey"
+      FOREIGN KEY ("institutionId") REFERENCES "institutions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "amountPaid" DOUBLE PRECISION`,
+    `ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "paidAt" TIMESTAMP(3)`,
+  ]);
+
+  // 14. Admin role permissions
+  await run('admin role permissions', [
+    `UPDATE "roles"
+     SET "permissions" = '["users.read","users.write","users.assignRole","roles.read","students.read","students.write","fees.read","fees.write","attendance.read","attendance.write","exams.read","exams.write","subjects.read","subjects.write","academic.read","academic.write","institution.read","institution.write","inquiry.read","inquiry.write"]'::jsonb
+     WHERE "code" = 'admin'`,
+  ]);
+
+  await prisma.$disconnect();
+  console.log('[sql] All schema sync complete.');
+})().catch(async (e) => {
+  console.warn('[sql] Fatal:', (e.message || '').slice(0, 300));
+  await prisma.$disconnect().catch(() => {});
+});
+JSSQL
 
 echo "[start] Syncing migrations into _prisma_migrations (upsert via Prisma client)..."
 node - << 'JSSYNC'
@@ -320,12 +334,6 @@ const { readFileSync, existsSync } = require('fs');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// ALL migrations — ensure every migration is registered as applied in
-// _prisma_migrations with the correct checksum. This handles three cases:
-//   1. Fresh Supabase DB (after db push): inserts all migrations as applied so
-//      prisma migrate deploy does not try to re-run them against existing tables.
-//   2. Neon → Supabase migration with checksum mismatch: updates checksums.
-//   3. Migration stuck in "failed" state: marks finished_at so it's treated as applied.
 const ALL_MIGRATIONS = [
   '20260306173811_add_student_model',
   '20260315194341_add_auth_rbac_audit_models',
@@ -368,11 +376,10 @@ const ALL_MIGRATIONS = [
   '20260430060000_institution_extended_profile',
   '20260430120000_messaging',
   '20260430150000_fix_admin_role_permissions',
+  '20260501000000_ensure_fee_collections',
 ];
 
 (async () => {
-  // Ensure _prisma_migrations table exists (db push does NOT create it; only
-  // migrate deploy does — but migrate deploy fails on fresh DB with existing tables).
   try {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
@@ -401,7 +408,6 @@ const ALL_MIGRATIONS = [
         name
       );
       if (rows.length === 0) {
-        // Not in table yet — insert as applied so migrate deploy skips it
         await prisma.$executeRawUnsafe(
           `INSERT INTO "_prisma_migrations"
              ("id","checksum","started_at","finished_at","migration_name","logs","rolled_back_at","applied_steps_count")
@@ -410,7 +416,6 @@ const ALL_MIGRATIONS = [
         );
         console.log('[checksum] Registered:', name);
       } else {
-        // Already in table — sync checksum and ensure finished_at is set
         await prisma.$executeRawUnsafe(
           `UPDATE "_prisma_migrations"
            SET "checksum"=$1, "finished_at"=COALESCE("finished_at",NOW()), "rolled_back_at"=NULL
@@ -430,12 +435,6 @@ const ALL_MIGRATIONS = [
   await prisma.$disconnect().catch(() => {});
 });
 JSSYNC
-
-echo "[start] Pushing schema to DB (handles any schema drift after DB migrations)..."
-npx prisma db push --skip-generate --accept-data-loss || echo "[start] WARN: db push returned non-zero — continuing"
-
-echo "[start] Applying pending migrations..."
-npx prisma migrate deploy || echo "[start] WARN: migrate deploy returned non-zero — continuing"
 
 echo "[start] Seeding platform admins (idempotent)..."
 node - << 'JSSEED'
