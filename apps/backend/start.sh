@@ -519,4 +519,8 @@ echo "[start] Pushing schema to DB (catches any remaining drift)..."
 npx prisma db push --skip-generate --accept-data-loss || echo "[start] WARN: db push returned non-zero — continuing"
 
 echo "[start] Starting application..."
-exec node dist/main
+if [ -f "dist/main.js" ]; then
+  exec node dist/main
+else
+  exec node dist/src/main
+fi
