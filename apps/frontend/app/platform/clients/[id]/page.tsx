@@ -153,9 +153,26 @@ export default function ClientDetailPage() {
   if (!client) return <div className="p-8 text-gray-500 text-sm">Client not found</div>;
 
   const days = client.subscription ? daysLeft(client.subscription.endDate) : null;
+  const actualStudents = client._count.students;
+  const seatLimit = client.subscription?.maxStudents ?? null;
+  const overLimit = seatLimit !== null && actualStudents > seatLimit;
+  const usagePct = seatLimit ? Math.min(Math.round((actualStudents / seatLimit) * 100), 100) : 0;
 
   return (
     <div className="p-8 max-w-3xl space-y-6">
+      {/* Over-limit warning banner */}
+      {overLimit && (
+        <div className="bg-red-900/30 border border-red-700/60 rounded-xl px-4 py-3 flex items-start gap-3">
+          <span className="text-red-400 text-lg leading-none mt-0.5">⚠</span>
+          <div>
+            <p className="text-sm font-semibold text-red-400">Student limit exceeded</p>
+            <p className="text-xs text-red-400/70 mt-0.5">
+              This school has <strong>{actualStudents.toLocaleString()}</strong> active students but their subscription covers only <strong>{seatLimit!.toLocaleString()}</strong> seats ({actualStudents - seatLimit!} over). Contact them to upgrade.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -213,16 +230,39 @@ export default function ClientDetailPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: 'Active Students', value: client._count.students },
-          { label: 'Staff / Users', value: client._count.users },
-          { label: 'Onboarded', value: formatDate(client.createdAt) },
-        ].map((s) => (
-          <div key={s.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <p className="text-xs text-gray-500">{s.label}</p>
-            <p className="text-lg font-bold text-white mt-1">{s.value}</p>
-          </div>
-        ))}
+        {/* Seat usage card */}
+        <div className={`bg-gray-900 border rounded-xl p-4 ${overLimit ? 'border-red-700/60' : 'border-gray-800'}`}>
+          <p className="text-xs text-gray-500">Active Students</p>
+          <p className={`text-lg font-bold mt-1 ${overLimit ? 'text-red-400' : 'text-white'}`}>
+            {actualStudents.toLocaleString()}
+            {seatLimit && (
+              <span className="text-sm font-normal text-gray-500"> / {seatLimit.toLocaleString()}</span>
+            )}
+          </p>
+          {seatLimit && (
+            <div className="mt-2">
+              <div className="h-1.5 rounded-full bg-gray-800 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${overLimit ? 'bg-red-500' : usagePct >= 80 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                  style={{ width: `${usagePct}%` }}
+                />
+              </div>
+              <p className={`text-xs mt-1 ${overLimit ? 'text-red-400' : 'text-gray-600'}`}>
+                {overLimit ? `${actualStudents - seatLimit} over limit` : `${usagePct}% used`}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <p className="text-xs text-gray-500">Staff / Users</p>
+          <p className="text-lg font-bold text-white mt-1">{client._count.users}</p>
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <p className="text-xs text-gray-500">Onboarded</p>
+          <p className="text-lg font-bold text-white mt-1">{formatDate(client.createdAt)}</p>
+        </div>
       </div>
 
       {/* Subscription */}
@@ -247,9 +287,16 @@ export default function ClientDetailPage() {
               <span className="text-gray-400">Plan</span>
               <span className="text-white capitalize">{client.subscription.planName}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Max Students</span>
-              <span className="text-white">{client.subscription.maxStudents}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Seat Limit</span>
+              <span className="text-white flex items-center gap-2">
+                {client.subscription.maxStudents.toLocaleString()}
+                {overLimit && (
+                  <span className="text-xs bg-red-900/40 border border-red-700/50 text-red-400 px-2 py-0.5 rounded font-semibold">
+                    {actualStudents - client.subscription.maxStudents} over
+                  </span>
+                )}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Price / Student</span>

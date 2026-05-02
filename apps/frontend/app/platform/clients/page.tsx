@@ -36,7 +36,7 @@ function SubBadge({ sub }: { sub?: Client['subscription'] }) {
   return <span className="scf-badge scf-b-green">Active · {d}d</span>;
 }
 
-type Filter = 'all' | 'active' | 'expired' | 'no-sub';
+type Filter = 'all' | 'active' | 'expired' | 'no-sub' | 'over-limit';
 
 export default function PlatformClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -54,18 +54,25 @@ export default function PlatformClientsPage() {
 
   useEffect(() => { fetchClients(); }, [fetchClients]);
 
+  const isOverLimit = (c: Client) =>
+    !!c.subscription && c._count.students > c.subscription.maxStudents;
+
   const filtered = clients.filter((c) => {
-    if (filter === 'no-sub')  return !c.subscription;
-    if (filter === 'expired') return c.subscription && daysLeft(c.subscription.endDate) < 0;
-    if (filter === 'active')  return c.subscription && daysLeft(c.subscription.endDate) >= 0;
+    if (filter === 'no-sub')     return !c.subscription;
+    if (filter === 'expired')    return c.subscription && daysLeft(c.subscription.endDate) < 0;
+    if (filter === 'active')     return c.subscription && daysLeft(c.subscription.endDate) >= 0;
+    if (filter === 'over-limit') return isOverLimit(c);
     return true;
   });
 
+  const overLimitCount = clients.filter(isOverLimit).length;
+
   const FILTERS: { key: Filter; label: string; accent: string }[] = [
-    { key:'all',    label:'All',            accent:'0,180,255' },
-    { key:'active', label:'Active',         accent:'0,220,120' },
-    { key:'expired',label:'Expired',        accent:'255,50,80' },
-    { key:'no-sub', label:'No Subscription',accent:'255,150,0' },
+    { key:'all',        label:'All',            accent:'0,180,255' },
+    { key:'active',     label:'Active',         accent:'0,220,120' },
+    { key:'expired',    label:'Expired',        accent:'255,50,80' },
+    { key:'no-sub',     label:'No Subscription',accent:'255,150,0' },
+    { key:'over-limit', label:`Over Limit${overLimitCount > 0 ? ` (${overLimitCount})` : ''}`, accent:'255,80,80' },
   ];
 
   return (
@@ -164,8 +171,20 @@ export default function PlatformClientsPage() {
                         {c.code}
                       </span>
                     </td>
-                    <td style={{ padding:'12px 16px', fontSize:13, color:'rgba(140,190,220,.7)', fontVariantNumeric:'tabular-nums' }}>
-                      {c._count.students.toLocaleString()}
+                    <td style={{ padding:'12px 16px', fontVariantNumeric:'tabular-nums' }}>
+                      {c.subscription ? (
+                        <span style={{ fontSize:13, fontWeight: isOverLimit(c) ? 700 : 400, color: isOverLimit(c) ? '#ff4466' : 'rgba(140,190,220,.7)' }}>
+                          {c._count.students.toLocaleString()}
+                          <span style={{ color:'rgba(100,150,190,.4)', fontWeight:400 }}> / {c.subscription.maxStudents.toLocaleString()}</span>
+                          {isOverLimit(c) && (
+                            <span style={{ marginLeft:6, fontSize:10, background:'rgba(255,50,80,.15)', border:'1px solid rgba(255,50,80,.35)', color:'#ff4466', padding:'1px 5px', borderRadius:3, fontWeight:700, letterSpacing:'.04em' }}>
+                              OVER
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize:13, color:'rgba(140,190,220,.7)' }}>{c._count.students.toLocaleString()}</span>
+                      )}
                     </td>
                     <td style={{ padding:'12px 16px', fontSize:13, color:'rgba(140,190,220,.7)', fontVariantNumeric:'tabular-nums' }}>
                       {c.subscription?.maxStudents.toLocaleString() ?? <span style={{ color:'rgba(80,120,160,.35)' }}>—</span>}
