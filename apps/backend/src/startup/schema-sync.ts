@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client';
-import { Logger } from '@nestjs/common';
 
-const logger = new Logger('SchemaSync');
+/* eslint-disable no-console */
+const log   = (msg: string) => console.log(`[SchemaSync] ${msg}`);
+const warn  = (msg: string) => console.warn(`[SchemaSync] WARN ${msg}`);
+const error = (msg: string) => console.error(`[SchemaSync] ERROR ${msg}`);
 
 async function run(
   prisma: PrismaClient,
@@ -18,11 +20,11 @@ async function run(
       ok++;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      logger.warn(`[${label}] ${msg.slice(0, 160)}`);
+      warn(`[${label}] ${msg.slice(0, 160)}`);
       warned++;
     }
   }
-  logger.log(`${label}: ${ok} ok, ${warned} warned`);
+  log(`${label}: ${ok} ok, ${warned} warned`);
 }
 
 export async function syncSchema(): Promise<void> {
@@ -266,10 +268,10 @@ export async function syncSchema(): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
     ]);
 
-    logger.log('Schema sync complete.');
+    log('Schema sync complete.');
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    logger.error('Schema sync failed: ' + msg.slice(0, 300));
+    error('Schema sync failed: ' + msg.slice(0, 300));
   } finally {
     await prisma.$disconnect().catch(() => {});
   }
