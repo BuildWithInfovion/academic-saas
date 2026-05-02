@@ -182,6 +182,26 @@ export class UsersService {
     return { message: 'Password updated' };
   }
 
+  async updateProfile(
+    institutionId: string,
+    userId: string,
+    dto: { name?: string; phone?: string },
+  ) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, institutionId, deletedAt: null },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    const data: { name?: string | null; phone?: string | null } = {};
+    if (dto.name !== undefined) data.name = dto.name.trim() || null;
+    if (dto.phone !== undefined) data.phone = dto.phone.trim() || null;
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: { id: true, name: true, email: true, phone: true },
+    });
+    return updated;
+  }
+
   async changePassword(
     institutionId: string,
     userId: string,

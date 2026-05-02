@@ -17,7 +17,34 @@ interface ApproveResult {
 }
 
 export default function OperatorSettingsPage() {
-  const user = useAuthStore((s) => s.user);
+  const user    = useAuthStore((s) => s.user);
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const token   = useAuthStore((s) => s.accessToken);
+
+  // Profile
+  const [profileName,  setProfileName]  = useState(user?.name  ?? '');
+  const [profilePhone, setProfilePhone] = useState(user?.phone ?? '');
+  const [profileSaving,  setProfileSaving]  = useState(false);
+  const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const saveProfile = async () => {
+    setProfileSaving(true); setProfileMsg(null);
+    try {
+      const updated = await apiFetch<{ id: string; name: string | null; phone: string | null }>(
+        '/users/me/profile',
+        { method: 'PATCH', body: JSON.stringify({ name: profileName.trim(), phone: profilePhone.trim() }) },
+      );
+      if (user && token) {
+        setAuth({ accessToken: token, user: { ...user, name: updated.name ?? null, phone: updated.phone ?? undefined } });
+      }
+      setProfileMsg({ ok: true, text: 'Profile saved.' });
+      setTimeout(() => setProfileMsg(null), 3000);
+    } catch (e: unknown) {
+      setProfileMsg({ ok: false, text: e instanceof Error ? e.message : 'Failed to save.' });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   // Change password
   const [oldPassword, setOldPassword] = useState('');
@@ -106,6 +133,58 @@ export default function OperatorSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-ds-text1 mb-1">Settings</h1>
         <p className="text-sm text-ds-text3">Manage your account and pending requests</p>
+      </div>
+
+      {/* Profile */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <h2 className="text-sm font-semibold text-ds-text1 mb-4">Profile</h2>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Full Name</label>
+            <input
+              id="settings-name"
+              name="name"
+              type="text"
+              className={inp}
+              placeholder="e.g. Vrushali Sharma"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Login Email (cannot change)</label>
+            <input type="text" className={inp} value={user?.email ?? '—'} readOnly
+              style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Phone</label>
+            <input
+              id="settings-phone"
+              name="phone"
+              type="text"
+              className={inp}
+              placeholder="+91 98765 43210"
+              value={profilePhone}
+              onChange={(e) => setProfilePhone(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {profileMsg && (
+          <div className={`mt-3 text-sm px-3 py-2 rounded-lg ${profileMsg.ok
+            ? 'bg-ds-success-bg text-ds-success-text border border-ds-success-border'
+            : 'bg-ds-error-bg text-ds-error-text border border-ds-error-border'}`}>
+            {profileMsg.text}
+          </div>
+        )}
+
+        <button
+          onClick={saveProfile}
+          disabled={profileSaving}
+          className="mt-5 px-5 py-2.5 btn-brand rounded-lg disabled:opacity-50 transition-colors"
+        >
+          {profileSaving ? 'Saving…' : 'Save Profile'}
+        </button>
       </div>
 
       {/* Account Info */}

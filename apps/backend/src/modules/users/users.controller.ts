@@ -57,6 +57,19 @@ export class UsersController {
     return this.usersService.delete(tenant.institutionId, userId);
   }
 
+  @Patch('me/profile')
+  async updateProfile(
+    @Tenant() tenant: TenantContext,
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { name?: string; phone?: string },
+  ) {
+    return this.usersService.updateProfile(
+      tenant.institutionId,
+      req.user.userId,
+      body,
+    );
+  }
+
   @Post('me/change-password')
   async changePassword(
     @Tenant() tenant: TenantContext,

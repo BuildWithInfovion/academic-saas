@@ -80,12 +80,9 @@ const menuGroups = [
 
 function displayName(name?: string | null, email?: string | null, phone?: string | null): string {
   if (name) return name;
-  if (email) {
-    const prefix = email.split('@')[0];
-    return prefix.replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  }
   if (phone) return phone;
-  return 'User';
+  if (email) return email;
+  return 'Operator';
 }
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

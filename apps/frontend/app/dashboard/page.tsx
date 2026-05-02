@@ -141,7 +141,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="page-title">
             {greeting},{' '}
-            <span style={{ color: '#ae5525' }}>{user?.name || user?.email?.split('@')[0] || 'Admin'}</span>
+            <span style={{ color: '#ae5525' }}>{user?.name || 'Admin'}</span>
           </h1>
           <p className="page-subtitle">{todayDate}{currentYear ? ` · AY ${currentYear.name}` : ''}</p>
         </div>
