@@ -26,18 +26,18 @@ const PARTICLES: { top?: string; bottom?: string; left?: string; right?: string;
 
 const getLogoTransition = (phase: Phase): string => {
   if (phase === 'init')     return 'none';
-  if (phase === 'zoom-in')  return 'transform 0.72s cubic-bezier(0.34,1.56,0.64,1)';
-  if (phase === 'zoom-out') return 'transform 1.6s cubic-bezier(0.25,0.46,0.45,0.94)';
-  return 'transform 0.9s ease';
+  if (phase === 'zoom-in')  return 'transform 0.9s cubic-bezier(0.16,1,0.3,1)';
+  if (phase === 'zoom-out') return 'transform 1.8s cubic-bezier(0.16,1,0.3,1)';
+  return 'transform 1s cubic-bezier(0.16,1,0.3,1)';
 };
 
 const getLogoTransform = (phase: Phase): string => {
   switch (phase) {
-    case 'init':     return 'scale(0)';
-    case 'zoom-in':  return 'scale(2.4)';
+    case 'init':     return 'scale(0) translateY(20px)';
+    case 'zoom-in':  return 'scale(2.0)';
     case 'zoom-out': return 'scale(1)';
-    case 'greet':    return 'translateY(-56px) scale(0.82)';
-    case 'reveal':   return 'translateY(-64px) scale(0.78)';
+    case 'greet':    return 'translateY(-52px) scale(0.80)';
+    case 'reveal':   return 'translateY(-60px) scale(0.76)';
     default:         return 'scale(1)';
   }
 };
@@ -94,10 +94,10 @@ export default function LoginPage() {
   // Intro animation
   useEffect(() => {
     const r  = requestAnimationFrame(() => setPhase('zoom-in'));
-    const t1 = setTimeout(() => setPhase('zoom-out'), 900);
-    const t2 = setTimeout(() => setPhase('greet'),    2700);
-    const t3 = setTimeout(() => setPhase('reveal'),   3900);
-    const t4 = setTimeout(() => setPhase('done'),     4700);
+    const t1 = setTimeout(() => setPhase('zoom-out'), 1000);
+    const t2 = setTimeout(() => setPhase('greet'),    2900);
+    const t3 = setTimeout(() => setPhase('reveal'),   4100);
+    const t4 = setTimeout(() => setPhase('done'),     5100);
     return () => { cancelAnimationFrame(r); [t1, t2, t3, t4].forEach(clearTimeout); };
   }, []);
 
@@ -379,7 +379,7 @@ export default function LoginPage() {
       : 'Enter your school code and credentials';
 
   return (
-    <div style={{ minHeight:'100vh', background:'#060402', position:'relative', overflow:'hidden',
+    <div style={{ minHeight:'100vh', background:'#040d1a', position:'relative', overflow:'hidden',
       display:'flex', alignItems:'center', justifyContent:'center' }}>
 
       {/* ─── Component-scoped styles ─── */}
@@ -387,46 +387,46 @@ export default function LoginPage() {
         @keyframes loginParticleDrift {
           0%, 100% { transform: translateY(0px) scale(1);   opacity: 0; }
           10%, 90% { opacity: 1; }
-          50%      { transform: translateY(-55px) scale(1.1); opacity: 0.55; }
+          50%      { transform: translateY(-55px) scale(1.1); opacity: 0.5; }
         }
         @keyframes loginCardReveal {
-          from { opacity: 0; transform: translateY(32px); }
+          from { opacity: 0; transform: translateY(28px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes loginGlowBreathe {
-          0%, 100% { opacity: 0.45; transform: scale(1); }
-          50%      { opacity: 0.75; transform: scale(1.14); }
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50%      { opacity: 0.7; transform: scale(1.12); }
         }
         @keyframes loginArcSpin    { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
         @keyframes loginArcSpinRev { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
         @keyframes loginWelcomeIn  {
-          from { opacity: 0; transform: scale(0.94) translateY(12px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
+          from { opacity: 0; transform: scale(0.96) translateY(14px); letter-spacing: 0.1em; }
+          to   { opacity: 1; transform: scale(1) translateY(0); letter-spacing: 0.22em; }
         }
         @keyframes loginShimmer {
           0%   { background-position: -200% center; }
           100% { background-position:  200% center; }
         }
         @keyframes cardBorderPulse {
-          0%, 100% { opacity: 0.55; }
+          0%, 100% { opacity: 0.5; }
           50%      { opacity: 1; }
         }
         @keyframes successBgIn     { from { opacity: 0; } to { opacity: 1; } }
         @keyframes successCircleIn {
           0%   { transform: scale(0);    opacity: 0; }
-          60%  { transform: scale(1.12); opacity: 1; }
-          80%  { transform: scale(0.96); }
+          60%  { transform: scale(1.1);  opacity: 1; }
+          80%  { transform: scale(0.97); }
           100% { transform: scale(1);    opacity: 1; }
         }
-        @keyframes successRingOut  { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.8); opacity: 0; } }
+        @keyframes successRingOut  { 0% { transform: scale(1); opacity: 0.45; } 100% { transform: scale(2.8); opacity: 0; } }
         @keyframes successCheckDraw {
           from { stroke-dashoffset: 80; opacity: 0; }
           15%  { opacity: 1; }
           to   { stroke-dashoffset: 0; }
         }
-        @keyframes successTextIn   { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes successTextIn   { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes successDot {
-          0%, 70%, 100% { transform: translateY(0px);  opacity: 0.28; }
+          0%, 70%, 100% { transform: translateY(0px);  opacity: 0.25; }
           35%            { transform: translateY(-7px); opacity: 1; }
         }
         @keyframes successBarFill  { from { width: 0%; } to { width: 100%; } }
@@ -436,60 +436,60 @@ export default function LoginPage() {
           transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
         }
         .login-btn:not(:disabled):hover {
-          background: linear-gradient(135deg, #c5692e 0%, #ae5525 100%) !important;
-          box-shadow: 0 6px 28px rgba(174,85,37,0.52), 0 2px 8px rgba(0,0,0,0.25) !important;
+          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
+          box-shadow: 0 6px 28px rgba(13,148,136,0.45), 0 2px 8px rgba(0,0,0,0.2) !important;
           transform: translateY(-2px) scale(1.01) !important;
         }
         .login-btn:not(:disabled):active {
           transform: translateY(0) scale(0.98) !important;
-          box-shadow: 0 2px 10px rgba(174,85,37,0.3) !important;
+          box-shadow: 0 2px 10px rgba(13,148,136,0.25) !important;
         }
 
         .ldf {
           width: 100%; padding: 10px 12px 10px 36px;
-          font-size: 14px; border: 1px solid rgba(220,146,75,0.18);
-          border-radius: 9px; color: #f0e6d3;
+          font-size: 14px; border: 1px solid rgba(20,184,166,0.15);
+          border-radius: 9px; color: #e2f8f5;
           background: rgba(255,255,255,0.04);
           transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; outline: none;
           box-sizing: border-box;
         }
-        .ldf::placeholder { color: rgba(174,112,64,0.32); }
-        .ldf:hover  { background: rgba(255,255,255,0.065); border-color: rgba(220,146,75,0.38); }
-        .ldf:focus  { background: rgba(255,255,255,0.07); border-color: #dc924b; box-shadow: 0 0 0 3px rgba(220,146,75,0.14), inset 0 1px 0 rgba(255,255,255,0.04); }
+        .ldf::placeholder { color: rgba(148,163,184,0.4); }
+        .ldf:hover  { background: rgba(255,255,255,0.06); border-color: rgba(20,184,166,0.32); }
+        .ldf:focus  { background: rgba(255,255,255,0.07); border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(13,148,136,0.18), inset 0 1px 0 rgba(255,255,255,0.04); }
         .ldf:disabled { opacity: 0.35; cursor: not-allowed; }
 
         .ldf-plain {
           width: 100%; padding: 10px 12px;
-          font-size: 14px; border: 1px solid rgba(220,146,75,0.18);
-          border-radius: 9px; color: #f0e6d3;
+          font-size: 14px; border: 1px solid rgba(20,184,166,0.15);
+          border-radius: 9px; color: #e2f8f5;
           background: rgba(255,255,255,0.04);
           transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; outline: none;
           box-sizing: border-box;
         }
-        .ldf-plain::placeholder { color: rgba(174,112,64,0.32); }
-        .ldf-plain:hover  { background: rgba(255,255,255,0.065); border-color: rgba(220,146,75,0.38); }
-        .ldf-plain:focus  { background: rgba(255,255,255,0.07); border-color: #dc924b; box-shadow: 0 0 0 3px rgba(220,146,75,0.14); }
+        .ldf-plain::placeholder { color: rgba(148,163,184,0.4); }
+        .ldf-plain:hover  { background: rgba(255,255,255,0.06); border-color: rgba(20,184,166,0.32); }
+        .ldf-plain:focus  { background: rgba(255,255,255,0.07); border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(13,148,136,0.18); }
 
         .otp-cell {
           width: 44px; height: 52px; border-radius: 10px;
-          border: 1.5px solid rgba(220,146,75,0.22);
+          border: 1.5px solid rgba(20,184,166,0.2);
           background: rgba(255,255,255,0.04);
-          color: #f7c576; font-size: 22px; font-weight: 600;
+          color: #5eead4; font-size: 22px; font-weight: 600;
           text-align: center; outline: none;
           transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
           caret-color: transparent;
         }
-        .otp-cell::placeholder { color: rgba(174,112,64,0.18); font-size: 16px; }
-        .otp-cell:hover  { background: rgba(255,255,255,0.065); border-color: rgba(220,146,75,0.42); }
-        .otp-cell:focus  { background: rgba(255,255,255,0.07); border-color: #dc924b; box-shadow: 0 0 0 3px rgba(220,146,75,0.15); }
-        .otp-cell.filled { border-color: rgba(220,146,75,0.55); background: rgba(220,146,75,0.06); }
+        .otp-cell::placeholder { color: rgba(94,234,212,0.18); font-size: 16px; }
+        .otp-cell:hover  { background: rgba(255,255,255,0.06); border-color: rgba(20,184,166,0.38); }
+        .otp-cell:focus  { background: rgba(255,255,255,0.07); border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(13,148,136,0.18); }
+        .otp-cell.filled { border-color: rgba(20,184,166,0.5); background: rgba(13,148,136,0.07); }
         .otp-cell:disabled { opacity: 0.35; cursor: not-allowed; }
 
         .welcome-shimmer {
-          background: linear-gradient(90deg, #f7c576 0%, #fffbe8 45%, #f7c576 80%);
-          background-size: 220% auto;
+          background: linear-gradient(90deg, #ffffff 0%, #99f6e4 40%, #ffffff 70%, #99f6e4 100%);
+          background-size: 250% auto;
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-          animation: loginShimmer 3.8s linear infinite;
+          animation: loginShimmer 5s linear infinite;
         }
 
         .tab-btn {
@@ -498,14 +498,14 @@ export default function LoginPage() {
           transition: all 0.2s ease; letter-spacing: 0.02em;
         }
         .tab-btn.active {
-          background: linear-gradient(135deg, rgba(174,85,37,0.7), rgba(140,57,25,0.7));
-          color: #f7c576;
-          box-shadow: 0 2px 10px rgba(174,85,37,0.28);
+          background: linear-gradient(135deg, rgba(13,148,136,0.75), rgba(15,118,110,0.75));
+          color: #5eead4;
+          box-shadow: 0 2px 12px rgba(13,148,136,0.3);
         }
         .tab-btn.inactive {
-          background: transparent; color: rgba(174,112,64,0.5);
+          background: transparent; color: rgba(100,116,139,0.6);
         }
-        .tab-btn.inactive:hover { color: rgba(220,146,75,0.8); background: rgba(255,255,255,0.04); }
+        .tab-btn.inactive:hover { color: rgba(45,212,191,0.8); background: rgba(255,255,255,0.05); }
 
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
@@ -513,32 +513,32 @@ export default function LoginPage() {
       {/* ─── Ambient background glows ─── */}
       <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:0 }}>
         <div style={{ position:'absolute', top:'-12%', left:'-8%', width:640, height:640,
-          borderRadius:'50%', filter:'blur(130px)',
-          background:'radial-gradient(circle, rgba(220,146,75,0.11) 0%, transparent 70%)',
-          animation:'loginGlowBreathe 9s ease-in-out infinite' }} />
+          borderRadius:'50%', filter:'blur(140px)',
+          background:'radial-gradient(circle, rgba(13,148,136,0.14) 0%, transparent 70%)',
+          animation:'loginGlowBreathe 10s ease-in-out infinite' }} />
         <div style={{ position:'absolute', bottom:'-12%', right:'-8%', width:560, height:560,
-          borderRadius:'50%', filter:'blur(110px)',
-          background:'radial-gradient(circle, rgba(174,85,37,0.09) 0%, transparent 70%)',
-          animation:'loginGlowBreathe 13s ease-in-out infinite', animationDelay:'5s' }} />
-        <div style={{ position:'absolute', top:'38%', right:'18%', width:360, height:360,
-          borderRadius:'50%', filter:'blur(90px)',
-          background:'radial-gradient(circle, rgba(247,197,118,0.06) 0%, transparent 70%)',
-          animation:'loginGlowBreathe 11s ease-in-out infinite', animationDelay:'2.5s' }} />
+          borderRadius:'50%', filter:'blur(120px)',
+          background:'radial-gradient(circle, rgba(15,118,110,0.10) 0%, transparent 70%)',
+          animation:'loginGlowBreathe 14s ease-in-out infinite', animationDelay:'5s' }} />
+        <div style={{ position:'absolute', top:'40%', right:'16%', width:380, height:380,
+          borderRadius:'50%', filter:'blur(100px)',
+          background:'radial-gradient(circle, rgba(45,212,191,0.07) 0%, transparent 70%)',
+          animation:'loginGlowBreathe 12s ease-in-out infinite', animationDelay:'2.5s' }} />
       </div>
 
       {/* ─── Arc rings ─── */}
       <div style={{ position:'fixed', top:-130, left:-130, width:440, height:440,
-        borderRadius:'50%', border:'1px solid rgba(220,146,75,0.055)',
-        pointerEvents:'none', zIndex:1, animation:'loginArcSpin 70s linear infinite' }} />
+        borderRadius:'50%', border:'1px solid rgba(20,184,166,0.06)',
+        pointerEvents:'none', zIndex:1, animation:'loginArcSpin 80s linear infinite' }} />
       <div style={{ position:'fixed', top:-80,  left:-80,  width:280, height:280,
-        borderRadius:'50%', border:'0.5px dashed rgba(220,146,75,0.04)',
-        pointerEvents:'none', zIndex:1, animation:'loginArcSpinRev 45s linear infinite' }} />
+        borderRadius:'50%', border:'0.5px dashed rgba(20,184,166,0.04)',
+        pointerEvents:'none', zIndex:1, animation:'loginArcSpinRev 50s linear infinite' }} />
       <div style={{ position:'fixed', bottom:-110, right:-110, width:400, height:400,
-        borderRadius:'50%', border:'1px solid rgba(220,146,75,0.05)',
-        pointerEvents:'none', zIndex:1, animation:'loginArcSpinRev 55s linear infinite' }} />
+        borderRadius:'50%', border:'1px solid rgba(13,148,136,0.05)',
+        pointerEvents:'none', zIndex:1, animation:'loginArcSpinRev 65s linear infinite' }} />
       <div style={{ position:'fixed', bottom:-60,  right:-60,  width:250, height:250,
-        borderRadius:'50%', border:'0.5px dashed rgba(174,85,37,0.04)',
-        pointerEvents:'none', zIndex:1, animation:'loginArcSpin 38s linear infinite' }} />
+        borderRadius:'50%', border:'0.5px dashed rgba(15,118,110,0.04)',
+        pointerEvents:'none', zIndex:1, animation:'loginArcSpin 42s linear infinite' }} />
 
       {/* ─── Floating particles ─── */}
       {PARTICLES.map((p, i) => {
@@ -551,8 +551,8 @@ export default function LoginPage() {
           <div key={i} style={{
             position:'fixed', ...pos,
             width:p.size, height:p.size, borderRadius:'50%',
-            background: i%3===0 ? 'rgba(247,197,118,0.55)' : i%3===1 ? 'rgba(220,146,75,0.45)' : 'rgba(174,85,37,0.38)',
-            boxShadow: `0 0 ${p.size*3}px rgba(220,146,75,0.4)`,
+            background: i%3===0 ? 'rgba(94,234,212,0.6)' : i%3===1 ? 'rgba(20,184,166,0.5)' : 'rgba(13,148,136,0.4)',
+            boxShadow: `0 0 ${p.size*3}px rgba(20,184,166,0.4)`,
             pointerEvents:'none', zIndex:2,
             animation:`loginParticleDrift ${p.dur} ease-in-out infinite`,
             animationDelay: p.delay,
@@ -567,18 +567,18 @@ export default function LoginPage() {
         <div style={{
           position:'fixed', inset:0, zIndex:50,
           display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-          background:'#060402',
+          background:'#040d1a',
           opacity: phase === 'reveal' ? 0 : 1,
           transition: phase === 'reveal' ? 'opacity 0.72s ease' : 'none',
           pointerEvents: phase === 'reveal' ? 'none' : 'auto',
         }}>
           <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
             <div style={{ position:'absolute', top:'-10%', left:'-5%', width:600, height:600,
-              borderRadius:'50%', filter:'blur(120px)',
-              background:'radial-gradient(circle, rgba(220,146,75,0.14) 0%, transparent 70%)' }} />
+              borderRadius:'50%', filter:'blur(130px)',
+              background:'radial-gradient(circle, rgba(13,148,136,0.16) 0%, transparent 70%)' }} />
             <div style={{ position:'absolute', bottom:'-10%', right:'-5%', width:520, height:520,
-              borderRadius:'50%', filter:'blur(110px)',
-              background:'radial-gradient(circle, rgba(174,85,37,0.10) 0%, transparent 70%)' }} />
+              borderRadius:'50%', filter:'blur(115px)',
+              background:'radial-gradient(circle, rgba(15,118,110,0.12) 0%, transparent 70%)' }} />
           </div>
           <div style={{
             position:'relative', zIndex:1, marginBottom:36,
@@ -591,8 +591,8 @@ export default function LoginPage() {
                 onError={() => setLogoError(true)} />
             ) : (
               <div style={{ textAlign:'center' }}>
-                <p style={{ color:'#f7c576', fontWeight:700, fontSize:'2.8rem', letterSpacing:'0.14em' }}>INFOVION</p>
-                <p style={{ color:'rgba(174,112,64,0.45)', fontSize:'0.8rem', letterSpacing:'0.1em', marginTop:5 }}>ACADEMIC SAAS</p>
+                <p style={{ color:'#5eead4', fontWeight:300, fontSize:'2.8rem', letterSpacing:'0.22em' }}>INFOVION</p>
+                <p style={{ color:'rgba(94,234,212,0.4)', fontSize:'0.75rem', letterSpacing:'0.18em', marginTop:6 }}>ACADEMIC SAAS</p>
               </div>
             )}
           </div>
@@ -605,10 +605,10 @@ export default function LoginPage() {
             <h1 style={{ margin:0, fontWeight:300, fontSize:'clamp(1.35rem,4vw,2.1rem)', letterSpacing:'0.22em', textTransform:'uppercase' }}>
               <span className="welcome-shimmer">Welcome to Infovion</span>
             </h1>
-            <div style={{ height:1, background:'linear-gradient(to right,transparent,rgba(247,197,118,0.28),transparent)',
-              margin:'18px auto 0', width:280, maxWidth:'80vw' }} />
-            <p style={{ color:'rgba(174,112,64,0.45)', fontSize:12, letterSpacing:'0.12em',
-              textTransform:'uppercase', marginTop:12 }}>
+            <div style={{ height:1, background:'linear-gradient(to right,transparent,rgba(20,184,166,0.3),transparent)',
+              margin:'20px auto 0', width:260, maxWidth:'80vw' }} />
+            <p style={{ color:'rgba(94,234,212,0.38)', fontSize:11, letterSpacing:'0.18em',
+              textTransform:'uppercase', marginTop:14, fontWeight:300 }}>
               Intelligent School Management
             </p>
           </div>
@@ -625,20 +625,20 @@ export default function LoginPage() {
           animation:'loginCardReveal 0.62s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
         }}>
           <div style={{
-            background:'linear-gradient(160deg, rgba(28,14,6,0.96) 0%, rgba(18,9,3,0.97) 100%)',
-            border:'1px solid rgba(220,146,75,0.2)',
+            background:'linear-gradient(160deg, rgba(10,20,42,0.97) 0%, rgba(6,13,30,0.98) 100%)',
+            border:'1px solid rgba(20,184,166,0.16)',
             borderRadius:22,
             padding:'0 0 32px',
-            boxShadow:'0 48px 100px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(220,146,75,0.08), 0 0 80px rgba(220,146,75,0.06)',
+            boxShadow:'0 48px 100px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(20,184,166,0.06), 0 0 80px rgba(13,148,136,0.08)',
             backdropFilter:'blur(32px)',
             WebkitBackdropFilter:'blur(32px)',
             overflow:'hidden',
             position:'relative',
           }}>
-            {/* Gold top accent bar */}
-            <div style={{ height:2, background:'linear-gradient(90deg, transparent 0%, rgba(220,146,75,0.5) 30%, rgba(247,197,118,0.9) 50%, rgba(220,146,75,0.5) 70%, transparent 100%)', animation:'cardBorderPulse 4s ease-in-out infinite' }} />
+            {/* Teal top accent bar */}
+            <div style={{ height:2, background:'linear-gradient(90deg, transparent 0%, rgba(13,148,136,0.5) 25%, rgba(45,212,191,0.9) 50%, rgba(13,148,136,0.5) 75%, transparent 100%)', animation:'cardBorderPulse 5s ease-in-out infinite' }} />
             {/* Inner top highlight */}
-            <div style={{ position:'absolute', top:2, left:0, right:0, height:60, background:'linear-gradient(180deg, rgba(220,146,75,0.04) 0%, transparent 100%)', pointerEvents:'none' }} />
+            <div style={{ position:'absolute', top:2, left:0, right:0, height:60, background:'linear-gradient(180deg, rgba(13,148,136,0.04) 0%, transparent 100%)', pointerEvents:'none' }} />
 
             <div style={{ padding:'28px 32px 0' }}>
 
@@ -649,20 +649,20 @@ export default function LoginPage() {
                     style={{ objectFit:'contain', width:'auto', maxHeight:56, margin:'0 auto', display:'block' }}
                     onError={() => setLogoError(true)} />
                 ) : (
-                  <p style={{ color:'#f7c576', fontWeight:700, fontSize:'1.25rem', letterSpacing:'0.1em', margin:0 }}>INFOVION</p>
+                  <p style={{ color:'#5eead4', fontWeight:300, fontSize:'1.25rem', letterSpacing:'0.16em', margin:0 }}>INFOVION</p>
                 )}
-                <p style={{ color:'rgba(174,112,64,0.4)', fontSize:10.5, letterSpacing:'0.14em',
-                  textTransform:'uppercase', margin:'6px 0 0' }}>Academic Management</p>
+                <p style={{ color:'rgba(94,234,212,0.35)', fontSize:10, letterSpacing:'0.18em',
+                  textTransform:'uppercase', margin:'6px 0 0', fontWeight:300 }}>Academic Management</p>
               </div>
 
               {/* Thin divider */}
-              <div style={{ height:'0.5px', background:'linear-gradient(to right, transparent, rgba(220,146,75,0.18), transparent)', marginBottom:20 }} />
+              <div style={{ height:'0.5px', background:'linear-gradient(to right, transparent, rgba(20,184,166,0.15), transparent)', marginBottom:20 }} />
 
               {/* ── Tab switcher ── */}
               <div style={{
                 display:'flex', gap:4, padding:'4px',
                 background:'rgba(255,255,255,0.03)',
-                border:'1px solid rgba(220,146,75,0.12)',
+                border:'1px solid rgba(20,184,166,0.1)',
                 borderRadius:11, marginBottom:24,
               }}>
                 <button className={`tab-btn ${activeTab === 'staff' ? 'active' : 'inactive'}`}
@@ -677,10 +677,10 @@ export default function LoginPage() {
 
               {/* ── Heading ── */}
               <div style={{ marginBottom:20 }}>
-                <h2 style={{ margin:0, color:'#f5ede0', fontWeight:600, fontSize:19.5, letterSpacing:'-0.025em' }}>
+                <h2 style={{ margin:0, color:'#e2f8f5', fontWeight:600, fontSize:19.5, letterSpacing:'-0.025em' }}>
                   {cardHeading}
                 </h2>
-                <p style={{ margin:'5px 0 0', color:'rgba(174,112,64,0.5)', fontSize:13 }}>
+                <p style={{ margin:'5px 0 0', color:'rgba(148,163,184,0.6)', fontSize:13 }}>
                   {cardSub}
                 </p>
               </div>
@@ -695,12 +695,12 @@ export default function LoginPage() {
                     <div style={{ display:'flex', flexDirection:'column', gap:15 }}>
                       <div>
                         <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                          color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                          color:'rgba(94,234,212,0.65)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                           School Code
                         </label>
                         <div style={{ position:'relative' }}>
                           <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                            alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                            alignItems:'center', pointerEvents:'none', color:'rgba(71,85,105,0.5)' }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
                             </svg>
@@ -714,12 +714,12 @@ export default function LoginPage() {
 
                       <div>
                         <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                          color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                          color:'rgba(94,234,212,0.65)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                           Email Address
                         </label>
                         <div style={{ position:'relative' }}>
                           <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                            alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                            alignItems:'center', pointerEvents:'none', color:'rgba(71,85,105,0.5)' }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                             </svg>
@@ -733,12 +733,12 @@ export default function LoginPage() {
 
                       <div>
                         <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                          color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                          color:'rgba(94,234,212,0.65)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                           Password
                         </label>
                         <div style={{ position:'relative' }}>
                           <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                            alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
+                            alignItems:'center', pointerEvents:'none', color:'rgba(71,85,105,0.5)' }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                             </svg>
@@ -758,8 +758,8 @@ export default function LoginPage() {
                       {/* Authenticator hint */}
                       <div style={{
                         marginBottom:16, padding:'10px 14px', borderRadius:9, fontSize:12.5,
-                        background:'rgba(220,146,75,0.07)', border:'1px solid rgba(220,146,75,0.18)',
-                        color:'rgba(220,146,75,0.7)', display:'flex', alignItems:'center', gap:8,
+                        background:'rgba(13,148,136,0.08)', border:'1px solid rgba(20,184,166,0.18)',
+                        color:'rgba(94,234,212,0.7)', display:'flex', alignItems:'center', gap:8,
                       }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}>
                           <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
@@ -793,10 +793,10 @@ export default function LoginPage() {
                             setTotpDigits(['','','','','','']);
                             setError(null);
                           }}
-                          style={{ fontSize:12, color:'rgba(174,112,64,0.5)', background:'none', border:'none',
+                          style={{ fontSize:12, color:'rgba(100,116,139,0.6)', background:'none', border:'none',
                             cursor:'pointer', padding:0, display:'flex', alignItems:'center', gap:4 }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.8)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color='rgba(174,112,64,0.5)')}>
+                          onMouseEnter={(e) => (e.currentTarget.style.color='rgba(45,212,191,0.8)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color='rgba(100,116,139,0.6)')}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="15 18 9 12 15 6"/>
                           </svg>
@@ -820,9 +820,9 @@ export default function LoginPage() {
                       style={{
                         marginTop:18, width:'100%', padding:'12px',
                         fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
-                        background: loading ? 'rgba(174,85,37,0.55)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
-                        color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)',
-                        boxShadow: loading ? 'none' : '0 2px 16px rgba(174,85,37,0.38)',
+                        background: loading ? 'rgba(13,148,136,0.5)' : 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+                        color:'#ffffff', border:'1px solid rgba(15,118,110,0.3)',
+                        boxShadow: loading ? 'none' : '0 2px 18px rgba(13,148,136,0.35)',
                       }}>
                       {loading ? (
                         <span style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
@@ -856,9 +856,9 @@ export default function LoginPage() {
                       style={{
                         marginTop:18, width:'100%', padding:'12px',
                         fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
-                        background: loading ? 'rgba(174,85,37,0.55)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
-                        color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)',
-                        boxShadow: loading ? 'none' : '0 2px 16px rgba(174,85,37,0.38)',
+                        background: loading ? 'rgba(13,148,136,0.5)' : 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+                        color:'#ffffff', border:'1px solid rgba(15,118,110,0.3)',
+                        boxShadow: loading ? 'none' : '0 2px 18px rgba(13,148,136,0.35)',
                       }}>
                       {loading ? (
                         <span style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
@@ -893,10 +893,10 @@ export default function LoginPage() {
                   {staffStep === 1 && (
                     <div style={{ textAlign:'center', marginTop:14 }}>
                       <button type="button" onClick={openForgot}
-                        style={{ fontSize:12, fontWeight:500, color:'rgba(220,146,75,0.5)',
+                        style={{ fontSize:12, fontWeight:500, color:'rgba(100,116,139,0.55)',
                           background:'none', border:'none', cursor:'pointer', padding:0 }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color='#f7c576')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.5)')}>
+                        onMouseEnter={(e) => (e.currentTarget.style.color='#5eead4')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color='rgba(100,116,139,0.55)')}>
                         Forgot password?
                       </button>
                     </div>
@@ -1029,30 +1029,30 @@ export default function LoginPage() {
           onClick={(e) => e.target === e.currentTarget && setShowParentForgot(false)}>
           <div style={{
             width:'100%', maxWidth:380, borderRadius:18, overflow:'hidden',
-            background:'linear-gradient(160deg, rgba(28,14,6,0.98) 0%, rgba(18,9,3,0.99) 100%)',
-            border:'1px solid rgba(220,146,75,0.18)',
+            background:'linear-gradient(160deg, rgba(10,20,42,0.98) 0%, rgba(6,13,30,0.99) 100%)',
+            border:'1px solid rgba(20,184,166,0.15)',
             boxShadow:'0 32px 80px rgba(0,0,0,0.75)',
             animation:'loginCardReveal 0.4s ease forwards',
           }}>
             {/* Header */}
             <div style={{ padding:'20px 24px 18px',
-              background:'linear-gradient(135deg, rgba(29,16,6,0.95), rgba(40,22,8,0.95))',
-              borderBottom:'1px solid rgba(220,146,75,0.1)' }}>
+              background:'linear-gradient(135deg, rgba(10,20,42,0.95), rgba(14,26,52,0.95))',
+              borderBottom:'1px solid rgba(20,184,166,0.08)' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                   <div style={{ width:34, height:34, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center',
-                    background:'rgba(174,85,37,0.15)', border:'1px solid rgba(220,146,75,0.2)' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(220,146,75,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    background:'rgba(13,148,136,0.12)', border:'1px solid rgba(20,184,166,0.2)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(45,212,191,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
                   </div>
                   <div>
-                    <p style={{ fontSize:14, fontWeight:700, color:'#fcfbf7', margin:0 }}>Forgot Password</p>
-                    <p style={{ fontSize:11, color:'rgba(220,146,75,0.6)', margin:0 }}>Parent account recovery</p>
+                    <p style={{ fontSize:14, fontWeight:700, color:'#e2f8f5', margin:0 }}>Forgot Password</p>
+                    <p style={{ fontSize:11, color:'rgba(94,234,212,0.5)', margin:0 }}>Parent account recovery</p>
                   </div>
                 </div>
                 <button onClick={() => setShowParentForgot(false)}
-                  style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(220,146,75,0.5)', fontSize:20, lineHeight:1, padding:4 }}>×</button>
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(94,234,212,0.4)', fontSize:20, lineHeight:1, padding:4 }}>×</button>
               </div>
             </div>
 
@@ -1067,26 +1067,26 @@ export default function LoginPage() {
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                   </div>
-                  <p style={{ fontSize:15, fontWeight:600, color:'#fcfbf7', marginBottom:8 }}>Request Submitted</p>
-                  <p style={{ fontSize:12.5, color:'rgba(220,146,75,0.65)', lineHeight:1.6, marginBottom:20 }}>
+                  <p style={{ fontSize:15, fontWeight:600, color:'#e2f8f5', marginBottom:8 }}>Request Submitted</p>
+                  <p style={{ fontSize:12.5, color:'rgba(148,163,184,0.7)', lineHeight:1.6, marginBottom:20 }}>
                     Your school operator will reset your password and share it with you directly. Please contact the school if you don&apos;t hear back soon.
                   </p>
                   <button onClick={() => setShowParentForgot(false)}
                     style={{ padding:'10px 28px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
-                      background:'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
-                      color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)' }}>
+                      background:'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+                      color:'#ffffff', border:'1px solid rgba(15,118,110,0.3)' }}>
                     Back to Login
                   </button>
                 </div>
               ) : (
                 <>
-                  <p style={{ fontSize:12.5, color:'rgba(220,146,75,0.65)', marginBottom:18, lineHeight:1.5 }}>
+                  <p style={{ fontSize:12.5, color:'rgba(148,163,184,0.65)', marginBottom:18, lineHeight:1.5 }}>
                     Enter your registered phone number. Your school operator will receive a request and reset your password.
                   </p>
 
                   <div style={{ marginBottom:16 }}>
                     <label style={{ display:'block', fontSize:11, fontWeight:600, marginBottom:6,
-                      color:'rgba(220,146,75,0.7)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                      color:'rgba(94,234,212,0.6)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
                       Phone Number
                     </label>
                     <div style={{ position:'relative' }}>
@@ -1113,14 +1113,14 @@ export default function LoginPage() {
                   <div style={{ display:'flex', gap:10 }}>
                     <button onClick={() => setShowParentForgot(false)} disabled={pfLoading}
                       style={{ flex:1, padding:'11px', borderRadius:10, fontSize:13, fontWeight:500, cursor:'pointer',
-                        background:'transparent', border:'1px solid rgba(220,146,75,0.2)', color:'rgba(220,146,75,0.6)' }}>
+                        background:'transparent', border:'1px solid rgba(20,184,166,0.18)', color:'rgba(94,234,212,0.55)' }}>
                       Cancel
                     </button>
                     <button onClick={handleParentForgotSubmit} disabled={pfLoading}
                       style={{ flex:1, padding:'11px', borderRadius:10, fontSize:13, fontWeight:600,
                         cursor: pfLoading ? 'default' : 'pointer',
-                        background: pfLoading ? 'rgba(174,85,37,0.55)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
-                        color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)' }}>
+                        background: pfLoading ? 'rgba(13,148,136,0.5)' : 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+                        color:'#ffffff', border:'1px solid rgba(15,118,110,0.3)' }}>
                       {pfLoading ? 'Submitting…' : 'Submit Request'}
                     </button>
                   </div>
@@ -1143,22 +1143,22 @@ export default function LoginPage() {
           onClick={(e) => e.target === e.currentTarget && setShowForgot(false)}>
           <div style={{
             width:'100%', maxWidth:380, borderRadius:18, overflow:'hidden',
-            background:'linear-gradient(160deg, rgba(28,14,6,0.98) 0%, rgba(18,9,3,0.99) 100%)',
-            border:'1px solid rgba(220,146,75,0.18)',
+            background:'linear-gradient(160deg, rgba(10,20,42,0.98) 0%, rgba(6,13,30,0.99) 100%)',
+            border:'1px solid rgba(20,184,166,0.15)',
             boxShadow:'0 32px 80px rgba(0,0,0,0.75)',
             animation:'loginCardReveal 0.4s ease forwards',
           }}>
             <div style={{ padding:'20px 24px 18px',
-              background:'linear-gradient(135deg, rgba(29,16,6,0.95), rgba(40,22,8,0.95))',
-              borderBottom:'1px solid rgba(220,146,75,0.1)' }}>
+              background:'linear-gradient(135deg, rgba(10,20,42,0.95), rgba(14,26,52,0.95))',
+              borderBottom:'1px solid rgba(20,184,166,0.08)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ width:36, height:36, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center',
-                  background:'rgba(220,146,75,0.15)', border:'1px solid rgba(220,146,75,0.25)', fontSize:16 }}>🔑</div>
+                  background:'rgba(13,148,136,0.14)', border:'1px solid rgba(20,184,166,0.22)', fontSize:16 }}>🔑</div>
                 <div>
-                  <h2 style={{ margin:0, color:'#f5ede0', fontSize:14, fontWeight:600 }}>
+                  <h2 style={{ margin:0, color:'#e2f8f5', fontSize:14, fontWeight:600 }}>
                     {fpSuccess ? 'Password Reset' : fpStep === 'otp' ? 'Enter Reset Code' : 'Reset Password'}
                   </h2>
-                  <p style={{ margin:'3px 0 0', color:'rgba(174,112,64,0.5)', fontSize:12 }}>
+                  <p style={{ margin:'3px 0 0', color:'rgba(94,234,212,0.4)', fontSize:12 }}>
                     {fpSuccess
                       ? 'Your password has been updated'
                       : fpStep === 'otp'
@@ -1172,13 +1172,13 @@ export default function LoginPage() {
               {fpSuccess ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
                   <div style={{ padding:'11px 13px', borderRadius:8, fontSize:13,
-                    background:'rgba(26,95,60,0.2)', border:'1px solid rgba(26,95,60,0.35)', color:'#6ee7b7' }}>
+                    background:'rgba(13,148,136,0.12)', border:'1px solid rgba(20,184,166,0.25)', color:'#5eead4' }}>
                     {fpSuccess}
                   </div>
                   <button onClick={() => setShowForgot(false)} style={{
                     width:'100%', padding:'11px', borderRadius:8, fontWeight:600, fontSize:14, cursor:'pointer',
-                    background:'linear-gradient(135deg,#ae5525,#8c3919)', color:'#fcfbf7',
-                    border:'1px solid rgba(140,57,25,0.35)', boxShadow:'0 2px 8px rgba(174,85,37,0.3)',
+                    background:'linear-gradient(135deg,#0d9488,#0f766e)', color:'#ffffff',
+                    border:'1px solid rgba(15,118,110,0.3)', boxShadow:'0 2px 8px rgba(13,148,136,0.25)',
                   }}>Back to Login</button>
                 </div>
               ) : fpStep === 'form' ? (
@@ -1213,17 +1213,17 @@ export default function LoginPage() {
                   <div style={{ display:'flex', gap:8, paddingTop:4 }}>
                     <button onClick={() => setShowForgot(false)} style={{
                       flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:500, cursor:'pointer',
-                      background:'rgba(255,255,255,0.05)', color:'rgba(240,230,211,0.7)',
-                      border:'1px solid rgba(220,146,75,0.18)', transition:'all 0.18s',
+                      background:'rgba(255,255,255,0.04)', color:'rgba(148,163,184,0.7)',
+                      border:'1px solid rgba(20,184,166,0.14)', transition:'all 0.18s',
                     }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.09)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.05)')}>
+                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.08)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.04)')}>
                       Cancel
                     </button>
                     <button onClick={handleForgotSendOtp} disabled={fpLoading} style={{
                       flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:600, cursor:'pointer',
-                      background:'linear-gradient(135deg,#ae5525,#8c3919)', color:'#fcfbf7',
-                      border:'1px solid rgba(140,57,25,0.35)', boxShadow:'0 2px 8px rgba(174,85,37,0.25)',
+                      background:'linear-gradient(135deg,#0d9488,#0f766e)', color:'#ffffff',
+                      border:'1px solid rgba(15,118,110,0.3)', boxShadow:'0 2px 8px rgba(13,148,136,0.22)',
                       opacity: fpLoading ? 0.55 : 1,
                     }}>
                       {fpLoading ? 'Sending…' : 'Send Code'}
@@ -1261,17 +1261,17 @@ export default function LoginPage() {
                   <div style={{ display:'flex', gap:8, paddingTop:4 }}>
                     <button onClick={() => { setFpStep('form'); setFpError(null); }} style={{
                       flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:500, cursor:'pointer',
-                      background:'rgba(255,255,255,0.05)', color:'rgba(240,230,211,0.7)',
-                      border:'1px solid rgba(220,146,75,0.18)', transition:'all 0.18s',
+                      background:'rgba(255,255,255,0.04)', color:'rgba(148,163,184,0.7)',
+                      border:'1px solid rgba(20,184,166,0.14)', transition:'all 0.18s',
                     }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.09)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.05)')}>
+                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.08)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.04)')}>
                       Back
                     </button>
                     <button onClick={handleForgotReset} disabled={fpLoading} style={{
                       flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:600, cursor:'pointer',
-                      background:'linear-gradient(135deg,#ae5525,#8c3919)', color:'#fcfbf7',
-                      border:'1px solid rgba(140,57,25,0.35)', boxShadow:'0 2px 8px rgba(174,85,37,0.25)',
+                      background:'linear-gradient(135deg,#0d9488,#0f766e)', color:'#ffffff',
+                      border:'1px solid rgba(15,118,110,0.3)', boxShadow:'0 2px 8px rgba(13,148,136,0.22)',
                       opacity: fpLoading ? 0.55 : 1,
                     }}>
                       {fpLoading ? 'Resetting…' : 'Reset Password'}
@@ -1279,10 +1279,10 @@ export default function LoginPage() {
                   </div>
                   <div style={{ textAlign:'center' }}>
                     <button type="button" onClick={handleForgotSendOtp} disabled={fpLoading}
-                      style={{ fontSize:12, color:'rgba(220,146,75,0.45)', background:'none', border:'none',
+                      style={{ fontSize:12, color:'rgba(100,116,139,0.5)', background:'none', border:'none',
                         cursor:'pointer', padding:0 }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.8)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.45)')}>
+                      onMouseEnter={(e) => (e.currentTarget.style.color='rgba(45,212,191,0.8)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color='rgba(100,116,139,0.5)')}>
                       Resend code
                     </button>
                   </div>
@@ -1300,59 +1300,59 @@ export default function LoginPage() {
         <div style={{
           position:'fixed', inset:0, zIndex:80,
           display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-          background:'#060402',
-          animation:'successBgIn 0.4s ease forwards',
+          background:'#040d1a',
+          animation:'successBgIn 0.5s ease forwards',
         }}>
           <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-            width:400, height:400, borderRadius:'50%', filter:'blur(100px)',
-            background:'radial-gradient(circle, rgba(220,146,75,0.18) 0%, transparent 65%)',
+            width:420, height:420, borderRadius:'50%', filter:'blur(110px)',
+            background:'radial-gradient(circle, rgba(13,148,136,0.2) 0%, transparent 65%)',
             pointerEvents:'none' }} />
-          {[0, 0.6, 1.2].map((delay, i) => (
+          {[0, 0.65, 1.3].map((delay, i) => (
             <div key={i} style={{
               position:'absolute', top:'50%', left:'50%',
               width:110, height:110, marginTop:-55, marginLeft:-55,
               borderRadius:'50%',
-              border:`1.5px solid rgba(220,146,75,${0.5 - i * 0.12})`,
-              animation:`successRingOut 2.4s ${delay}s cubic-bezier(0.2,0.6,0.4,1) infinite`,
+              border:`1.5px solid rgba(20,184,166,${0.45 - i * 0.1})`,
+              animation:`successRingOut 2.6s ${delay}s cubic-bezier(0.2,0.6,0.4,1) infinite`,
               pointerEvents:'none',
             }} />
           ))}
           <div style={{
             width:100, height:100, borderRadius:'50%',
-            background:'linear-gradient(145deg, rgba(220,146,75,0.18), rgba(174,85,37,0.1))',
-            border:'2px solid rgba(220,146,75,0.55)',
+            background:'linear-gradient(145deg, rgba(13,148,136,0.2), rgba(15,118,110,0.1))',
+            border:'2px solid rgba(20,184,166,0.5)',
             display:'flex', alignItems:'center', justifyContent:'center',
             animation:'successCircleIn 1.1s 0.15s cubic-bezier(0.34,1.56,0.64,1) both',
-            boxShadow:'0 0 40px rgba(220,146,75,0.22), inset 0 1px 0 rgba(255,255,255,0.06)',
+            boxShadow:'0 0 48px rgba(13,148,136,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
             position:'relative', zIndex:1,
           }}>
             <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-              <polyline points="8,22 18,32 36,14" stroke="#f7c576" strokeWidth="3.2"
+              <polyline points="8,22 18,32 36,14" stroke="#5eead4" strokeWidth="3"
                 strokeLinecap="round" strokeLinejoin="round"
                 strokeDasharray="80" strokeDashoffset="80"
                 style={{ animation:'successCheckDraw 1.1s 1.0s cubic-bezier(0.25,0.46,0.45,0.94) forwards' }} />
             </svg>
           </div>
           <div style={{
-            marginTop:28, padding:'5px 16px', borderRadius:999,
-            background:'rgba(220,146,75,0.1)', border:'1px solid rgba(220,146,75,0.22)',
+            marginTop:28, padding:'5px 18px', borderRadius:999,
+            background:'rgba(13,148,136,0.1)', border:'1px solid rgba(20,184,166,0.2)',
             animation:'successTextIn 0.7s 1.8s ease both',
           }}>
-            <p style={{ margin:0, color:'rgba(220,146,75,0.8)', fontSize:11.5,
-              letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:600 }}>
+            <p style={{ margin:0, color:'rgba(94,234,212,0.75)', fontSize:11,
+              letterSpacing:'0.18em', textTransform:'uppercase', fontWeight:500 }}>
               {successInfo.institution}
             </p>
           </div>
           <h1 style={{
-            margin:'16px 0 0', color:'#f5ede0', fontWeight:300,
-            fontSize:'clamp(1.8rem,5vw,2.6rem)', letterSpacing:'-0.02em',
+            margin:'16px 0 0', color:'#e2f8f5', fontWeight:300,
+            fontSize:'clamp(1.8rem,5vw,2.5rem)', letterSpacing:'-0.01em',
             textAlign:'center',
             animation:'successTextIn 0.75s 2.1s ease both',
           }}>
             Welcome back!
           </h1>
           <p style={{
-            margin:'10px 0 0', color:'rgba(174,112,64,0.55)', fontSize:14,
+            margin:'10px 0 0', color:'rgba(148,163,184,0.55)', fontSize:14,
             letterSpacing:'0.01em', textAlign:'center',
             animation:'successTextIn 0.75s 2.45s ease both',
           }}>
@@ -1361,19 +1361,19 @@ export default function LoginPage() {
           <div style={{ display:'flex', gap:7, marginTop:20, animation:'successTextIn 0.7s 2.75s ease both' }}>
             {[0, 0.22, 0.44].map((delay, i) => (
               <div key={i} style={{
-                width:7, height:7, borderRadius:'50%', background:'rgba(220,146,75,0.6)',
+                width:7, height:7, borderRadius:'50%', background:'rgba(20,184,166,0.55)',
                 animation:`successDot 1.5s ${delay}s ease-in-out infinite`,
               }} />
             ))}
           </div>
           <div style={{
             marginTop:32, width:200, height:2, borderRadius:999,
-            background:'rgba(220,146,75,0.1)', overflow:'hidden',
+            background:'rgba(13,148,136,0.1)', overflow:'hidden',
             animation:'successTextIn 0.7s 2.9s ease both',
           }}>
             <div style={{
               height:'100%',
-              background:'linear-gradient(90deg, #ae5525, #f7c576, #dc924b)',
+              background:'linear-gradient(90deg, #0d9488, #5eead4, #0d9488)',
               animation:'successBarFill 3.8s 3.1s cubic-bezier(0.4,0,0.2,1) forwards',
               width:0,
             }} />
