@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { silentRefresh, apiFetch } from '@/lib/api';
 import { getRoleRoute, getRoleLabel } from '@/lib/auth-utils';
+import { SUPPORT_TOPICS } from '@/lib/constants';
 
 type MenuItem = { label: string; path: string; icon?: () => ReactElement };
 
@@ -46,17 +47,6 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   const [supportDone,    setSupportDone]    = useState(false);
   const [supportError,   setSupportError]   = useState<string | null>(null);
 
-  const SUPPORT_TOPICS = [
-    'Login / Access Issue',
-    'Student Data Issue',
-    'Fee / Payment Issue',
-    'Attendance Issue',
-    'Exam / Marks Issue',
-    'Report / Download Issue',
-    'Admission / Enrollment Issue',
-    'Settings / Configuration',
-    'Other',
-  ];
 
   const submitSupport = async () => {
     if (!supportSubject || !supportMessage.trim()) return;

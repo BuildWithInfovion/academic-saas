@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { silentRefreshOp, apiFetch } from '@/lib/api';
 import { getRoleRoute, getRoleLabel, DASHBOARD_ROLES } from '@/lib/auth-utils';
+import { SUPPORT_TOPICS } from '@/lib/constants';
 
 // Most-specific match wins — prevents parent paths staying active on child pages
 function getActivePath(pathname: string): string | undefined {
@@ -104,17 +105,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [supportDone,    setSupportDone]    = useState(false);
   const [supportError,   setSupportError]   = useState<string | null>(null);
 
-  const SUPPORT_TOPICS = [
-    'Login / Access Issue',
-    'Student Data Issue',
-    'Fee / Payment Issue',
-    'Attendance Issue',
-    'Exam / Marks Issue',
-    'Report / Download Issue',
-    'Admission / Enrollment Issue',
-    'Settings / Configuration',
-    'Other',
-  ];
 
   const submitSupport = async () => {
     if (!supportSubject || !supportMessage.trim()) return;

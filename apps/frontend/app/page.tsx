@@ -256,7 +256,7 @@ export default function LoginPage() {
       });
       setLoadStep(3);
       setSuccessInfo({ institution: data.user.institutionName || 'Welcome' });
-      await new Promise<void>((resolve) => setTimeout(resolve, 5500));
+      await new Promise<void>((resolve) => setTimeout(resolve, 800));
       router.push('/portal/parent');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

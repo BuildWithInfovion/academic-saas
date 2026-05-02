@@ -3,7 +3,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-const STAFF_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist', 'non_teaching_staff', 'accountant', 'director'];
+const STAFF_ROLE_CODES = ['super_admin', 'admin', 'principal', 'teacher', 'receptionist', 'non_teaching_staff', 'accountant'];
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateSalaryStructureDto, UpdateSalaryStructureDto,

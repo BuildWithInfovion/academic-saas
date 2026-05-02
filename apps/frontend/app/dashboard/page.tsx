@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { apiFetch } from '@/lib/api';
+import { SUPPORT_TOPICS } from '@/lib/constants';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell,
@@ -37,11 +38,6 @@ export default function DashboardPage() {
   const [supportDone,    setSupportDone]    = useState(false);
   const [supportError,   setSupportError]   = useState<string | null>(null);
 
-  const SUPPORT_TOPICS = [
-    'Login / Access Issue','Student Data Issue','Fee / Payment Issue',
-    'Attendance Issue','Exam / Marks Issue','Report / Download Issue',
-    'Admission / Enrollment Issue','Settings / Configuration','Other',
-  ];
 
   const submitSupport = async () => {
     if (!supportSubject || !supportMessage.trim()) return;

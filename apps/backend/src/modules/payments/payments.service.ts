@@ -72,12 +72,16 @@ export class PaymentsService {
   }
 
   verifySignature(razorpayOrderId: string, razorpayPaymentId: string, razorpaySignature: string): boolean {
+    const secret = this.keySecret;
+    if (!secret) return false;
     const body = `${razorpayOrderId}|${razorpayPaymentId}`;
     const expected = crypto
-      .createHmac('sha256', this.keySecret!)
+      .createHmac('sha256', secret)
       .update(body)
       .digest('hex');
-    return expected === razorpaySignature;
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const sigBuf = Buffer.from(razorpaySignature, 'hex');
+    return expectedBuf.length === sigBuf.length && crypto.timingSafeEqual(expectedBuf, sigBuf);
   }
 
   // Called after successful Razorpay payment to record collection in our system

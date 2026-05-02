@@ -28,9 +28,11 @@ export class EmailService {
     const school = institutionName ? ` for ${institutionName}` : '';
 
     if (!this.resend) {
-      this.logger.warn(
-        `[EMAIL-CONSOLE] Password reset OTP${school} → ${email} : ${otp}`,
-      );
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.warn(`[EMAIL-CONSOLE] Password reset OTP${school} → ${email} : ${otp}`);
+      } else {
+        this.logger.error(`[EMAIL-CONSOLE] RESEND_API_KEY not configured — password reset OTP could not be delivered to ${email}`);
+      }
       return;
     }
 
