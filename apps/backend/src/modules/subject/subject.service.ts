@@ -29,10 +29,11 @@ export class SubjectService {
       where: { id: subjectId, institutionId, deletedAt: null },
     });
     if (!subject) throw new NotFoundException('Subject not found');
-    return this.prisma.subject.update({
-      where: { id: subjectId },
+    await this.prisma.subject.updateMany({
+      where: { id: subjectId, institutionId },
       data: { deletedAt: new Date() },
     });
+    return subject;
   }
 
   // ── Unit-Subject assignments ──────────────────────────────────────────────
@@ -87,6 +88,6 @@ export class SubjectService {
       where: { institutionId, academicUnitId, subjectId },
     });
     if (!existing) throw new NotFoundException('Assignment not found');
-    return this.prisma.academicUnitSubject.delete({ where: { id: existing.id } });
+    return this.prisma.academicUnitSubject.deleteMany({ where: { id: existing.id, institutionId } });
   }
 }

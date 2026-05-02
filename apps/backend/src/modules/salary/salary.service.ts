@@ -84,7 +84,8 @@ export class SalaryService {
     if (!existing) throw new NotFoundException('Salary structure not found');
     const linked = await this.prisma.staffSalaryProfile.count({ where: { structureId: id } });
     if (linked > 0) throw new BadRequestException('Cannot delete — structure is linked to staff profiles');
-    return this.prisma.salaryStructure.delete({ where: { id } });
+    await this.prisma.salaryStructure.deleteMany({ where: { id, institutionId } });
+    return existing;
   }
 
   // ── Staff Salary Profiles ──────────────────────────────────────────────────

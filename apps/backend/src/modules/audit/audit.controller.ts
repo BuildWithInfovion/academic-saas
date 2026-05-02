@@ -1,9 +1,18 @@
-import { Controller, Get, Query, UseGuards, Request, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  Request,
+  DefaultValuePipe,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { AuthenticatedRequest } from '../../common/types/authenticated-request';
 
 @Controller('audit-logs')
 @UseGuards(AuthGuard, TenantGuard, RolesGuard)
@@ -13,13 +22,13 @@ export class AuditController {
   @Get()
   @Permissions('institution.read')
   async list(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
     @Query('action') action?: string,
     @Query('entityType') entityType?: string,
   ) {
-    const institutionId: string = req.tenant?.institutionId;
+    const institutionId = req.tenant.institutionId;
     const skip = (page - 1) * limit;
     const where: any = { institutionId };
     if (action) where.action = { contains: action, mode: 'insensitive' };

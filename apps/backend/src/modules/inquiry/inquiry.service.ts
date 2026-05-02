@@ -74,9 +74,10 @@ export class InquiryService {
 
   async delete(institutionId: string, id: string) {
     await this.findOne(institutionId, id);
-    return this.prisma.inquiry.update({
-      where: { id },
+    await this.prisma.inquiry.updateMany({
+      where: { id, institutionId },
       data: { deletedAt: new Date() },
     });
+    return { deleted: true };
   }
 }

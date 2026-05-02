@@ -100,7 +100,8 @@ export class ExamService {
       );
     }
 
-    return this.prisma.exam.update({ where: { id: examId }, data: { status } });
+    await this.prisma.exam.updateMany({ where: { id: examId, institutionId }, data: { status } });
+    return { ...exam, status };
   }
 
   async delete(institutionId: string, examId: string) {
@@ -117,11 +118,11 @@ export class ExamService {
       );
     }
 
-    // Soft-delete: mark as deleted rather than physically removing the row
-    return this.prisma.exam.update({
-      where: { id: examId },
+    await this.prisma.exam.updateMany({
+      where: { id: examId, institutionId },
       data: { deletedAt: new Date() },
     });
+    return exam;
   }
 
   // ── Exam Subjects ─────────────────────────────────────────────────────────

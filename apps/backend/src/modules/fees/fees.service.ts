@@ -48,7 +48,8 @@ export class FeesService {
   async deleteFeeHead(institutionId: string, id: string) {
     const head = await this.prisma.feeHead.findFirst({ where: { id, institutionId, deletedAt: null } });
     if (!head) throw new NotFoundException('Fee head not found');
-    return this.prisma.feeHead.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.feeHead.updateMany({ where: { id, institutionId }, data: { deletedAt: new Date() } });
+    return head;
   }
 
   async getFeeStructures(institutionId: string, academicUnitId: string, academicYearId: string) {
@@ -78,7 +79,8 @@ export class FeesService {
   async deleteFeeStructure(institutionId: string, id: string) {
     const structure = await this.prisma.feeStructure.findFirst({ where: { id, institutionId, deletedAt: null } });
     if (!structure) throw new NotFoundException('Fee structure not found');
-    return this.prisma.feeStructure.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.feeStructure.updateMany({ where: { id, institutionId }, data: { deletedAt: new Date() } });
+    return structure;
   }
 
   async recordPayment(institutionId: string, dto: RecordPaymentDto) {
@@ -364,7 +366,8 @@ export class FeesService {
     if (!cat) throw new NotFoundException('Category not found');
     const inUse = await this.prisma.feePlanItem.count({ where: { feeCategoryId: id } });
     if (inUse > 0) throw new BadRequestException('Category is used in fee plans and cannot be deleted');
-    return this.prisma.feeCategory.update({ where: { id }, data: { deletedAt: new Date() } });
+    await this.prisma.feeCategory.updateMany({ where: { id, institutionId }, data: { deletedAt: new Date() } });
+    return cat;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -427,7 +430,8 @@ export class FeesService {
   async deleteFeePlan(institutionId: string, planId: string) {
     const plan = await this.prisma.feePlan.findFirst({ where: { id: planId, institutionId, deletedAt: null } });
     if (!plan) throw new NotFoundException('Fee plan not found');
-    return this.prisma.feePlan.update({ where: { id: planId }, data: { deletedAt: new Date() } });
+    await this.prisma.feePlan.updateMany({ where: { id: planId, institutionId }, data: { deletedAt: new Date() } });
+    return plan;
   }
 
   async copyFeePlan(institutionId: string, planId: string, dto: CopyFeePlanDto) {
@@ -479,7 +483,8 @@ export class FeesService {
     if (!item) throw new NotFoundException('Plan item not found');
     const hasCollections = await this.prisma.feeCollection.count({ where: { feePlanItemId: itemId } });
     if (hasCollections > 0) throw new BadRequestException('Cannot delete an item that has fee collections recorded against it');
-    return this.prisma.feePlanItem.delete({ where: { id: itemId } });
+    await this.prisma.feePlanItem.deleteMany({ where: { id: itemId, feePlanId: planId } });
+    return item;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -513,7 +518,8 @@ export class FeesService {
     if (!inst) throw new NotFoundException('Installment not found');
     const hasCollections = await this.prisma.feeCollection.count({ where: { feePlanInstallmentId: installmentId } });
     if (hasCollections > 0) throw new BadRequestException('Cannot delete an installment that has collections recorded against it');
-    return this.prisma.feePlanInstallment.delete({ where: { id: installmentId } });
+    await this.prisma.feePlanInstallment.deleteMany({ where: { id: installmentId, feePlanItemId: itemId } });
+    return inst;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

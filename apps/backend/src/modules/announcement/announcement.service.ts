@@ -113,8 +113,8 @@ export class AnnouncementService {
       throw new NotFoundException('Announcement not found');
     }
 
-    await this.prisma.announcement.update({
-      where: { id },
+    await this.prisma.announcement.updateMany({
+      where: { id, institutionId },
       data: { deletedAt: new Date() },
     });
 
