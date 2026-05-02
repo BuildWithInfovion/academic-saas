@@ -375,4 +375,85 @@ export class UsersService {
       },
     });
   }
+
+  // ── Director management (callable by operator) ─────────────────────────────
+
+  async getDirectors(institutionId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        institutionId,
+        deletedAt: null,
+        roles: { some: { role: { code: 'super_admin', institutionId } } },
+      },
+      select: {
+        id: true, name: true, email: true, phone: true,
+        isActive: true, lastLoginAt: true, createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async createDirector(
+    institutionId: string,
+    dto: { name?: string; email?: string; phone?: string; password: string },
+  ) {
+    if (!dto.email?.trim() && !dto.phone?.trim()) {
+      throw new BadRequestException('Email or phone is required');
+    }
+
+    this.validatePasswordStrength(dto.password);
+
+    const email = dto.email?.trim().toLowerCase() || null;
+    const phone = dto.phone?.trim() || null;
+
+    if (email) {
+      const dup = await this.prisma.user.findFirst({
+        where: { institutionId, deletedAt: null, email: { equals: email, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (dup) throw new ConflictException('A user with this email already exists');
+    }
+
+    if (phone) {
+      const dup = await this.prisma.user.findFirst({
+        where: { institutionId, deletedAt: null, phone },
+        select: { id: true },
+      });
+      if (dup) throw new ConflictException('A user with this phone already exists');
+    }
+
+    const superAdminRole = await this.prisma.role.findFirst({
+      where: { institutionId, code: 'super_admin' },
+    });
+    if (!superAdminRole) {
+      throw new NotFoundException('Director role not found for this institution');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          institutionId,
+          name: dto.name?.trim() || null,
+          email,
+          phone,
+          passwordHash,
+          isActive: true,
+        },
+      });
+      await tx.userRole.create({
+        data: { userId: created.id, roleId: superAdminRole.id, institutionId },
+      });
+      return created;
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      createdAt: user.createdAt,
+    };
+  }
 }

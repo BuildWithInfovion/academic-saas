@@ -117,7 +117,9 @@ export class AuthService {
     const { id: institutionId, name: institutionName } =
       await this.resolveInstitution(institutionCode);
 
-    const user = await this.prisma.user.findFirst({
+    // Fetch ALL active users matching this credential — multiple records can
+    // exist when the same person holds different roles (e.g. operator + director).
+    const candidates = await this.prisma.user.findMany({
       where: {
         institutionId,
         deletedAt: null,
@@ -133,8 +135,7 @@ export class AuthService {
     // Generic error — never reveal whether email or password was wrong
     const INVALID = new UnauthorizedException('Invalid credentials');
 
-    if (!user || !user.passwordHash) {
-      // Simulate bcrypt timing to prevent user enumeration
+    if (candidates.length === 0) {
       await bcrypt.compare(
         password,
         '$2b$12$invalidhashpaddinginvalid000000000000000000000000000000',
@@ -142,9 +143,39 @@ export class AuthService {
       throw INVALID;
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) throw INVALID;
+    // Role priority — higher number wins when multiple records share credentials.
+    // super_admin (Director) beats admin (Operator) so the director always gets in.
+    const ROLE_PRIORITY: Record<string, number> = {
+      student: 0,
+      parent: 1,
+      non_teaching_staff: 2,
+      accountant: 3,
+      receptionist: 4,
+      teacher: 5,
+      principal: 6,
+      admin: 7,
+      super_admin: 8,
+    };
+    const userPriority = (u: (typeof candidates)[0]) =>
+      Math.max(-1, ...u.roles.map((ur) => ROLE_PRIORITY[ur.role.code] ?? -1));
 
+    // Verify password against every candidate; keep those that match.
+    const checks = await Promise.all(
+      candidates.map(async (u) => ({
+        user: u,
+        valid: u.passwordHash
+          ? await bcrypt.compare(password, u.passwordHash)
+          : false,
+      })),
+    );
+
+    const validMatches = checks
+      .filter((c) => c.valid)
+      .sort((a, b) => userPriority(b.user) - userPriority(a.user));
+
+    if (validMatches.length === 0) throw INVALID;
+
+    const user = validMatches[0].user;
     const roles = this.extractRoles(user.roles);
     const permissions = this.extractPermissions(user.roles);
 

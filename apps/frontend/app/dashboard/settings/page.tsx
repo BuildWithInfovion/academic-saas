@@ -6,6 +6,16 @@ import { useAuthStore } from '@/store/auth.store';
 import { TotpSetupCard } from '@/components/totp-setup-card';
 import { validatePassword, checkPasswordStrength } from '@/lib/password-utils';
 
+interface Director {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
 interface ResetRequest {
   id: string;
   createdAt: string;
@@ -53,6 +63,60 @@ export default function OperatorSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
+
+  // Director account
+  const [directors,       setDirectors]       = useState<Director[]>([]);
+  const [dirLoading,      setDirLoading]      = useState(true);
+  const [showDirForm,     setShowDirForm]     = useState(false);
+  const [dirName,         setDirName]         = useState('');
+  const [dirEmail,        setDirEmail]        = useState('');
+  const [dirPhone,        setDirPhone]        = useState('');
+  const [dirPassword,     setDirPassword]     = useState('');
+  const [dirSaving,       setDirSaving]       = useState(false);
+  const [dirError,        setDirError]        = useState<string | null>(null);
+  const [dirCreated,      setDirCreated]      = useState<{ name: string | null; email: string | null; phone: string | null; password: string } | null>(null);
+
+  const fetchDirectors = useCallback(async () => {
+    setDirLoading(true);
+    try {
+      const res = await apiFetch<Director[]>('/users/director');
+      setDirectors(Array.isArray(res) ? res : []);
+    } catch {
+      setDirectors([]);
+    } finally {
+      setDirLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchDirectors(); }, [fetchDirectors]);
+
+  const handleCreateDirector = async () => {
+    setDirError(null);
+    if (!dirEmail.trim() && !dirPhone.trim()) return setDirError('Email or phone is required');
+    if (!dirPassword.trim()) return setDirError('Password is required');
+    const pwErr = validatePassword(dirPassword);
+    if (pwErr) return setDirError(pwErr);
+    setDirSaving(true);
+    try {
+      await apiFetch('/users/director', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: dirName.trim() || undefined,
+          email: dirEmail.trim() || undefined,
+          phone: dirPhone.trim() || undefined,
+          password: dirPassword,
+        }),
+      });
+      setDirCreated({ name: dirName.trim() || null, email: dirEmail.trim() || null, phone: dirPhone.trim() || null, password: dirPassword });
+      setDirName(''); setDirEmail(''); setDirPhone(''); setDirPassword('');
+      setShowDirForm(false);
+      await fetchDirectors();
+    } catch (e: unknown) {
+      setDirError(e instanceof Error ? e.message : 'Failed to create director');
+    } finally {
+      setDirSaving(false);
+    }
+  };
 
   // Reset requests
   const [requests, setRequests] = useState<ResetRequest[]>([]);
@@ -200,6 +264,128 @@ export default function OperatorSettingsPage() {
             <span className="bg-ds-info-bg text-ds-info-text px-2.5 py-0.5 rounded-full text-xs font-medium">Operator</span>
           </div>
         </div>
+      </div>
+
+      {/* Director Account */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-semibold text-ds-text1">Director Account</h2>
+            <p className="text-xs text-ds-text3 mt-0.5">Read-only oversight login for the school director</p>
+          </div>
+          {!showDirForm && (
+            <button
+              onClick={() => { setShowDirForm(true); setDirError(null); setDirCreated(null); }}
+              className="btn-brand px-3 py-1.5 rounded-lg text-xs"
+            >
+              + Create Director
+            </button>
+          )}
+        </div>
+
+        {/* Success credentials banner */}
+        {dirCreated && (
+          <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-xl p-4">
+            <p className="text-xs font-semibold text-ds-success-text mb-3 uppercase tracking-wider">
+              Director Account Created — Share credentials securely
+            </p>
+            <div className="space-y-1.5 text-sm">
+              {dirCreated.name  && <div className="flex justify-between"><span className="text-ds-text2">Name</span><span className="font-medium text-ds-text1">{dirCreated.name}</span></div>}
+              {dirCreated.email && <div className="flex justify-between"><span className="text-ds-text2">Email</span><span className="font-medium text-ds-text1">{dirCreated.email}</span></div>}
+              {dirCreated.phone && <div className="flex justify-between"><span className="text-ds-text2">Phone</span><span className="font-medium text-ds-text1">{dirCreated.phone}</span></div>}
+              <div className="flex justify-between"><span className="text-ds-text2">Password</span><span className="font-mono font-bold text-ds-text1 tracking-widest">{dirCreated.password}</span></div>
+            </div>
+            <p className="text-xs text-ds-success-text mt-3">Credentials shown only once. Director should change password after first login.</p>
+            <button onClick={() => setDirCreated(null)} className="mt-2 text-xs text-ds-text3 hover:text-ds-text2 underline">Dismiss</button>
+          </div>
+        )}
+
+        {/* Existing directors list */}
+        {dirLoading ? (
+          <p className="text-sm text-ds-text3">Loading…</p>
+        ) : directors.length === 0 && !showDirForm ? (
+          <div className="text-center py-6 border border-dashed border-ds-border rounded-lg">
+            <p className="text-sm text-ds-text3">No director account yet</p>
+            <p className="text-xs text-ds-text3 mt-1">Create one to give the school director read-only access</p>
+          </div>
+        ) : directors.length > 0 ? (
+          <div className="divide-y divide-ds-border mb-4">
+            {directors.map((d) => (
+              <div key={d.id} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium text-ds-text1">{d.name ?? '(No name)'}</p>
+                  <p className="text-xs text-ds-text3">{d.email ?? d.phone ?? '—'}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {d.lastLoginAt ? (
+                    <span className="text-xs text-ds-text3">
+                      Last login {new Date(d.lastLoginAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-ds-text3">Never logged in</span>
+                  )}
+                  <span className="bg-ds-info-bg text-ds-info-text px-2 py-0.5 rounded-full text-xs font-medium">Director</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {/* Create form */}
+        {showDirForm && (
+          <div className="border border-ds-border rounded-xl p-4 space-y-3 mt-2">
+            <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider">New Director Account</p>
+
+            {dirError && (
+              <div className="bg-ds-error-bg border border-ds-error-border rounded-lg px-3 py-2 text-ds-error-text text-xs">{dirError}</div>
+            )}
+
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Full Name <span className="text-ds-text3">(optional)</span></label>
+              <input className={inp} type="text" placeholder="e.g. Ramesh Sharma" value={dirName} onChange={(e) => setDirName(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Email <span className="text-ds-text3">(required if no phone)</span></label>
+              <input className={inp} type="email" placeholder="director@school.com" value={dirEmail} onChange={(e) => setDirEmail(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Phone <span className="text-ds-text3">(required if no email)</span></label>
+              <input className={inp} type="text" placeholder="10-digit mobile" value={dirPhone} onChange={(e) => setDirPhone(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Password</label>
+              <input className={inp} type="password" placeholder="Min 8 chars, uppercase + number" value={dirPassword} onChange={(e) => setDirPassword(e.target.value)} />
+              {dirPassword && (() => {
+                const s = checkPasswordStrength(dirPassword);
+                return (
+                  <div className="mt-2 grid grid-cols-2 gap-1">
+                    {([['minLength', '8+ characters'], ['hasUppercase', 'Uppercase'], ['hasLowercase', 'Lowercase'], ['hasNumber', 'Number']] as const).map(([k, label]) => (
+                      <span key={k} className={`text-xs flex items-center gap-1 ${s[k] ? 'text-ds-success-text' : 'text-ds-text3'}`}>
+                        {s[k] ? '✓' : '○'} {label}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleCreateDirector}
+                disabled={dirSaving}
+                className="btn-brand px-4 py-2 rounded-lg text-sm disabled:opacity-50"
+              >
+                {dirSaving ? 'Creating…' : 'Create Director'}
+              </button>
+              <button
+                onClick={() => { setShowDirForm(false); setDirError(null); setDirName(''); setDirEmail(''); setDirPhone(''); setDirPassword(''); }}
+                className="px-4 py-2 rounded-lg text-sm border border-ds-border text-ds-text2 hover:bg-ds-bg2"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Password Reset Requests */}

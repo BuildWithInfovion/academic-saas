@@ -111,6 +111,7 @@ export default function LoginPage() {
     const authPayload = {
       accessToken: data.accessToken as string,
       user: {
+        name: (data.user.name ?? null) as string | null,
         email: (data.user.email ?? '') as string,
         phone: data.user.phone as string | undefined,
         institutionId: data.user.institutionId as string,

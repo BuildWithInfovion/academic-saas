@@ -88,6 +88,24 @@ export class UsersController {
     );
   }
 
+  // ── Director management ────────────────────────────────────────────────────
+  // Static routes must come before :userId param routes in NestJS.
+
+  @Get('director')
+  @Permissions('users.read')
+  getDirectors(@Tenant() tenant: TenantContext) {
+    return this.usersService.getDirectors(tenant.institutionId);
+  }
+
+  @Post('director')
+  @Permissions('users.write')
+  createDirector(
+    @Tenant() tenant: TenantContext,
+    @Body() body: { name?: string; email?: string; phone?: string; password: string },
+  ) {
+    return this.usersService.createDirector(tenant.institutionId, body);
+  }
+
   @Get(':userId/assignments')
   @Permissions('users.read')
   getAssignments(
