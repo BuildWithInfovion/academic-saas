@@ -15,21 +15,13 @@ const INST_TYPES = [
 ];
 
 const BOARDS = [
-  'CBSE',
-  'ICSE / ISC',
-  'IB',
-  'Cambridge IGCSE',
-  'State Board',
-  'NIOS',
-  'Others',
+  'CBSE', 'ICSE / ISC', 'IB', 'Cambridge IGCSE',
+  'State Board', 'NIOS', 'Others',
 ];
 
 const MANAGEMENT_TYPES = [
-  'Private Unaided',
-  'Private Aided',
-  'Government',
-  'Central Government',
-  'Trust / NGO',
+  'Private Unaided', 'Private Aided', 'Government',
+  'Central Government', 'Trust / NGO',
 ];
 
 const GENDER_TYPES = ['Co-education', 'Boys Only', 'Girls Only'];
@@ -70,38 +62,81 @@ interface OnboardResult {
   subscription: { totalAmount: number; endDate: string; maxStudents: number };
 }
 
+// ── Shared sub-components (defined outside to keep stable references) ────────
+
+function Section({
+  title,
+  subtitle,
+  badge,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-white">{title}</h2>
+          {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+        </div>
+        {badge && (
+          <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full border border-gray-700">
+            {badge}
+          </span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function FieldErr({ error }: { error?: string }) {
+  if (!error) return null;
+  return (
+    <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
+      <span>⚠</span> {error}
+    </p>
+  );
+}
+
+function inp(hasError?: boolean) {
+  return `w-full px-3 py-2.5 bg-gray-800/60 border rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${
+    hasError ? 'border-red-500' : 'border-gray-700 hover:border-gray-600'
+  }`;
+}
+
+const SEL_CLS = `w-full px-3 py-2.5 bg-gray-800/60 border border-gray-700 hover:border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none transition-colors`;
+const TEXTAREA_CLS = `w-full px-3 py-2.5 bg-gray-800/60 border border-gray-700 hover:border-gray-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition-colors`;
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function OnboardClientPage() {
   const router = useRouter();
 
   const [form, setForm] = useState({
-    // Identity
     name: '',
     institutionType: 'school',
     planCode: 'standard',
     codeOverride: '',
-    // Education profile
     board: '',
     affiliationNo: '',
     mediumOfInstruction: '',
     schoolGenderType: '',
     managementType: '',
     foundedYear: '',
-    // Contact
     institutionPhone: '',
     institutionEmail: '',
     website: '',
-    // Location
     city: '',
     state: '',
     institutionAddress: '',
-    // Subscription
     maxStudents: '500',
     pricePerUser: '50',
     subscriptionYears: '1',
     subscriptionStartDate: new Date().toISOString().split('T')[0],
-    // Accounts
     adminName: '',
     adminEmail: '',
     adminPhone: '',
@@ -118,12 +153,12 @@ export default function OnboardClientPage() {
 
   const isSchoolType = ['school', 'pre_school'].includes(form.institutionType);
 
-  const set =
-    (key: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  function set(key: keyof typeof form) {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       setForm((f) => ({ ...f, [key]: e.target.value }));
       setFieldErrors((fe) => { const n = { ...fe }; delete n[key]; return n; });
     };
+  }
 
   const totalAmount =
     (parseInt(form.maxStudents) || 0) * (parseFloat(form.pricePerUser) || 0);
@@ -216,56 +251,10 @@ export default function OnboardClientPage() {
     }
   };
 
-  // ── Styles ─────────────────────────────────────────────────────────────────
-
-  const inp = (field?: string) =>
-    `w-full px-3 py-2.5 bg-gray-800/60 border rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${
-      field && fieldErrors[field] ? 'border-red-500' : 'border-gray-700 hover:border-gray-600'
-    }`;
-  const sel = `w-full px-3 py-2.5 bg-gray-800/60 border border-gray-700 hover:border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none transition-colors`;
-
-  const FieldErr = ({ field }: { field: string }) =>
-    fieldErrors[field] ? (
-      <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
-        <span>⚠</span> {fieldErrors[field]}
-      </p>
-    ) : null;
-
-  const Section = ({
-    title,
-    subtitle,
-    badge,
-    children,
-  }: {
-    title: string;
-    subtitle?: string;
-    badge?: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-white">{title}</h2>
-          {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
-        </div>
-        {badge && (
-          <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full border border-gray-700">
-            {badge}
-          </span>
-        )}
-      </div>
-      {children}
-    </div>
-  );
-
   // ── Success screen ─────────────────────────────────────────────────────────
 
   if (result) {
-    const credCard = (
-      label: string,
-      creds: Credentials,
-      color: 'indigo' | 'amber',
-    ) => (
+    const credCard = (label: string, creds: Credentials, color: 'indigo' | 'amber') => (
       <div className={`rounded-xl p-4 space-y-3 border ${
         color === 'indigo'
           ? 'bg-indigo-950/40 border-indigo-800/60'
@@ -284,15 +273,11 @@ export default function OnboardClientPage() {
         ].map(({ k, v, mono, highlight }) => (
           <div key={k} className="flex items-center justify-between gap-4">
             <span className="text-xs text-gray-400 shrink-0">{k}</span>
-            <span
-              className={`text-sm font-medium truncate ${
-                mono ? 'font-mono' : ''
-              } ${
-                highlight
-                  ? color === 'indigo' ? 'text-indigo-300' : 'text-amber-300'
-                  : 'text-white'
-              }`}
-            >
+            <span className={`text-sm font-medium truncate ${mono ? 'font-mono' : ''} ${
+              highlight
+                ? color === 'indigo' ? 'text-indigo-300' : 'text-amber-300'
+                : 'text-white'
+            }`}>
               {v}
             </span>
           </div>
@@ -302,7 +287,6 @@ export default function OnboardClientPage() {
 
     return (
       <div className="p-8 max-w-2xl space-y-5">
-        {/* Header */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-green-900/40 border border-green-700 flex items-center justify-center text-green-400 text-lg">
             ✓
@@ -334,9 +318,7 @@ export default function OnboardClientPage() {
             {
               k: 'Annual Amount',
               v: new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-                maximumFractionDigits: 0,
+                style: 'currency', currency: 'INR', maximumFractionDigits: 0,
               }).format(result.subscription.totalAmount),
             },
             {
@@ -373,9 +355,10 @@ export default function OnboardClientPage() {
 
   // ── Form ───────────────────────────────────────────────────────────────────
 
+  const fe = fieldErrors;
+
   return (
     <div className="p-8 max-w-2xl space-y-6">
-      {/* Header */}
       <div>
         <button
           onClick={() => router.back()}
@@ -403,17 +386,19 @@ export default function OnboardClientPage() {
               Institution Name <span className="text-red-400">*</span>
             </label>
             <input
-              className={inp('name')}
+              id="inst-name"
+              name="inst-name"
+              className={inp(!!fe.name)}
               placeholder="e.g. Vedant Vidya Mandir, St. Xavier's School"
               value={form.name}
               onChange={set('name')}
             />
-            <FieldErr field="name" />
+            <FieldErr error={fe.name} />
           </div>
 
           <div>
             <label className="text-xs text-gray-400 block mb-1">Institution Type</label>
-            <select className={sel} value={form.institutionType} onChange={set('institutionType')}>
+            <select id="inst-type" name="inst-type" className={SEL_CLS} value={form.institutionType} onChange={set('institutionType')}>
               {INST_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
@@ -422,7 +407,7 @@ export default function OnboardClientPage() {
 
           <div>
             <label className="text-xs text-gray-400 block mb-1">Subscription Plan</label>
-            <select className={sel} value={form.planCode} onChange={set('planCode')}>
+            <select id="plan-code" name="plan-code" className={SEL_CLS} value={form.planCode} onChange={set('planCode')}>
               {PLANS.map((p) => (
                 <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
               ))}
@@ -435,7 +420,9 @@ export default function OnboardClientPage() {
               <span className="text-gray-600">(optional — auto-generated from name if empty)</span>
             </label>
             <input
-              className={inp('codeOverride')}
+              id="code-override"
+              name="code-override"
+              className={inp(!!fe.codeOverride)}
               placeholder="e.g. vedantvidya, stmary2026"
               value={form.codeOverride}
               onChange={set('codeOverride')}
@@ -449,22 +436,18 @@ export default function OnboardClientPage() {
                 </span>
               </p>
             )}
-            <FieldErr field="codeOverride" />
+            <FieldErr error={fe.codeOverride} />
           </div>
         </div>
       </Section>
 
-      {/* ── 2. School Profile (education-specific) ────────────────────────── */}
+      {/* ── 2. Academic Profile (school only) ────────────────────────────── */}
       {isSchoolType && (
-        <Section
-          title="Academic Profile"
-          subtitle="Board affiliation, medium, and school classification"
-          badge="School"
-        >
+        <Section title="Academic Profile" subtitle="Board affiliation, medium, and school classification" badge="School">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-400 block mb-1">Board / Curriculum</label>
-              <select className={sel} value={form.board} onChange={set('board')}>
+              <select id="board" name="board" className={SEL_CLS} value={form.board} onChange={set('board')}>
                 <option value="">— Select board —</option>
                 {BOARDS.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
@@ -472,21 +455,22 @@ export default function OnboardClientPage() {
 
             <div>
               <label className="text-xs text-gray-400 block mb-1">
-                Affiliation / School No.{' '}
-                <span className="text-gray-600">(optional)</span>
+                Affiliation / School No. <span className="text-gray-600">(optional)</span>
               </label>
               <input
-                className={inp('affiliationNo')}
+                id="affiliation-no"
+                name="affiliation-no"
+                className={inp(!!fe.affiliationNo)}
                 placeholder="e.g. 1100234"
                 value={form.affiliationNo}
                 onChange={set('affiliationNo')}
               />
-              <FieldErr field="affiliationNo" />
+              <FieldErr error={fe.affiliationNo} />
             </div>
 
             <div>
               <label className="text-xs text-gray-400 block mb-1">Medium of Instruction</label>
-              <select className={sel} value={form.mediumOfInstruction} onChange={set('mediumOfInstruction')}>
+              <select id="medium" name="medium" className={SEL_CLS} value={form.mediumOfInstruction} onChange={set('mediumOfInstruction')}>
                 <option value="">— Select medium —</option>
                 {MEDIUMS.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -494,7 +478,7 @@ export default function OnboardClientPage() {
 
             <div>
               <label className="text-xs text-gray-400 block mb-1">School Type</label>
-              <select className={sel} value={form.schoolGenderType} onChange={set('schoolGenderType')}>
+              <select id="gender-type" name="gender-type" className={SEL_CLS} value={form.schoolGenderType} onChange={set('schoolGenderType')}>
                 <option value="">— Select type —</option>
                 {GENDER_TYPES.map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
@@ -502,7 +486,7 @@ export default function OnboardClientPage() {
 
             <div>
               <label className="text-xs text-gray-400 block mb-1">Management</label>
-              <select className={sel} value={form.managementType} onChange={set('managementType')}>
+              <select id="mgmt-type" name="mgmt-type" className={SEL_CLS} value={form.managementType} onChange={set('managementType')}>
                 <option value="">— Select management —</option>
                 {MANAGEMENT_TYPES.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -513,15 +497,17 @@ export default function OnboardClientPage() {
                 Year Established <span className="text-gray-600">(optional)</span>
               </label>
               <input
+                id="founded-year"
+                name="founded-year"
                 type="number"
-                className={inp('foundedYear')}
-                placeholder={`e.g. 1998`}
+                className={inp(!!fe.foundedYear)}
+                placeholder="e.g. 1998"
                 min={1800}
                 max={new Date().getFullYear()}
                 value={form.foundedYear}
                 onChange={set('foundedYear')}
               />
-              <FieldErr field="foundedYear" />
+              <FieldErr error={fe.foundedYear} />
             </div>
           </div>
         </Section>
@@ -535,14 +521,16 @@ export default function OnboardClientPage() {
               Phone <span className="text-gray-600">(optional)</span>
             </label>
             <input
-              className={inp('institutionPhone')}
+              id="inst-phone"
+              name="inst-phone"
+              className={inp(!!fe.institutionPhone)}
               type="tel"
               placeholder="9876543210"
               maxLength={10}
               value={form.institutionPhone}
               onChange={set('institutionPhone')}
             />
-            <FieldErr field="institutionPhone" />
+            <FieldErr error={fe.institutionPhone} />
           </div>
 
           <div>
@@ -550,13 +538,15 @@ export default function OnboardClientPage() {
               Email <span className="text-gray-600">(optional)</span>
             </label>
             <input
-              className={inp('institutionEmail')}
+              id="inst-email"
+              name="inst-email"
+              className={inp(!!fe.institutionEmail)}
               type="email"
               placeholder="info@school.edu.in"
               value={form.institutionEmail}
               onChange={set('institutionEmail')}
             />
-            <FieldErr field="institutionEmail" />
+            <FieldErr error={fe.institutionEmail} />
           </div>
 
           <div className="col-span-2">
@@ -564,6 +554,8 @@ export default function OnboardClientPage() {
               Website <span className="text-gray-600">(optional)</span>
             </label>
             <input
+              id="website"
+              name="website"
               className={inp()}
               type="url"
               placeholder="https://www.schoolname.edu.in"
@@ -580,6 +572,8 @@ export default function OnboardClientPage() {
           <div>
             <label className="text-xs text-gray-400 block mb-1">City</label>
             <input
+              id="city"
+              name="city"
               className={inp()}
               placeholder="e.g. Pune, Nagpur, Mumbai"
               value={form.city}
@@ -589,7 +583,7 @@ export default function OnboardClientPage() {
 
           <div>
             <label className="text-xs text-gray-400 block mb-1">State</label>
-            <select className={sel} value={form.state} onChange={set('state')}>
+            <select id="state" name="state" className={SEL_CLS} value={form.state} onChange={set('state')}>
               <option value="">— Select state —</option>
               {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -600,7 +594,9 @@ export default function OnboardClientPage() {
               Street Address <span className="text-gray-600">(optional)</span>
             </label>
             <textarea
-              className="w-full px-3 py-2.5 bg-gray-800/60 border border-gray-700 hover:border-gray-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition-colors"
+              id="inst-address"
+              name="inst-address"
+              className={TEXTAREA_CLS}
               rows={2}
               placeholder="Building, street, area..."
               value={form.institutionAddress}
@@ -618,19 +614,23 @@ export default function OnboardClientPage() {
               Max Students <span className="text-red-400">*</span>
             </label>
             <input
+              id="max-students"
+              name="max-students"
               type="number"
-              className={inp('maxStudents')}
+              className={inp(!!fe.maxStudents)}
               placeholder="500"
               min={1}
               value={form.maxStudents}
               onChange={set('maxStudents')}
             />
-            <FieldErr field="maxStudents" />
+            <FieldErr error={fe.maxStudents} />
           </div>
 
           <div>
             <label className="text-xs text-gray-400 block mb-1">Price / Student (₹)</label>
             <input
+              id="price-per-user"
+              name="price-per-user"
               type="number"
               className={inp()}
               placeholder="50"
@@ -642,7 +642,7 @@ export default function OnboardClientPage() {
 
           <div>
             <label className="text-xs text-gray-400 block mb-1">Duration</label>
-            <select className={sel} value={form.subscriptionYears} onChange={set('subscriptionYears')}>
+            <select id="sub-years" name="sub-years" className={SEL_CLS} value={form.subscriptionYears} onChange={set('subscriptionYears')}>
               {YEARS.map((y) => (
                 <option key={y} value={y}>{y} Year{y > 1 ? 's' : ''}</option>
               ))}
@@ -652,6 +652,8 @@ export default function OnboardClientPage() {
           <div>
             <label className="text-xs text-gray-400 block mb-1">Start Date</label>
             <input
+              id="sub-start"
+              name="sub-start"
               type="date"
               className={inp()}
               value={form.subscriptionStartDate}
@@ -674,7 +676,9 @@ export default function OnboardClientPage() {
             Notes <span className="text-gray-600">(optional)</span>
           </label>
           <textarea
-            className="w-full px-3 py-2.5 bg-gray-800/60 border border-gray-700 hover:border-gray-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition-colors"
+            id="notes"
+            name="notes"
+            className={TEXTAREA_CLS}
             rows={2}
             placeholder="Payment terms, special agreements, referral source..."
             value={form.notes}
@@ -694,6 +698,8 @@ export default function OnboardClientPage() {
               Name <span className="text-gray-600">(optional)</span>
             </label>
             <input
+              id="admin-name"
+              name="admin-name"
               className={inp()}
               type="text"
               placeholder="e.g. Rajesh Kumar"
@@ -707,13 +713,15 @@ export default function OnboardClientPage() {
               Email <span className="text-gray-600">(optional)</span>
             </label>
             <input
-              className={inp('adminEmail')}
+              id="admin-email"
+              name="admin-email"
+              className={inp(!!fe.adminEmail)}
               type="email"
               placeholder="admin@school.com"
               value={form.adminEmail}
               onChange={set('adminEmail')}
             />
-            <FieldErr field="adminEmail" />
+            <FieldErr error={fe.adminEmail} />
           </div>
 
           <div>
@@ -721,14 +729,16 @@ export default function OnboardClientPage() {
               Phone <span className="text-gray-600">(optional)</span>
             </label>
             <input
-              className={inp('adminPhone')}
+              id="admin-phone"
+              name="admin-phone"
+              className={inp(!!fe.adminPhone)}
               type="tel"
               placeholder="9876543210"
               value={form.adminPhone}
               onChange={set('adminPhone')}
               maxLength={10}
             />
-            <FieldErr field="adminPhone" />
+            <FieldErr error={fe.adminPhone} />
           </div>
         </div>
       </Section>
@@ -743,6 +753,8 @@ export default function OnboardClientPage() {
           <div className="col-span-2">
             <label className="text-xs text-gray-400 block mb-1">Name</label>
             <input
+              id="director-name"
+              name="director-name"
               className={inp()}
               type="text"
               placeholder="e.g. Priya Sharma"
@@ -754,26 +766,30 @@ export default function OnboardClientPage() {
           <div>
             <label className="text-xs text-gray-400 block mb-1">Email</label>
             <input
-              className={inp('directorEmail')}
+              id="director-email"
+              name="director-email"
+              className={inp(!!fe.directorEmail)}
               type="email"
               placeholder="director@school.com"
               value={form.directorEmail}
               onChange={set('directorEmail')}
             />
-            <FieldErr field="directorEmail" />
+            <FieldErr error={fe.directorEmail} />
           </div>
 
           <div>
             <label className="text-xs text-gray-400 block mb-1">Phone</label>
             <input
-              className={inp('directorPhone')}
+              id="director-phone"
+              name="director-phone"
+              className={inp(!!fe.directorPhone)}
               type="tel"
               placeholder="9876543210"
               value={form.directorPhone}
               onChange={set('directorPhone')}
               maxLength={10}
             />
-            <FieldErr field="directorPhone" />
+            <FieldErr error={fe.directorPhone} />
           </div>
         </div>
       </Section>

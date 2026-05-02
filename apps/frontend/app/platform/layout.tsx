@@ -69,7 +69,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     return () => clearInterval(id);
   }, []);
 
-  // Poll open support tickets every 60 s for notification badge
+  // Poll open support tickets every 5 min for notification badge
   useEffect(() => {
     if (isLoginPage) return;
     const fetchTickets = () => {
@@ -83,7 +83,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         .catch(() => {});
     };
     fetchTickets();
-    const id = setInterval(fetchTickets, 60_000);
+    const id = setInterval(fetchTickets, 300_000);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoginPage]);

@@ -26,9 +26,9 @@ export class PrismaService
   async onModuleInit() {
     await this.connectWithRetry();
 
-    // Log queries that take more than 200 ms — surfaces missing indexes quickly.
+    // Log queries that take more than 500 ms (cross-region RTT to Supabase is ~260ms baseline).
     this.$on('query' as never, (e: { query: string; duration: number }) => {
-      if (e.duration >= 200) {
+      if (e.duration >= 500) {
         this.logger.warn(
           `[SLOW QUERY] ${e.duration}ms — ${e.query.slice(0, 200)}`,
         );
