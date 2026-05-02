@@ -389,9 +389,13 @@ export default function OnboardClientPage() {
               id="inst-name"
               name="inst-name"
               className={inp(!!fe.name)}
-              placeholder="e.g. Vedant Vidya Mandir, St. Xavier's School"
+              placeholder="e.g. VEDANT VIDYA MANDIR, ST. XAVIER'S SCHOOL"
               value={form.name}
-              onChange={set('name')}
+              onChange={(e) => {
+                const v = e.target.value.toUpperCase();
+                setForm((f) => ({ ...f, name: v }));
+                setFieldErrors((fe2) => { const n = { ...fe2 }; delete n.name; return n; });
+              }}
             />
             <FieldErr error={fe.name} />
           </div>
