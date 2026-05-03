@@ -231,6 +231,9 @@ export default function StudentsPage() {
   const currentYearIdRef   = useRef(currentYearId);
   const academicUnitsRef   = useRef(academicUnits);
 
+  // Prefetch cache — keyed by "unitId|yearId" so stale data is never used
+  const feePlanCache = useRef<Map<string, { plans: FeePlan[]; legacy: any[] }>>(new Map());
+
   // ── Ledger import ────────────────────────────────────────────────────────
   type ImportRow = {
     firstName: string; lastName: string; middleName?: string; gender?: string;
@@ -364,6 +367,19 @@ export default function StudentsPage() {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [form, editingId, saveDraft]);
 
+  // Prefetch fee plan as soon as class + year are known so Step 2 opens instantly
+  useEffect(() => {
+    if (!form.academicUnitId || !currentYearId) return;
+    const cacheKey = `${form.academicUnitId}|${currentYearId}`;
+    if (feePlanCache.current.has(cacheKey)) return;
+    Promise.all([
+      apiFetch<FeePlan[]>(`/fees/plans?yearId=${currentYearId}&unitId=${form.academicUnitId}`).catch(() => [] as FeePlan[]),
+      apiFetch(`/fees/structures?unitId=${form.academicUnitId}&yearId=${currentYearId}`).catch(() => []),
+    ]).then(([plans, legacy]) => {
+      feePlanCache.current.set(cacheKey, { plans: Array.isArray(plans) ? plans : [], legacy: Array.isArray(legacy) ? legacy : [] });
+    });
+  }, [form.academicUnitId, currentYearId]);
+
   const loadDraft = (draft: AdmissionDraft) => {
     setForm({ ...draft.form });
     setActiveDraftId(draft.id);
@@ -436,23 +452,33 @@ export default function StudentsPage() {
     setExistingParentInfo(null);
     setLoadingFees(true);
 
-    // Only fetch plans explicitly assigned to this class — never fall back to
-    // plans for other classes (that caused cross-class fee contamination).
-    const planClassPromise = (form.academicUnitId && currentYearId)
-      ? apiFetch<FeePlan[]>(`/fees/plans?yearId=${currentYearId}&unitId=${form.academicUnitId}`).catch(() => null)
-      : Promise.resolve(null);
+    // Sibling detection runs in background — does not block fee plan display
+    if (form.parentPhone) {
+      apiFetch(`/users?phone=${encodeURIComponent(form.parentPhone)}&role=parent`)
+        .then((res) => { if (Array.isArray(res) && res.length > 0) setExistingParentInfo({ phone: form.parentPhone }); })
+        .catch(() => {});
+    }
 
-    const legacyPromise = (form.academicUnitId && currentYearId)
-      ? apiFetch(`/fees/structures?unitId=${form.academicUnitId}&yearId=${currentYearId}`).catch(() => null)
-      : Promise.resolve(null);
+    // Use prefetched cache if available — shows fee plan instantly with no spinner
+    const cacheKey = `${form.academicUnitId}|${currentYearId}`;
+    const cached = feePlanCache.current.get(cacheKey);
 
-    // Sibling detection — only match parent-role accounts, not staff/operators
-    const parentPromise = form.parentPhone
-      ? apiFetch(`/users?phone=${encodeURIComponent(form.parentPhone)}&role=parent`).catch(() => null)
-      : Promise.resolve(null);
+    const planClassPromise = cached
+      ? Promise.resolve(cached.plans)
+      : (form.academicUnitId && currentYearId)
+        ? apiFetch<FeePlan[]>(`/fees/plans?yearId=${currentYearId}&unitId=${form.academicUnitId}`).catch(() => null)
+        : Promise.resolve(null);
+
+    const legacyPromise = cached
+      ? Promise.resolve(cached.legacy)
+      : (form.academicUnitId && currentYearId)
+        ? apiFetch(`/fees/structures?unitId=${form.academicUnitId}&yearId=${currentYearId}`).catch(() => null)
+        : Promise.resolve(null);
+
+    if (cached) setLoadingFees(false);
 
     try {
-      const [planClassRes, legacyRes, parentRes] = await Promise.all([planClassPromise, legacyPromise, parentPromise]);
+      const [planClassRes, legacyRes] = await Promise.all([planClassPromise, legacyPromise]);
 
       const classPlans: FeePlan[] = Array.isArray(planClassRes) ? planClassRes : [];
       const plan = classPlans.length > 0 ? classPlans[0] : null;
@@ -507,10 +533,6 @@ export default function StudentsPage() {
         } else {
           setFeeItems(feeHeads.map((fh) => ({ feeHeadId: fh.id, name: fh.name, structureAmount: 0, amount: '', checked: false })));
         }
-      }
-
-      if (Array.isArray(parentRes) && parentRes.length > 0) {
-        setExistingParentInfo({ phone: form.parentPhone });
       }
     } catch {
       setActivePlan(null);
