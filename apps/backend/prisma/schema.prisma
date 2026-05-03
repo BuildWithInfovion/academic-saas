@@ -157,6 +157,9 @@ model Student {
   disabilityDetails     String?
   medicalConditions     String?   // allergies, chronic conditions
 
+  // PHOTO
+  photoUrl              String?
+
   // SIBLING LINKING
   siblingGroupId        String?
 

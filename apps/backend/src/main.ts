@@ -4,13 +4,8 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import { syncSchema } from './startup/schema-sync';
 
 async function bootstrap(): Promise<void> {
-  // Run DDL sync before the app initialises — ensures every schema column
-  // exists regardless of which deployment method Railway uses.
-  await syncSchema();
-
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const logger = new Logger('Bootstrap');
 
