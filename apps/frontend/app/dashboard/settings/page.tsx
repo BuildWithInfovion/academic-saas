@@ -190,6 +190,116 @@ export default function OperatorSettingsPage() {
     }
   };
 
+  // ── School Profile & Branding ─────────────────────────────────────────────
+  const [school, setSchool] = useState<{
+    name?: string; board?: string; address?: string; phone?: string; email?: string; website?: string;
+    principalName?: string; tagline?: string; affiliationNo?: string; udiseCode?: string; gstin?: string;
+    logoUrl?: string; stampUrl?: string; signatureUrl?: string;
+    bankName?: string; bankAccountNo?: string; bankIfsc?: string; bankBranch?: string; bankAccountHolder?: string;
+  } | null>(null);
+  const [schoolForm, setSchoolForm] = useState({
+    principalName: '', tagline: '', board: '', address: '', phone: '', email: '', website: '',
+    affiliationNo: '', udiseCode: '', gstin: '',
+    bankName: '', bankAccountNo: '', bankIfsc: '', bankBranch: '', bankAccountHolder: '',
+  });
+  const [schoolSaving, setSchoolSaving] = useState(false);
+  const [schoolMsg, setSchoolMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [brandingUploading, setBrandingUploading] = useState<Record<string, boolean>>({});
+
+  const loadSchool = useCallback(async () => {
+    try {
+      const res = await apiFetch<typeof school>('/institution/me');
+      setSchool(res);
+      if (res) setSchoolForm({
+        principalName:    res.principalName    ?? '',
+        tagline:          res.tagline          ?? '',
+        board:            res.board            ?? '',
+        address:          res.address          ?? '',
+        phone:            res.phone            ?? '',
+        email:            res.email            ?? '',
+        website:          res.website          ?? '',
+        affiliationNo:    res.affiliationNo    ?? '',
+        udiseCode:        res.udiseCode        ?? '',
+        gstin:            res.gstin            ?? '',
+        bankName:         res.bankName         ?? '',
+        bankAccountNo:    res.bankAccountNo    ?? '',
+        bankIfsc:         res.bankIfsc         ?? '',
+        bankBranch:       res.bankBranch       ?? '',
+        bankAccountHolder: res.bankAccountHolder ?? '',
+      });
+    } catch { /* non-fatal */ }
+  }, []);
+
+  useEffect(() => { void loadSchool(); }, [loadSchool]);
+
+  const saveSchoolProfile = async () => {
+    setSchoolSaving(true); setSchoolMsg(null);
+    try {
+      const res = await apiFetch('/institution/me', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          principalName:     schoolForm.principalName.trim()     || undefined,
+          tagline:           schoolForm.tagline.trim()           || undefined,
+          board:             schoolForm.board.trim()             || undefined,
+          address:           schoolForm.address.trim()           || undefined,
+          phone:             schoolForm.phone.trim()             || undefined,
+          email:             schoolForm.email.trim()             || undefined,
+          website:           schoolForm.website.trim()           || undefined,
+          affiliationNo:     schoolForm.affiliationNo.trim()     || undefined,
+          udiseCode:         schoolForm.udiseCode.trim()         || undefined,
+          gstin:             schoolForm.gstin.trim()             || undefined,
+          bankName:          schoolForm.bankName.trim()          || undefined,
+          bankAccountNo:     schoolForm.bankAccountNo.trim()     || undefined,
+          bankIfsc:          schoolForm.bankIfsc.trim()          || undefined,
+          bankBranch:        schoolForm.bankBranch.trim()        || undefined,
+          bankAccountHolder: schoolForm.bankAccountHolder.trim() || undefined,
+        }),
+      });
+      setSchool((prev) => ({ ...prev, ...res as object }));
+      setSchoolMsg({ ok: true, text: 'School profile saved.' });
+      setTimeout(() => setSchoolMsg(null), 3000);
+    } catch (e: unknown) {
+      setSchoolMsg({ ok: false, text: e instanceof Error ? e.message : 'Failed to save.' });
+    } finally {
+      setSchoolSaving(false);
+    }
+  };
+
+  const uploadBranding = async (asset: 'logo' | 'stamp' | 'signature', file: File) => {
+    setBrandingUploading((p) => ({ ...p, [asset]: true }));
+    try {
+      const sig = await apiFetch<{ signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string }>(
+        `/institution/me/branding-signature?asset=${asset}`,
+      );
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('api_key', sig.apiKey);
+      fd.append('timestamp', String(sig.timestamp));
+      fd.append('signature', sig.signature);
+      fd.append('folder', sig.folder);
+      const upload = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
+        method: 'POST', body: fd,
+      });
+      if (!upload.ok) throw new Error('Upload failed');
+      const data = await upload.json() as { secure_url: string };
+      const urlField = asset === 'logo' ? 'logoUrl' : asset === 'stamp' ? 'stampUrl' : 'signatureUrl';
+      await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify({ [urlField]: data.secure_url }) });
+      setSchool((prev) => prev ? { ...prev, [urlField]: data.secure_url } : prev);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Upload failed');
+    } finally {
+      setBrandingUploading((p) => ({ ...p, [asset]: false }));
+    }
+  };
+
+  const removeBranding = async (asset: 'logo' | 'stamp' | 'signature') => {
+    const urlField = asset === 'logo' ? 'logoUrl' : asset === 'stamp' ? 'stampUrl' : 'signatureUrl';
+    try {
+      await apiFetch('/institution/me', { method: 'PATCH', body: JSON.stringify({ [urlField]: null }) });
+      setSchool((prev) => prev ? { ...prev, [urlField]: undefined } : prev);
+    } catch { alert('Failed to remove image.'); }
+  };
+
   const inp = 'w-full p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand';
 
   return (
@@ -263,6 +373,152 @@ export default function OperatorSettingsPage() {
             <span className="text-ds-text2">Role</span>
             <span className="bg-ds-info-bg text-ds-info-text px-2.5 py-0.5 rounded-full text-xs font-medium">Operator</span>
           </div>
+        </div>
+      </div>
+
+      {/* School Profile — used in fee receipts, certificates, TCs */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <h2 className="text-sm font-semibold text-ds-text1 mb-1">School Profile</h2>
+        <p className="text-xs text-ds-text3 mb-4">These details appear on fee receipts, certificates, and transfer certificates.</p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Principal Name</label>
+              <input className={inp} placeholder="e.g. Dr. Ramesh Sharma" value={schoolForm.principalName}
+                onChange={(e) => setSchoolForm((f) => ({ ...f, principalName: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Board / Affiliation</label>
+              <input className={inp} placeholder="e.g. SSC / CBSE / ICSE" value={schoolForm.board}
+                onChange={(e) => setSchoolForm((f) => ({ ...f, board: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">School Tagline <span className="text-ds-text3">(optional)</span></label>
+            <input className={inp} placeholder="e.g. Empowering minds, shaping futures" value={schoolForm.tagline}
+              onChange={(e) => setSchoolForm((f) => ({ ...f, tagline: e.target.value }))} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ds-text2 block mb-1">Address</label>
+            <input className={inp} placeholder="Full school address" value={schoolForm.address}
+              onChange={(e) => setSchoolForm((f) => ({ ...f, address: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">School Phone</label>
+              <input className={inp} placeholder="Contact number" value={schoolForm.phone}
+                onChange={(e) => setSchoolForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">School Email</label>
+              <input className={inp} placeholder="info@school.com" value={schoolForm.email}
+                onChange={(e) => setSchoolForm((f) => ({ ...f, email: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">Affiliation No.</label>
+              <input className={inp} placeholder="Board affiliation" value={schoolForm.affiliationNo}
+                onChange={(e) => setSchoolForm((f) => ({ ...f, affiliationNo: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">UDISE Code</label>
+              <input className={inp} placeholder="11-digit UDISE" value={schoolForm.udiseCode}
+                onChange={(e) => setSchoolForm((f) => ({ ...f, udiseCode: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ds-text2 block mb-1">GSTIN <span className="text-ds-text3">(optional)</span></label>
+              <input className={inp} placeholder="GST number" value={schoolForm.gstin}
+                onChange={(e) => setSchoolForm((f) => ({ ...f, gstin: e.target.value }))} />
+            </div>
+          </div>
+
+          {/* Bank details for fee receipts */}
+          <div className="pt-2 border-t border-ds-border">
+            <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3">Bank Details <span className="font-normal normal-case text-ds-text3">(shown on receipts for online payment)</span></p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Account Holder</label>
+                <input className={inp} placeholder="Name on account" value={schoolForm.bankAccountHolder}
+                  onChange={(e) => setSchoolForm((f) => ({ ...f, bankAccountHolder: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Bank Name</label>
+                <input className={inp} placeholder="e.g. State Bank of India" value={schoolForm.bankName}
+                  onChange={(e) => setSchoolForm((f) => ({ ...f, bankName: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Account Number</label>
+                <input className={inp} placeholder="Account number" value={schoolForm.bankAccountNo}
+                  onChange={(e) => setSchoolForm((f) => ({ ...f, bankAccountNo: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">IFSC Code</label>
+                <input className={inp} placeholder="e.g. SBIN0001234" value={schoolForm.bankIfsc}
+                  onChange={(e) => setSchoolForm((f) => ({ ...f, bankIfsc: e.target.value }))} />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Branch</label>
+                <input className={inp} placeholder="Branch name / city" value={schoolForm.bankBranch}
+                  onChange={(e) => setSchoolForm((f) => ({ ...f, bankBranch: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {schoolMsg && (
+          <div className={`mt-3 text-sm px-3 py-2 rounded-lg ${schoolMsg.ok
+            ? 'bg-ds-success-bg text-ds-success-text border border-ds-success-border'
+            : 'bg-ds-error-bg text-ds-error-text border border-ds-error-border'}`}>
+            {schoolMsg.text}
+          </div>
+        )}
+        <button onClick={() => void saveSchoolProfile()} disabled={schoolSaving}
+          className="mt-5 px-5 py-2.5 btn-brand rounded-lg disabled:opacity-50 transition-colors">
+          {schoolSaving ? 'Saving…' : 'Save School Profile'}
+        </button>
+      </div>
+
+      {/* School Branding — logo, stamp, signature */}
+      <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-6">
+        <h2 className="text-sm font-semibold text-ds-text1 mb-1">School Branding</h2>
+        <p className="text-xs text-ds-text3 mb-5">Upload any combination — all three are optional. These appear on fee receipts and certificates.</p>
+
+        <div className="space-y-5">
+          {([
+            { key: 'logo' as const,      label: 'School Logo',            hint: 'Shown at the top-left of receipts and certificates', url: school?.logoUrl },
+            { key: 'stamp' as const,     label: 'School Stamp / Seal',    hint: 'Official stamp — shown at the top-right of receipts',  url: school?.stampUrl },
+            { key: 'signature' as const, label: 'Authorised Signature',   hint: 'Principal or authorised signatory signature image',    url: school?.signatureUrl },
+          ]).map(({ key, label, hint, url }) => (
+            <div key={key} className="flex items-start gap-4 p-4 rounded-xl border border-ds-border bg-ds-bg2">
+              {/* Preview */}
+              <div className="shrink-0 w-24 h-16 rounded-lg border border-ds-border bg-ds-surface flex items-center justify-center overflow-hidden">
+                {url ? (
+                  <img src={url} alt={label} className="max-w-full max-h-full object-contain p-1" />
+                ) : (
+                  <span className="text-[10px] text-ds-text3 text-center leading-tight px-1">No {label.toLowerCase()} set</span>
+                )}
+              </div>
+              {/* Controls */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-ds-text1">{label}</p>
+                <p className="text-xs text-ds-text3 mt-0.5 mb-3">{hint}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className={`cursor-pointer px-3 py-1.5 rounded-lg text-xs font-medium btn-brand ${brandingUploading[key] ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {brandingUploading[key] ? 'Uploading…' : url ? 'Replace' : 'Upload'}
+                    <input type="file" accept="image/*" className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadBranding(key, f); e.target.value = ''; }} />
+                  </label>
+                  {url && (
+                    <button onClick={() => void removeBranding(key)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium border border-ds-error-border text-ds-error-text hover:bg-ds-error-bg">
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

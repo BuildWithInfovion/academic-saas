@@ -1545,7 +1545,7 @@ export default function StudentsPage() {
                     )}
                     <div className="space-y-2">
                       {feeItems.map((item, idx) => (
-                        <div key={item.feeHeadId} className={`rounded-lg border transition-colors ${item.checked ? 'border-ds-brand bg-ds-bg2' : 'border-ds-border bg-ds-surface'}`}>
+                        <div key={item.feePlanInstallmentId ?? item.feePlanItemId ?? item.feeHeadId ?? idx} className={`rounded-lg border transition-colors ${item.checked ? 'border-ds-brand bg-ds-bg2' : 'border-ds-border bg-ds-surface'}`}>
                           <div className="flex items-center justify-between px-4 py-3 cursor-pointer"
                             onClick={() => setFeeItems((prev) => prev.map((it, i) =>
                               i === idx ? { ...it, checked: !it.checked, amount: !it.checked && it.structureAmount ? String(it.structureAmount) : it.amount } : it
@@ -1696,7 +1696,7 @@ export default function StudentsPage() {
               <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3">
                 <p className="text-xs font-semibold text-ds-warning-text mb-1">Next Steps</p>
                 <ul className="text-xs text-ds-warning-text space-y-1 list-disc list-inside">
-                  <li>Go to <strong>Fees → Fee Structures</strong> to set up the full fee plan for this class</li>
+                  <li>Go to <strong>Fees → Fee Plans</strong> to set up the full fee plan for this class</li>
                   {(!credentials.feePayments || credentials.feePayments.length === 0) && <li>No fee was recorded — add it from the Fees page</li>}
                 </ul>
               </div>
