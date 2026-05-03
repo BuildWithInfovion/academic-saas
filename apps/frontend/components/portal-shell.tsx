@@ -18,6 +18,15 @@ type PortalShellProps = {
   menuItems: MenuItem[];
 };
 
+function isJwtExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return (payload.exp as number) * 1000 < Date.now() + 30_000;
+  } catch {
+    return true;
+  }
+}
+
 function displayName(name?: string | null, email?: string, phone?: string): string {
   if (name?.trim()) return name.trim();
   if (email) {
@@ -70,7 +79,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   // already has the cached token. Avoids a network round-trip on every page refresh.
   useEffect(() => {
     const cached = usePortalAuthStore.getState().accessToken;
-    if (cached) { setReady(true); return; }
+    if (cached && !isJwtExpired(cached)) { setReady(true); return; }
     silentRefresh().then((status) => {
       if (status === 'ok') { setReady(true); }
       else if (status === 'expired') { router.replace('/'); }

@@ -79,6 +79,15 @@ const menuGroups = [
   },
 ];
 
+function isJwtExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return (payload.exp as number) * 1000 < Date.now() + 30_000; // treat <30s remaining as expired
+  } catch {
+    return true;
+  }
+}
+
 function displayName(name?: string | null, email?: string | null, phone?: string | null): string {
   if (name) return name;
   if (phone) return phone;
@@ -124,15 +133,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     } finally { setSupportSending(false); }
   };
 
-  // On mount: if token is already in memory (same-tab navigation), proceed.
-  // Otherwise attempt a silent refresh via the httpOnly auth_rt cookie.
-  // Middleware already redirects to / when the cookie is absent, so failure
-  // here is an edge case (cookie valid but server unreachable).
+  // On mount: use cached token only if it's still valid (not expired).
+  // The JWT has a 15-minute expiry — a stale cached token causes all child
+  // API calls to 401. Decode the exp claim to detect this before rendering.
   useEffect(() => {
-    // Read getState() here — React effects run after all microtasks including
-    // zustand's sessionStorage hydration, so the token is already restored.
     const cached = useAuthStore.getState().accessToken;
-    if (cached) { setReady(true); return; }
+    if (cached && !isJwtExpired(cached)) { setReady(true); return; }
     silentRefreshOp().then((status) => {
       if (status === 'ok') {
         setReady(true);
