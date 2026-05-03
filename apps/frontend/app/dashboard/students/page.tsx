@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
@@ -132,6 +132,27 @@ const emptyForm = {
   hasDisability: false, disabilityDetails: '', medicalConditions: '',
 };
 
+// ── Draft helpers ──────────────────────────────────────────────────────────────
+interface AdmissionDraft {
+  id: string;
+  savedAt: string;
+  label: string;
+  form: typeof emptyForm;
+  yearId: string;
+}
+
+function draftKey(institutionId: string) {
+  return `admission-drafts-${institutionId}`;
+}
+function loadDraftsFromStorage(institutionId: string): AdmissionDraft[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(draftKey(institutionId)) ?? '[]'); }
+  catch { return []; }
+}
+function saveDraftsToStorage(institutionId: string, drafts: AdmissionDraft[]) {
+  localStorage.setItem(draftKey(institutionId), JSON.stringify(drafts));
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function StudentsPage() {
   const router = useRouter();
@@ -196,6 +217,12 @@ export default function StudentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // ── Drafts ────────────────────────────────────────────────────────────────
+  const [drafts, setDrafts] = useState<AdmissionDraft[]>([]);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── Ledger import ────────────────────────────────────────────────────────
   type ImportRow = {
     firstName: string; lastName: string; middleName?: string; gender?: string;
@@ -212,6 +239,19 @@ export default function StudentsPage() {
   const [importing, setImporting] = useState(false);
 
   useEffect(() => { setIsReady(true); }, []);
+
+  // Load drafts from localStorage on mount
+  useEffect(() => {
+    if (user?.institutionId) setDrafts(loadDraftsFromStorage(user.institutionId));
+  }, [user?.institutionId]);
+
+  // Auto-save draft every 60 s when the form has content (only for new admissions)
+  useEffect(() => {
+    if (editingId || !form.firstName.trim()) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => saveDraft(true), 60_000);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [form, editingId, saveDraft]);
 
   const showSuccess = (msg: string) => {
     setSuccess(msg);
@@ -261,8 +301,51 @@ export default function StudentsPage() {
   const resetForm = () => {
     setForm({ ...emptyForm, admissionDate: new Date().toISOString().split('T')[0] });
     setEditingId(null);
+    setActiveDraftId(null);
+    setDraftSaved(false);
     setError(null);
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
   };
+
+  // ── Draft functions ────────────────────────────────────────────────────────
+  const saveDraft = useCallback((silent = false) => {
+    if (!user?.institutionId) return;
+    if (!form.firstName.trim()) { if (!silent) setError('Enter at least the student\'s first name before saving as draft.'); return; }
+    const existing = loadDraftsFromStorage(user.institutionId);
+    const id = activeDraftId ?? `draft-${Date.now()}`;
+    const label = [form.firstName, form.middleName, form.lastName].filter(Boolean).join(' ').trim()
+      || 'Unnamed Student';
+    const className = academicUnits.find((u) => u.id === form.academicUnitId)?.displayName ?? '';
+    const draft: AdmissionDraft = { id, savedAt: new Date().toISOString(), label: className ? `${label} — ${className}` : label, form: { ...form }, yearId: currentYearId };
+    const updated = [draft, ...existing.filter((d) => d.id !== id)];
+    saveDraftsToStorage(user.institutionId, updated);
+    setDrafts(updated);
+    setActiveDraftId(id);
+    if (!silent) { setDraftSaved(true); setTimeout(() => setDraftSaved(false), 2500); }
+  }, [form, activeDraftId, user?.institutionId, academicUnits, currentYearId]);
+
+  const loadDraft = (draft: AdmissionDraft) => {
+    setForm({ ...draft.form });
+    setActiveDraftId(draft.id);
+    setDraftSaved(false);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const deleteDraft = (id: string) => {
+    if (!user?.institutionId) return;
+    const updated = drafts.filter((d) => d.id !== id);
+    saveDraftsToStorage(user.institutionId, updated);
+    setDrafts(updated);
+    if (activeDraftId === id) { setActiveDraftId(null); setDraftSaved(false); }
+  };
+
+  const clearDraftAfterAdmission = useCallback((id: string | null) => {
+    if (!id || !user?.institutionId) return;
+    const updated = loadDraftsFromStorage(user.institutionId).filter((d) => d.id !== id);
+    saveDraftsToStorage(user.institutionId, updated);
+    setDrafts(updated);
+  }, [user?.institutionId]);
 
   const sf = (key: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -479,6 +562,7 @@ export default function StudentsPage() {
       });
 
       setShowFeeStep(false);
+      clearDraftAfterAdmission(activeDraftId);
       resetForm();
       await fetchStudents();
       setCredentials(result);
@@ -1152,12 +1236,71 @@ export default function StudentsPage() {
               <button onClick={resetForm} className="px-6 py-2.5 border border-ds-border-strong rounded-lg text-sm hover:bg-ds-bg2">Cancel</button>
             </div>
           ) : (
-            <button onClick={openFeeStep} className="btn-brand w-full px-4 py-2.5 rounded-lg">
-              Next: Fee &amp; Confirm Admission →
-            </button>
+            <div className="space-y-2">
+              <button onClick={openFeeStep} className="btn-brand w-full px-4 py-2.5 rounded-lg">
+                Next: Fee &amp; Confirm Admission →
+              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => saveDraft()}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-ds-border text-sm font-medium text-ds-text2 hover:bg-ds-bg2 transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  {draftSaved ? '✓ Draft Saved' : activeDraftId ? 'Update Draft' : 'Save as Draft'}
+                </button>
+                {activeDraftId && (
+                  <span className="text-xs text-ds-brand font-medium px-2 py-1 bg-ds-info-bg border border-ds-info-border rounded-md">
+                    Draft active
+                  </span>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
+
+      {/* ── Drafts Section ── */}
+      {drafts.length > 0 && !editingId && (
+        <div className="bg-ds-surface shadow-sm rounded-xl border border-amber-200 overflow-hidden mb-2">
+          <div className="px-6 py-4 border-b border-amber-100 flex items-center justify-between" style={{ background: 'rgba(254,243,199,0.5)' }}>
+            <div className="flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <h2 className="font-medium text-amber-800 text-sm">Saved Drafts</h2>
+              <span className="text-xs bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-semibold">{drafts.length}</span>
+            </div>
+            <p className="text-xs text-amber-600">Click a draft to continue filling the form</p>
+          </div>
+          <div className="divide-y divide-amber-100">
+            {drafts.map((draft) => (
+              <div key={draft.id} className={`flex items-center justify-between px-6 py-3 hover:bg-amber-50 transition-colors ${activeDraftId === draft.id ? 'bg-amber-50' : ''}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-ds-text1 truncate">{draft.label || 'Unnamed Student'}</p>
+                  <p className="text-xs text-ds-text3 mt-0.5">
+                    Saved {new Date(draft.savedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {activeDraftId === draft.id && <span className="ml-2 text-ds-brand font-medium">· Currently editing</span>}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 ml-4 shrink-0">
+                  <button
+                    onClick={() => loadDraft(draft)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-ds-border text-ds-text2 hover:bg-ds-bg2 transition-colors"
+                  >
+                    {activeDraftId === draft.id ? 'Editing' : 'Continue →'}
+                  </button>
+                  <button
+                    onClick={() => deleteDraft(draft.id)}
+                    className="p-1.5 text-ds-text3 hover:text-red-500 rounded transition-colors"
+                    title="Delete draft"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Recently Admitted ── */}
       <div className="bg-ds-surface shadow-sm rounded-xl border border-ds-border overflow-hidden">
