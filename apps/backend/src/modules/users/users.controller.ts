@@ -43,7 +43,9 @@ export class UsersController {
     @Query('phone') phone?: string,
     @Query('email') email?: string,
   ) {
-    if (phone || email) return this.usersService.findByIdentifier(tenant.institutionId, phone, email);
+    // When searching by identifier (phone/email), an optional role param narrows
+    // the match — e.g. role=parent prevents staff phones triggering sibling detection.
+    if (phone || email) return this.usersService.findByIdentifier(tenant.institutionId, phone, email, role);
     if (role) return this.usersService.findByRole(tenant.institutionId, role);
     return this.usersService.findAll(tenant.institutionId);
   }

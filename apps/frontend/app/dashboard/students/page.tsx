@@ -436,25 +436,30 @@ export default function StudentsPage() {
     setExistingParentInfo(null);
     setLoadingFees(true);
 
-    // Try new FeePlan system first, fall back to legacy FeeStructure
-    const planPromise = (form.academicUnitId && currentYearId)
+    // Try new FeePlan system — class-specific first, then all-year fallback
+    const planClassPromise = (form.academicUnitId && currentYearId)
       ? apiFetch<FeePlan[]>(`/fees/plans?yearId=${currentYearId}&unitId=${form.academicUnitId}`).catch(() => null)
+      : Promise.resolve(null);
+    const planYearPromise = currentYearId
+      ? apiFetch<FeePlan[]>(`/fees/plans?yearId=${currentYearId}`).catch(() => null)
       : Promise.resolve(null);
 
     const legacyPromise = (form.academicUnitId && currentYearId)
       ? apiFetch(`/fees/structures?unitId=${form.academicUnitId}&yearId=${currentYearId}`).catch(() => null)
       : Promise.resolve(null);
 
-    // Sibling detection — check if this parent phone already has a portal account
+    // Sibling detection — only match parent-role accounts, not staff/operators
     const parentPromise = form.parentPhone
-      ? apiFetch(`/users?phone=${encodeURIComponent(form.parentPhone)}`).catch(() => null)
+      ? apiFetch(`/users?phone=${encodeURIComponent(form.parentPhone)}&role=parent`).catch(() => null)
       : Promise.resolve(null);
 
     try {
-      const [planRes, legacyRes, parentRes] = await Promise.all([planPromise, legacyPromise, parentPromise]);
+      const [planClassRes, planYearRes, legacyRes, parentRes] = await Promise.all([planClassPromise, planYearPromise, legacyPromise, parentPromise]);
 
-      const plans: FeePlan[] = Array.isArray(planRes) ? planRes : [];
-      const plan = plans.length > 0 ? plans[0] : null;
+      // Prefer class-assigned plans; if none, fall back to any plan for the year
+      const classPlans: FeePlan[] = Array.isArray(planClassRes) ? planClassRes : [];
+      const yearPlans: FeePlan[] = Array.isArray(planYearRes) ? planYearRes : [];
+      const plan = classPlans.length > 0 ? classPlans[0] : (yearPlans.length > 0 ? yearPlans[0] : null);
 
       if (plan && plan.items.length > 0) {
         // ── New plan system ──

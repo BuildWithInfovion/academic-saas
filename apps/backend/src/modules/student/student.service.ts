@@ -153,10 +153,17 @@ export class StudentService {
       where: { institutionId, code: 'parent' },
     });
 
-    // Check if a user with this phone already exists (reuse if so)
+    // Check if a PARENT user with this phone already exists (reuse if so).
+    // Scoped to parent role — prevents staff/operator phones triggering reuse
+    // when a staff member's child is admitted (different scenario entirely).
     const existingParentUser = dto.parentPhone
       ? await this.prisma.user.findFirst({
-          where: { institutionId, phone: dto.parentPhone, deletedAt: null },
+          where: {
+            institutionId,
+            phone: dto.parentPhone,
+            deletedAt: null,
+            roles: { some: { role: { institutionId, code: 'parent' } } },
+          },
         })
       : null;
 

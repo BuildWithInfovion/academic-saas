@@ -478,6 +478,7 @@ export class AuthService {
       refreshToken: rawToken,
       user: {
         id: user.id,
+        name: user.name ?? null,
         email: user.email,
         phone: user.phone,
         institutionId: user.institutionId,

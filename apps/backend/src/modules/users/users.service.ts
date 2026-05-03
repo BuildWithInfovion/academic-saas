@@ -141,18 +141,26 @@ export class UsersService {
     });
   }
 
-  /** Find a single user by phone or email — used by the link modal */
+  /** Find a user by phone or email — optionally scoped to a specific role code */
   async findByIdentifier(
     institutionId: string,
     phone?: string,
     email?: string,
+    roleCode?: string,
   ) {
     if (!phone && !email) return [];
     const OR: any[] = [];
     if (phone) OR.push({ phone });
     if (email) OR.push({ email: { equals: email, mode: 'insensitive' } });
     return this.prisma.user.findMany({
-      where: { institutionId, deletedAt: null, OR },
+      where: {
+        institutionId,
+        deletedAt: null,
+        OR,
+        ...(roleCode
+          ? { roles: { some: { role: { institutionId, code: roleCode } } } }
+          : {}),
+      },
       select: { id: true, name: true, email: true, phone: true },
       take: 5,
     });
