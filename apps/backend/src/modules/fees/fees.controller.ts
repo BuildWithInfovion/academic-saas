@@ -160,8 +160,8 @@ export class FeesController {
   // ── V2: Fee Plans ──────────────────────────────────────────────────────────
   @Get('plans')
   @Permissions('fees.read')
-  getFeePlans(@Request() req: AuthenticatedRequest, @Query('yearId') yearId: string) {
-    return this.feesService.getFeePlans(req.tenant.institutionId, yearId || undefined);
+  getFeePlans(@Request() req: AuthenticatedRequest, @Query('yearId') yearId: string, @Query('unitId') unitId: string) {
+    return this.feesService.getFeePlans(req.tenant.institutionId, yearId || undefined, unitId || undefined);
   }
 
   @Get('plans/:planId')

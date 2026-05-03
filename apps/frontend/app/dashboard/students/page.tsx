@@ -80,6 +80,9 @@ interface AcademicUnit { id: string; displayName?: string; name?: string; }
 interface AcademicYear { id: string; name: string; isCurrent: boolean; }
 interface FeeHead { id: string; name: string; }
 interface FeeStructure { id: string; feeHeadId: string; amount: number; installmentName?: string; dueDate?: string; feeHead: FeeHead; }
+interface FeePlanInstallment { id: string; label: string; amount: number; dueDate?: string; }
+interface FeePlanItem { id: string; feeCategoryId: string; feeCategory: { id: string; name: string }; totalAmount: number; installments: FeePlanInstallment[]; }
+interface FeePlan { id: string; name: string; items: FeePlanItem[]; }
 
 const INDIAN_STATES = [
   'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
@@ -153,13 +156,24 @@ export default function StudentsPage() {
   // Fee step
   const [showFeeStep, setShowFeeStep] = useState(false);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [activePlan, setActivePlan] = useState<FeePlan | null>(null);
   const [loadingFees, setLoadingFees] = useState(false);
   const [collectNow, setCollectNow] = useState(true);
   const [paymentMode, setPaymentMode] = useState('cash');
   const [feeDueDate, setFeeDueDate] = useState('');
   const [existingParentInfo, setExistingParentInfo] = useState<{ phone: string } | null>(null);
 
-  type FeeLineItem = { feeHeadId: string; name: string; structureAmount: number; amount: string; checked: boolean; };
+  // Extended FeeLineItem supports both old (feeHeadId) and new (feePlanItemId) systems
+  type FeeLineItem = {
+    feeHeadId?: string;           // legacy
+    feePlanItemId?: string;       // new plan system
+    feePlanInstallmentId?: string;// new plan system (if installment-based)
+    feeCategoryId?: string;       // new plan system
+    name: string;
+    structureAmount: number;
+    amount: string;
+    checked: boolean;
+  };
   const [feeItems, setFeeItems] = useState<FeeLineItem[]>([]);
   const [confirming, setConfirming] = useState(false);
 
@@ -294,10 +308,17 @@ export default function StudentsPage() {
     setPaymentMode('cash');
     setFeeDueDate('');
     setFeeItems([]);
+    setActivePlan(null);
+    setFeeStructures([]);
     setExistingParentInfo(null);
     setLoadingFees(true);
 
-    const feePromise = (form.academicUnitId && currentYearId)
+    // Try new FeePlan system first, fall back to legacy FeeStructure
+    const planPromise = (form.academicUnitId && currentYearId)
+      ? apiFetch<FeePlan[]>(`/fees/plans?yearId=${currentYearId}&unitId=${form.academicUnitId}`).catch(() => null)
+      : Promise.resolve(null);
+
+    const legacyPromise = (form.academicUnitId && currentYearId)
       ? apiFetch(`/fees/structures?unitId=${form.academicUnitId}&yearId=${currentYearId}`).catch(() => null)
       : Promise.resolve(null);
 
@@ -307,10 +328,46 @@ export default function StudentsPage() {
       : Promise.resolve(null);
 
     try {
-      const [feeRes, parentRes] = await Promise.all([feePromise, parentPromise]);
+      const [planRes, legacyRes, parentRes] = await Promise.all([planPromise, legacyPromise, parentPromise]);
 
-      if (feeRes !== null) {
-        const structs: FeeStructure[] = Array.isArray(feeRes) ? feeRes : [];
+      const plans: FeePlan[] = Array.isArray(planRes) ? planRes : [];
+      const plan = plans.length > 0 ? plans[0] : null;
+
+      if (plan && plan.items.length > 0) {
+        // ── New plan system ──
+        setActivePlan(plan);
+        const items: FeeLineItem[] = [];
+        for (const item of plan.items) {
+          if (item.installments.length > 0) {
+            for (const inst of item.installments) {
+              items.push({
+                feePlanItemId: item.id,
+                feePlanInstallmentId: inst.id,
+                feeCategoryId: item.feeCategoryId,
+                name: `${item.feeCategory.name} — ${inst.label}`,
+                structureAmount: inst.amount,
+                amount: '',
+                checked: false,
+              });
+            }
+          } else {
+            items.push({
+              feePlanItemId: item.id,
+              feeCategoryId: item.feeCategoryId,
+              name: item.feeCategory.name,
+              structureAmount: item.totalAmount,
+              amount: '',
+              checked: false,
+            });
+          }
+        }
+        // Auto-check admission fee if present
+        const admIdx = items.findIndex((i) => i.name.toLowerCase().includes('admission'));
+        if (admIdx >= 0) { items[admIdx].checked = true; items[admIdx].amount = String(items[admIdx].structureAmount); }
+        setFeeItems(items);
+      } else {
+        // ── Legacy FeeStructure fallback ──
+        const structs: FeeStructure[] = Array.isArray(legacyRes) ? legacyRes : [];
         setFeeStructures(structs);
         if (structs.length > 0) {
           const items = structs.map((s) => ({
@@ -332,6 +389,7 @@ export default function StudentsPage() {
         setExistingParentInfo({ phone: form.parentPhone });
       }
     } catch {
+      setActivePlan(null);
       setFeeStructures([]);
       setFeeItems([]);
     } finally {
@@ -391,12 +449,25 @@ export default function StudentsPage() {
       if (collectNow) {
         const paidItems = feeItems.filter((i) => i.checked && parseFloat(i.amount) > 0);
         if (paidItems.length > 0) {
-          payload.admissionFees = paidItems.map((i) => ({
-            feeHeadId: i.feeHeadId,
-            amountPaid: parseFloat(i.amount),
-            paymentMode,
-            academicYearId: currentYearId || undefined,
-          }));
+          if (activePlan) {
+            // New plan system — send admissionCollections
+            payload.admissionCollections = paidItems.map((i) => ({
+              feePlanItemId: i.feePlanItemId,
+              feePlanInstallmentId: i.feePlanInstallmentId ?? undefined,
+              feeCategoryId: i.feeCategoryId,
+              amount: parseFloat(i.amount),
+              paymentMode,
+              academicYearId: currentYearId || undefined,
+            }));
+          } else {
+            // Legacy system — send admissionFees with feeHeadId
+            payload.admissionFees = paidItems.map((i) => ({
+              feeHeadId: i.feeHeadId,
+              amountPaid: parseFloat(i.amount),
+              paymentMode,
+              academicYearId: currentYearId || undefined,
+            }));
+          }
         }
       } else {
         payload.admissionFee = { paid: false, dueDate: feeDueDate || undefined };
@@ -691,7 +762,9 @@ export default function StudentsPage() {
       })
     : students;
 
-  const totalFeeStructure = feeStructures.reduce((sum, s) => sum + s.amount, 0);
+  const totalFeeStructure = activePlan
+    ? activePlan.items.reduce((sum, item) => sum + item.totalAmount, 0)
+    : feeStructures.reduce((sum, s) => sum + s.amount, 0);
   const inp = 'border border-ds-border-strong p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
   const lbl = 'text-xs font-medium text-ds-text2 block mb-1';
   const sec = 'text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-3 mt-1 pb-1 border-b border-ds-border';
@@ -1180,6 +1253,34 @@ export default function StudentsPage() {
               {/* Fee Structure Reference */}
               {loadingFees ? (
                 <p className="text-sm text-ds-text3">Loading fee structure...</p>
+              ) : activePlan ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider">Annual Fee Structure</p>
+                    <span className="text-xs text-ds-brand font-medium">{activePlan.name}</span>
+                  </div>
+                  <div className="bg-ds-bg2 rounded-lg divide-y divide-ds-border text-sm">
+                    {activePlan.items.map((item) =>
+                      item.installments.length > 0 ? (
+                        item.installments.map((inst) => (
+                          <div key={inst.id} className="flex justify-between px-4 py-2.5">
+                            <span className="text-ds-text2">{item.feeCategory.name} <span className="text-ds-text3">— {inst.label}</span></span>
+                            <span className="font-medium text-ds-text1">₹{inst.amount.toLocaleString('en-IN')}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div key={item.id} className="flex justify-between px-4 py-2.5">
+                          <span className="text-ds-text2">{item.feeCategory.name}</span>
+                          <span className="font-medium text-ds-text1">₹{item.totalAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                      )
+                    )}
+                    <div className="flex justify-between px-4 py-2.5 font-semibold text-ds-text1">
+                      <span>Total Annual Fees</span>
+                      <span>₹{totalFeeStructure.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
               ) : feeStructures.length > 0 ? (
                 <div>
                   <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-2">Annual Fee Structure</p>
@@ -1198,7 +1299,7 @@ export default function StudentsPage() {
                 </div>
               ) : !loadingFees ? (
                 <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 text-xs text-ds-warning-text">
-                  No fee structure configured for this class. You can set it up in the Fees section after admission.
+                  No fee structure configured for this class. You can set it up in Fees → Fee Plans after admission.
                 </div>
               ) : null}
 

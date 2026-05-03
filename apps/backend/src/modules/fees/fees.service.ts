@@ -374,9 +374,13 @@ export class FeesService {
   // V2 — Fee Plans
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getFeePlans(institutionId: string, academicYearId?: string) {
+  async getFeePlans(institutionId: string, academicYearId?: string, academicUnitId?: string) {
     return this.prisma.feePlan.findMany({
-      where: { institutionId, deletedAt: null, ...(academicYearId ? { academicYearId } : {}) },
+      where: {
+        institutionId, deletedAt: null,
+        ...(academicYearId ? { academicYearId } : {}),
+        ...(academicUnitId ? { classMaps: { some: { academicUnitId } } } : {}),
+      },
       include: {
         academicYear: { select: { id: true, name: true } },
         items: {

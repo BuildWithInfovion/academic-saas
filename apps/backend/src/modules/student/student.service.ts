@@ -78,9 +78,20 @@ export interface AdmissionFeeItemDto {
   academicYearId?: string;
 }
 
+export interface AdmissionCollectionItemDto {
+  feePlanItemId: string;
+  feePlanInstallmentId?: string;
+  feeCategoryId: string;
+  amount: number;
+  paymentMode?: string;
+  academicYearId?: string;
+}
+
 export interface ConfirmAdmissionDto extends CreateStudentDto {
   /** New multi-fee format — preferred */
   admissionFees?: AdmissionFeeItemDto[];
+  /** V2 fee plan collection items — used when school has a FeePlan configured */
+  admissionCollections?: AdmissionCollectionItemDto[];
   /** Legacy single-fee format — still supported */
   admissionFee?: AdmissionFeeDto;
 }
@@ -271,10 +282,9 @@ export class StudentService {
                 academicYearId: dto.admissionFee.academicYearId,
               });
             }
-            this.logger.debug(`[confirmAdmission] tx:fees — ${feeItems.length} fee item(s) to create`);
+            this.logger.debug(`[confirmAdmission] tx:fees — ${feeItems.length} legacy fee item(s) to create`);
 
-            // 4. Create one FeePayment per selected fee head.
-            // Count existing receipts once and increment locally to avoid N COUNT queries.
+            // 4a. Legacy FeePayment records (old feeHead-based system)
             const feePayments: Record<string, unknown>[] = [];
             if (feeItems.length > 0) {
               const receiptBaseCount = await tx.feePayment.count({ where: { institutionId } });
@@ -302,7 +312,39 @@ export class StudentService {
               }
             }
 
-            return { student, parentUser, isNewParentUser, feePayments };
+            // 4b. V2 FeeCollection records (FeePlan-based system)
+            const feeCollections: Record<string, unknown>[] = [];
+            if (dto.admissionCollections && dto.admissionCollections.length > 0) {
+              const validCollections = dto.admissionCollections.filter((c) => c.feePlanItemId && c.feeCategoryId && c.amount > 0);
+              this.logger.debug(`[confirmAdmission] tx:feeCollections — ${validCollections.length} v2 collection(s) to create`);
+              if (validCollections.length > 0) {
+                const colBaseCount = await tx.feeCollection.count({ where: { institutionId } });
+                const rcpYear = new Date().getFullYear();
+                for (let i = 0; i < validCollections.length; i++) {
+                  const col = validCollections[i];
+                  const receiptNo = `FRC-${rcpYear}-${String(colBaseCount + i + 1).padStart(5, '0')}`;
+                  const coll = await tx.feeCollection.create({
+                    data: {
+                      institutionId,
+                      studentId: student.id,
+                      feePlanItemId: col.feePlanItemId,
+                      feePlanInstallmentId: col.feePlanInstallmentId ?? null,
+                      feeCategoryId: col.feeCategoryId,
+                      academicYearId: col.academicYearId ?? undefined,
+                      amount: col.amount,
+                      paymentMode: col.paymentMode ?? 'cash',
+                      receiptNo,
+                      paidOn: new Date(),
+                      remarks: 'Admission fee payment',
+                    },
+                    include: { feeCategory: true },
+                  });
+                  feeCollections.push(coll as unknown as Record<string, unknown>);
+                }
+              }
+            }
+
+            return { student, parentUser, isNewParentUser, feePayments, feeCollections };
           }, { timeout: 15000, maxWait: 10000 }),
         );
 
