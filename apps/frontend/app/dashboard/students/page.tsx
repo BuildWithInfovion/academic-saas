@@ -223,6 +223,14 @@ export default function StudentsPage() {
   const [draftSaved, setDraftSaved] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Refs that always hold the latest values — used in beforeunload and unmount
+  // handlers where closures would otherwise capture stale state.
+  const formRef            = useRef(form);
+  const editingIdRef       = useRef(editingId);
+  const activeDraftIdRef   = useRef(activeDraftId);
+  const currentYearIdRef   = useRef(currentYearId);
+  const academicUnitsRef   = useRef(academicUnits);
+
   // ── Ledger import ────────────────────────────────────────────────────────
   type ImportRow = {
     firstName: string; lastName: string; middleName?: string; gender?: string;
@@ -240,6 +248,13 @@ export default function StudentsPage() {
 
   useEffect(() => { setIsReady(true); }, []);
 
+  // Keep refs in sync with latest state so unmount/beforeunload handlers are never stale
+  useEffect(() => { formRef.current          = form;          }, [form]);
+  useEffect(() => { editingIdRef.current     = editingId;     }, [editingId]);
+  useEffect(() => { activeDraftIdRef.current = activeDraftId; }, [activeDraftId]);
+  useEffect(() => { currentYearIdRef.current = currentYearId; }, [currentYearId]);
+  useEffect(() => { academicUnitsRef.current = academicUnits; }, [academicUnits]);
+
   // Load drafts from localStorage on mount
   useEffect(() => {
     if (user?.institutionId) setDrafts(loadDraftsFromStorage(user.institutionId));
@@ -252,6 +267,31 @@ export default function StudentsPage() {
     autoSaveTimer.current = setTimeout(() => saveDraft(true), 60_000);
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [form, editingId, saveDraft]);
+
+  // ── Save on navigation away (unmount) and on browser refresh ─────────────
+  // Uses refs so the handlers always see current state, not stale closures.
+  const saveFromRefs = useCallback(() => {
+    const institutionId = user?.institutionId;
+    if (!institutionId || editingIdRef.current) return;
+    const f = formRef.current;
+    if (!f.firstName.trim()) return;
+    const existing = loadDraftsFromStorage(institutionId);
+    const id = activeDraftIdRef.current ?? `draft-${Date.now()}`;
+    const label = [f.firstName, f.middleName, f.lastName].filter(Boolean).join(' ').trim() || 'Unnamed Student';
+    const unit  = academicUnitsRef.current.find((u) => u.id === f.academicUnitId);
+    const cls   = unit?.displayName ?? unit?.name ?? '';
+    const draft: AdmissionDraft = { id, savedAt: new Date().toISOString(), label: cls ? `${label} — ${cls}` : label, form: f, yearId: currentYearIdRef.current };
+    saveDraftsToStorage(institutionId, [draft, ...existing.filter((d) => d.id !== id)]);
+  }, [user?.institutionId]);
+
+  // Fires when the SPA navigates away (component unmounts)
+  useEffect(() => () => { saveFromRefs(); }, [saveFromRefs]);
+
+  // Fires on browser refresh / tab close
+  useEffect(() => {
+    window.addEventListener('beforeunload', saveFromRefs);
+    return () => window.removeEventListener('beforeunload', saveFromRefs);
+  }, [saveFromRefs]);
 
   const showSuccess = (msg: string) => {
     setSuccess(msg);
