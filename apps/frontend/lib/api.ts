@@ -2,7 +2,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { DASHBOARD_ROLES } from '@/lib/auth-utils';
 
-const BASE_URL = (() => {
+export const BASE_URL = (() => {
   const url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
     if (process.env.NODE_ENV === 'production') {
@@ -12,6 +12,9 @@ const BASE_URL = (() => {
   }
   return url;
 })();
+
+/** Build a full API URL for pre-auth fetch calls (login, password reset, etc.) */
+export const apiUrl = (path: string) => `${BASE_URL}${path}`;
 
 /**
  * Returns the auth store that currently holds a valid session.

@@ -3,34 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
+import type { AcademicYear, Institution, LedgerInstallment, LedgerItem, Ledger } from '@/lib/types';
 
 declare global { interface Window { Razorpay: any } }
-
-type Institution = { name: string; board?: string; address?: string; phone?: string; email?: string; logoUrl?: string; principalName?: string };
 
 type Child = {
   id: string; firstName: string; lastName: string; admissionNo: string;
   academicUnit?: { displayName?: string; name?: string };
-};
-
-type LedgerInstallment = {
-  id: string; label: string; amount: number; dueDate?: string | null;
-  concession: number; netAmount: number; paid: number; balance: number;
-  status: 'paid' | 'partial' | 'due' | 'overdue' | 'upcoming';
-};
-
-type LedgerItem = {
-  feePlanItemId: string; feeCategoryId: string; categoryName: string;
-  totalAmount: number; concession: number; netAmount: number;
-  installments: LedgerInstallment[]; totalPaid: number; totalBalance: number;
-};
-
-type Ledger = {
-  student: { id: string; name: string; admissionNo: string; className: string };
-  plan: { id: string; name: string } | null;
-  items: LedgerItem[];
-  totalAnnual: number; totalConcession: number; totalNet: number;
-  totalPaid: number; totalBalance: number;
 };
 
 type CollectionEntry = {
@@ -38,8 +17,6 @@ type CollectionEntry = {
   paidOn: string; categoryName: string; installmentLabel?: string | null;
   remarks?: string | null; source: 'legacy' | 'v2';
 };
-
-type AcademicYear = { id: string; name: string; isCurrent: boolean };
 
 type ChildDue = {
   studentId: string; studentName: string; admissionNo: string; className: string;

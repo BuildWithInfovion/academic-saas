@@ -93,9 +93,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
 
   const handleLogout = async () => {
     logout();
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/platform/auth/logout`, {
-      method: 'POST', credentials: 'include',
-    }).catch(() => {});
+    await platformFetch('/platform/auth/logout', { method: 'POST' }).catch(() => {});
     router.push('/platform/login');
   };
 

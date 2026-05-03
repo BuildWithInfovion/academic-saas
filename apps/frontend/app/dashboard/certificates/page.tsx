@@ -3,23 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface Institution {
-  name: string; board?: string; address?: string; phone?: string; email?: string;
-  website?: string; logoUrl?: string; stampUrl?: string; signatureUrl?: string;
-  affiliationNo?: string; principalName?: string; udiseCode?: string; gstin?: string;
-}
-
-interface Student {
-  id: string; admissionNo: string; firstName: string; lastName: string;
-  dateOfBirth?: string; gender?: string; fatherName?: string; motherName?: string;
-  parentPhone?: string; address?: string; nationality?: string; religion?: string;
-  casteCategory?: string; bloodGroup?: string; admissionDate?: string; photoUrl?: string;
-  academicUnit?: { id: string; displayName?: string; name?: string };
-}
-
-interface AcademicYear { id: string; name: string; isCurrent: boolean; }
+import type { Institution, Student, AcademicYear } from '@/lib/types';
 
 // ── Customisation state shapes ─────────────────────────────────────────────────
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute, PORTAL_ROLES, DASHBOARD_ROLES } from '@/lib/auth-utils';
+import { apiUrl } from '@/lib/api';
 
 type Phase = 'init' | 'zoom-in' | 'zoom-out' | 'greet' | 'reveal' | 'done';
 
@@ -101,8 +102,6 @@ export default function LoginPage() {
     return () => { cancelAnimationFrame(r); [t1, t2, t3, t4].forEach(clearTimeout); };
   }, []);
 
-  const api = (path: string) =>
-    `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}${path}`;
 
   // ── Shared session handler ────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,7 +135,7 @@ export default function LoginPage() {
     if (!staffPassword.trim())   return setError('Password is required');
     setLoading(true); setLoadStep(1); setError(null);
     try {
-      const res = await fetch(api('/auth/login'), {
+      const res = await fetch(apiUrl('/auth/login'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -177,7 +176,7 @@ export default function LoginPage() {
     if (!totpToken)        return setError('Session expired — please sign in again');
     setLoading(true); setLoadStep(1); setError(null);
     try {
-      const res = await fetch(api('/auth/totp/authenticate'), {
+      const res = await fetch(apiUrl('/auth/totp/authenticate'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -234,7 +233,7 @@ export default function LoginPage() {
     if (!parentPassword.trim()) return setError('Password is required');
     setLoading(true); setLoadStep(1); setError(null);
     try {
-      const res = await fetch(api('/auth/parent/login'), {
+      const res = await fetch(apiUrl('/auth/parent/login'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -299,7 +298,7 @@ export default function LoginPage() {
     if (!/^\d{10}$/.test(pfPhone.trim())) return setPfError('Enter a valid 10-digit phone number');
     setPfLoading(true); setPfError(null);
     try {
-      await fetch(api('/auth/parent/request-password-reset'), {
+      await fetch(apiUrl('/auth/parent/request-password-reset'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: pfPhone.trim() }),
@@ -319,7 +318,7 @@ export default function LoginPage() {
     if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(fpEmail.trim())) return setFpError('Enter a valid email address (e.g. name@school.com)');
     setFpLoading(true); setFpError(null);
     try {
-      const res = await fetch(api('/auth/forgot-password'), {
+      const res = await fetch(apiUrl('/auth/forgot-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -344,7 +343,7 @@ export default function LoginPage() {
     if (fpNewPassword.length < 8) return setFpError('Password must be at least 8 characters');
     setFpLoading(true); setFpError(null);
     try {
-      const res = await fetch(api('/auth/reset-password'), {
+      const res = await fetch(apiUrl('/auth/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

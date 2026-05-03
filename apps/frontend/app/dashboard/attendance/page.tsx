@@ -3,9 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
-
-interface AcademicUnit { id: string; name: string; displayName?: string; }
-interface Student { id: string; firstName: string; lastName: string; admissionNo: string; rollNo?: string; }
+import type { AcademicUnit, Student } from '@/lib/types';
 interface AttendanceRecord {
   status: string;
   student: Student;

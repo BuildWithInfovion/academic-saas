@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface AcademicYear { id: string; name: string; isCurrent: boolean; }
-interface AcademicUnit { id: string; name: string; displayName?: string; level: number; parentId?: string | null; }
+import type { AcademicYear, AcademicUnit } from '@/lib/types';
 interface Exam { id: string; name: string; status: string; academicYear: { name: string }; }
 
 interface ScorecardRow { subject: string; maxMarks: number; marksObtained: number | string | null; passed: boolean | null; remarks?: string; }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { usePlatformAuthStore } from '@/store/platform-auth.store';
+import { apiUrl } from '@/lib/api';
 
 type Phase = 'init' | 'zoom-in' | 'zoom-out' | 'greet' | 'reveal' | 'done';
 
@@ -77,7 +78,7 @@ export default function PlatformLoginPage() {
     if (!resetEmail.trim()) return setResetError('Email is required');
     setResetLoading(true); setResetError(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/platform/auth/request-reset`, {
+      const res = await fetch(apiUrl('/platform/auth/request-reset'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resetEmail.trim() }),
@@ -103,7 +104,7 @@ export default function PlatformLoginPage() {
     if (!resetNewPwd.trim()) return setResetError('New password is required');
     setResetLoading(true); setResetError(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/platform/auth/reset-password`, {
+      const res = await fetch(apiUrl('/platform/auth/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: resetToken.trim(), newPassword: resetNewPwd }),
@@ -130,7 +131,7 @@ export default function PlatformLoginPage() {
     if (!password.trim()) return setError('Password is required');
     setLoading(true); setLoadStep(1); setError(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/platform/auth/login`, {
+      const res = await fetch(apiUrl('/platform/auth/login'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
-
-interface AcademicYear { id: string; name: string; isCurrent: boolean; }
-interface AcademicUnit { id: string; name: string; displayName?: string; }
-interface Subject { id: string; name: string; code?: string; }
+import type { AcademicYear, AcademicUnit, Subject } from '@/lib/types';
 interface Exam {
   id: string; name: string; status: string;
   startDate?: string; endDate?: string;

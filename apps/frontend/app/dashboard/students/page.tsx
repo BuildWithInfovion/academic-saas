@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
+import type { AcademicUnit, AcademicYear, FeeHead, FeeStructure, FeePlanInstallment, FeePlanItem, FeePlan, Student } from '@/lib/types';
 
 // ── Date Select ────────────────────────────────────────────────────────────────
 const MONTHS = [
@@ -52,37 +53,8 @@ function DateSelect({ value, onChange, minYear, maxYear }: {
   );
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-interface Student {
-  id: string; admissionNo: string; rollNo?: string;
-  firstName: string; middleName?: string; lastName: string;
-  dateOfBirth?: string; placeOfBirth?: string; gender?: string;
-  phone?: string; email?: string; motherTongue?: string;
-  fatherName?: string; fatherOccupation?: string; fatherQualification?: string; fatherEmail?: string; fatherAadhar?: string;
-  motherName?: string; motherOccupation?: string; motherQualification?: string; motherEmail?: string; motherAadhar?: string;
-  parentPhone?: string; secondaryPhone?: string;
-  annualIncome?: string; isEwsCategory?: boolean;
-  emergencyContactName?: string; emergencyContactRelation?: string; emergencyContactPhone?: string;
-  address?: string; locality?: string; city?: string; state?: string; pinCode?: string;
-  bloodGroup?: string; nationality?: string; religion?: string;
-  casteCategory?: string; aadharNumber?: string;
-  tcFromPrevious?: string; tcPreviousInstitution?: string;
-  previousClass?: string; previousBoard?: string; previousMarks?: string;
-  hasDisability?: boolean; disabilityDetails?: string; medicalConditions?: string;
-  admissionDate?: string; academicUnitId?: string;
-  status?: string; createdAt: string;
-  academicUnit?: { id: string; name: string; displayName?: string };
-  userAccount?: { id: string; email?: string; phone?: string; isActive: boolean } | null;
-  parentUser?: { id: string; email?: string; phone?: string; isActive: boolean } | null;
-}
-
-interface AcademicUnit { id: string; displayName?: string; name?: string; }
-interface AcademicYear { id: string; name: string; isCurrent: boolean; }
-interface FeeHead { id: string; name: string; }
-interface FeeStructure { id: string; feeHeadId: string; amount: number; installmentName?: string; dueDate?: string; feeHead: FeeHead; }
-interface FeePlanInstallment { id: string; label: string; amount: number; dueDate?: string; }
-interface FeePlanItem { id: string; feeCategoryId: string; feeCategory: { id: string; name: string }; totalAmount: number; installments: FeePlanInstallment[]; }
-interface FeePlan { id: string; name: string; items: FeePlanItem[]; }
+// Types imported from @/lib/types: AcademicUnit, AcademicYear, FeeHead, FeeStructure,
+// FeePlanInstallment, FeePlanItem, FeePlan, Student
 
 const INDIAN_STATES = [
   'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',

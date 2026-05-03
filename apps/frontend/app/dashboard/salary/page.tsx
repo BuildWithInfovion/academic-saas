@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
+import type { AllowanceItem } from '@/lib/types';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type AllowanceItem = { name: string; amount: number };
 
 type SalaryStructure = {
   id: string; name: string; description?: string; isActive: boolean;
