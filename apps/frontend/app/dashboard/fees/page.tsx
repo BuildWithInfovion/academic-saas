@@ -138,8 +138,8 @@ export default function FeesPage() {
   useEffect(() => {
     void Promise.all([
       apiFetch<AcademicYear[]>('/academic/years').then(setYears),
-      apiFetch<{ units: AcademicUnit[] }>('/academic/units').then((r) => setUnits(r.units ?? [])),
-      apiFetch<Institution>('/institution/profile').then(setInstitution),
+      apiFetch<AcademicUnit[]>('/academic/units/classes').then((r) => setUnits(Array.isArray(r) ? r : [])),
+      apiFetch<Institution>('/institution/me').then(setInstitution),
     ]);
   }, []);
 
