@@ -16,7 +16,7 @@ type Child = {
 type LedgerInstallment = {
   id: string; label: string; amount: number; dueDate?: string | null;
   concession: number; netAmount: number; paid: number; balance: number;
-  status: 'paid' | 'partial' | 'due' | 'overdue';
+  status: 'paid' | 'partial' | 'due' | 'overdue' | 'upcoming';
 };
 
 type LedgerItem = {
@@ -52,10 +52,11 @@ type ChildDue = {
 function fmt(n: number) { return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 
 const STATUS_CHIP: Record<string, { bg: string; color: string; label: string }> = {
-  paid:    { bg: '#dcfce7', color: '#15803d', label: 'Paid' },
-  partial: { bg: '#fef9c3', color: '#854d0e', label: 'Partial' },
-  due:     { bg: '#dbeafe', color: '#1d4ed8', label: 'Due' },
-  overdue: { bg: '#fee2e2', color: '#dc2626', label: 'Overdue' },
+  paid:     { bg: '#dcfce7', color: '#15803d', label: 'Paid' },
+  partial:  { bg: '#fef9c3', color: '#854d0e', label: 'Partial' },
+  due:      { bg: '#dbeafe', color: '#1d4ed8', label: 'Due' },
+  overdue:  { bg: '#fee2e2', color: '#dc2626', label: 'Overdue' },
+  upcoming: { bg: '#f1f5f9', color: '#64748b', label: 'Upcoming' },
 };
 
 export default function ParentFeesPage() {
@@ -128,7 +129,7 @@ export default function ParentFeesPage() {
                 studentId: selectedChildId,
                 academicYearId: yearId,
                 items: [{
-                  feePlanInstallmentId: inst.id,
+                  feePlanInstallmentId: inst.id.startsWith('item_') ? undefined : inst.id,
                   feePlanItemId: item.feePlanItemId,
                   feeCategoryId: item.feeCategoryId,
                   amount: inst.balance,
@@ -374,7 +375,7 @@ export default function ParentFeesPage() {
                         <tbody>
                           {item.installments.map((inst) => {
                             const chip = STATUS_CHIP[inst.status] ?? STATUS_CHIP.due;
-                            const canPay = payConfig?.enabled && inst.balance > 0 && inst.status !== 'paid';
+                            const canPay = payConfig?.enabled && inst.balance > 0 && inst.status !== 'paid' && inst.status !== 'upcoming' && !inst.id.startsWith('item_');
                             return (
                               <tr key={inst.id} className="border-b" style={{ borderColor: 'var(--border)' }}>
                                 <td className="px-5 py-3">

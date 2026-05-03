@@ -628,33 +628,64 @@ export class FeesService {
 
     const [concessions, collections] = await Promise.all([
       this.prisma.feeConcession.findMany({ where: { studentId, feePlanItemId: { in: planItemIds } } }),
-      this.prisma.feeCollection.findMany({ where: { studentId, institutionId, feePlanInstallmentId: { in: installmentIds } }, select: { feePlanInstallmentId: true, amount: true } }),
+      // Include collections tied to installments AND collections recorded without an installment
+      // (e.g. admission-time payments on items that have no installment schedule yet)
+      this.prisma.feeCollection.findMany({
+        where: {
+          studentId, institutionId,
+          OR: [
+            ...(installmentIds.length > 0 ? [{ feePlanInstallmentId: { in: installmentIds } }] : []),
+            { feePlanItemId: { in: planItemIds }, feePlanInstallmentId: null },
+          ],
+        },
+        select: { feePlanInstallmentId: true, feePlanItemId: true, amount: true },
+      }),
     ]);
 
     const concessionByItem = new Map<string, number>();
     for (const c of concessions) concessionByItem.set(c.feePlanItemId, (concessionByItem.get(c.feePlanItemId) ?? 0) + c.amount);
 
     const paidByInstallment = new Map<string, number>();
+    const paidByItem = new Map<string, number>(); // payments with no installment ID (item-level)
     for (const c of collections) {
-      if (c.feePlanInstallmentId) paidByInstallment.set(c.feePlanInstallmentId, (paidByInstallment.get(c.feePlanInstallmentId) ?? 0) + c.amount);
+      if (c.feePlanInstallmentId) {
+        paidByInstallment.set(c.feePlanInstallmentId, (paidByInstallment.get(c.feePlanInstallmentId) ?? 0) + c.amount);
+      } else if (c.feePlanItemId) {
+        paidByItem.set(c.feePlanItemId, (paidByItem.get(c.feePlanItemId) ?? 0) + c.amount);
+      }
     }
 
-    const today = new Date();
+    const today = istToday(); // IST-aware — prevents false overdue flags in early UTC morning
 
     const items = plan.items.map((item) => {
       const totalConcession = concessionByItem.get(item.id) ?? 0;
       const netAmount = Math.max(0, item.totalAmount - totalConcession);
-      const numInst = item.installments.length || 1;
-      const concessionPerInst = totalConcession / numInst;
 
-      const installments = item.installments.map((inst) => {
-        const netInstAmount = Math.max(0, inst.amount - concessionPerInst);
-        const paid = paidByInstallment.get(inst.id) ?? 0;
-        const balance = Math.max(0, netInstAmount - paid);
-        const isOverdue = inst.dueDate ? inst.dueDate < today && balance > 0 : false;
-        const status = balance <= 0 ? 'paid' : paid > 0 ? 'partial' : isOverdue ? 'overdue' : 'due';
-        return { id: inst.id, label: inst.label, amount: inst.amount, dueDate: inst.dueDate, concession: concessionPerInst, netAmount: netInstAmount, paid, balance, status, isOverdue, sortOrder: inst.sortOrder };
-      });
+      let installments: {
+        id: string; label: string; amount: number; dueDate: Date | null;
+        concession: number; netAmount: number; paid: number; balance: number;
+        status: string; isOverdue: boolean; sortOrder: number;
+      }[];
+
+      if (item.installments.length > 0) {
+        const numInst = item.installments.length;
+        const concessionPerInst = totalConcession / numInst;
+        installments = item.installments.map((inst) => {
+          const netInstAmount = Math.max(0, inst.amount - concessionPerInst);
+          const paid = paidByInstallment.get(inst.id) ?? 0;
+          const balance = Math.max(0, netInstAmount - paid);
+          const isOverdue = inst.dueDate ? inst.dueDate < today && balance > 0 : false;
+          const isFuture = inst.dueDate ? inst.dueDate > today : false;
+          const status = balance <= 0 ? 'paid' : paid > 0 ? 'partial' : isOverdue ? 'overdue' : isFuture ? 'upcoming' : 'due';
+          return { id: inst.id, label: inst.label, amount: inst.amount, dueDate: inst.dueDate, concession: concessionPerInst, netAmount: netInstAmount, paid, balance, status, isOverdue, sortOrder: inst.sortOrder };
+        });
+      } else {
+        // Item has no installment schedule — treat as a single lump-sum payment
+        const paid = paidByItem.get(item.id) ?? 0;
+        const balance = Math.max(0, netAmount - paid);
+        const status = balance <= 0 ? 'paid' : paid > 0 ? 'partial' : 'due';
+        installments = [{ id: `item_${item.id}`, label: 'Full Amount', amount: item.totalAmount, dueDate: null, concession: totalConcession, netAmount, paid, balance, status, isOverdue: false, sortOrder: 0 }];
+      }
 
       const itemPaid = installments.reduce((s, i) => s + i.paid, 0);
       const itemBalance = installments.reduce((s, i) => s + i.balance, 0);

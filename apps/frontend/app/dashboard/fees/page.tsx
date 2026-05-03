@@ -15,7 +15,7 @@ interface FeePlanItem { id: string; feeCategoryId: string; feeCategory: FeeCateg
 interface FeePlanClassMap { id: string; academicUnitId: string; academicUnit: AcademicUnit; }
 interface FeePlan { id: string; name: string; description?: string; isActive: boolean; academicYearId: string; academicYear: { id: string; name: string }; items: FeePlanItem[]; classMaps: FeePlanClassMap[]; }
 
-interface LedgerInstallment { id: string; label: string; amount: number; dueDate?: string | null; concession: number; netAmount: number; paid: number; balance: number; status: 'paid' | 'partial' | 'due' | 'overdue'; isOverdue: boolean; }
+interface LedgerInstallment { id: string; label: string; amount: number; dueDate?: string | null; concession: number; netAmount: number; paid: number; balance: number; status: 'paid' | 'partial' | 'due' | 'overdue' | 'upcoming'; isOverdue: boolean; }
 interface LedgerItem { feePlanItemId: string; feeCategoryId: string; categoryName: string; totalAmount: number; concession: number; netAmount: number; installments: LedgerInstallment[]; totalPaid: number; totalBalance: number; }
 interface Ledger { student: { id: string; name: string; admissionNo: string; className: string }; plan: { id: string; name: string } | null; items: LedgerItem[]; totalAnnual: number; totalConcession: number; totalNet: number; totalPaid: number; totalBalance: number; }
 
@@ -42,6 +42,7 @@ const STATUS_CHIP: Record<string, string> = {
   partial: 'bg-yellow-100 text-yellow-800',
   due: 'bg-blue-100 text-blue-800',
   overdue: 'bg-red-100 text-red-700',
+  upcoming: 'bg-slate-100 text-slate-500',
 };
 
 function esc(s: string | null | undefined) {
@@ -204,7 +205,7 @@ function CollectTab({ years, institution }: { years: AcademicYear[]; institution
     if (query.length < 2) { setResults([]); return; }
     const t = setTimeout(async () => {
       setLoading(true);
-      try { const r = await apiFetch<{ students: StudentSearch[] }>(`/students/search?q=${encodeURIComponent(query)}&limit=8`); setResults(r.students ?? []); }
+      try { const r = await apiFetch<any>(`/students?search=${encodeURIComponent(query)}&limit=8&page=1`); setResults(r.data ?? []); }
       catch { setResults([]); } finally { setLoading(false); }
     }, 300);
     return () => clearTimeout(t);
@@ -217,11 +218,11 @@ function CollectTab({ years, institution }: { years: AcademicYear[]; institution
     try {
       const l = await apiFetch<Ledger>(`/fees/ledger/student/${s.id}?yearId=${currentYear.id}`);
       setLedger(l);
-      // Auto-select all unpaid/partial installments
+      // Auto-select due/overdue/partial installments — skip 'upcoming' (future due date)
       const autoSelect = new Set<string>();
       for (const item of l.items) {
         for (const inst of item.installments) {
-          if (inst.status !== 'paid') autoSelect.add(inst.id);
+          if (inst.status !== 'paid' && inst.status !== 'upcoming') autoSelect.add(inst.id);
         }
       }
       setSelectedInstallments(autoSelect);
@@ -254,7 +255,8 @@ function CollectTab({ years, institution }: { years: AcademicYear[]; institution
         item.installments
           .filter((inst) => selectedInstallments.has(inst.id))
           .map((inst) => ({
-            feePlanInstallmentId: inst.id,
+            // Virtual installment IDs (item_<id>) mean no DB installment row exists
+            feePlanInstallmentId: inst.id.startsWith('item_') ? undefined : inst.id,
             feePlanItemId: item.feePlanItemId,
             feeCategoryId: item.feeCategoryId,
             amount: getInstallmentAmount(inst),
@@ -728,7 +730,7 @@ function ConcessionsTab({ years }: { years: AcademicYear[] }) {
   useEffect(() => {
     if (query.length < 2) { setResults([]); return; }
     const t = setTimeout(async () => {
-      try { const r = await apiFetch<{ students: StudentSearch[] }>(`/students/search?q=${encodeURIComponent(query)}&limit=8`); setResults(r.students ?? []); } catch { }
+      try { const r = await apiFetch<any>(`/students?search=${encodeURIComponent(query)}&limit=8&page=1`); setResults(r.data ?? []); } catch { }
     }, 300);
     return () => clearTimeout(t);
   }, [query]);
