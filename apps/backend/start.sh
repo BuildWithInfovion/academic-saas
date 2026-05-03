@@ -54,6 +54,7 @@ const ALL_MIGRATIONS = [
   '20260430120000_messaging',
   '20260430150000_fix_admin_role_permissions',
   '20260501000000_ensure_fee_collections',
+  '20260503000000_add_student_photo_url',
 ];
 
 (async () => {
@@ -143,10 +144,34 @@ const ADMINS = [
 });
 JSSEED
 
-# ── Step 3: Apply any pending migrations (new schema changes since last deploy)
+# ── Step 3: Schema safety net — apply any columns that must exist before migrate deploy
+echo "[start] Applying schema safety net..."
+node - << 'JSSAFETY'
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+(async () => {
+  const fixes = [
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "photoUrl" TEXT`,
+  ];
+  for (const sql of fixes) {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+      console.log('[safety] OK:', sql.slice(0, 80));
+    } catch (e) {
+      console.warn('[safety] Warning:', (e.message || '').slice(0, 150));
+    }
+  }
+  await prisma.$disconnect();
+})().catch(async (e) => {
+  console.warn('[safety] Fatal:', (e.message || '').slice(0, 300));
+  await prisma.$disconnect().catch(() => {});
+});
+JSSAFETY
+
+# ── Step 4: Apply any pending migrations (new schema changes since last deploy)
 echo "[start] Running pending migrations..."
 npx prisma migrate deploy
 
-# ── Step 4: Start the application
+# ── Step 5: Start the application
 echo "[start] Starting application..."
 exec node dist/src/main
