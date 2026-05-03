@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { platformFetch } from '@/lib/platform-api';
 
@@ -48,6 +48,9 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const deleteInputRef = useRef<HTMLInputElement>(null);
 
   // Subscription edit state
   const [editSub, setEditSub] = useState(false);
@@ -87,8 +90,14 @@ export default function ClientDetailPage() {
     }
   }, [id]);
 
+  const openDeleteModal = () => {
+    setDeleteConfirmText('');
+    setDeleteModal(true);
+    setTimeout(() => deleteInputRef.current?.focus(), 50);
+  };
+
   const handleDelete = async () => {
-    if (!confirm(`Permanently soft-delete "${client?.name}"? This cannot be undone from the UI.`)) return;
+    if (deleteConfirmText !== client?.name) return;
     setDeleting(true);
     try {
       await platformFetch(`/platform/clients/${id}`, { method: 'DELETE' });
@@ -96,6 +105,7 @@ export default function ClientDetailPage() {
     } catch (e: any) {
       alert(e.message);
       setDeleting(false);
+      setDeleteModal(false);
     }
   };
 
@@ -143,6 +153,8 @@ export default function ClientDetailPage() {
 
   const inp = 'w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500';
 
+  const canConfirmDelete = deleteConfirmText === client?.name;
+
   if (loading) return <div className="p-8 text-gray-500 text-sm">Loading...</div>;
   if (loadError) return (
     <div className="p-8">
@@ -160,6 +172,71 @@ export default function ClientDetailPage() {
 
   return (
     <div className="p-8 max-w-3xl space-y-6">
+
+      {/* ── Destructive delete confirmation modal ─────────────────────────── */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md rounded-xl p-6 shadow-2xl" style={{ background: '#111827', border: '1px solid #991b1b' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(153,27,27,0.3)' }}>
+                <svg width="18" height="18" fill="none" stroke="#f87171" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-white">Permanently delete school?</h2>
+                <p className="text-xs text-gray-400 mt-0.5">This will erase all data — students, fees, attendance, staff, and settings.</p>
+              </div>
+            </div>
+
+            <div className="bg-red-950/40 border border-red-900/60 rounded-lg px-3 py-2.5 mb-4 text-xs text-red-300 space-y-1">
+              <p className="font-semibold">The following will be permanently deleted:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-red-400/80 mt-1">
+                <li>All students and admission records</li>
+                <li>All fee plans, payments, and collections</li>
+                <li>All attendance records</li>
+                <li>All staff profiles and salary records</li>
+                <li>All exam results and report cards</li>
+                <li>All users, roles, and login access</li>
+              </ul>
+              <p className="font-semibold text-red-300 mt-2">This action cannot be undone.</p>
+            </div>
+
+            <label className="block text-xs text-gray-400 mb-1.5">
+              Type <span className="text-white font-mono font-semibold">{client?.name}</span> to confirm
+            </label>
+            <input
+              ref={deleteInputRef}
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && canConfirmDelete) void handleDelete(); }}
+              placeholder={client?.name}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none mb-4"
+              style={{ background: '#1f2937', border: '1px solid #374151', color: '#fff' }}
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDeleteModal(false); setDeleteConfirmText(''); }}
+                className="flex-1 py-2 rounded-lg text-xs font-medium text-gray-300"
+                style={{ background: '#1f2937', border: '1px solid #374151' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleDelete()}
+                disabled={!canConfirmDelete || deleting}
+                className="flex-1 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-40"
+                style={{ background: canConfirmDelete ? '#dc2626' : '#7f1d1d' }}
+              >
+                {deleting ? 'Deleting...' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Over-limit warning banner */}
       {overLimit && (
         <div className="bg-red-900/30 border border-red-700/60 rounded-xl px-4 py-3 flex items-start gap-3">
@@ -219,7 +296,7 @@ export default function ClientDetailPage() {
             </button>
           )}
           <button
-            onClick={handleDelete}
+            onClick={openDeleteModal}
             disabled={deleting}
             className="px-3 py-1.5 text-xs bg-red-900/40 border border-red-700 text-red-400 rounded-lg hover:bg-red-900/70 disabled:opacity-50"
           >

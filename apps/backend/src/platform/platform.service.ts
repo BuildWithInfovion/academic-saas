@@ -572,10 +572,10 @@ export class PlatformService {
     });
     if (!institution) throw new NotFoundException('Client not found');
 
-    return this.prisma.institution.update({
-      where: { id: institutionId },
-      data: { deletedAt: new Date(), status: 'inactive' },
-    });
+    // Hard delete — all child records cascade via onDelete: Cascade on every
+    // model that references Institution (students, users, fees, attendance, etc.)
+    await this.prisma.institution.delete({ where: { id: institutionId } });
+    return { deleted: true, institutionId };
   }
 
   // ── ONBOARD ───────────────────────────────────────────────────────────────
