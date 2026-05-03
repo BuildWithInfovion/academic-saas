@@ -86,4 +86,7 @@ export class UpdateStudentDto {
   @IsOptional() @IsBoolean() hasDisability?: boolean;
   @IsOptional() @IsString() disabilityDetails?: string;
   @IsOptional() @IsString() medicalConditions?: string;
+
+  // Photo
+  @IsOptional() @IsString() photoUrl?: string;
 }

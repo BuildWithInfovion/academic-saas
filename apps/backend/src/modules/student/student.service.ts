@@ -723,6 +723,7 @@ export class StudentService {
       ...(dto.hasDisability !== undefined && { hasDisability: dto.hasDisability }),
       ...(dto.disabilityDetails !== undefined && { disabilityDetails: dto.disabilityDetails || null }),
       ...(dto.medicalConditions !== undefined && { medicalConditions: dto.medicalConditions || null }),
+      ...(dto.photoUrl !== undefined && { photoUrl: dto.photoUrl || null }),
     };
 
     // H-04: If parentPhone changed, also update the linked parent user's phone

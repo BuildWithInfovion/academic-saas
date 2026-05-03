@@ -22,6 +22,7 @@ import { Tenant } from '../../common/decorators/tenant.decorator';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { StorageService } from '../../common/storage/storage.service';
 
 interface TenantContext {
   institutionId: string;
@@ -32,7 +33,10 @@ interface TenantContext {
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('students')
 export class StudentController {
-  constructor(private readonly studentService: StudentService) {}
+  constructor(
+    private readonly studentService: StudentService,
+    private readonly storageService: StorageService,
+  ) {}
 
   // ── PORTAL ENDPOINTS (before :id routes) ──────────────────────────────────
 
@@ -122,6 +126,13 @@ export class StudentController {
     @Query('unitId') unitId?: string,
   ) {
     return this.studentService.findAll(tenant.institutionId, page, limit, search, unitId);
+  }
+
+  // GET /students/:id/photo-signature — Cloudinary signed upload for student photo
+  @Get(':id/photo-signature')
+  @Permissions('users.write')
+  getPhotoSignature(@Tenant() tenant: TenantContext, @Param('id') id: string) {
+    return this.storageService.generateUploadSignature(tenant.institutionId, id);
   }
 
   @Get(':id')
