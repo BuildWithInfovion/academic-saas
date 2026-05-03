@@ -75,6 +75,20 @@ const ALL_MIGRATIONS = [
     console.warn('[sync] Could not ensure _prisma_migrations:', (e.message || '').slice(0, 150));
   }
 
+  // Column repair — add any columns that might be missing from the live DB.
+  // This runs before migrate deploy so Prisma never sees a P2022 on startup.
+  const COLUMN_REPAIRS = [
+    `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "photoUrl" TEXT`,
+  ];
+  for (const sql of COLUMN_REPAIRS) {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+      console.log('[sync] Column repair OK:', sql.slice(0, 80));
+    } catch (e) {
+      console.warn('[sync] Column repair warning:', (e.message || '').slice(0, 150));
+    }
+  }
+
   for (const name of ALL_MIGRATIONS) {
     const file = `./prisma/migrations/${name}/migration.sql`;
     if (!existsSync(file)) { console.log(`[sync] Skipping (no file): ${name}`); continue; }
