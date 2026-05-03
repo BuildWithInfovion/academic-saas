@@ -260,14 +260,6 @@ export default function StudentsPage() {
     if (user?.institutionId) setDrafts(loadDraftsFromStorage(user.institutionId));
   }, [user?.institutionId]);
 
-  // Auto-save draft every 60 s when the form has content (only for new admissions)
-  useEffect(() => {
-    if (editingId || !form.firstName.trim()) return;
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => saveDraft(true), 60_000);
-    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
-  }, [form, editingId, saveDraft]);
-
   // ── Save on navigation away (unmount) and on browser refresh ─────────────
   // Uses refs so the handlers always see current state, not stale closures.
   const saveFromRefs = useCallback(() => {
@@ -363,6 +355,14 @@ export default function StudentsPage() {
     setActiveDraftId(id);
     if (!silent) { setDraftSaved(true); setTimeout(() => setDraftSaved(false), 2500); }
   }, [form, activeDraftId, user?.institutionId, academicUnits, currentYearId]);
+
+  // Auto-save draft every 60 s when the form has content (only for new admissions)
+  useEffect(() => {
+    if (editingId || !form.firstName.trim()) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => saveDraft(true), 60_000);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [form, editingId, saveDraft]);
 
   const loadDraft = (draft: AdmissionDraft) => {
     setForm({ ...draft.form });
