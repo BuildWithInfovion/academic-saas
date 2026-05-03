@@ -1014,7 +1014,12 @@ export default function StudentsPage() {
           </div>
           <div>
             <label className={lbl}>Mother Tongue</label>
-            <input className={inp} placeholder="e.g. Hindi, Marathi, Tamil" value={form.motherTongue} onChange={sf('motherTongue')} />
+            <select className={inp} value={form.motherTongue} onChange={sf('motherTongue')}>
+              <option value="">Select</option>
+              {['Hindi','Marathi','Kannada','Tamil','Telugu','Malayalam','Gujarati','Punjabi','Bengali','Odia','Assamese','Urdu','Konkani','Sindhi','Nepali','Sanskrit','Maithili','Kashmiri','Manipuri','Bodo','Santali','Dogri','Tulu','Bhili','Gondi','Kurukh','Other'].map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className={lbl}>Blood Group</label>
