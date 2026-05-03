@@ -436,12 +436,10 @@ export default function StudentsPage() {
     setExistingParentInfo(null);
     setLoadingFees(true);
 
-    // Try new FeePlan system — class-specific first, then all-year fallback
+    // Only fetch plans explicitly assigned to this class — never fall back to
+    // plans for other classes (that caused cross-class fee contamination).
     const planClassPromise = (form.academicUnitId && currentYearId)
       ? apiFetch<FeePlan[]>(`/fees/plans?yearId=${currentYearId}&unitId=${form.academicUnitId}`).catch(() => null)
-      : Promise.resolve(null);
-    const planYearPromise = currentYearId
-      ? apiFetch<FeePlan[]>(`/fees/plans?yearId=${currentYearId}`).catch(() => null)
       : Promise.resolve(null);
 
     const legacyPromise = (form.academicUnitId && currentYearId)
@@ -454,12 +452,10 @@ export default function StudentsPage() {
       : Promise.resolve(null);
 
     try {
-      const [planClassRes, planYearRes, legacyRes, parentRes] = await Promise.all([planClassPromise, planYearPromise, legacyPromise, parentPromise]);
+      const [planClassRes, legacyRes, parentRes] = await Promise.all([planClassPromise, legacyPromise, parentPromise]);
 
-      // Prefer class-assigned plans; if none, fall back to any plan for the year
       const classPlans: FeePlan[] = Array.isArray(planClassRes) ? planClassRes : [];
-      const yearPlans: FeePlan[] = Array.isArray(planYearRes) ? planYearRes : [];
-      const plan = classPlans.length > 0 ? classPlans[0] : (yearPlans.length > 0 ? yearPlans[0] : null);
+      const plan = classPlans.length > 0 ? classPlans[0] : null;
 
       if (plan && plan.items.length > 0) {
         // ── New plan system ──
