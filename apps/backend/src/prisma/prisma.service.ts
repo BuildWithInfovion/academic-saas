@@ -26,6 +26,19 @@ export class PrismaService
   async onModuleInit() {
     await this.connectWithRetry();
 
+    // Ensure any columns that the Prisma client expects but may be missing from
+    // the live DB are added before requests start. IF NOT EXISTS makes this idempotent.
+    try {
+      await this.$executeRawUnsafe(
+        `ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "photoUrl" TEXT`,
+      );
+      this.logger.log('Schema guard: students.photoUrl ensured');
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Schema guard warning: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
     // Log queries that take more than 500 ms (cross-region RTT to Supabase is ~260ms baseline).
     this.$on('query' as never, (e: { query: string; duration: number }) => {
       if (e.duration >= 500) {
