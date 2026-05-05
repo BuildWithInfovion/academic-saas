@@ -102,7 +102,7 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
     reader.readAsText(file);
   };
 
-  const CHUNK_SIZE = 50;
+  const CHUNK_SIZE = 100;
 
   const handleConfirmImport = async () => {
     const validRows = importRows.filter((r) => r._errors.length === 0);

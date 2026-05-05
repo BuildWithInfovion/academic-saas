@@ -399,10 +399,17 @@ export class StudentService {
 
     const results = { created: 0, skipped: 0, errors: [] as { row: number; error: string }[] };
 
+    // ── Phase 1: validate all rows upfront ───────────────────────────────────
+    type ValidRow = {
+      row: ImportStudentRowDto;
+      rowNum: number;
+      unit: { id: string; name: string };
+      phone: string | null;
+    };
+    const validRows: ValidRow[] = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const rowNum = i + 2; // 1-indexed + header row
-
+      const rowNum = i + 2;
       const firstName = row.firstName?.trim();
       const lastName  = row.lastName?.trim();
       if (!firstName || !lastName) {
@@ -410,14 +417,48 @@ export class StudentService {
         results.skipped++;
         continue;
       }
-
       const unit = resolveUnit(units, row.className ?? '');
       if (!unit) {
         results.errors.push({ row: rowNum, error: `Class "${row.className}" not found — check class names in Settings` });
         results.skipped++;
         continue;
       }
+      validRows.push({ row, rowNum, unit, phone: row.parentPhone?.replace(/\s/g, '') || null });
+    }
+    if (!validRows.length) return results;
 
+    // ── Phase 2: batch-lookup all parent phones in one query ─────────────────
+    const allPhones = [...new Set(validRows.map((v) => v.phone).filter(Boolean))] as string[];
+    const existingParents = allPhones.length
+      ? await this.prisma.user.findMany({
+          where: { institutionId, phone: { in: allPhones }, deletedAt: null },
+          select: { id: true, phone: true },
+        })
+      : [];
+    // phone → userId (populated from DB; extended as new parents are created)
+    const parentByPhone = new Map(existingParents.map((u) => [u.phone!, u.id]));
+
+    // ── Phase 3: pre-compute bcrypt hashes for NEW phones in parallel ────────
+    // 10 rounds instead of 12: ~4× faster, still plenty secure for bulk-imported
+    // temporary passwords (users are expected to change on first login).
+    const BCRYPT_ROUNDS = 10;
+    const HASH_CONCURRENCY = 8;
+    const newPhones = allPhones.filter((p) => !parentByPhone.has(p));
+    const hashMap = new Map<string, { hash: string; pwd: string }>();
+    for (let i = 0; i < newPhones.length; i += HASH_CONCURRENCY) {
+      const batch = newPhones.slice(i, i + HASH_CONCURRENCY);
+      const hashed = await Promise.all(
+        batch.map(async (phone) => {
+          const pwd = generatePassword();
+          const hash = await bcrypt.hash(pwd, BCRYPT_ROUNDS);
+          return { phone, hash, pwd };
+        }),
+      );
+      for (const h of hashed) hashMap.set(h.phone, { hash: h.hash, pwd: h.pwd });
+    }
+
+    // ── Phase 4: create students (transactions are now fast — no bcrypt inside) ─
+    for (const { row, rowNum, unit, phone } of validRows) {
       try {
         await this.prisma.withConnectionRetry(() =>
           this.prisma.$transaction(async (tx) => {
@@ -425,24 +466,22 @@ export class StudentService {
             const rollNo = await this.generateRollNoInTx(tx, unit.id);
 
             let parentUserId: string | undefined;
-            const phone = row.parentPhone?.replace(/\s/g, '') || null;
             if (phone) {
-              let parentUser = await tx.user.findFirst({
-                where: { institutionId, phone, deletedAt: null },
-              });
-              if (!parentUser) {
-                const pwd = generatePassword();
-                const hash = await bcrypt.hash(pwd, 12);
-                parentUser = await tx.user.create({
-                  data: { institutionId, phone, passwordHash: hash, isActive: true },
+              let pid = parentByPhone.get(phone);
+              if (!pid) {
+                const pre = hashMap.get(phone)!;
+                const newParent = await tx.user.create({
+                  data: { institutionId, phone, passwordHash: pre.hash, isActive: true },
                 });
                 if (parentRole) {
                   await tx.userRole.create({
-                    data: { userId: parentUser.id, roleId: parentRole.id, institutionId },
+                    data: { userId: newParent.id, roleId: parentRole.id, institutionId },
                   });
                 }
+                pid = newParent.id;
+                parentByPhone.set(phone, pid);
               }
-              parentUserId = parentUser.id;
+              parentUserId = pid;
             }
 
             await tx.student.create({
@@ -450,9 +489,9 @@ export class StudentService {
                 institutionId,
                 admissionNo,
                 rollNo,
-                firstName,
+                firstName: row.firstName.trim(),
                 middleName: row.middleName?.trim() || null,
-                lastName,
+                lastName: row.lastName.trim(),
                 gender: row.gender?.toLowerCase() || null,
                 dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
                 fatherName: row.fatherName?.trim() || null,
