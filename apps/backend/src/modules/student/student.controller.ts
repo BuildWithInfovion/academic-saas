@@ -88,7 +88,7 @@ export class StudentController {
 
   // POST /students/import — batch create students from ledger data (JSON rows from frontend CSV parse)
   @Post('import')
-  @Permissions('users.write')
+  @Permissions('students.write')
   importStudents(@Tenant() tenant: TenantContext, @Body() body: { rows: ImportStudentRowDto[] }) {
     return this.studentService.importStudents(tenant.institutionId, body.rows || []);
   }

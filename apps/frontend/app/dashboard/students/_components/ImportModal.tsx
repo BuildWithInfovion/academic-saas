@@ -25,10 +25,11 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
   const [importStep, setImportStep] = useState<'upload' | 'preview' | 'result'>('upload');
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleClose = () => {
-    setImportRows([]); setImportStep('upload'); setImportResult(null); setError(null);
+    setImportRows([]); setImportStep('upload'); setImportResult(null); setError(null); setImportProgress('');
     onClose();
   };
 
@@ -101,17 +102,31 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
     reader.readAsText(file);
   };
 
+  const CHUNK_SIZE = 50;
+
   const handleConfirmImport = async () => {
     const validRows = importRows.filter((r) => r._errors.length === 0);
     if (!validRows.length) { setError('No valid rows to import'); return; }
     setImporting(true);
+    setError(null);
+    const merged: ImportResult = { created: 0, skipped: 0, errors: [] };
     try {
-      const result = await apiFetch('/students/import', {
-        method: 'POST',
-        body: JSON.stringify({ rows: validRows.map(({ _rowNum: _r, _errors: _e, ...rest }) => rest) }),
-      }) as ImportResult;
-      setImportResult(result);
+      const chunks: typeof validRows[] = [];
+      for (let i = 0; i < validRows.length; i += CHUNK_SIZE) chunks.push(validRows.slice(i, i + CHUNK_SIZE));
+      for (let c = 0; c < chunks.length; c++) {
+        setImportProgress(`Importing batch ${c + 1} of ${chunks.length}…`);
+        const payload = chunks[c].map(({ _rowNum: _r, _errors: _e, ...rest }) => rest);
+        const result = await apiFetch('/students/import', {
+          method: 'POST',
+          body: JSON.stringify({ rows: payload }),
+        }) as ImportResult;
+        merged.created += result.created;
+        merged.skipped += result.skipped;
+        merged.errors.push(...result.errors);
+      }
+      setImportResult(merged);
       setImportStep('result');
+      setImportProgress('');
       await onImportComplete();
     } catch (e: any) { setError(e.message || 'Import failed'); }
     finally { setImporting(false); }
@@ -283,7 +298,7 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
           {importStep === 'preview' && (
             <>
               <button onClick={() => void handleConfirmImport()} disabled={importing || importRows.filter(r => r._errors.length === 0).length === 0} className="btn-brand flex-1 py-2.5 rounded-lg disabled:opacity-50">
-                {importing ? 'Importing...' : `Import ${importRows.filter(r => r._errors.length === 0).length} Students`}
+                {importing ? (importProgress || 'Importing…') : `Import ${importRows.filter(r => r._errors.length === 0).length} Students`}
               </button>
               <button onClick={handleClose} className="px-5 py-2.5 border border-ds-border-strong rounded-lg text-sm hover:bg-ds-bg2">Cancel</button>
             </>
