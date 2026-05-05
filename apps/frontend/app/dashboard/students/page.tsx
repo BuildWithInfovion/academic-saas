@@ -11,7 +11,7 @@ import { FeeConfirmModal } from './_components/FeeConfirmModal';
 import { CredentialsModal } from './_components/CredentialsModal';
 import { StudentProfilePanel } from './_components/StudentProfilePanel';
 import { LinkModal } from './_components/LinkModal';
-import { ImportModal } from './_components/ImportModal';
+import { ImportModal, IMPORT_BATCH_KEY, type ImportBatch } from './_components/ImportModal';
 
 const inp = 'border border-ds-border-strong p-2 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand bg-ds-surface';
 const PAGE_SIZE = 50;
@@ -59,6 +59,8 @@ export default function StudentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [lastImportBatch, setLastImportBatch] = useState<ImportBatch | null>(null);
+  const [undoing, setUndoing] = useState(false);
 
   // Drafts
   const [drafts, setDrafts] = useState<AdmissionDraft[]>([]);
@@ -87,6 +89,17 @@ export default function StudentsPage() {
   useEffect(() => {
     if (user?.institutionId) setDrafts(loadDraftsFromStorage(user.institutionId));
   }, [user?.institutionId]);
+
+  // Load recent import batch from localStorage for undo banner (show for 24h)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(IMPORT_BATCH_KEY);
+      if (!raw) return;
+      const batch = JSON.parse(raw) as ImportBatch;
+      if (Date.now() - batch.timestamp < 24 * 60 * 60 * 1000) setLastImportBatch(batch);
+      else localStorage.removeItem(IMPORT_BATCH_KEY);
+    } catch { localStorage.removeItem(IMPORT_BATCH_KEY); }
+  }, []);
 
   const saveFromRefs = useCallback(() => {
     const institutionId = user?.institutionId;
@@ -448,6 +461,42 @@ export default function StudentsPage() {
       {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
       {success && <div className="mb-4 bg-ds-success-bg border border-ds-success-border rounded-lg p-3 text-ds-success-text text-sm">{success}</div>}
 
+      {/* Undo last import banner */}
+      {lastImportBatch && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between gap-4">
+          <p className="text-sm text-amber-800">
+            <span className="font-semibold">{lastImportBatch.count} students</span> were imported recently.
+            You can undo this if the data was incorrect.
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={async () => {
+                if (!confirm(`Delete all ${lastImportBatch.count} imported students? This cannot be undone.`)) return;
+                setUndoing(true);
+                try {
+                  await apiFetch('/students/import-batch', {
+                    method: 'DELETE',
+                    body: JSON.stringify({ studentIds: lastImportBatch.studentIds }),
+                  });
+                  localStorage.removeItem(IMPORT_BATCH_KEY);
+                  setLastImportBatch(null);
+                  showSuccess(`${lastImportBatch.count} imported students deleted`);
+                  void fetchStudents();
+                } catch (e: any) { setError(e.message || 'Failed to undo import'); }
+                finally { setUndoing(false); }
+              }}
+              disabled={undoing}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 disabled:opacity-50">
+              {undoing ? 'Deleting…' : 'Undo Import'}
+            </button>
+            <button onClick={() => { localStorage.removeItem(IMPORT_BATCH_KEY); setLastImportBatch(null); }}
+              className="px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-100">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       <AdmissionForm
         form={form} setForm={setForm}
         editingId={editingId} updating={updating}
@@ -567,7 +616,7 @@ export default function StudentsPage() {
         open={showImport}
         academicUnits={academicUnits}
         onClose={() => setShowImport(false)}
-        onImportComplete={fetchStudents}
+        onImportComplete={async (batch) => { setLastImportBatch(batch); setShowImport(false); await fetchStudents(); }}
       />
     </div>
   );

@@ -42,22 +42,46 @@ export interface ImportStudentRowDto {
   bloodGroup?: string;
 }
 
+const CLASS_PREFIXES = ['class', 'std', 'grade', 'form', 'standard'];
+
+function normUnit(s: string) { return s.trim().toLowerCase().replace(/[\s_\-\.]/g, ''); }
+
+function stripPrefix(s: string): string {
+  for (const p of CLASS_PREFIXES) if (s.startsWith(p)) return s.slice(p.length);
+  return s;
+}
+
 function resolveUnit(
   units: { id: string; name: string; displayName?: string | null }[],
   className: string,
 ): { id: string; name: string } | null {
-  const q = className.toLowerCase().replace(/[\s_-]/g, '');
+  const q = normUnit(className);
+  if (!q) return null;
+  const numQ = stripPrefix(q); // "class7" → "7", "7" → "7", "grade10" → "10"
+
   for (const u of units) {
-    const n = u.name.toLowerCase().replace(/[\s_-]/g, '');
-    const d = (u.displayName ?? '').toLowerCase().replace(/[\s_-]/g, '');
+    const n = normUnit(u.name);
+    const d = normUnit(u.displayName ?? '');
+
+    // Pass 1: exact match
     if (n === q || d === q) return u;
+
+    // Pass 2: strip prefixes from both sides and compare numerics
+    // Handles "7" (CSV) vs "Class 7" (unit), "Class 7" (CSV) vs "7" (unit), etc.
+    const numN = stripPrefix(n);
+    const numD = stripPrefix(d);
+    if (numN === numQ || numD === numQ) return u;
   }
-  // Partial / contains fallback
-  for (const u of units) {
-    const n = u.name.toLowerCase().replace(/[\s_-]/g, '');
-    const d = (u.displayName ?? '').toLowerCase().replace(/[\s_-]/g, '');
-    if (n.includes(q) || q.includes(n) || d.includes(q) || q.includes(d)) return u;
+
+  // Pass 3: substring fallback only for long queries (≥4 chars) to avoid "1" → "class12"
+  if (q.length >= 4) {
+    for (const u of units) {
+      const n = normUnit(u.name);
+      const d = normUnit(u.displayName ?? '');
+      if (n.includes(q) || d.includes(q)) return u;
+    }
   }
+
   return null;
 }
 
@@ -388,7 +412,13 @@ export class StudentService {
   async importStudents(
     institutionId: string,
     rows: ImportStudentRowDto[],
-  ): Promise<{ created: number; skipped: number; errors: { row: number; error: string }[] }> {
+  ): Promise<{
+    created: number;
+    skipped: number;
+    errors: { row: number; error: string }[];
+    studentIds: string[];
+    newParentCredentials: { phone: string; password: string }[];
+  }> {
     const [units, parentRole] = await Promise.all([
       this.prisma.academicUnit.findMany({
         where: { institutionId, deletedAt: null },
@@ -397,7 +427,13 @@ export class StudentService {
       this.prisma.role.findFirst({ where: { institutionId, code: 'parent' } }),
     ]);
 
-    const results = { created: 0, skipped: 0, errors: [] as { row: number; error: string }[] };
+    const results = {
+      created: 0, skipped: 0,
+      errors: [] as { row: number; error: string }[],
+      studentIds: [] as string[],
+      newParentCredentials: [] as { phone: string; password: string }[],
+      newParentPhones: new Set<string>(), // internal — tracks which phones were created this run
+    };
 
     // ── Phase 1: validate all rows upfront ───────────────────────────────────
     type ValidRow = {
@@ -425,7 +461,10 @@ export class StudentService {
       }
       validRows.push({ row, rowNum, unit, phone: row.parentPhone?.replace(/\s/g, '') || null });
     }
-    if (!validRows.length) return results;
+    if (!validRows.length) {
+      const { newParentPhones: _, ...out } = results;
+      return out;
+    }
 
     // ── Phase 2: batch-lookup all parent phones in one query ─────────────────
     const allPhones = [...new Set(validRows.map((v) => v.phone).filter(Boolean))] as string[];
@@ -460,7 +499,7 @@ export class StudentService {
     // ── Phase 4: create students (transactions are now fast — no bcrypt inside) ─
     for (const { row, rowNum, unit, phone } of validRows) {
       try {
-        await this.prisma.withConnectionRetry(() =>
+        const createdStudent = await this.prisma.withConnectionRetry(() =>
           this.prisma.$transaction(async (tx) => {
             const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
             const rollNo = await this.generateRollNoInTx(tx, unit.id);
@@ -480,11 +519,16 @@ export class StudentService {
                 }
                 pid = newParent.id;
                 parentByPhone.set(phone, pid);
+                // Track new credentials to return to caller
+                if (!results.newParentPhones.has(phone)) {
+                  results.newParentPhones.add(phone);
+                  results.newParentCredentials.push({ phone, password: pre.pwd });
+                }
               }
               parentUserId = pid;
             }
 
-            await tx.student.create({
+            return tx.student.create({
               data: {
                 institutionId,
                 admissionNo,
@@ -508,10 +552,12 @@ export class StudentService {
                 parentUserId,
                 tcFromPrevious: 'not_applicable',
               },
+              select: { id: true },
             });
           }, { timeout: 15000, maxWait: 10000 }),
         );
         results.created++;
+        results.studentIds.push(createdStudent.id);
       } catch (err: any) {
         const msg = err?.message?.slice(0, 120) ?? 'Unknown error';
         results.errors.push({ row: rowNum, error: msg });
@@ -519,7 +565,36 @@ export class StudentService {
       }
     }
 
-    return results;
+    const { newParentPhones: _, ...out } = results;
+    return out;
+  }
+
+  async deleteImportBatch(institutionId: string, studentIds: string[]): Promise<{ deleted: number }> {
+    if (!studentIds.length) return { deleted: 0 };
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds }, institutionId, deletedAt: null },
+      select: { id: true, parentUserId: true },
+    });
+    if (!students.length) return { deleted: 0 };
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.student.updateMany({
+        where: { id: { in: students.map((s) => s.id) } },
+        data: { deletedAt: now },
+      });
+      // Soft-delete parent users that have no remaining active students
+      const parentIds = [...new Set(students.map((s) => s.parentUserId).filter(Boolean))] as string[];
+      for (const pid of parentIds) {
+        const remaining = await tx.student.count({
+          where: { parentUserId: pid, deletedAt: null },
+        });
+        if (remaining === 0) {
+          await tx.user.update({ where: { id: pid }, data: { deletedAt: now } });
+        }
+      }
+    });
+    return { deleted: students.length };
   }
 
   // ── BASIC CREATE (kept for backwards compat) ──────────────────────────────

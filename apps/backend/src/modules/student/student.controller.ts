@@ -93,6 +93,13 @@ export class StudentController {
     return this.studentService.importStudents(tenant.institutionId, body.rows || []);
   }
 
+  // DELETE /students/import-batch — reverse a bulk import by student IDs
+  @Delete('import-batch')
+  @Permissions('students.write')
+  deleteImportBatch(@Tenant() tenant: TenantContext, @Body() body: { studentIds: string[] }) {
+    return this.studentService.deleteImportBatch(tenant.institutionId, body.studentIds || []);
+  }
+
   // ── ADMISSION ──────────────────────────────────────────────────────────────
 
   /**
