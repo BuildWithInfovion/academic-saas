@@ -77,9 +77,9 @@ export class StudentController {
   @Permissions('users.write')
   getImportTemplate(@Res() res: Response) {
     const csv = [
-      'First Name*,Last Name*,Middle Name,Gender (Male/Female/Other),Date of Birth (DD-MM-YYYY),Class*,Old Admission No,Admission Date (DD-MM-YYYY),Father Name,Mother Name,Parent Mobile,Address,Religion,Caste Category,Blood Group',
-      'Ramesh,Sharma,Kumar,Male,15-06-2015,Class 5,OLD-001,01-06-2023,Rajesh Sharma,Sunita Sharma,9876543210,123 MG Road Mumbai,Hindu,General,A+',
-      'Priya,Verma,,Female,20-08-2014,Class 6,,01-06-2022,Suresh Verma,Kavita Verma,9123456789,,,,',
+      'First Name*,Last Name*,Middle Name,Gender (Male/Female/Other),Date of Birth (DD-MM-YYYY),Class*,Old Admission No,Admission Date (DD-MM-YYYY),Father Name,Mother Name,Parent Mobile,Address,Religion,Caste Category,Blood Group,Fee Paid (Rs)',
+      'Ramesh,Sharma,Kumar,Male,15-06-2015,Class 5,OLD-001,01-06-2023,Rajesh Sharma,Sunita Sharma,9876543210,123 MG Road Mumbai,Hindu,General,A+,5000',
+      'Priya,Verma,,Female,20-08-2014,Class 6,,01-06-2022,Suresh Verma,Kavita Verma,9123456789,,,,,',
     ].join('\n');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="student-import-template.csv"');

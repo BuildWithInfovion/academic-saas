@@ -40,6 +40,7 @@ export interface ImportStudentRowDto {
   religion?: string;
   casteCategory?: string;
   bloodGroup?: string;
+  feePaid?: string;
 }
 
 const CLASS_PREFIXES = ['class', 'std', 'grade', 'form', 'standard'];
@@ -496,6 +497,19 @@ export class StudentService {
       for (const h of hashed) hashMap.set(h.phone, { hash: h.hash, pwd: h.pwd });
     }
 
+    // ── Phase 4 setup: default fee head + receipt base count ────────────────
+    // FeePayment requires feeHeadId. Fetch any available fee head for the institution
+    // (admin can assign proper fee structures later via Fees → Fee Plans).
+    const [defaultFeeHead, feePaymentBaseCount] = await Promise.all([
+      this.prisma.feeHead.findFirst({
+        where: { institutionId },
+        select: { id: true },
+      }),
+      this.prisma.feePayment.count({ where: { institutionId } }),
+    ]);
+    let feePaymentLocalCount = 0;
+    const rcpYear = new Date().getFullYear();
+
     // ── Phase 4: create students (transactions are now fast — no bcrypt inside) ─
     for (const { row, rowNum, unit, phone } of validRows) {
       try {
@@ -528,7 +542,7 @@ export class StudentService {
               parentUserId = pid;
             }
 
-            return tx.student.create({
+            const student = await tx.student.create({
               data: {
                 institutionId,
                 admissionNo,
@@ -554,10 +568,30 @@ export class StudentService {
               },
               select: { id: true },
             });
+
+            const feePaidAmount = row.feePaid ? parseFloat(row.feePaid) : 0;
+            if (feePaidAmount > 0 && defaultFeeHead) {
+              const receiptNo = `IMP-${rcpYear}-${String(feePaymentBaseCount + feePaymentLocalCount + 1).padStart(5, '0')}`;
+              await tx.feePayment.create({
+                data: {
+                  institutionId,
+                  studentId: student.id,
+                  feeHeadId: defaultFeeHead.id,
+                  amount: feePaidAmount,
+                  paymentMode: 'cash',
+                  receiptNo,
+                  paidOn: new Date(),
+                  remarks: 'Imported from ledger',
+                },
+              });
+            }
+
+            return { student, hasFee: feePaidAmount > 0 && !!defaultFeeHead };
           }, { timeout: 15000, maxWait: 10000 }),
         );
+        if (createdStudent.hasFee) feePaymentLocalCount++;
         results.created++;
-        results.studentIds.push(createdStudent.id);
+        results.studentIds.push(createdStudent.student.id);
       } catch (err: any) {
         const msg = err?.message?.slice(0, 120) ?? 'Unknown error';
         results.errors.push({ row: rowNum, error: msg });

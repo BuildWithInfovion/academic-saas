@@ -72,7 +72,8 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
         'parent mobile': 'parentPhone', 'parent mobile*': 'parentPhone', 'phone': 'parentPhone',
         'address': 'address', 'religion': 'religion',
         'caste category': 'casteCategory', 'blood group': 'bloodGroup',
-        'fee paid (₹)': 'feePaid', 'fee paid': 'feePaid', 'fees paid': 'feePaid',
+        'fee paid (₹)': 'feePaid', 'fee paid (rs)': 'feePaid', 'fee paid (rs.)': 'feePaid',
+        'fees paid (rs)': 'feePaid', 'fee paid': 'feePaid', 'fees paid': 'feePaid',
       };
       const parseDMY = (s: string): string | undefined => {
         if (!s) return undefined;
@@ -169,7 +170,7 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
 
   const downloadTemplate = () => {
     const csv = [
-      'First Name*,Last Name*,Middle Name,Gender (Male/Female/Other),Date of Birth (DD-MM-YYYY),Class*,Old Admission No,Admission Date (DD-MM-YYYY),Father Name,Mother Name,Parent Mobile,Address,Religion,Caste Category,Blood Group,Fee Paid (₹)',
+      'First Name*,Last Name*,Middle Name,Gender (Male/Female/Other),Date of Birth (DD-MM-YYYY),Class*,Old Admission No,Admission Date (DD-MM-YYYY),Father Name,Mother Name,Parent Mobile,Address,Religion,Caste Category,Blood Group,Fee Paid (Rs)',
       'Ramesh,Sharma,Kumar,Male,15-06-2015,Class 5,OLD-001,01-06-2023,Rajesh Sharma,Sunita Sharma,9876543210,123 MG Road Mumbai,Hindu,General,A+,5000',
       'Priya,Verma,,Female,20-08-2014,Class 6,,01-06-2022,Suresh Verma,Kavita Verma,9123456789,,,,, ',
     ].join('\n');
