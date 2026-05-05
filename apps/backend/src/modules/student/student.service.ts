@@ -389,13 +389,12 @@ export class StudentService {
     institutionId: string,
     rows: ImportStudentRowDto[],
   ): Promise<{ created: number; skipped: number; errors: { row: number; error: string }[] }> {
-    const [units, parentRole, currentYear] = await Promise.all([
+    const [units, parentRole] = await Promise.all([
       this.prisma.academicUnit.findMany({
         where: { institutionId, deletedAt: null },
         select: { id: true, name: true, displayName: true },
       }),
       this.prisma.role.findFirst({ where: { institutionId, code: 'parent' } }),
-      this.prisma.academicYear.findFirst({ where: { institutionId, isCurrent: true }, select: { id: true } }),
     ]);
 
     const results = { created: 0, skipped: 0, errors: [] as { row: number; error: string }[] };
@@ -469,7 +468,6 @@ export class StudentService {
                 nationality: 'Indian',
                 parentUserId,
                 tcFromPrevious: 'not_applicable',
-                academicYearId: currentYear?.id ?? undefined,
               },
             });
           }, { timeout: 15000, maxWait: 10000 }),
