@@ -250,7 +250,7 @@ export class PlatformService {
 
     const token = await this.jwtService.signAsync(payload, {
       secret: this.config.get<string>('JWT_SECRET'),
-      expiresIn: '8h',
+      expiresIn: '24h',
     });
 
     return {

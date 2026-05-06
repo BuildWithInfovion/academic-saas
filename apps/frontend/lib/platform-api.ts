@@ -17,38 +17,51 @@ function extractErrorMessage(body: unknown, status: number): string {
   return `Request failed (${status})`;
 }
 
-/**
- * Restore the platform admin session on page load by calling GET /platform/auth/me.
- * The httpOnly platform_rt cookie is sent automatically by the browser.
- * PlatformGuard reads the cookie — no Authorization header needed.
- * Returns true if the session was successfully restored.
- */
-export async function silentPlatformRefresh(): Promise<boolean> {
+async function fetchWithTimeout(input: RequestInfo, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${BASE_URL}/platform/auth/me`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-    if (!res.ok) return false;
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+/**
+ * Restore the platform admin session on page load.
+ * Returns 'ok' | 'expired' | 'error' — callers must handle all three:
+ *   'ok'      → session valid, proceed
+ *   'expired' → cookie gone/invalid, redirect to login
+ *   'error'   → network/server issue, show retry UI (do NOT redirect to login)
+ */
+export async function silentPlatformRefresh(): Promise<'ok' | 'expired' | 'error'> {
+  try {
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/platform/auth/me`,
+      { method: 'GET', credentials: 'include' },
+      15_000,
+    );
+    if (res.status === 401 || res.status === 403) return 'expired';
+    if (!res.ok) return 'error';
     const admin = await res.json() as { id: string; email: string; name: string };
-    if (!admin?.id) return false;
-    // Store admin info; subsequent API calls use the httpOnly cookie via credentials: 'include'
+    if (!admin?.id) return 'error';
     usePlatformAuthStore.getState().setAuth('', admin);
-    return true;
+    return 'ok';
   } catch {
-    return false;
+    return 'error';
   }
 }
 
 export async function platformFetch(
   endpoint: string,
-  options: RequestInit = {},
+  options: RequestInit & { silent?: boolean } = {},
 ): Promise<unknown> {
   const { platformToken, logout } = usePlatformAuthStore.getState();
+  const { silent, ...fetchOptions } = options;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
+    ...(fetchOptions.headers as Record<string, string>),
   };
 
   // Send the in-memory token if available (just-logged-in case).
@@ -59,14 +72,19 @@ export async function platformFetch(
   }
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     credentials: 'include',
     headers,
   });
 
   if (res.status === 401) {
-    logout();
-    if (typeof window !== 'undefined') window.location.href = '/platform/login';
+    // Background/polling callers pass silent:true so a transient 401 (e.g. cold-start
+    // timing, single-session invalidation from another device) doesn't kick the user
+    // out mid-session. Only user-initiated calls should trigger the hard redirect.
+    if (!silent) {
+      logout();
+      if (typeof window !== 'undefined') window.location.href = '/platform/login';
+    }
     throw new Error('Session expired. Please sign in again.');
   }
 

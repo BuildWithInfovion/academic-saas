@@ -44,6 +44,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const pathname = usePathname();
   const { admin, logout } = usePlatformAuthStore();
   const [ready,        setReady]       = useState(false);
+  const [connError,    setConnError]   = useState(false);
   const [clock,        setClock]       = useState('');
   const [logoError,    setLogoError]   = useState(false);
   const [notifOpen,    setNotifOpen]   = useState(false);
@@ -55,9 +56,16 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   useEffect(() => {
     if (isLoginPage) { setReady(true); return; }
     if (admin) { setReady(true); return; }
-    silentPlatformRefresh().then((ok) => {
-      if (ok) setReady(true);
-      else router.replace('/platform/login');
+    silentPlatformRefresh().then((status) => {
+      if (status === 'ok') {
+        setReady(true);
+      } else if (status === 'expired') {
+        router.replace('/platform/login');
+      } else {
+        // 'error' = network/server issue (e.g. Render cold-start) — show retry UI
+        // instead of sending the user to login when their session is still valid.
+        setConnError(true);
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -69,11 +77,13 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     return () => clearInterval(id);
   }, []);
 
-  // Poll open support tickets every 5 min for notification badge
+  // Poll open support tickets every 5 min for notification badge.
+  // silent:true prevents a transient 401 from the background poll from kicking
+  // the user out — session validity is checked separately below.
   useEffect(() => {
     if (isLoginPage) return;
     const fetchTickets = () => {
-      platformFetch('/platform/support-tickets')
+      platformFetch('/platform/support-tickets', { silent: true })
         .then((data) => {
           const all = data as { id:string; subject:string; institutionName:string; createdAt:string; status:string }[];
           const open = all.filter((t) => t.status === 'open');
@@ -88,7 +98,37 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoginPage]);
 
+  // Re-validate session every 30 min so an expired cookie is caught gracefully
+  // (redirects to login with a clean state rather than a sudden mid-use 401).
+  useEffect(() => {
+    if (isLoginPage || !ready) return;
+    const id = setInterval(async () => {
+      const status = await silentPlatformRefresh();
+      if (status === 'expired') {
+        router.replace('/platform/login');
+      }
+    }, 30 * 60 * 1000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoginPage, ready]);
+
   if (isLoginPage) return <>{children}</>;
+
+  if (connError) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#020408' }}>
+      <div style={{ textAlign:'center' }}>
+        <p style={{ color:'#c8e6ff', fontSize:14, fontWeight:600, marginBottom:8 }}>Unable to reach the server.</p>
+        <p style={{ color:'rgba(100,160,210,.5)', fontSize:12, marginBottom:16 }}>Check your connection and try again.</p>
+        <button
+          onClick={() => { setConnError(false); window.location.reload(); }}
+          style={{ padding:'8px 20px', borderRadius:8, border:'1px solid rgba(0,180,255,.3)', background:'rgba(0,100,200,.2)', color:'#80d4ff', fontSize:12, fontWeight:700, cursor:'pointer', letterSpacing:'.08em' }}
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
+
   if (!ready || !admin) return null;
 
   const handleLogout = async () => {

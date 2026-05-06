@@ -51,7 +51,7 @@ export class PlatformController {
     const result = await this.platformService.login(dto.email, dto.password, ip, userAgent);
     res.cookie('platform_rt', result.accessToken, {
       ...PLATFORM_RT_OPTIONS,
-      maxAge: 8 * 60 * 60 * 1000,   // 8 h — aligned with JWT expiry
+      maxAge: 24 * 60 * 60 * 1000,   // 24 h — aligned with JWT expiry
     });
     return result;
   }
