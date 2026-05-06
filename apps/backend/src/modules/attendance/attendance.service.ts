@@ -173,8 +173,10 @@ export class AttendanceService {
 
   // Class-wise attendance for a date
   async getClassDailySummary(institutionId: string, academicUnitId: string, date: string) {
-    const session = await this.getByUnitAndDate(institutionId, academicUnitId, date);
-    const allStudents = await this.getStudentsForUnit(institutionId, academicUnitId);
+    const [session, allStudents] = await Promise.all([
+      this.getByUnitAndDate(institutionId, academicUnitId, date),
+      this.getStudentsForUnit(institutionId, academicUnitId),
+    ]);
 
     if (!session) {
       return { date, academicUnitId, taken: false, students: allStudents, records: [] };

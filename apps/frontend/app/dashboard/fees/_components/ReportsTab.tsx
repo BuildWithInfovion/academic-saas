@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import type { AcademicYear, AcademicUnit, Institution, FeeCollectionEntry, Defaulter } from '@/lib/types';
 import { fmt, todayStr, MODE_LABEL } from './fees-utils';
@@ -17,13 +17,18 @@ export function ReportsTab({ years, units, institution }: { years: AcademicYear[
   const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
   const [trend, setTrend] = useState<{ month: string; label: string; amount: number }[]>([]);
   const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { if (currentYear) setSelYear(currentYear.id); }, [currentYear]);
 
   useEffect(() => {
-    if (reportTab === 'daily') { void loadDaily(); }
-    else if (reportTab === 'defaulters') { void loadDefaulters(); }
-    else { void loadTrend(); }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (reportTab === 'daily') { void loadDaily(); }
+      else if (reportTab === 'defaulters') { void loadDefaulters(); }
+      else { void loadTrend(); }
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [reportTab, date, selYear, selUnit]);
 
   const loadDaily = async () => {

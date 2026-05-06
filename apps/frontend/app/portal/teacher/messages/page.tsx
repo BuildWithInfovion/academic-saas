@@ -62,15 +62,21 @@ export default function TeacherMessagesPage() {
   useEffect(() => {
     if (!activeConv) return;
     if (pollRef.current) clearInterval(pollRef.current);
+    let abortCtrl = new AbortController();
     pollRef.current = setInterval(() => {
+      abortCtrl.abort();
+      abortCtrl = new AbortController();
       apiFetch(`/messages/conversations/${activeConv}`)
         .then((data: any) => {
           setMessages(data.messages || []);
           setMyUserId(data.myUserId || '');
         })
         .catch(() => {});
-    }, 8000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, 30000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      abortCtrl.abort();
+    };
   }, [activeConv]);
 
   useEffect(() => {
