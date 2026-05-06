@@ -612,22 +612,32 @@ export class StudentService {
     if (!students.length) return { deleted: 0 };
 
     const now = new Date();
-    await this.prisma.$transaction(async (tx) => {
-      await tx.student.updateMany({
-        where: { id: { in: students.map((s) => s.id) } },
-        data: { deletedAt: now },
-      });
-      // Soft-delete parent users that have no remaining active students
-      const parentIds = [...new Set(students.map((s) => s.parentUserId).filter(Boolean))] as string[];
-      for (const pid of parentIds) {
-        const remaining = await tx.student.count({
-          where: { parentUserId: pid, deletedAt: null },
-        });
-        if (remaining === 0) {
-          await tx.user.update({ where: { id: pid }, data: { deletedAt: now } });
-        }
-      }
+
+    // Soft-delete all students in one bulk updateMany (no transaction — idempotent)
+    await this.prisma.student.updateMany({
+      where: { id: { in: students.map((s) => s.id) } },
+      data: { deletedAt: now },
     });
+
+    // Find which parent users have NO remaining active students (now that deletes are done),
+    // then soft-delete those orphaned parent accounts in one bulk update.
+    const parentIds = [...new Set(students.map((s) => s.parentUserId).filter(Boolean))] as string[];
+    if (parentIds.length) {
+      const stillActive = await this.prisma.student.findMany({
+        where: { parentUserId: { in: parentIds }, deletedAt: null },
+        select: { parentUserId: true },
+        distinct: ['parentUserId'],
+      });
+      const activeParentSet = new Set(stillActive.map((s) => s.parentUserId!));
+      const orphanIds = parentIds.filter((id) => !activeParentSet.has(id));
+      if (orphanIds.length) {
+        await this.prisma.user.updateMany({
+          where: { id: { in: orphanIds } },
+          data: { deletedAt: now },
+        });
+      }
+    }
+
     return { deleted: students.length };
   }
 

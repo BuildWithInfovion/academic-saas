@@ -458,7 +458,13 @@ export class PlatformService {
         _count: {
           select: {
             students: { where: { deletedAt: null, status: 'active' } },
-            users: { where: { deletedAt: null } },
+            // Exclude parent/student portal accounts — count staff only
+            users: {
+              where: {
+                deletedAt: null,
+                roles: { none: { role: { code: { in: ['parent', 'student'] } } } },
+              },
+            },
           },
         },
       },
@@ -473,7 +479,13 @@ export class PlatformService {
         _count: {
           select: {
             students: { where: { deletedAt: null } },
-            users: { where: { deletedAt: null } },
+            // Exclude parent/student portal accounts — count staff only
+            users: {
+              where: {
+                deletedAt: null,
+                roles: { none: { role: { code: { in: ['parent', 'student'] } } } },
+              },
+            },
           },
         },
       },

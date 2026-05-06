@@ -163,6 +163,14 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
       setImportStep('result');
       const batch: ImportBatch = { timestamp: Date.now(), count: merged.created, studentIds: merged.studentIds };
       localStorage.setItem(IMPORT_BATCH_KEY, JSON.stringify(batch));
+      // Auto-download credentials immediately — don't rely on user clicking the button
+      if (merged.newParentCredentials.length > 0) {
+        const rows = ['Phone,Temporary Password', ...merged.newParentCredentials.map((c) => `${c.phone},${c.password}`)];
+        const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'parent-credentials.csv'; a.click();
+        URL.revokeObjectURL(url);
+      }
       await onImportComplete(batch);
     } catch (e: any) { setError(e.message || 'Import failed'); }
     finally { setImporting(false); setImportProgressLabel(''); }
