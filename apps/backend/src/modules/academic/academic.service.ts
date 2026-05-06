@@ -71,7 +71,7 @@ export class AcademicService {
         classTeacher: {
           select: { id: true, name: true, email: true, phone: true },
         },
-        _count: { select: { students: true } },
+        _count: { select: { students: { where: { deletedAt: null } } } },
       },
       orderBy: { level: 'asc' },
     });
@@ -111,7 +111,7 @@ export class AcademicService {
         classTeacher: {
           select: { id: true, name: true, email: true, phone: true },
         },
-        _count: { select: { students: true } },
+        _count: { select: { students: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -145,7 +145,7 @@ export class AcademicService {
           select: { id: true, name: true, displayName: true },
           orderBy: { createdAt: 'asc' },
         },
-        _count: { select: { students: true } },
+        _count: { select: { students: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -338,7 +338,7 @@ export class AcademicService {
           select: { id: true, name: true, email: true, phone: true },
         },
         parent: { select: { id: true, name: true, displayName: true } },
-        _count: { select: { students: true } },
+        _count: { select: { students: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -567,7 +567,7 @@ export class AcademicService {
         displayName: true,
         parentId: true,
         classTeacherUserId: true,
-        _count: { select: { students: true } },
+        _count: { select: { students: { where: { deletedAt: null } } } },
       },
     });
 
