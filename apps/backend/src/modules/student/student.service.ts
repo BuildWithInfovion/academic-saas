@@ -613,6 +613,11 @@ export class StudentService {
 
     const now = new Date();
 
+    // Hard-delete fee payments for these students (created during import, no other activity)
+    await this.prisma.feePayment.deleteMany({
+      where: { studentId: { in: students.map((s) => s.id) }, institutionId },
+    });
+
     // Soft-delete all students in one bulk updateMany (no transaction — idempotent)
     await this.prisma.student.updateMany({
       where: { id: { in: students.map((s) => s.id) } },
