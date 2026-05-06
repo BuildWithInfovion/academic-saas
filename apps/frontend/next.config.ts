@@ -2,18 +2,34 @@ import type { NextConfig } from "next";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
-const nextConfig: NextConfig = {
-  // React StrictMode intentionally double-invokes effects in development to
-  // surface side-effects. Our session-restore logic uses token rotation
-  // (one refresh revokes the old token), so two concurrent calls would leave
-  // the second caller with a revoked token → forced logout. The singleton
-  // guard in silentRefresh() is the primary fix, but disabling StrictMode
-  // removes the double-invoke trigger entirely.
-  reactStrictMode: false,
+// Build a Content-Security-Policy string.
+// Next.js App Router emits inline scripts for hydration, so script-src must
+// include 'unsafe-inline'.  A nonce-based CSP via Middleware would remove that
+// requirement but is a larger refactor; document here for future hardening.
+// Razorpay requires https://checkout.razorpay.com for script + frame + connect.
+const buildCSP = () => {
+  const apiOrigin = API_HOST.startsWith("http") ? new URL(API_HOST).origin : API_HOST;
+  return [
+    `default-src 'self'`,
+    `script-src 'self' 'unsafe-inline' https://checkout.razorpay.com`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' data: blob: https:`,
+    `font-src 'self' data:`,
+    `connect-src 'self' ${apiOrigin} https://api.razorpay.com https://lumberjack.razorpay.com`,
+    `frame-src https://api.razorpay.com`,
+    `object-src 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+    `upgrade-insecure-requests`,
+  ].join("; ");
+};
 
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+const nextConfig: NextConfig = {
+  // StrictMode double-invokes effects in dev to surface missing cleanups.
+  // The singleton guards (silentRefreshOpPromise / silentRefreshPortalPromise)
+  // already ensure only one refresh network call fires regardless of how many
+  // times the effect runs, so StrictMode is safe to enable.
+  reactStrictMode: true,
 
   // Compress all responses (gzip/br)
   compress: true,
@@ -52,10 +68,11 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "no-cache, no-store, must-revalidate",
           },
-          // Basic security headers
+          // Security headers
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Content-Security-Policy", value: buildCSP() },
         ],
       },
     ];

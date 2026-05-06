@@ -39,7 +39,10 @@ export class CleanupService {
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - ATTENDANCE_RETAIN_MONTHS);
 
-    // Find sessions older than cutoff first (we need their IDs for record deletion)
+    // Find sessions older than cutoff first (we need their IDs for record deletion).
+    // NOTE: This query is platform-wide (no institutionId filter) — all institutions
+    // share the same 12-month retention period.  If per-institution retention policies
+    // are ever required, add an institutionId + retentionMonths lookup here.
     const oldSessions = await this.prisma.attendanceSession.findMany({
       where: { date: { lt: cutoff } },
       select: { id: true },

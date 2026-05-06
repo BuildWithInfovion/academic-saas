@@ -1,4 +1,5 @@
 import type { Institution } from '@/lib/types';
+export { FEE_STATUS_CHIP as STATUS_CHIP } from '@/lib/types';
 
 export const MODES = ['cash', 'upi', 'cheque', 'neft', 'dd', 'online'] as const;
 
@@ -23,13 +24,6 @@ export const STANDARD_CATEGORIES = [
   { name: 'Development Fee', type: 'DEVELOPMENT' },
 ];
 
-export const STATUS_CHIP: Record<string, string> = {
-  paid:     'bg-green-100 text-green-800',
-  partial:  'bg-yellow-100 text-yellow-800',
-  due:      'bg-blue-100 text-blue-800',
-  overdue:  'bg-red-100 text-red-700',
-  upcoming: 'bg-slate-100 text-slate-500',
-};
 
 export function esc(s: string | null | undefined): string {
   if (!s) return '';

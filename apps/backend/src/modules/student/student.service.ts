@@ -130,8 +130,11 @@ export class StudentService {
     tx: Prisma.TransactionClient,
     institutionId: string,
   ): Promise<string> {
-    const count = await tx.student.count({ where: { institutionId } });
     const year = new Date().getFullYear();
+    const yearStart = new Date(year, 0, 1);
+    const count = await tx.student.count({
+      where: { institutionId, deletedAt: null, createdAt: { gte: yearStart } },
+    });
     return `ADM-${year}-${String(count + 1).padStart(4, '0')}`;
   }
 

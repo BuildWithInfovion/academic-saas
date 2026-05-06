@@ -3,11 +3,12 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type AuthUser = {
   name?: string | null;
-  email: string;
-  phone?: string;
+  email?: string | null;
+  phone?: string | null;
   institutionId: string;
-  institutionName?: string;
+  institutionName?: string | null;
   roles: string[];
+  permissions?: string[];
 };
 
 export type AuthState = {

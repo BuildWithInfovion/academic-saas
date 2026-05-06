@@ -2,6 +2,13 @@ import { useAuthStore } from '@/store/auth.store';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { DASHBOARD_ROLES } from '@/lib/auth-utils';
 
+export class ApiError extends Error {
+  constructor(message: string, public readonly statusCode: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export const BASE_URL = (() => {
   const url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
@@ -143,9 +150,14 @@ async function doRefresh(endpoint: string): Promise<RefreshResult> {
       return { status: 'expired' };
     }
 
+    // Guard: if backend returned a non-null user, use it. If the field is absent
+    // (undefined), fall back to the cached user. Never fall back to stale data
+    // when the server explicitly returned null — that indicates a server-side error.
+    const freshUser = data.user as Parameters<typeof store.setAuth>[0]['user'] | null | undefined;
+    if (freshUser === null) return { status: 'unavailable' };
     store.setAuth({
       accessToken: data.accessToken,
-      user: (data.user as Parameters<typeof store.setAuth>[0]['user']) ?? useAuthStore.getState().user!,
+      user: freshUser ?? store.user!,
     });
     return { status: 'success', accessToken: data.accessToken };
   } catch {
@@ -383,18 +395,18 @@ export async function apiFetch<
         }
         if (retryRes.status !== 401) {
           const body = await readResponse(retryRes);
-          throw new Error(extractErrorMessage(body, retryRes.status));
+          throw new ApiError(extractErrorMessage(body, retryRes.status), retryRes.status);
         }
       }
       if (refreshResult.status === 'expired') {
-        throw new Error('Session expired. Please sign in again.');
+        throw new ApiError('Session expired. Please sign in again.', 401);
       }
-      throw new Error('Unable to refresh session. Please try again.');
+      throw new ApiError('Unable to refresh session. Please try again.', 503);
     }
 
     if (!res.ok) {
       const body = await readResponse(res);
-      throw new Error(extractErrorMessage(body, res.status));
+      throw new ApiError(extractErrorMessage(body, res.status), res.status);
     }
 
     const data = (await readResponse(res)) as T;

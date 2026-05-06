@@ -15,7 +15,7 @@ import { EmailService } from './email.service';
 import { generatePassword } from '../../common/utils/generate-password';
 
 type RoleWithPermissions = {
-  role: { code: string; permissions: unknown };
+  role: { code: string; permissions: string[] | null | Record<string, unknown> };
 };
 
 // ── Inline TOTP (RFC 6238 + RFC 4226) — zero extra dependency ─────────────────
@@ -53,13 +53,18 @@ function totpGenerate(secret: string, step: number): string {
   return String(code % 1_000_000).padStart(6, '0');
 }
 
-function totpVerify(token: string, secret: string | null, window = 1): boolean {
-  if (!secret) return false;
+// Returns the matching step number (for replay-attack tracking) or null if invalid
+function totpVerifyStep(token: string, secret: string | null, window = 1): number | null {
+  if (!secret) return null;
   const step = Math.floor(Date.now() / 1000 / 30);
   for (let i = -window; i <= window; i++) {
-    if (totpGenerate(secret, step + i) === token) return true;
+    if (totpGenerate(secret, step + i) === token) return step + i;
   }
-  return false;
+  return null;
+}
+
+function totpVerify(token: string, secret: string | null, window = 1): boolean {
+  return totpVerifyStep(token, secret, window) !== null;
 }
 
 function totpGenerateSecret(bytes = 20): string {
@@ -77,6 +82,16 @@ const BACKUP_CODE_COUNT = 8;
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+
+  // RFC 6238 §5.2: track used TOTP steps per user to prevent replay within the 90-s window.
+  // Key: `${userId}:${step}`, value: timestamp. Cleaned up every 2 minutes.
+  private readonly usedTotpSteps = new Map<string, number>();
+  private readonly usedTotpCleanupInterval = setInterval(() => {
+    const cutoff = Date.now() - 90_000;
+    for (const [key, usedAt] of this.usedTotpSteps) {
+      if (usedAt < cutoff) this.usedTotpSteps.delete(key);
+    }
+  }, 2 * 60_000);
 
   constructor(
     private readonly usersService: UsersService,
@@ -228,9 +243,9 @@ export class AuthService {
     }
 
     const trimmedCode = code.replace(/\s/g, '');
-    const isValidTotp = totpVerify(trimmedCode, user.totpSecret);
+    const matchedStep = totpVerifyStep(trimmedCode, user.totpSecret);
 
-    if (!isValidTotp) {
+    if (matchedStep === null) {
       // Try backup codes — strip hyphens to match the format used at generation time
       const codeHash = crypto
         .createHash('sha256')
@@ -253,6 +268,14 @@ export class AuthService {
       this.logger.warn(
         `[authenticateTotp] Backup code used — userId=${user.id} remaining=${remaining.length}`,
       );
+    } else {
+      // RFC 6238 §5.2 replay prevention: reject a step that was already accepted
+      const replayKey = `${user.id}:${matchedStep}`;
+      if (this.usedTotpSteps.has(replayKey)) {
+        this.logger.warn(`[authenticateTotp] Replay attempt blocked — userId=${user.id}`);
+        throw new UnauthorizedException('This authentication code has already been used');
+      }
+      this.usedTotpSteps.set(replayKey, Date.now());
     }
 
     const institution = await this.prisma.institution.findUnique({
@@ -790,11 +813,18 @@ export class AuthService {
     userId: string,
   ): Promise<{ newPassword: string }> {
     const user = await this.prisma.user.findFirst({
-      where: { id: userId, institutionId, isActive: true, deletedAt: null },
+      where: {
+        id: userId,
+        institutionId,
+        isActive: true,
+        deletedAt: null,
+        // Prevent resetting another director or operator — privilege escalation risk
+        roles: { none: { role: { code: { in: ['admin', 'super_admin'] } } } },
+      },
       select: { id: true },
     });
     if (!user)
-      throw new NotFoundException('User not found in this institution');
+      throw new NotFoundException('User not found or cannot reset a privileged account');
 
     const newPassword = generatePassword();
     const passwordHash = await bcrypt.hash(newPassword, 12);

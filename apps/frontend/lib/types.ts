@@ -51,6 +51,30 @@ export interface Subject {
   code?: string;
 }
 
+// ── Fee status chips ──────────────────────────────────────────────────────────
+// Dashboard (Tailwind classes) and portal (inline styles) representations share
+// the same status keys so label/color changes only need updating here.
+
+export type FeeStatusKey = 'paid' | 'partial' | 'due' | 'overdue' | 'upcoming';
+
+/** Tailwind class string — used in the operator dashboard. */
+export const FEE_STATUS_CHIP: Record<FeeStatusKey, string> = {
+  paid:     'bg-green-100 text-green-800',
+  partial:  'bg-yellow-100 text-yellow-800',
+  due:      'bg-blue-100 text-blue-800',
+  overdue:  'bg-red-100 text-red-700',
+  upcoming: 'bg-slate-100 text-slate-500',
+};
+
+/** Inline-style object — used in the parent portal (avoids Tailwind dependency). */
+export const FEE_STATUS_CHIP_INLINE: Record<FeeStatusKey, { bg: string; color: string; label: string }> = {
+  paid:     { bg: '#dcfce7', color: '#15803d', label: 'Paid' },
+  partial:  { bg: '#fef9c3', color: '#854d0e', label: 'Partial' },
+  due:      { bg: '#dbeafe', color: '#1d4ed8', label: 'Due' },
+  overdue:  { bg: '#fee2e2', color: '#dc2626', label: 'Overdue' },
+  upcoming: { bg: '#f1f5f9', color: '#64748b', label: 'Upcoming' },
+};
+
 // ── Student ───────────────────────────────────────────────────────────────────
 
 export interface Student {

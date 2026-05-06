@@ -20,9 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:platform": "ts-node --project tsconfig.seed.json prisma/seed-platform-admin.ts",
     "seed:bulk": "ts-node --project tsconfig.seed.json prisma/seed-bulk.ts",
-    "seed:fix-roles": "ts-node --project tsconfig.seed.json prisma/seed-fix-roles.ts",
-    "seed:demo": "ts-node --project tsconfig.seed.json prisma/seed-demo.ts",
-    "purge:deleted-institutions": "ts-node --project tsconfig.seed.json prisma/purge-deleted-institutions.ts"
+    "seed:demo": "ts-node --project tsconfig.seed.json prisma/seed-demo.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

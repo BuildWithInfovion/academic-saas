@@ -13,12 +13,24 @@ interface AttemptRecord {
 }
 
 // In-memory store — sufficient for single-instance deployments.
-// For multi-instance/Redis deployments, replace with an external store.
+// NOTE: This guard is single-instance only. With a load balancer across multiple
+// backend instances an attacker gets MAX_ATTEMPTS per instance. Migrate to a
+// Redis-backed counter before scaling beyond one process.
 const attempts = new Map<string, AttemptRecord>();
 
 const MAX_ATTEMPTS = 10;        // max login attempts in the window
 const WINDOW_MS   = 15 * 60 * 1000; // 15-minute rolling window
 const BLOCK_MS    = 15 * 60 * 1000; // block for 15 minutes after exceeding limit
+
+// Evict entries whose block has expired to prevent unbounded memory growth.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of attempts) {
+    const expired =
+      record.blockedUntil ? now >= record.blockedUntil : now - record.firstAttemptAt > WINDOW_MS;
+    if (expired) attempts.delete(key);
+  }
+}, BLOCK_MS);
 
 @Injectable()
 export class LoginRateLimitGuard implements CanActivate {

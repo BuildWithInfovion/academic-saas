@@ -1,11 +1,11 @@
 'use client';
 
-import { ReactNode, ReactElement, useEffect, useState } from 'react';
+import { ReactNode, ReactElement, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
-import { silentRefreshOp, apiFetch } from '@/lib/api';
+import { silentRefreshOp, apiFetch, ApiError, BASE_URL } from '@/lib/api';
 import { getRoleRoute, getRoleLabel, DASHBOARD_ROLES } from '@/lib/auth-utils';
 import { SUPPORT_TOPICS } from '@/lib/constants';
 
@@ -115,6 +115,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [supportError,   setSupportError]   = useState<string | null>(null);
 
 
+  const supportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (supportTimerRef.current) clearTimeout(supportTimerRef.current); }, []);
+
   const submitSupport = async () => {
     if (!supportSubject || !supportMessage.trim()) return;
     setSupportSending(true);
@@ -127,7 +131,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       setSupportDone(true);
       setSupportSubject('');
       setSupportMessage('');
-      setTimeout(() => { setSupportOpen(false); setSupportDone(false); }, 2000);
+      supportTimerRef.current = setTimeout(() => { setSupportOpen(false); setSupportDone(false); }, 2000);
     } catch (e: unknown) {
       setSupportError(e instanceof Error ? e.message : 'Failed to submit ticket. Please try again.');
     } finally { setSupportSending(false); }
@@ -161,8 +165,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       try {
         await apiFetch('/institution/me');
       } catch (e: unknown) {
-        const status = (e as { status?: number }).status;
-        if (status === 401 || status === 403) {
+        if (e instanceof ApiError && (e.statusCode === 401 || e.statusCode === 403)) {
           logout();
           router.replace('/');
         }
@@ -278,7 +281,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <button
           onClick={() => {
             const token = useAuthStore.getState().accessToken ?? '';
-            void fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/auth/logout`, {
+            void fetch(`${BASE_URL}/auth/logout`, {
               method: 'POST', credentials: 'include',
               headers: { 'Authorization': `Bearer ${token}` },
             }).finally(() => {

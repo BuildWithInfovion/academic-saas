@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import type { AcademicYear, Institution, LedgerInstallment, LedgerItem, Ledger } from '@/lib/types';
-
-declare global { interface Window { Razorpay: any } }
+import { FEE_STATUS_CHIP_INLINE } from '@/lib/types';
 
 type Child = {
   id: string; firstName: string; lastName: string; admissionNo: string;
@@ -28,13 +27,7 @@ type ChildDue = {
 
 function fmt(n: number) { return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 
-const STATUS_CHIP: Record<string, { bg: string; color: string; label: string }> = {
-  paid:     { bg: '#dcfce7', color: '#15803d', label: 'Paid' },
-  partial:  { bg: '#fef9c3', color: '#854d0e', label: 'Partial' },
-  due:      { bg: '#dbeafe', color: '#1d4ed8', label: 'Due' },
-  overdue:  { bg: '#fee2e2', color: '#dc2626', label: 'Overdue' },
-  upcoming: { bg: '#f1f5f9', color: '#64748b', label: 'Upcoming' },
-};
+const STATUS_CHIP = FEE_STATUS_CHIP_INLINE;
 
 export default function ParentFeesPage() {
   const user = usePortalAuthStore((s) => s.user);
@@ -53,13 +46,19 @@ export default function ParentFeesPage() {
 
   // Razorpay
   const [payConfig, setPayConfig] = useState<{ enabled: boolean; keyId: string | null } | null>(null);
+  const [payConfigError, setPayConfigError] = useState(false);
   const [payingInstId, setPayingInstId] = useState<string | null>(null);
   const [payError, setPayError] = useState('');
   const rzpScriptRef = useRef(false);
 
   // Load Razorpay SDK and payment config
   useEffect(() => {
-    apiFetch('/payments/config').then((cfg: any) => setPayConfig(cfg)).catch(() => {});
+    apiFetch<{ enabled: boolean; keyId: string | null }>('/payments/config')
+      .then((cfg) => setPayConfig(cfg))
+      .catch((err) => {
+        console.error('[ParentFees] Failed to load payment config:', err);
+        setPayConfigError(true);
+      });
     if (!rzpScriptRef.current && typeof window !== 'undefined') {
       rzpScriptRef.current = true;
       const script = document.createElement('script');

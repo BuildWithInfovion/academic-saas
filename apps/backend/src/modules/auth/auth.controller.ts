@@ -13,6 +13,14 @@ import {
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import {
+  TotpAuthenticateDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ParentLoginDto,
+  RequestParentPasswordResetDto,
+  TotpCodeDto,
+} from './dto/auth.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 import type { JwtUser } from '../../common/types/authenticated-request';
 
@@ -22,8 +30,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard';
 import { ParentLoginRateLimitGuard } from '../../common/guards/parent-login-rate-limit.guard';
-
-const IS_PROD = process.env.NODE_ENV === 'production';
+import { IS_PROD } from '../../common/constants/env';
 
 const RT_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -82,13 +89,12 @@ export class AuthController {
   @Post('totp/authenticate')
   @UseGuards(LoginRateLimitGuard)
   async totpAuthenticate(
-    @Body('totpToken') totpToken: string,
-    @Body('code') code: string,
+    @Body() dto: TotpAuthenticateDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.authenticateTotp(
-      (totpToken ?? '').trim(),
-      (code ?? '').replace(/\s/g, ''),
+      dto.totpToken.trim(),
+      dto.code.replace(/\s/g, ''),
     );
 
     const roles: string[] = result.user?.roles ?? [];
@@ -133,10 +139,10 @@ export class AuthController {
    */
   @UseGuards(AuthGuard)
   @Post('totp/confirm')
-  async totpConfirm(@Req() req: AuthedReq, @Body('code') code: string) {
+  async totpConfirm(@Req() req: AuthedReq, @Body() dto: TotpCodeDto) {
     return this.authService.confirmTotp(
       req.user.userId,
-      (code ?? '').replace(/\s/g, ''),
+      dto.code.replace(/\s/g, ''),
     );
   }
 
@@ -147,10 +153,10 @@ export class AuthController {
    */
   @UseGuards(AuthGuard)
   @Delete('totp')
-  async totpDisable(@Req() req: AuthedReq, @Body('code') code: string) {
+  async totpDisable(@Req() req: AuthedReq, @Body() dto: TotpCodeDto) {
     await this.authService.disableTotp(
       req.user.userId,
-      (code ?? '').replace(/\s/g, ''),
+      dto.code.replace(/\s/g, ''),
     );
     return { message: 'Two-factor authentication disabled' };
   }
@@ -215,13 +221,10 @@ export class AuthController {
    * Body: { institutionCode, email }
    */
   @Post('forgot-password')
-  async forgotPassword(
-    @Body('institutionCode') institutionCode: string,
-    @Body('email') email: string,
-  ) {
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.requestPasswordResetOtp(
-      (institutionCode ?? '').trim().toLowerCase(),
-      (email ?? '').trim(),
+      dto.institutionCode.trim().toLowerCase(),
+      dto.email.trim(),
     );
   }
 
@@ -231,17 +234,12 @@ export class AuthController {
    * Body: { institutionCode, email, otp, newPassword }
    */
   @Post('reset-password')
-  async resetPassword(
-    @Body('institutionCode') institutionCode: string,
-    @Body('email') email: string,
-    @Body('otp') otp: string,
-    @Body('newPassword') newPassword: string,
-  ) {
+  async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(
-      (institutionCode ?? '').trim().toLowerCase(),
-      (email ?? '').trim(),
-      (otp ?? '').trim(),
-      newPassword ?? '',
+      dto.institutionCode.trim().toLowerCase(),
+      dto.email.trim(),
+      dto.otp.trim(),
+      dto.newPassword,
     );
   }
 
@@ -316,8 +314,8 @@ export class AuthController {
    * Always returns success to prevent phone enumeration.
    */
   @Post('parent/request-password-reset')
-  async requestParentPasswordReset(@Body('phone') phone: string) {
-    return this.authService.requestParentPasswordReset((phone ?? '').trim());
+  async requestParentPasswordReset(@Body() dto: RequestParentPasswordResetDto) {
+    return this.authService.requestParentPasswordReset(dto.phone.trim());
   }
 
   // ── Parent login ───────────────────────────────────────────────────────────
@@ -330,13 +328,12 @@ export class AuthController {
   @Post('parent/login')
   @UseGuards(ParentLoginRateLimitGuard)
   async parentLogin(
-    @Body('phone') phone: string,
-    @Body('password') password: string,
+    @Body() dto: ParentLoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.parentLogin(
-      (phone ?? '').trim(),
-      password ?? '',
+      dto.phone.trim(),
+      dto.password,
     );
 
     res.cookie('auth_rt', result.refreshToken, {

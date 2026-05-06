@@ -94,8 +94,9 @@ export class FeesService {
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
         return await this.prisma.$transaction(async (tx) => {
-          const count = await tx.feePayment.count({ where: { institutionId } });
           const year = new Date().getFullYear();
+          const yearStart = new Date(year, 0, 1);
+          const count = await tx.feePayment.count({ where: { institutionId, paidOn: { gte: yearStart } } });
           const receiptNo = `RCP-${year}-${String(count + 1).padStart(5, '0')}`;
           return tx.feePayment.create({
             data: { institutionId, studentId: dto.studentId, feeHeadId: dto.feeHeadId, feeStructureId: dto.feeStructureId ?? null, installmentName: dto.installmentName ?? null, academicYearId: dto.academicYearId, amount: dto.amount, paymentMode: dto.paymentMode, receiptNo, paidOn: new Date(dto.paidOn), remarks: dto.remarks },
@@ -122,8 +123,9 @@ export class FeesService {
       try {
         return await this.prisma.$transaction(async (tx) => {
           const results: Record<string, unknown>[] = [];
-          const baseCount = await tx.feePayment.count({ where: { institutionId } });
           const rcpYear = new Date().getFullYear();
+          const rcpYearStart = new Date(rcpYear, 0, 1);
+          const baseCount = await tx.feePayment.count({ where: { institutionId, paidOn: { gte: rcpYearStart } } });
           for (let i = 0; i < dto.items.length; i++) {
             const item = dto.items[i];
             const receiptNo = `RCP-${rcpYear}-${String(baseCount + i + 1).padStart(5, '0')}`;
@@ -724,8 +726,9 @@ export class FeesService {
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
         return await this.prisma.$transaction(async (tx) => {
-          const baseCount = await tx.feeCollection.count({ where: { institutionId } });
           const rcpYear = new Date().getFullYear();
+          const rcpYearStart = new Date(rcpYear, 0, 1);
+          const baseCount = await tx.feeCollection.count({ where: { institutionId, paidOn: { gte: rcpYearStart } } });
           const results: Awaited<ReturnType<typeof tx.feeCollection.create>>[] = [];
           for (let i = 0; i < dto.items.length; i++) {
             const item = dto.items[i];
