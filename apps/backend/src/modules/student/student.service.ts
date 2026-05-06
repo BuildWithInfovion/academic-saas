@@ -502,8 +502,6 @@ export class StudentService {
     // temporary passwords (users are expected to change on first login).
     const BCRYPT_ROUNDS = 10;
     const HASH_CONCURRENCY = 8;
-    // Hash phones that don't have an active account (includes soft-deleted phones
-    // that will be reactivated — they need a fresh password too).
     const newPhones = allPhones.filter((p) => !parentByPhone.has(p));
     const hashMap = new Map<string, { hash: string; pwd: string }>();
     for (let i = 0; i < newPhones.length; i += HASH_CONCURRENCY) {
@@ -518,136 +516,195 @@ export class StudentService {
       for (const h of hashed) hashMap.set(h.phone, { hash: h.hash, pwd: h.pwd });
     }
 
-    // ── Phase 4 setup: default fee head + receipt base count ────────────────
-    // FeePayment requires feeHeadId. Fetch any available fee head for the institution
-    // (admin can assign proper fee structures later via Fees → Fee Plans).
-    const [defaultFeeHead, feePaymentBaseCount] = await Promise.all([
-      this.prisma.feeHead.findFirst({
-        where: { institutionId },
-        select: { id: true },
-      }),
-      this.prisma.feePayment.count({ where: { institutionId } }),
-    ]);
-    let feePaymentLocalCount = 0;
-    const rcpYear = new Date().getFullYear();
+    // ── Phase 3.5: batch-create all new parent users before the student loop ─
+    // Old approach: created one parent per student transaction = N sequential round-trips.
+    // New approach: bulk-insert all new parents in 2 DB calls, then populate parentByPhone
+    // so the student creates below find their parentUserId without any DB lookup.
+    const phonesToCreate     = newPhones.filter((p) => !softDeletedByPhone.has(p));
+    const phonesToReactivate = newPhones.filter((p) =>  softDeletedByPhone.has(p));
 
-    // ── Phase 4: create students (transactions are now fast — no bcrypt inside) ─
-    for (const { row, rowNum, unit, phone } of validRows) {
-      try {
-        const createdStudent = await this.prisma.withConnectionRetry(() =>
-          this.prisma.$transaction(async (tx) => {
-            const admissionNo = await this.generateAdmissionNoInTx(tx, institutionId);
-            const rollNo = await this.generateRollNoInTx(tx, unit.id);
-
-            let parentUserId: string | undefined;
-            if (phone) {
-              let pid = parentByPhone.get(phone);
-              if (!pid) {
-                const pre = hashMap.get(phone)!;
-                const softDeletedId = softDeletedByPhone.get(phone);
-
-                if (softDeletedId) {
-                  // Reactivate a previously soft-deleted parent account (e.g. after import undo).
-                  // update() is safe here: the soft-delete middleware only intercepts
-                  // deleteMany/findMany, not update, so deletedAt: null is applied directly.
-                  await tx.user.update({
-                    where: { id: softDeletedId },
-                    data: { deletedAt: null, passwordHash: pre.hash, isActive: true },
-                  });
-                  // Ensure the parent role is still assigned
-                  if (parentRole) {
-                    const hasRole = await tx.userRole.findFirst({
-                      where: { userId: softDeletedId, roleId: parentRole.id },
-                    });
-                    if (!hasRole) {
-                      await tx.userRole.create({
-                        data: { userId: softDeletedId, roleId: parentRole.id, institutionId },
-                      });
-                    }
-                  }
-                  pid = softDeletedId;
-                  softDeletedByPhone.delete(phone); // won't be reactivated again this run
-                } else {
-                  const newParent = await tx.user.create({
-                    data: { institutionId, phone, passwordHash: pre.hash, isActive: true },
-                  });
-                  if (parentRole) {
-                    await tx.userRole.create({
-                      data: { userId: newParent.id, roleId: parentRole.id, institutionId },
-                    });
-                  }
-                  pid = newParent.id;
-                }
-
-                parentByPhone.set(phone, pid);
-                // Track new credentials to return to caller
-                if (!results.newParentPhones.has(phone)) {
-                  results.newParentPhones.add(phone);
-                  results.newParentCredentials.push({ phone, password: pre.pwd });
-                }
-              }
-              parentUserId = pid;
-            }
-
-            const student = await tx.student.create({
-              data: {
-                institutionId,
-                admissionNo,
-                rollNo,
-                firstName: row.firstName.trim(),
-                middleName: row.middleName?.trim() || null,
-                lastName: row.lastName.trim(),
-                gender: row.gender?.toLowerCase() || null,
-                dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
-                fatherName: row.fatherName?.trim() || null,
-                motherName: row.motherName?.trim() || null,
-                parentPhone: phone,
-                address: row.address?.trim() || null,
-                religion: row.religion?.trim() || null,
-                casteCategory: row.casteCategory?.trim() || null,
-                bloodGroup: row.bloodGroup?.trim() || null,
-                academicUnitId: unit.id,
-                admissionDate: row.admissionDate ? new Date(row.admissionDate) : new Date(),
-                status: 'active',
-                nationality: 'Indian',
-                parentUserId,
-                tcFromPrevious: 'not_applicable',
-              },
-              select: { id: true },
+    // Reactivate soft-deleted accounts in parallel (updateMany can't target different IDs).
+    if (phonesToReactivate.length > 0) {
+      await Promise.all(
+        phonesToReactivate.map(async (phone) => {
+          const id  = softDeletedByPhone.get(phone)!;
+          const pre = hashMap.get(phone)!;
+          await this.prisma.user.update({
+            where: { id },
+            data: { deletedAt: null, passwordHash: pre.hash, isActive: true },
+          });
+          if (parentRole) {
+            const hasRole = await this.prisma.userRole.findFirst({
+              where: { userId: id, roleId: parentRole.id },
             });
-
-            const feePaidAmount = row.feePaid ? parseFloat(row.feePaid) : 0;
-            if (feePaidAmount > 0 && defaultFeeHead) {
-              const receiptNo = `IMP-${rcpYear}-${String(feePaymentBaseCount + feePaymentLocalCount + 1).padStart(5, '0')}`;
-              await tx.feePayment.create({
-                data: {
-                  institutionId,
-                  studentId: student.id,
-                  feeHeadId: defaultFeeHead.id,
-                  amount: feePaidAmount,
-                  paymentMode: 'cash',
-                  receiptNo,
-                  paidOn: new Date(),
-                  remarks: 'Imported from ledger',
-                },
+            if (!hasRole) {
+              await this.prisma.userRole.create({
+                data: { userId: id, roleId: parentRole.id, institutionId },
               });
             }
+          }
+          parentByPhone.set(phone, id);
+          results.newParentCredentials.push({ phone, password: pre.pwd });
+        }),
+      );
+    }
 
-            return {
-              student,
-              hasFee: feePaidAmount > 0 && !!defaultFeeHead,
-              feeWasSkipped: feePaidAmount > 0 && !defaultFeeHead,
-            };
-          }, { timeout: 15000, maxWait: 10000 }),
-        );
-        if (createdStudent.hasFee) feePaymentLocalCount++;
-        if (createdStudent.feeWasSkipped) results.feeSkipped++;
-        results.created++;
-        results.studentIds.push(createdStudent.student.id);
-      } catch (err: any) {
-        const msg = err?.message?.slice(0, 120) ?? 'Unknown error';
-        results.errors.push({ row: rowNum, error: msg });
-        results.skipped++;
+    // Batch-create genuinely new parent accounts (one INSERT + one SELECT + one multi-row INSERT).
+    if (phonesToCreate.length > 0) {
+      await this.prisma.user.createMany({
+        data: phonesToCreate.map((phone) => ({
+          institutionId,
+          phone,
+          passwordHash: hashMap.get(phone)!.hash,
+          isActive: true,
+        })),
+        skipDuplicates: true,
+      });
+      const newUsers = await this.prisma.user.findMany({
+        where: { institutionId, phone: { in: phonesToCreate } },
+        select: { id: true, phone: true },
+      });
+      if (parentRole && newUsers.length > 0) {
+        await this.prisma.userRole.createMany({
+          data: newUsers.map((u) => ({ userId: u.id, roleId: parentRole.id, institutionId })),
+          skipDuplicates: true,
+        });
+      }
+      for (const u of newUsers) {
+        if (!u.phone) continue; // phone was set on insert; skip if somehow null
+        parentByPhone.set(u.phone, u.id);
+        results.newParentCredentials.push({ phone: u.phone, password: hashMap.get(u.phone)!.pwd });
+      }
+    }
+
+    // ── Phase 4 setup: default fee head + receipt base count ────────────────
+    const [defaultFeeHead, feePaymentBaseCount] = await Promise.all([
+      this.prisma.feeHead.findFirst({ where: { institutionId }, select: { id: true } }),
+      this.prisma.feePayment.count({ where: { institutionId } }),
+    ]);
+    const rcpYear = new Date().getFullYear();
+
+    // ── Phase 4a: pre-allocate all admission numbers + roll numbers ───────────
+    // Old: 2 COUNT queries inside every transaction = 2N sequential DB calls.
+    // New: 2 queries total regardless of batch size.
+    const baseAdmissionCount = await this.prisma.student.count({ where: { institutionId } });
+    const unitIdsInBatch = [...new Set(validRows.map((v) => v.unit.id))];
+    const rollCountRows = await this.prisma.student.groupBy({
+      by: ['academicUnitId'],
+      where: { academicUnitId: { in: unitIdsInBatch }, deletedAt: null },
+      _count: { id: true },
+    });
+    const rollCountByUnit  = new Map(rollCountRows.map((r) => [r.academicUnitId, r._count.id]));
+    const rollOffsetByUnit = new Map(unitIdsInBatch.map((id) => [id, 0]));
+
+    // Assign admission numbers, roll numbers, receipt numbers and parent IDs in memory.
+    type IndexedRow = ValidRow & {
+      admissionNo: string;
+      rollNo: string;
+      parentUserId: string | undefined;
+      feePaidAmount: number;
+      feeReceiptNo: string | null;
+      feeWasSkipped: boolean;
+    };
+    let feePaymentLocalCount = 0;
+    const indexedRows: IndexedRow[] = validRows.map((vr, i) => {
+      const { row, unit, phone } = vr;
+      const admissionNo = `ADM-${rcpYear}-${String(baseAdmissionCount + i + 1).padStart(4, '0')}`;
+      const rollBase   = rollCountByUnit.get(unit.id) ?? 0;
+      const rollOffset = rollOffsetByUnit.get(unit.id) ?? 0;
+      rollOffsetByUnit.set(unit.id, rollOffset + 1);
+      const rollNo = String(rollBase + rollOffset + 1).padStart(2, '0');
+
+      const feePaidAmount  = row.feePaid ? parseFloat(row.feePaid) : 0;
+      const feeWasSkipped  = feePaidAmount > 0 && !defaultFeeHead;
+      let   feeReceiptNo: string | null = null;
+      if (feePaidAmount > 0 && defaultFeeHead) {
+        feeReceiptNo = `IMP-${rcpYear}-${String(feePaymentBaseCount + feePaymentLocalCount + 1).padStart(5, '0')}`;
+        feePaymentLocalCount++;
+      }
+
+      return {
+        ...vr,
+        admissionNo,
+        rollNo,
+        parentUserId: phone ? parentByPhone.get(phone) : undefined,
+        feePaidAmount,
+        feeReceiptNo,
+        feeWasSkipped,
+      };
+    });
+
+    // ── Phase 5: create students in parallel batches ──────────────────────────
+    // Transactions are now tiny: student.create + optional feePayment.create only.
+    // No bcrypt, no parent creation, no counter generation inside — those are all
+    // pre-computed above. 10× concurrency reduces wall-clock time proportionally.
+    const STUDENT_CONCURRENCY = 10;
+    for (let batchStart = 0; batchStart < indexedRows.length; batchStart += STUDENT_CONCURRENCY) {
+      const batch = indexedRows.slice(batchStart, batchStart + STUDENT_CONCURRENCY);
+      const batchResults = await Promise.allSettled(
+        batch.map(({ row, unit, phone, admissionNo, rollNo, parentUserId, feePaidAmount, feeReceiptNo }) =>
+          this.prisma.withConnectionRetry(() =>
+            this.prisma.$transaction(async (tx) => {
+              const student = await tx.student.create({
+                data: {
+                  institutionId,
+                  admissionNo,
+                  rollNo,
+                  firstName:      row.firstName.trim(),
+                  middleName:     row.middleName?.trim() || null,
+                  lastName:       row.lastName.trim(),
+                  gender:         row.gender?.toLowerCase() || null,
+                  dateOfBirth:    row.dateOfBirth  ? new Date(row.dateOfBirth)  : null,
+                  fatherName:     row.fatherName?.trim()    || null,
+                  motherName:     row.motherName?.trim()    || null,
+                  parentPhone:    phone ?? null,
+                  address:        row.address?.trim()       || null,
+                  religion:       row.religion?.trim()      || null,
+                  casteCategory:  row.casteCategory?.trim() || null,
+                  bloodGroup:     row.bloodGroup?.trim()    || null,
+                  academicUnitId: unit.id,
+                  admissionDate:  row.admissionDate ? new Date(row.admissionDate) : new Date(),
+                  status:         'active',
+                  nationality:    'Indian',
+                  parentUserId,
+                  tcFromPrevious: 'not_applicable',
+                },
+                select: { id: true },
+              });
+
+              if (feeReceiptNo && feePaidAmount > 0 && defaultFeeHead) {
+                await tx.feePayment.create({
+                  data: {
+                    institutionId,
+                    studentId:   student.id,
+                    feeHeadId:   defaultFeeHead.id,
+                    amount:      feePaidAmount,
+                    paymentMode: 'cash',
+                    receiptNo:   feeReceiptNo,
+                    paidOn:      new Date(),
+                    remarks:     'Imported from ledger',
+                  },
+                });
+              }
+
+              return student.id;
+            }, { timeout: 10000, maxWait: 5000 }),
+          ),
+        ),
+      );
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const r   = batchResults[j];
+        const idx = batchStart + j;
+        if (r.status === 'fulfilled') {
+          if (indexedRows[idx].feeWasSkipped) results.feeSkipped++;
+          results.created++;
+          results.studentIds.push(r.value);
+        } else {
+          const msg = (r.reason as any)?.message?.slice(0, 120) ?? 'Unknown error';
+          results.errors.push({ row: indexedRows[idx].rowNum, error: msg });
+          results.skipped++;
+        }
       }
     }
 
