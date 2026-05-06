@@ -181,7 +181,27 @@ export default function AttendancePage() {
           )}
 
           {selectedUnit && loading && (
-            <div className="text-center py-16 text-ds-text3 text-sm">Loading...</div>
+            <div className="animate-pulse space-y-2 pt-4">
+              <div className="flex gap-3 mb-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-9 bg-ds-bg2 rounded-lg w-24" />
+                ))}
+              </div>
+              <div className="bg-ds-surface rounded-xl border border-ds-border overflow-hidden">
+                <div className="bg-ds-bg2 px-5 py-3 flex gap-8">
+                  <div className="h-3 bg-ds-border rounded w-6" />
+                  <div className="h-3 bg-ds-border rounded w-24" />
+                  <div className="h-3 bg-ds-border rounded w-16" />
+                </div>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="flex gap-8 px-5 py-3 border-t border-ds-border">
+                    <div className="h-3 bg-ds-bg2 rounded w-6" />
+                    <div className="h-3 bg-ds-bg2 rounded w-32" />
+                    <div className="h-5 bg-ds-bg2 rounded-full w-16" />
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {selectedUnit && !loading && reportData && (

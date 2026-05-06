@@ -47,6 +47,32 @@ let refreshingPortalPromise: Promise<RefreshResult> | null = null;
 let silentRefreshOpPromise: Promise<'ok' | 'expired' | 'error'> | null = null;
 let silentRefreshPortalPromise: Promise<'ok' | 'expired' | 'error'> | null = null;
 
+// --- Response cache for GET requests ---
+interface CacheEntry { data: unknown; expiresAt: number; }
+const responseCache = new Map<string, CacheEntry>();
+// Deduplicates concurrent identical GET requests — only one network call fires
+// even if three components mount simultaneously and request the same endpoint.
+const inFlightGets = new Map<string, Promise<unknown>>();
+
+// These paths are stable within a session (academic calendar, class list,
+// institution profile, subject master). Cache them for 5 minutes so navigating
+// between pages doesn't re-hit the DB for data that hasn't changed.
+const STATIC_PREFIXES = ['/academic/years', '/academic/units', '/institution/me', '/subjects'];
+const STATIC_TTL = 5 * 60_000;
+
+function makeCacheKey(tenantId: string, endpoint: string) { return `${tenantId}\0${endpoint}`; }
+function isStaticEndpoint(endpoint: string) {
+  return STATIC_PREFIXES.some((p) => endpoint.startsWith(p));
+}
+
+/** Bust cached entries whose endpoint starts with pathPrefix. Call after a mutation. */
+export function clearApiCache(pathPrefix?: string): void {
+  if (!pathPrefix) { responseCache.clear(); return; }
+  for (const k of responseCache.keys()) {
+    if ((k.split('\0')[1] ?? '').startsWith(pathPrefix)) responseCache.delete(k);
+  }
+}
+
 function buildRequestHeaders(
   headers: HeadersInit | undefined,
   tenantId: string,
@@ -311,44 +337,76 @@ export async function apiFetch<
     throw new Error('Not authenticated. Please log in again.');
   }
 
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    ...rest,
-    credentials: 'include',
-    headers: buildRequestHeaders(rest.headers, tenantId, accessToken, rest.body),
-  });
+  const isGet = !rest.method || rest.method.toUpperCase() === 'GET';
+  const key = makeCacheKey(tenantId, endpoint);
 
-  // On 401: attempt one silent token refresh, then retry
-  if (res.status === 401) {
-    const refreshResult = await tryRefreshToken();
-    if (refreshResult.status === 'success') {
-      const retryRes = await fetch(`${BASE_URL}${endpoint}`, {
-        ...rest,
-        credentials: 'include',
-        headers: buildRequestHeaders(
-          rest.headers,
-          tenantId,
-          refreshResult.accessToken,
-          rest.body,
-        ),
-      });
-      if (retryRes.ok) {
-        return readResponse(retryRes) as Promise<T>;
-      }
-      if (retryRes.status !== 401) {
-        const body = await readResponse(retryRes);
-        throw new Error(extractErrorMessage(body, retryRes.status));
-      }
-    }
-    if (refreshResult.status === 'expired') {
-      throw new Error('Session expired. Please sign in again.');
-    }
-    throw new Error('Unable to refresh session. Please try again.');
+  // Return from TTL cache for known-static paths (academic years, units, institution, subjects).
+  if (isGet && isStaticEndpoint(endpoint)) {
+    const hit = responseCache.get(key);
+    if (hit && Date.now() < hit.expiresAt) return hit.data as T;
   }
 
-  if (!res.ok) {
-    const body = await readResponse(res);
-    throw new Error(extractErrorMessage(body, res.status));
+  // Deduplicate concurrent identical GET requests: if 3 components mount and all
+  // call apiFetch('/academic/years') at once, only 1 network request fires.
+  if (isGet) {
+    const existing = inFlightGets.get(key);
+    if (existing) return existing as Promise<T>;
   }
 
-  return readResponse(res) as Promise<T>;
+  const execute = async (): Promise<T> => {
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+      ...rest,
+      credentials: 'include',
+      headers: buildRequestHeaders(rest.headers, tenantId, accessToken, rest.body),
+    });
+
+    // On 401: attempt one silent token refresh, then retry
+    if (res.status === 401) {
+      const refreshResult = await tryRefreshToken();
+      if (refreshResult.status === 'success') {
+        const retryRes = await fetch(`${BASE_URL}${endpoint}`, {
+          ...rest,
+          credentials: 'include',
+          headers: buildRequestHeaders(
+            rest.headers,
+            tenantId,
+            refreshResult.accessToken,
+            rest.body,
+          ),
+        });
+        if (retryRes.ok) {
+          const data = (await readResponse(retryRes)) as T;
+          if (isGet && isStaticEndpoint(endpoint)) {
+            responseCache.set(key, { data, expiresAt: Date.now() + STATIC_TTL });
+          }
+          return data;
+        }
+        if (retryRes.status !== 401) {
+          const body = await readResponse(retryRes);
+          throw new Error(extractErrorMessage(body, retryRes.status));
+        }
+      }
+      if (refreshResult.status === 'expired') {
+        throw new Error('Session expired. Please sign in again.');
+      }
+      throw new Error('Unable to refresh session. Please try again.');
+    }
+
+    if (!res.ok) {
+      const body = await readResponse(res);
+      throw new Error(extractErrorMessage(body, res.status));
+    }
+
+    const data = (await readResponse(res)) as T;
+    if (isGet && isStaticEndpoint(endpoint)) {
+      responseCache.set(key, { data, expiresAt: Date.now() + STATIC_TTL });
+    }
+    return data;
+  };
+
+  if (!isGet) return execute();
+
+  const promise = execute().finally(() => inFlightGets.delete(key));
+  inFlightGets.set(key, promise);
+  return promise;
 }

@@ -523,7 +523,27 @@ export default function StudentsPage() {
           <input className={`${inp} max-w-sm`} placeholder="Search by name, admission no, or phone..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         {loading ? (
-          <div className="p-8 text-center text-ds-text3 text-sm">Loading...</div>
+          <div className="animate-pulse">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-ds-bg2">
+                <tr>{['Adm. No', 'Name', 'Class', 'Parent Mobile', 'Portal', 'Actions'].map((h) => (
+                  <th key={h} className="px-4 py-3 text-xs font-medium text-ds-text2 uppercase tracking-wider">{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody className="divide-y divide-ds-border">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-3"><div className="h-3 bg-ds-bg2 rounded w-20" /></td>
+                    <td className="px-4 py-3"><div className="h-3 bg-ds-bg2 rounded w-32" /></td>
+                    <td className="px-4 py-3"><div className="h-3 bg-ds-bg2 rounded w-20" /></td>
+                    <td className="px-4 py-3"><div className="h-3 bg-ds-bg2 rounded w-24" /></td>
+                    <td className="px-4 py-3"><div className="h-5 bg-ds-bg2 rounded-full w-20" /></td>
+                    <td className="px-4 py-3"><div className="h-3 bg-ds-bg2 rounded w-16" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : filteredStudents.length === 0 ? (
           <div className="p-8 text-center text-ds-text3 text-sm">No students found.</div>
         ) : (
