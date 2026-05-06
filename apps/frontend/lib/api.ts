@@ -73,14 +73,26 @@ function buildRequestHeaders(
   return merged;
 }
 
+// Wraps fetch with an AbortController timeout so cold-starting backends
+// (e.g. Render free tier, ~60-90 s spin-up) don't hang the browser indefinitely.
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
+}
+
 async function doRefresh(endpoint: string): Promise<RefreshResult> {
   try {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
-      credentials: 'include',
-      body: '{}',
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const res = await fetchWithTimeout(
+      `${BASE_URL}${endpoint}`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        body: '{}',
+        headers: { 'Content-Type': 'application/json' },
+      },
+      15_000,
+    );
     if (res.status === 401) {
       getActiveAuthState().logout();
       if (typeof window !== 'undefined') window.location.href = '/';
@@ -147,12 +159,16 @@ export async function silentRefreshOp(): Promise<'ok' | 'expired' | 'error'> {
 
   silentRefreshOpPromise = (async (): Promise<'ok' | 'expired' | 'error'> => {
     try {
-      const res = await fetch(`${BASE_URL}/auth/refresh-op`, {
-        method: 'POST',
-        credentials: 'include',
-        body: '{}',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const res = await fetchWithTimeout(
+        `${BASE_URL}/auth/refresh-op`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          body: '{}',
+          headers: { 'Content-Type': 'application/json' },
+        },
+        15_000,
+      );
 
       if (res.status === 401) return 'expired';
       if (!res.ok) {
@@ -191,12 +207,16 @@ export async function silentRefresh(): Promise<'ok' | 'expired' | 'error'> {
 
   silentRefreshPortalPromise = (async (): Promise<'ok' | 'expired' | 'error'> => {
     try {
-      const res = await fetch(`${BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        body: '{}',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const res = await fetchWithTimeout(
+        `${BASE_URL}/auth/refresh`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          body: '{}',
+          headers: { 'Content-Type': 'application/json' },
+        },
+        15_000,
+      );
 
       if (res.status === 401) return 'expired';
       if (!res.ok) {
