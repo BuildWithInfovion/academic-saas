@@ -116,7 +116,16 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
     </div>
   );
 
-  if (!ready || !accessToken) return null;
+  if (!ready || !accessToken) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+      <div className="flex flex-col items-center gap-3">
+        <svg className="w-8 h-8 animate-spin" style={{ color: 'var(--brand)' }} viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
+        </svg>
+        <p className="text-xs" style={{ color: 'var(--text-3)' }}>Loading portal…</p>
+      </div>
+    </div>
+  );
 
   const roleLabel = user ? getRoleLabel(user.roles) : '';
   const userName  = user ? displayName(user.name, user.email, user.phone) : '';

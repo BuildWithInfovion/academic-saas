@@ -38,6 +38,17 @@ interface Student {
 
 interface AcademicUnit { id: string; displayName?: string; name?: string; }
 
+interface FeePayment {
+  id: string;
+  receiptNo: string;
+  amount: number;
+  paymentMode: string;
+  paidOn: string;
+  remarks?: string | null;
+  feeHead?: { name: string } | null;
+  feeCategory?: { name: string } | null;
+}
+
 interface TcRequest {
   id: string;
   status: string;
@@ -86,6 +97,10 @@ export default function StudentProfilePage() {
   const [form, setForm] = useState<Partial<Student>>({});
   const [saving, setSaving] = useState(false);
 
+  // Fee state
+  const [feePayments, setFeePayments]   = useState<FeePayment[]>([]);
+  const [feeLoading, setFeeLoading]     = useState(false);
+
   // TC state
   const [tc, setTc]                     = useState<TcRequest | null>(null);
   const [tcLoading, setTcLoading]       = useState(false);
@@ -113,6 +128,18 @@ export default function StudentProfilePage() {
     }
   };
 
+  const loadFees = async (studentId: string) => {
+    setFeeLoading(true);
+    try {
+      const data = await apiFetch(`/fees/payments/student/${studentId}`) as { payments: FeePayment[]; total: number };
+      setFeePayments(Array.isArray(data?.payments) ? data.payments : []);
+    } catch {
+      // Non-fatal — fee section just shows empty
+    } finally {
+      setFeeLoading(false);
+    }
+  };
+
   const load = async () => {
     try {
       const [s, u] = await Promise.all([
@@ -122,6 +149,7 @@ export default function StudentProfilePage() {
       setStudent(s as Student);
       setUnits(Array.isArray(u) ? (u as AcademicUnit[]) : ((u as any).data || []));
       void loadTc(id);
+      void loadFees(id);
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to load student');
     } finally {
@@ -423,6 +451,60 @@ export default function StudentProfilePage() {
                   onReset={(userId, username) => openResetModal(userId, 'Student Portal', username)}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Fee History — spans full width */}
+          <div className="col-span-2">
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-ds-text1">Fee Payment History</h3>
+                {feePayments.length > 0 && (
+                  <span className="text-xs font-semibold text-ds-success-text bg-ds-success-bg border border-ds-success-border rounded-full px-3 py-0.5">
+                    Total Paid: ₹{feePayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('en-IN')}
+                  </span>
+                )}
+              </div>
+              {feeLoading ? (
+                <p className="text-xs text-ds-text3">Loading fee records…</p>
+              ) : feePayments.length === 0 ? (
+                <p className="text-xs text-ds-text3">No fee payments recorded for this student.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-ds-bg2">
+                        <th className="px-4 py-2 text-left text-xs font-medium text-ds-text2 uppercase">Date</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-ds-text2 uppercase">Receipt No</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-ds-text2 uppercase">Fee Head</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-ds-text2 uppercase">Mode</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-ds-text2 uppercase">Amount</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-ds-text2 uppercase">Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ds-border">
+                      {feePayments.map((p) => (
+                        <tr key={p.id} className="hover:bg-ds-bg2 transition-colors">
+                          <td className="px-4 py-2.5 text-xs text-ds-text2">
+                            {new Date(p.paidOn).toLocaleDateString('en-IN')}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs font-mono text-ds-text2">{p.receiptNo}</td>
+                          <td className="px-4 py-2.5 text-xs text-ds-text1">
+                            {p.feeCategory?.name || p.feeHead?.name || '—'}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-ds-text2 capitalize">{p.paymentMode}</td>
+                          <td className="px-4 py-2.5 text-xs font-semibold text-ds-success-text text-right">
+                            ₹{p.amount.toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-ds-text3 max-w-[200px] truncate">
+                            {p.remarks || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>

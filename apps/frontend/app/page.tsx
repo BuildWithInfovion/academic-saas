@@ -246,16 +246,17 @@ export default function LoginPage() {
       usePortalAuthStore.getState().setAuth({
         accessToken: data.accessToken,
         user: {
-          email: data.user.email,
-          phone: data.user.phone,
-          institutionId: data.user.institutionId,
-          institutionName: data.user.institutionName,
-          roles: data.user.roles ?? [],
+          name: (data.user.name ?? null) as string | null,
+          email: (data.user.email ?? '') as string,
+          phone: data.user.phone as string | undefined,
+          institutionId: data.user.institutionId as string,
+          institutionName: data.user.institutionName as string | undefined,
+          roles: (data.user.roles as string[]) ?? [],
         },
       });
       setLoadStep(3);
       setSuccessInfo({ institution: data.user.institutionName || 'Welcome' });
-      await new Promise<void>((resolve) => setTimeout(resolve, 800));
+      await new Promise<void>((resolve) => setTimeout(resolve, 400));
       router.push('/portal/parent');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

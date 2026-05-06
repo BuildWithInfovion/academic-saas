@@ -177,7 +177,14 @@ export class FeesService {
       const student = await this.prisma.student.findFirst({ where: { id: studentId, institutionId, parentUserId, deletedAt: null }, select: { id: true } });
       if (!student) throw new ForbiddenException('You are not authorised to view this student\'s data');
     }
-    const payments = await this.prisma.feePayment.findMany({ where: { institutionId, studentId }, include: { feeHead: true }, orderBy: { paidOn: 'desc' } });
+    const [legacyPayments, v2Collections] = await Promise.all([
+      this.prisma.feePayment.findMany({ where: { institutionId, studentId }, include: { feeHead: true }, orderBy: { paidOn: 'desc' } }),
+      this.prisma.feeCollection.findMany({ where: { institutionId, studentId }, include: { feeCategory: true }, orderBy: { paidOn: 'desc' } }),
+    ]);
+    const payments = [
+      ...legacyPayments.map((p) => ({ id: p.id, receiptNo: p.receiptNo, amount: p.amount, paymentMode: p.paymentMode, paidOn: p.paidOn, remarks: p.remarks, feeHead: p.feeHead, feeCategory: null })),
+      ...v2Collections.map((c) => ({ id: c.id, receiptNo: c.receiptNo, amount: c.amount, paymentMode: c.paymentMode, paidOn: c.paidOn, remarks: c.remarks, feeHead: null, feeCategory: c.feeCategory })),
+    ].sort((a, b) => new Date(b.paidOn).getTime() - new Date(a.paidOn).getTime());
     return { payments, total: payments.reduce((sum, p) => sum + p.amount, 0) };
   }
 

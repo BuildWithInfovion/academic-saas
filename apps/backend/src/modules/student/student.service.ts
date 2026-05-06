@@ -874,7 +874,7 @@ export class StudentService {
         where: whereCondition,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ rollNo: 'asc' }, { firstName: 'asc' }, { lastName: 'asc' }],
         include: {
           academicUnit: { select: { id: true, name: true, displayName: true } },
           userAccount: { select: { id: true, email: true, phone: true, isActive: true } },
