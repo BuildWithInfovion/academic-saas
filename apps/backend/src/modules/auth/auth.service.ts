@@ -15,7 +15,7 @@ import { EmailService } from './email.service';
 import { generatePassword } from '../../common/utils/generate-password';
 
 type RoleWithPermissions = {
-  role: { code: string; permissions: string[] | null | Record<string, unknown> };
+  role: { code: string; permissions: unknown };
 };
 
 // ── Inline TOTP (RFC 6238 + RFC 4226) — zero extra dependency ─────────────────
