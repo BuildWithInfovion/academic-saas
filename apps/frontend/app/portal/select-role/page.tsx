@@ -38,7 +38,8 @@ export default function SelectRolePage() {
   const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
-    if (accessToken) { setReady(true); return; }
+    // Require both token AND user — Zustand v5 may hydrate them in separate ticks.
+    if (accessToken && user) { setReady(true); return; }
     silentRefresh().then((status) => {
       if (status === 'ok') { setReady(true); }
       else if (status === 'expired') { router.replace('/'); }
@@ -49,11 +50,14 @@ export default function SelectRolePage() {
 
   useEffect(() => {
     if (!ready) return;
-    const currentUser = usePortalAuthStore.getState().user;
-    if (!currentUser) { router.replace('/'); return; }
-    const portalRoles = (currentUser.roles ?? []).filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
-    if (portalRoles.length <= 1) router.replace(getRoleRoute(currentUser.roles));
-  }, [ready, router]);
+    // Use reactive `user` (already subscribed above). Exclude `router` from deps —
+    // its identity shifts mid-navigation; re-running this check then can fire a
+    // false redirect that races with the in-flight router.push from the role button.
+    if (!user) { router.replace('/'); return; }
+    const portalRoles = (user.roles ?? []).filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
+    if (portalRoles.length <= 1) router.replace(getRoleRoute(user.roles));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, user]);
 
   if (!ready || !user) return null;
 

@@ -75,11 +75,12 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
     } finally { setSupportSending(false); }
   };
 
-  // On mount: effects run after zustand's sessionStorage hydration, so getState()
-  // already has the cached token. Avoids a network round-trip on every page refresh.
+  // On mount: check cached token AND user together. Zustand v5 can hydrate
+  // accessToken and user in separate ticks; requiring both prevents the role-check
+  // effect from firing with a null user and incorrectly redirecting to login.
   useEffect(() => {
-    const cached = usePortalAuthStore.getState().accessToken;
-    if (cached && !isJwtExpired(cached)) { setReady(true); return; }
+    const { accessToken: cached, user: cachedUser } = usePortalAuthStore.getState();
+    if (cached && !isJwtExpired(cached) && cachedUser) { setReady(true); return; }
     silentRefresh().then((status) => {
       if (status === 'ok') { setReady(true); }
       else if (status === 'expired') { router.replace('/'); }
@@ -89,13 +90,17 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   }, []);
 
   // After session is ready, enforce role access.
+  // Depend on reactive `user` (not getState()) so this re-evaluates if the store
+  // finishes hydrating after ready was set. `router` intentionally excluded — its
+  // identity can change mid-navigation and re-triggering this check at that moment
+  // risks a false redirect before the destination page has a chance to mount.
   useEffect(() => {
     if (!ready) return;
-    const currentUser = usePortalAuthStore.getState().user;
-    if (!currentUser) { router.replace('/'); return; }
-    const hasRole = currentUser.roles.some((r) => allowedRoles.includes(r));
-    if (!hasRole) router.replace(getRoleRoute(currentUser.roles));
-  }, [ready, allowedRoles, router]);
+    if (!user) { router.replace('/'); return; }
+    const hasRole = user.roles.some((r) => allowedRoles.includes(r));
+    if (!hasRole) router.replace(getRoleRoute(user.roles));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, allowedRoles, user]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
