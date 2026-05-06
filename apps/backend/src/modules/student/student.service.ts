@@ -74,14 +74,9 @@ function resolveUnit(
     if (numN === numQ || numD === numQ) return u;
   }
 
-  // Pass 3: substring fallback only for long queries (≥4 chars) to avoid "1" → "class12"
-  if (q.length >= 4) {
-    for (const u of units) {
-      const n = normUnit(u.name);
-      const d = normUnit(u.displayName ?? '');
-      if (n.includes(q) || d.includes(q)) return u;
-    }
-  }
+  // Pass 3 removed: substring matching ("class1".includes in "class10") caused
+  // "Class 1" students to be silently placed in "Class 10/11/12". Passes 1+2
+  // cover all realistic naming patterns (prefixes, spaces, numbers).
 
   return null;
 }
@@ -416,6 +411,7 @@ export class StudentService {
   ): Promise<{
     created: number;
     skipped: number;
+    feeSkipped: number;
     errors: { row: number; error: string }[];
     studentIds: string[];
     newParentCredentials: { phone: string; password: string }[];
@@ -429,12 +425,23 @@ export class StudentService {
     ]);
 
     const results = {
-      created: 0, skipped: 0,
+      created: 0, skipped: 0, feeSkipped: 0,
       errors: [] as { row: number; error: string }[],
       studentIds: [] as string[],
       newParentCredentials: [] as { phone: string; password: string }[],
       newParentPhones: new Set<string>(), // internal — tracks which phones were created this run
     };
+
+    // If no academic units exist the school hasn't set up classes yet. Fail fast
+    // with a clear message rather than marking every single row as "class not found".
+    if (!units.length) {
+      return {
+        created: 0, skipped: rows.length, feeSkipped: 0,
+        errors: [{ row: 0, error: 'No classes configured for this school. Go to Settings → Classes and create the classes first, then re-import.' }],
+        studentIds: [],
+        newParentCredentials: [],
+      };
+    }
 
     // ── Phase 1: validate all rows upfront ───────────────────────────────────
     type ValidRow = {
@@ -626,10 +633,15 @@ export class StudentService {
               });
             }
 
-            return { student, hasFee: feePaidAmount > 0 && !!defaultFeeHead };
+            return {
+              student,
+              hasFee: feePaidAmount > 0 && !!defaultFeeHead,
+              feeWasSkipped: feePaidAmount > 0 && !defaultFeeHead,
+            };
           }, { timeout: 15000, maxWait: 10000 }),
         );
         if (createdStudent.hasFee) feePaymentLocalCount++;
+        if (createdStudent.feeWasSkipped) results.feeSkipped++;
         results.created++;
         results.studentIds.push(createdStudent.student.id);
       } catch (err: any) {

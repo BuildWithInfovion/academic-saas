@@ -16,6 +16,7 @@ type ImportRow = {
 type ImportResult = {
   created: number;
   skipped: number;
+  feeSkipped: number;
   errors: { row: number; error: string }[];
   studentIds: string[];
   newParentCredentials: { phone: string; password: string }[];
@@ -30,6 +31,26 @@ export type ImportBatch = {
 };
 
 const CHUNK_SIZE = 25;
+
+// ── Client-side class resolution (mirrors backend logic, no substring fallback) ──
+const CLASS_PREFIXES_FE = ['class', 'std', 'grade', 'form', 'standard'];
+function normUnitFe(s: string) { return s.trim().toLowerCase().replace(/[\s_\-.]/g, ''); }
+function stripPrefixFe(s: string): string {
+  for (const p of CLASS_PREFIXES_FE) if (s.startsWith(p)) return s.slice(p.length);
+  return s;
+}
+function resolveClassNameFe(units: AcademicUnit[], className: string): boolean {
+  const q = normUnitFe(className);
+  if (!q) return false;
+  const numQ = stripPrefixFe(q);
+  for (const u of units) {
+    const n = normUnitFe(u.name);
+    const d = normUnitFe(u.displayName ?? '');
+    if (n === q || d === q) return true;
+    if (stripPrefixFe(n) === numQ || stripPrefixFe(d) === numQ) return true;
+  }
+  return false;
+}
 
 export function ImportModal({ open, academicUnits, onClose, onImportComplete }: {
   open: boolean;
@@ -54,7 +75,10 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
   const parseCSVFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
+      // Strip UTF-8 BOM (﻿) that Excel and some editors prepend — without this
+      // the first column header becomes "﻿first name*" which doesn't match the
+      // COL map, making firstName undefined for every row and all rows fail validation.
+      const text = (e.target?.result as string).replace(/^﻿/, '');
       const lines = text.split(/\r?\n/).filter((l) => l.trim());
       if (lines.length < 2) { setError('CSV file is empty or has only headers'); return; }
       const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase());
@@ -110,6 +134,9 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
         const dob = parseDMY(raw.dateOfBirth ?? '');
         const adm = parseDMY(raw.admissionDate ?? '');
         if (raw.dateOfBirth && !dob) errs.push('DOB must be DD-MM-YYYY');
+        // Validate class name against configured units (only when units are loaded)
+        if (raw.className && academicUnits.length > 0 && !resolveClassNameFe(academicUnits, raw.className))
+          errs.push(`Class "${raw.className}" not found — check names in Settings → Classes`);
         parsed.push({
           firstName: raw.firstName ?? '', lastName: raw.lastName ?? '',
           middleName: raw.middleName, gender: raw.gender?.toLowerCase(),
@@ -136,7 +163,7 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
     setImporting(true);
     setError(null);
     setImportProgress(0);
-    const merged: ImportResult = { created: 0, skipped: 0, errors: [], studentIds: [], newParentCredentials: [] };
+    const merged: ImportResult = { created: 0, skipped: 0, feeSkipped: 0, errors: [], studentIds: [], newParentCredentials: [] };
     try {
       const chunks: typeof validRows[] = [];
       for (let i = 0; i < validRows.length; i += CHUNK_SIZE) chunks.push(validRows.slice(i, i + CHUNK_SIZE));
@@ -149,6 +176,7 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
         }) as ImportResult;
         merged.created += result.created;
         merged.skipped += result.skipped;
+        merged.feeSkipped += result.feeSkipped ?? 0;
         merged.errors.push(...result.errors);
         merged.studentIds.push(...(result.studentIds ?? []));
         // Deduplicate credentials across chunks (same phone could appear in multiple chunks)
@@ -407,6 +435,19 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
                 </div>
               )}
 
+              {/* Fee amounts not recorded — no fee head configured */}
+              {importResult.feeSkipped > 0 && (
+                <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3">
+                  <p className="text-xs font-semibold text-ds-warning-text mb-1">
+                    {importResult.feeSkipped} fee amounts not recorded — no fee heads configured
+                  </p>
+                  <p className="text-xs text-ds-warning-text">
+                    Go to <a href="/dashboard/fees" className="underline font-medium">Fees → Fee Heads</a> to create at least one fee head,
+                    then enter outstanding balances from each student&apos;s profile.
+                  </p>
+                </div>
+              )}
+
               {/* Students without parent accounts */}
               {(() => {
                 const noPhone = importRows.filter(r => r._errors.length === 0 && !r.parentPhone).length;
@@ -420,20 +461,60 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
                 ) : null;
               })()}
 
-              {/* Row errors */}
-              {importResult.errors.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-ds-text2 uppercase tracking-wider mb-2">Rows not imported</p>
-                  <div className="bg-ds-error-bg border border-ds-error-border rounded-lg divide-y divide-ds-error-border max-h-40 overflow-y-auto">
-                    {importResult.errors.map((e, i) => (
-                      <div key={i} className="px-3 py-2 text-xs text-ds-error-text flex gap-3">
-                        <span className="font-semibold shrink-0">Row {e.row}</span>
-                        <span>{e.error}</span>
+              {/* Row errors — grouped summary so the root cause is visible at a glance */}
+              {importResult.errors.length > 0 && (() => {
+                // Group errors by unique message to surface the most common failure
+                const groups = new Map<string, number>();
+                for (const e of importResult.errors) {
+                  // row: 0 = a school-level config error (not a per-row failure)
+                  const key = e.row === 0
+                    ? e.error
+                    : e.error.startsWith('Class "')
+                      ? 'Class name not found — check Settings → Classes'
+                      : e.error.slice(0, 80);
+                  groups.set(key, (groups.get(key) ?? 0) + 1);
+                }
+                const sorted = [...groups.entries()].sort((a, b) => b[1] - a[1]);
+                return (
+                  <div className="space-y-2">
+                    {/* Summary banner — tells the user WHY rows failed */}
+                    <div className="bg-ds-error-bg border border-ds-error-border rounded-xl p-4">
+                      <p className="text-xs font-bold text-ds-error-text mb-2 uppercase tracking-wider">
+                        {importResult.errors.some(e => e.row === 0) ? 'Setup issue — import blocked' : `Why ${importResult.errors.length} rows failed`}
+                      </p>
+                      <ul className="space-y-1">
+                        {sorted.map(([msg, cnt]) => (
+                          <li key={msg} className="flex items-start gap-2 text-xs text-ds-error-text">
+                            <span className="shrink-0 font-bold bg-ds-error-text text-white rounded px-1.5 py-0.5 text-[10px]">{cnt}</span>
+                            <span>{msg}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {sorted.some(([m]) => m.includes('Class name not found')) && (
+                        <p className="mt-3 text-xs text-ds-error-text border-t border-ds-error-border pt-2">
+                          <strong>Fix:</strong> Go to <a href="/dashboard/classes" className="underline font-medium">Settings → Classes</a> and
+                          make sure every class used in the CSV is created there. Class names in the CSV must match
+                          your configured classes (e.g. "Class 7" or just "7").
+                        </p>
+                      )}
+                    </div>
+                    {/* Detail list — collapsible */}
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-ds-text3 hover:text-ds-text1 select-none py-1">
+                        Show all {importResult.errors.length} row errors ▸
+                      </summary>
+                      <div className="mt-1 bg-ds-error-bg border border-ds-error-border rounded-lg divide-y divide-ds-error-border max-h-48 overflow-y-auto">
+                        {importResult.errors.map((e, i) => (
+                          <div key={i} className="px-3 py-2 text-xs text-ds-error-text flex gap-3">
+                            <span className="font-semibold shrink-0">Row {e.row}</span>
+                            <span>{e.error}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </details>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div className="bg-ds-info-bg border border-ds-info-border rounded-lg p-3 text-xs text-ds-info-text">
                 Student list refreshed. Go to <strong>Fees → Fee Plans</strong> to assign fee structures to these classes.
