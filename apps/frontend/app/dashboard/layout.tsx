@@ -153,6 +153,24 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
+  // Poll institution status every 3 minutes so deleted/suspended schools are
+  // logged out quickly rather than getting "Institution not found" errors mid-use.
+  useEffect(() => {
+    if (!ready) return;
+    const id = setInterval(async () => {
+      try {
+        await apiFetch('/institution/me');
+      } catch (e: unknown) {
+        const status = (e as { status?: number }).status;
+        if (status === 401 || status === 403) {
+          logout();
+          router.replace('/');
+        }
+      }
+    }, 3 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [ready, logout, router]);
+
   useEffect(() => {
     if (!ready) return;
     const currentUser = useAuthStore.getState().user;

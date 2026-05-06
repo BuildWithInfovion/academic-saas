@@ -10,6 +10,7 @@ import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { AppCacheService } from '../common/cache/app-cache.service';
 import { OnboardClientDto } from './dto/onboard-client.dto';
 import { DEFAULT_FEE_HEADS, SCHOOL_SUBJECTS, COLLEGE_SUBJECTS } from '../common/constants/seed-defaults';
 import { generatePassword } from '../common/utils/generate-password';
@@ -133,6 +134,7 @@ export class PlatformService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly cache: AppCacheService,
   ) {}
 
   // Hard limit: only MAX_PLATFORM_ADMINS active accounts may ever exist.
@@ -584,9 +586,15 @@ export class PlatformService {
     });
     if (!institution) throw new NotFoundException('Client not found');
 
-    // Hard delete — all child records cascade via onDelete: Cascade on every
-    // model that references Institution (students, users, fees, attendance, etc.)
-    await this.prisma.institution.delete({ where: { id: institutionId } });
+    // $executeRaw bypasses the soft-delete middleware — true hard delete.
+    // Child records cascade via ON DELETE CASCADE FK constraints, freeing
+    // the institution code immediately for reuse in onboardClient.
+    await this.prisma.$executeRaw`DELETE FROM "institutions" WHERE "id"::text = ${institutionId}`;
+
+    // Immediately evict TenantGuard's cache so active sessions get rejected on the
+    // very next API call rather than continuing for up to 5 more minutes.
+    this.cache.delete(`inst:${institutionId}`);
+
     return { deleted: true, institutionId };
   }
 

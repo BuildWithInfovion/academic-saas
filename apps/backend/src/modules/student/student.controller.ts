@@ -20,6 +20,7 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 import { AuthGuard } from '../../common/guards/auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { StorageService } from '../../common/storage/storage.service';
@@ -30,7 +31,7 @@ interface TenantContext {
   features: Record<string, any>;
 }
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(AuthGuard, TenantGuard, RolesGuard)
 @Controller('students')
 export class StudentController {
   constructor(

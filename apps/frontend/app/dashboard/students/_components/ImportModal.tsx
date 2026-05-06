@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { apiFetch, clearApiCache } from '@/lib/api';
 import type { AcademicUnit } from '@/lib/types';
 
 type ImportRow = {
@@ -65,6 +65,17 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
   const [importProgress, setImportProgress] = useState(0); // 0–100
   const [importProgressLabel, setImportProgressLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Fetch fresh units on every open — bypasses the 5-min API cache so class
+  // validation reflects classes added after the page initially loaded.
+  const [freshUnits, setFreshUnits] = useState<AcademicUnit[]>(academicUnits);
+  useEffect(() => {
+    if (!open) return;
+    clearApiCache('/academic/units');
+    apiFetch('/academic/units')
+      .then((data) => setFreshUnits(data as AcademicUnit[]))
+      .catch(() => setFreshUnits(academicUnits));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleClose = () => {
     setImportRows([]); setImportStep('upload'); setImportResult(null);
@@ -135,7 +146,7 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
         const adm = parseDMY(raw.admissionDate ?? '');
         if (raw.dateOfBirth && !dob) errs.push('DOB must be DD-MM-YYYY');
         // Validate class name against configured units (only when units are loaded)
-        if (raw.className && academicUnits.length > 0 && !resolveClassNameFe(academicUnits, raw.className))
+        if (raw.className && freshUnits.length > 0 && !resolveClassNameFe(freshUnits, raw.className))
           errs.push(`Class "${raw.className}" not found — check names in Settings → Classes`);
         parsed.push({
           firstName: raw.firstName ?? '', lastName: raw.lastName ?? '',
@@ -275,11 +286,11 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
                   <li>Upload the CSV — you can review before anything is saved</li>
                 </ol>
               </div>
-              {academicUnits.length > 0 && (
+              {freshUnits.length > 0 && (
                 <div className="bg-ds-bg2 border border-ds-border rounded-lg p-3">
                   <p className="text-xs font-semibold text-ds-text2 mb-2">Available classes (use these names in the CSV)</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {academicUnits.map((u) => (
+                    {freshUnits.map((u) => (
                       <span key={u.id} className="px-2 py-0.5 bg-ds-surface border border-ds-border rounded text-xs font-mono text-ds-text1">
                         {u.displayName || u.name}
                       </span>
@@ -287,7 +298,7 @@ export function ImportModal({ open, academicUnits, onClose, onImportComplete }: 
                   </div>
                 </div>
               )}
-              {academicUnits.length === 0 && (
+              {freshUnits.length === 0 && (
                 <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 text-sm text-ds-warning-text">
                   No classes configured yet. <a href="/dashboard/classes" className="underline font-medium">Set up classes first.</a>
                 </div>
