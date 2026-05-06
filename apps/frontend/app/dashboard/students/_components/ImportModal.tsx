@@ -29,7 +29,7 @@ export type ImportBatch = {
   studentIds: string[];
 };
 
-const CHUNK_SIZE = 100;
+const CHUNK_SIZE = 25;
 
 export function ImportModal({ open, academicUnits, onClose, onImportComplete }: {
   open: boolean;

@@ -467,22 +467,36 @@ export class StudentService {
       return out;
     }
 
-    // ── Phase 2: batch-lookup all parent phones in one query ─────────────────
+    // ── Phase 2: batch-lookup all parent phones — include soft-deleted accounts ─
+    // Raw query bypasses the soft-delete Prisma middleware so we can detect phones
+    // that were previously imported and then undone (soft-deleted users).  We reuse
+    // those accounts instead of trying to INSERT a duplicate phone, which would
+    // cause a P2002 unique-constraint error and make every transaction fail.
     const allPhones = [...new Set(validRows.map((v) => v.phone).filter(Boolean))] as string[];
-    const existingParents = allPhones.length
-      ? await this.prisma.user.findMany({
-          where: { institutionId, phone: { in: allPhones }, deletedAt: null },
-          select: { id: true, phone: true },
-        })
+    const allExistingParents = allPhones.length
+      ? await this.prisma.$queryRaw<{ id: string; phone: string; deletedAt: Date | null }[]>`
+          SELECT id, phone, "deletedAt"
+          FROM "users"
+          WHERE "institutionId" = ${institutionId}
+            AND phone = ANY(${allPhones}::text[])
+        `
       : [];
-    // phone → userId (populated from DB; extended as new parents are created)
-    const parentByPhone = new Map(existingParents.map((u) => [u.phone!, u.id]));
+    // Active accounts: can be used as-is
+    const parentByPhone = new Map(
+      allExistingParents.filter((u) => !u.deletedAt).map((u) => [u.phone, u.id]),
+    );
+    // Soft-deleted accounts: will be reactivated with a new password during import
+    const softDeletedByPhone = new Map(
+      allExistingParents.filter((u) => !!u.deletedAt).map((u) => [u.phone, u.id]),
+    );
 
     // ── Phase 3: pre-compute bcrypt hashes for NEW phones in parallel ────────
     // 10 rounds instead of 12: ~4× faster, still plenty secure for bulk-imported
     // temporary passwords (users are expected to change on first login).
     const BCRYPT_ROUNDS = 10;
     const HASH_CONCURRENCY = 8;
+    // Hash phones that don't have an active account (includes soft-deleted phones
+    // that will be reactivated — they need a fresh password too).
     const newPhones = allPhones.filter((p) => !parentByPhone.has(p));
     const hashMap = new Map<string, { hash: string; pwd: string }>();
     for (let i = 0; i < newPhones.length; i += HASH_CONCURRENCY) {
@@ -523,15 +537,41 @@ export class StudentService {
               let pid = parentByPhone.get(phone);
               if (!pid) {
                 const pre = hashMap.get(phone)!;
-                const newParent = await tx.user.create({
-                  data: { institutionId, phone, passwordHash: pre.hash, isActive: true },
-                });
-                if (parentRole) {
-                  await tx.userRole.create({
-                    data: { userId: newParent.id, roleId: parentRole.id, institutionId },
+                const softDeletedId = softDeletedByPhone.get(phone);
+
+                if (softDeletedId) {
+                  // Reactivate a previously soft-deleted parent account (e.g. after import undo).
+                  // update() is safe here: the soft-delete middleware only intercepts
+                  // deleteMany/findMany, not update, so deletedAt: null is applied directly.
+                  await tx.user.update({
+                    where: { id: softDeletedId },
+                    data: { deletedAt: null, passwordHash: pre.hash, isActive: true },
                   });
+                  // Ensure the parent role is still assigned
+                  if (parentRole) {
+                    const hasRole = await tx.userRole.findFirst({
+                      where: { userId: softDeletedId, roleId: parentRole.id },
+                    });
+                    if (!hasRole) {
+                      await tx.userRole.create({
+                        data: { userId: softDeletedId, roleId: parentRole.id, institutionId },
+                      });
+                    }
+                  }
+                  pid = softDeletedId;
+                  softDeletedByPhone.delete(phone); // won't be reactivated again this run
+                } else {
+                  const newParent = await tx.user.create({
+                    data: { institutionId, phone, passwordHash: pre.hash, isActive: true },
+                  });
+                  if (parentRole) {
+                    await tx.userRole.create({
+                      data: { userId: newParent.id, roleId: parentRole.id, institutionId },
+                    });
+                  }
+                  pid = newParent.id;
                 }
-                pid = newParent.id;
+
                 parentByPhone.set(phone, pid);
                 // Track new credentials to return to caller
                 if (!results.newParentPhones.has(phone)) {

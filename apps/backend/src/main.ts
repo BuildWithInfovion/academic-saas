@@ -20,9 +20,16 @@ async function bootstrap(): Promise<void> {
       // Allow requests with no origin (server-to-server, curl, mobile apps)
       if (!requestOrigin) return callback(null, true);
       if (allowedOrigins.includes(requestOrigin)) return callback(null, true);
-      callback(new Error(`CORS: origin ${requestOrigin} not allowed`), false);
+      // Pass null (not an Error) so cors sends a proper 204 response without
+      // Access-Control-Allow-Origin, rather than calling next(err) which could
+      // close the connection before a response is sent.
+      callback(null, false);
     },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Institution-ID'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   app.use(compression());
