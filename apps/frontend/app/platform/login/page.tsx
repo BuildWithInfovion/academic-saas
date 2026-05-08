@@ -145,7 +145,7 @@ export default function PlatformLoginPage() {
       const name = email.split('@')[0] || 'Admin';
       setSuccessInfo({ name });
       await new Promise<void>((res) => setTimeout(res, 5500));
-      router.push('/platform/dashboard');
+      window.location.href = '/platform/dashboard';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
       setLoadStep(0);
