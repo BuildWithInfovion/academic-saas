@@ -29,7 +29,10 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/portal') && !pathname.startsWith('/portal/select-role')) {
-    if (!request.cookies.get('auth_rt')) {
+    // Check portal_ready (set by app. origin on login) first; fall back to auth_rt
+    // (set by api. subdomain). auth_rt is not reliably visible to the Edge Middleware
+    // in all browser/CDN configurations due to cross-subdomain Set-Cookie handling.
+    if (!request.cookies.get('portal_ready') && !request.cookies.get('auth_rt')) {
       return NextResponse.redirect(new URL('/', request.url));
     }
   }

@@ -237,6 +237,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
               method: 'POST', credentials: 'include',
               headers: { 'Authorization': `Bearer ${token}` },
             }).finally(() => {
+              document.cookie = 'portal_ready=; path=/; max-age=0; SameSite=Lax';
               logout();
               window.location.href = '/';
             });

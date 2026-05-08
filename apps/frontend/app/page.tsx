@@ -123,9 +123,13 @@ export default function LoginPage() {
     const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
     setSuccessInfo({ institution: data.user.institutionName || fallbackCode });
     await new Promise<void>((resolve) => setTimeout(resolve, 1500));
-    // Full page navigation so httpOnly cookies are evaluated fresh by Edge Middleware.
-    // router.push silently no-ops when destination === current path, causing the
-    // "Welcome back!" overlay to stay on screen indefinitely.
+    // Set a same-origin cookie that the Edge Middleware can read. auth_rt is set by
+    // api. subdomain and is not reliably forwarded in cross-subdomain navigation
+    // headers on all browser/CDN configurations.
+    if (!isDashboard) {
+      const sec = window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `portal_ready=1; path=/; max-age=604800; SameSite=Lax${sec}`;
+    }
     window.location.href = destination;
   };
 
@@ -258,8 +262,8 @@ export default function LoginPage() {
       setLoadStep(3);
       setSuccessInfo({ institution: data.user.institutionName || 'Welcome' });
       await new Promise<void>((resolve) => setTimeout(resolve, 400));
-      // Full navigation — same reason as applySession: router.push can silently
-      // no-op when middleware redirects back to '/', leaving the overlay stuck.
+      const sec = window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `portal_ready=1; path=/; max-age=604800; SameSite=Lax${sec}`;
       window.location.href = '/portal/parent';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
