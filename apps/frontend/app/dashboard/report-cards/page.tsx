@@ -201,7 +201,7 @@ export default function ReportCardsPage() {
       .catch(() => {});
   }, [yearId]);
 
-  const leafUnits = units.filter((u) => u.level === Math.max(...units.map((x) => x.level)));
+  const leafUnits = units.filter((u) => u.level === Math.max(...units.map((x) => x.level ?? 0)));
 
   const handleLoad = async () => {
     if (!examId || !unitId) return;
