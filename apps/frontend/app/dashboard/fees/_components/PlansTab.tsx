@@ -197,7 +197,7 @@ export function PlansTab({ years, units }: { years: AcademicYear[]; units: Acade
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-slate-600"><span>Fee items</span><span className="font-medium">{plan.items.length}</span></div>
               <div className="flex justify-between text-slate-600"><span>Annual total</span><span className="font-medium text-slate-900">{fmt(totalFee(plan))}</span></div>
-              <div className="flex justify-between text-slate-600"><span>Classes</span><span className="font-medium">{plan.classMaps.length > 0 ? plan.classMaps.map((c) => unitName(c.academicUnit)).join(', ') : <span className="text-amber-600">None assigned</span>}</span></div>
+              <div className="flex justify-between text-slate-600"><span>Classes</span><span className="font-medium">{(plan.classMaps ?? []).length > 0 ? (plan.classMaps ?? []).map((c) => unitName(c.academicUnit)).join(', ') : <span className="text-amber-600">None assigned</span>}</span></div>
             </div>
             <button onClick={(e) => { e.stopPropagation(); openAssign(plan); }} className="mt-3 w-full px-3 py-1.5 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50">Assign Classes</button>
           </div>
