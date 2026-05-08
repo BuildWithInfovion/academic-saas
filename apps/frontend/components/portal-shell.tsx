@@ -133,7 +133,7 @@ export default function PortalShell({ children, allowedRoles, portalTitle, menuI
   );
 
   const roleLabel = user ? getRoleLabel(user.roles) : '';
-  const userName  = user ? displayName(user.name, user.email, user.phone) : '';
+  const userName  = user ? displayName(user.name, user.email ?? undefined, user.phone ?? undefined) : '';
 
   // Most-specific match wins — prevents parent paths staying highlighted on sub-pages
   const activeItemPath = [...menuItems]
