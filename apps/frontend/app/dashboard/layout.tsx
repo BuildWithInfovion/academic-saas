@@ -79,6 +79,13 @@ const menuGroups = [
   },
 ];
 
+function isJwtExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return (payload.exp as number) * 1000 < Date.now() + 30_000;
+  } catch { return true; }
+}
+
 function displayName(name?: string | null, email?: string | null, phone?: string | null): string {
   if (name) return name;
   if (phone) return phone;
@@ -153,10 +160,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     } catch { /* swallow */ } finally { setBellActioning(null); }
   };
 
-  // Always refresh on mount so the JWT contains current DB permissions.
-  // Skipping this when the token was still valid caused stale permissions to persist
-  // until expiry (e.g. operators getting 403 after a permission migration).
   useEffect(() => {
+    const cached = useAuthStore.getState().accessToken;
+    if (cached && !isJwtExpired(cached)) {
+      setReady(true);
+      // Background-refresh so the JWT reflects current DB permissions.
+      // Do NOT redirect on failure — the JWT itself is still valid and is
+      // the security boundary; a failed refresh is non-fatal here.
+      void silentRefreshOp();
+      return;
+    }
     silentRefreshOp().then((status) => {
       if (status === 'ok') {
         setReady(true);
