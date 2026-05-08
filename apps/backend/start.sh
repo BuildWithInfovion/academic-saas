@@ -117,6 +117,21 @@ const ALL_MIGRATIONS = [
       console.warn('[sync] Warning for', name + ':', (e.message || '').slice(0, 150));
     }
   }
+  // Clear any failed migration records so prisma migrate deploy retries them with
+  // the current (possibly corrected) SQL file. Only targets records that started
+  // but never finished and have error logs — applied migrations are untouched.
+  try {
+    const deleted = await prisma.$executeRawUnsafe(`
+      DELETE FROM "_prisma_migrations"
+      WHERE "finished_at" IS NULL
+      AND "rolled_back_at" IS NULL
+      AND "logs" IS NOT NULL
+    `);
+    if (Number(deleted) > 0) console.log('[sync] Cleared', deleted, 'failed migration(s) for retry.');
+  } catch (e) {
+    console.warn('[sync] Could not clear failed migrations:', (e.message || '').slice(0, 150));
+  }
+
   await prisma.$disconnect();
   console.log('[sync] Migration history ready.');
 })().catch(async (e) => {
