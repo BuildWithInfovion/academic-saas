@@ -117,7 +117,13 @@ export default function LoginPage() {
       },
     };
     const isDashboard = (DASHBOARD_ROLES as string[]).some((r) => roles.includes(r));
-    if (isDashboard) { setAuth(authPayload); } else { usePortalAuthStore.getState().setAuth(authPayload); }
+    if (isDashboard) {
+      usePortalAuthStore.getState().logout(); // clear any stale portal session
+      setAuth(authPayload);
+    } else {
+      useAuthStore.getState().logout(); // clear any stale operator session
+      usePortalAuthStore.getState().setAuth(authPayload);
+    }
     setLoadStep(3);
     const portalRoles = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
     const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
@@ -248,6 +254,7 @@ export default function LoginPage() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || 'Login failed');
       if (!data.accessToken) throw new Error('No token received');
+      useAuthStore.getState().logout(); // clear any stale operator session
       usePortalAuthStore.getState().setAuth({
         accessToken: data.accessToken,
         user: {

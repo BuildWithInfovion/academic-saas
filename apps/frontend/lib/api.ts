@@ -128,7 +128,6 @@ async function doRefresh(endpoint: string): Promise<RefreshResult> {
     );
     if (res.status === 401) {
       getActiveAuthState().logout();
-      if (typeof window !== 'undefined') window.location.href = '/';
       return { status: 'expired' };
     }
     if (!res.ok) return { status: 'unavailable' };
@@ -146,7 +145,6 @@ async function doRefresh(endpoint: string): Promise<RefreshResult> {
     const thisTabUser = store.user;
     if (thisTabUser && data.user?.email && data.user.email !== thisTabUser.email) {
       store.logout();
-      if (typeof window !== 'undefined') window.location.href = '/';
       return { status: 'expired' };
     }
 
