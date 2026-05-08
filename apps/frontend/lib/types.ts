@@ -213,7 +213,7 @@ export interface FeePlanInstallment {
 export interface FeePlanItem {
   id: string;
   feeCategoryId: string;
-  feeCategory: FeeCategory | { id: string; name: string };
+  feeCategory: FeeCategory;
   totalAmount: number;
   installments: FeePlanInstallment[];
 }
