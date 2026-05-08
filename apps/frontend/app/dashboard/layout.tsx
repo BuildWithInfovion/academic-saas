@@ -79,15 +79,6 @@ const menuGroups = [
   },
 ];
 
-function isJwtExpired(token: string): boolean {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return (payload.exp as number) * 1000 < Date.now() + 30_000; // treat <30s remaining as expired
-  } catch {
-    return true;
-  }
-}
-
 function displayName(name?: string | null, email?: string | null, phone?: string | null): string {
   if (name) return name;
   if (phone) return phone;
@@ -105,6 +96,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [connError,  setConnError]  = useState(false);
   const [logoError,  setLogoError]  = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Password reset request notifications
+  interface ResetRequest { id: string; createdAt: string; user: { id: string; email?: string | null; phone?: string | null } }
+  const [resetRequests,  setResetRequests]  = useState<ResetRequest[]>([]);
+  const [bellOpen,       setBellOpen]       = useState(false);
+  const [bellActioning,  setBellActioning]  = useState<string | null>(null);
+  const [bellApproved,   setBellApproved]   = useState<{ id: string; newPassword: string } | null>(null);
+  const bellRef = useRef<HTMLDivElement>(null);
 
   // Support ticket modal
   const [supportOpen,    setSupportOpen]    = useState(false);
@@ -137,12 +136,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     } finally { setSupportSending(false); }
   };
 
-  // On mount: use cached token only if it's still valid (not expired).
-  // The JWT has a 15-minute expiry — a stale cached token causes all child
-  // API calls to 401. Decode the exp claim to detect this before rendering.
+  const handleBellApprove = async (id: string) => {
+    setBellActioning(id);
+    try {
+      const res = await apiFetch<{ newPassword: string }>(`/auth/password-resets/${id}/approve`, { method: 'POST' });
+      setBellApproved({ id, newPassword: res.newPassword });
+      setResetRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch { /* swallow */ } finally { setBellActioning(null); }
+  };
+
+  const handleBellReject = async (id: string) => {
+    setBellActioning(id);
+    try {
+      await apiFetch(`/auth/password-resets/${id}/reject`, { method: 'POST' });
+      setResetRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch { /* swallow */ } finally { setBellActioning(null); }
+  };
+
+  // Always refresh on mount so the JWT contains current DB permissions.
+  // Skipping this when the token was still valid caused stale permissions to persist
+  // until expiry (e.g. operators getting 403 after a permission migration).
   useEffect(() => {
-    const cached = useAuthStore.getState().accessToken;
-    if (cached && !isJwtExpired(cached)) { setReady(true); return; }
     silentRefreshOp().then((status) => {
       if (status === 'ok') {
         setReady(true);
@@ -156,6 +170,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
+
+  // Poll for pending password-reset requests every 2 minutes.
+  // 403 = operator lacks users.write; swallow silently and leave count at 0.
+  useEffect(() => {
+    if (!ready) return;
+    let active = true;
+    const poll = async () => {
+      try {
+        const res = await apiFetch<ResetRequest[]>('/auth/password-resets');
+        if (active) setResetRequests(Array.isArray(res) ? res : []);
+      } catch { /* permission denied or network — ignore */ }
+    };
+    void poll();
+    const id = setInterval(() => { void poll(); }, 2 * 60 * 1000);
+    return () => { active = false; clearInterval(id); };
+  }, [ready]);
+
+  // Close bell dropdown on outside click
+  useEffect(() => {
+    if (!bellOpen) return;
+    const handle = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [bellOpen]);
 
   // Poll institution status every 3 minutes so deleted/suspended schools are
   // logged out quickly rather than getting "Institution not found" errors mid-use.
@@ -446,6 +486,82 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Notification bell — password reset requests */}
+            <div ref={bellRef} className="relative">
+              <button
+                onClick={() => { setBellOpen((o) => !o); if (bellOpen) setBellApproved(null); }}
+                className="relative p-1.5 rounded-lg transition-colors"
+                style={{ color: resetRequests.length > 0 ? '#ef4444' : 'var(--text-2)' }}
+                title="Password reset requests"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                {resetRequests.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold"
+                    style={{ background: '#ef4444' }}>
+                    {resetRequests.length > 9 ? '9+' : resetRequests.length}
+                  </span>
+                )}
+              </button>
+
+              {bellOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 rounded-xl z-50"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-xl)' }}>
+                  <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Password Reset Requests</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Parents &amp; staff who cannot log in</p>
+                  </div>
+
+                  {bellApproved && (
+                    <div className="px-4 py-3" style={{ background: '#f0fdf4', borderBottom: '1px solid var(--border)' }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: '#15803d' }}>New password — share with user:</p>
+                      <p className="font-mono font-bold text-lg tracking-widest" style={{ color: '#4338ca' }}>{bellApproved.newPassword}</p>
+                      <button onClick={() => setBellApproved(null)} className="text-xs mt-1 underline" style={{ color: 'var(--text-3)' }}>Dismiss</button>
+                    </div>
+                  )}
+
+                  {resetRequests.length === 0 ? (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-sm" style={{ color: 'var(--text-3)' }}>No pending requests</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-72 overflow-y-auto">
+                      {resetRequests.map((req, i) => (
+                        <div key={req.id} className="px-4 py-3" style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}>
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
+                            {req.user.phone ?? req.user.email ?? req.user.id}
+                          </p>
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                            {new Date(req.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => void handleBellReject(req.id)}
+                              disabled={bellActioning === req.id}
+                              className="flex-1 py-1.5 text-xs rounded-lg disabled:opacity-50"
+                              style={{ border: '1px solid var(--border)', color: 'var(--text-2)', background: 'transparent' }}
+                            >
+                              Reject
+                            </button>
+                            <button
+                              onClick={() => void handleBellApprove(req.id)}
+                              disabled={bellActioning === req.id}
+                              className="flex-1 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50"
+                              style={{ background: 'var(--brand)' }}
+                            >
+                              {bellActioning === req.id ? '…' : 'Set Password'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
               style={{ background: 'var(--brand)' }}
