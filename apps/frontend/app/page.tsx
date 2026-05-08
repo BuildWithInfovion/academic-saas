@@ -310,17 +310,21 @@ export default function LoginPage() {
 
   const handleParentForgotSubmit = async () => {
     if (!pfPhone.trim()) return setPfError('Phone number is required');
-    if (!/^\d{10}$/.test(pfPhone.trim())) return setPfError('Enter a valid 10-digit phone number');
+    if (!/^\d{10,15}$/.test(pfPhone.trim())) return setPfError('Enter a valid phone number (10–15 digits)');
     setPfLoading(true); setPfError(null);
     try {
-      await fetch(apiUrl('/auth/parent/request-password-reset'), {
+      const res = await fetch(apiUrl('/auth/parent/request-password-reset'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: pfPhone.trim() }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null) as { message?: string } | null;
+        throw new Error(data?.message ?? 'Request failed. Please try again.');
+      }
       setPfSubmitted(true);
-    } catch {
-      setPfError('Something went wrong. Please try again.');
+    } catch (err) {
+      setPfError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setPfLoading(false);
     }

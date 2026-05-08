@@ -477,6 +477,16 @@ export class StudentService {
       return out;
     }
 
+    // If any row has a parent phone but the institution has no 'parent' role yet,
+    // fail immediately with a clear message. Silently skipping role assignment would
+    // leave parent accounts unable to log in or reset passwords.
+    const hasParentPhones = validRows.some((v) => v.phone);
+    if (hasParentPhones && !parentRole) {
+      throw new BadRequestException(
+        'Parent role not found for this institution. Please contact support to repair your institution setup before importing students with parent phone numbers.',
+      );
+    }
+
     // ── Phase 2: batch-lookup all parent phones — include soft-deleted accounts ─
     // Raw query bypasses the soft-delete Prisma middleware so we can detect phones
     // that were previously imported and then undone (soft-deleted users).  We reuse
