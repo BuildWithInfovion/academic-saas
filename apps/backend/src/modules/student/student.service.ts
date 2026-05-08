@@ -874,12 +874,23 @@ export class StudentService {
     }
 
     if (search) {
-      whereCondition.OR = [
+      const parts = search.trim().split(/\s+/);
+      const orConditions: Prisma.StudentWhereInput[] = [
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { admissionNo: { contains: search, mode: 'insensitive' } },
         { parentPhone: { contains: search } },
       ];
+      // "First Last" full-name search: split on whitespace and match both fields
+      if (parts.length >= 2) {
+        orConditions.push({
+          AND: [
+            { firstName: { contains: parts[0], mode: 'insensitive' } },
+            { lastName: { contains: parts.slice(1).join(' '), mode: 'insensitive' } },
+          ],
+        });
+      }
+      whereCondition.OR = orConditions;
     }
 
     const [students, total] = await Promise.all([
