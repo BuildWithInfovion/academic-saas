@@ -32,10 +32,15 @@ import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard'
 import { ParentLoginRateLimitGuard } from '../../common/guards/parent-login-rate-limit.guard';
 import { IS_PROD } from '../../common/constants/env';
 
+// SameSite=None is required for cross-subdomain fetch requests
+// (app.buildwithinfovion.com → api.buildwithinfovion.com). Some browser/CDN
+// configurations treat these as cross-site despite sharing the same eTLD+1,
+// causing SameSite=Lax cookies to be silently dropped.
+// Secure=true is always set in prod, which satisfies the SameSite=None requirement.
 const RT_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: IS_PROD,
-  sameSite: 'lax' as const,
+  sameSite: IS_PROD ? ('none' as const) : ('lax' as const),
   ...(IS_PROD ? { domain: '.buildwithinfovion.com' } : {}),
   path: '/',
 };
