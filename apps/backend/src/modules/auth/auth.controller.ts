@@ -45,6 +45,26 @@ const RT_COOKIE_OPTIONS = {
   path: '/',
 };
 
+// When we migrated from SameSite=Lax → SameSite=None, browsers stored BOTH
+// variants as separate cookies (same name, different SameSite). cookie-parser
+// returns the first one — which may be the old revoked token — causing 401.
+// Clearing the Lax variant on every set/clear evicts the duplicate permanently.
+const RT_COOKIE_OPTIONS_LAX_LEGACY = IS_PROD
+  ? {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax' as const,
+      domain: '.buildwithinfovion.com',
+      path: '/',
+    }
+  : null;
+
+function clearLegacyLaxCookie(res: Response, name: string) {
+  if (RT_COOKIE_OPTIONS_LAX_LEGACY) {
+    res.clearCookie(name, RT_COOKIE_OPTIONS_LAX_LEGACY);
+  }
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -75,6 +95,7 @@ export class AuthController {
     // Full session — set httpOnly refresh token cookie
     const roles: string[] = result.user?.roles ?? [];
     const cookieName = roles.includes('admin') ? 'auth_rt_op' : 'auth_rt';
+    clearLegacyLaxCookie(res, cookieName);
     res.cookie(cookieName, result.refreshToken, {
       ...RT_COOKIE_OPTIONS,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -104,6 +125,7 @@ export class AuthController {
 
     const roles: string[] = result.user?.roles ?? [];
     const cookieName = roles.includes('admin') ? 'auth_rt_op' : 'auth_rt';
+    clearLegacyLaxCookie(res, cookieName);
     res.cookie(cookieName, result.refreshToken, {
       ...RT_COOKIE_OPTIONS,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -196,6 +218,7 @@ export class AuthController {
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
     const result = await this.authService.refreshByToken(refreshToken);
+    clearLegacyLaxCookie(res, 'auth_rt_op');
     res.cookie('auth_rt_op', result.refreshToken, {
       ...RT_COOKIE_OPTIONS,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -211,6 +234,8 @@ export class AuthController {
     @Req() req: AuthedReq,
     @Res({ passthrough: true }) res: Response,
   ) {
+    clearLegacyLaxCookie(res, 'auth_rt');
+    clearLegacyLaxCookie(res, 'auth_rt_op');
     res.clearCookie('auth_rt', RT_COOKIE_OPTIONS);
     res.clearCookie('auth_rt_op', RT_COOKIE_OPTIONS);
     // institutionId comes from the JWT payload — no TenantMiddleware needed for logout
