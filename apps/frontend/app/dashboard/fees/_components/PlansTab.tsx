@@ -89,7 +89,7 @@ export function PlansTab({ years, units }: { years: AcademicYear[]; units: Acade
 
   const openAssign = (plan: FeePlan) => {
     setAssigningPlan(plan.id);
-    setAssignedUnits(new Set(plan.classMaps.map((c) => c.academicUnitId)));
+    setAssignedUnits(new Set((plan.classMaps ?? []).map((c) => c.academicUnitId)));
   };
 
   const saveAssign = async () => {
