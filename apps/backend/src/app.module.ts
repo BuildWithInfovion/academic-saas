@@ -109,6 +109,7 @@ export class AppModule implements NestModule {
         { path: 'auth/reset-password', method: RequestMethod.ALL },
         { path: 'auth/totp/authenticate', method: RequestMethod.ALL },
         { path: 'auth/parent/login', method: RequestMethod.ALL },
+        { path: 'auth/parent/request-password-reset', method: RequestMethod.ALL },
         { path: 'platform', method: RequestMethod.ALL },
         { path: 'platform/*path', method: RequestMethod.ALL },
         { path: 'support/*path', method: RequestMethod.ALL },
