@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute, PORTAL_ROLES, DASHBOARD_ROLES } from '@/lib/auth-utils';
@@ -44,7 +43,6 @@ const getLogoTransform = (phase: Phase): string => {
 };
 
 export default function LoginPage() {
-  const router  = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const [logoError, setLogoError] = useState(false);
@@ -260,7 +258,9 @@ export default function LoginPage() {
       setLoadStep(3);
       setSuccessInfo({ institution: data.user.institutionName || 'Welcome' });
       await new Promise<void>((resolve) => setTimeout(resolve, 400));
-      router.push('/portal/parent');
+      // Full navigation — same reason as applySession: router.push can silently
+      // no-op when middleware redirects back to '/', leaving the overlay stuck.
+      window.location.href = '/portal/parent';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       setLoadStep(0);
