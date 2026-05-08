@@ -125,7 +125,10 @@ export default function LoginPage() {
     const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
     setSuccessInfo({ institution: data.user.institutionName || fallbackCode });
     await new Promise<void>((resolve) => setTimeout(resolve, 1500));
-    router.push(destination);
+    // Full page navigation so httpOnly cookies are evaluated fresh by Edge Middleware.
+    // router.push silently no-ops when destination === current path, causing the
+    // "Welcome back!" overlay to stay on screen indefinitely.
+    window.location.href = destination;
   };
 
   // ── Staff login (step 1: email + password) ────────────────────────────────

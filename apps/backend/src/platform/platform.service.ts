@@ -601,6 +601,24 @@ export class PlatformService {
   // ── ONBOARD ───────────────────────────────────────────────────────────────
 
   async onboardClient(dto: OnboardClientDto) {
+    // Guard: Director and Operator must have distinct credentials so the
+    // priority-based login (super_admin > admin) resolves unambiguously.
+    const hasDirector = !!(dto.directorEmail || dto.directorPhone);
+    if (hasDirector) {
+      if (dto.directorEmail && dto.adminEmail &&
+          dto.directorEmail.trim().toLowerCase() === dto.adminEmail.trim().toLowerCase()) {
+        throw new BadRequestException(
+          'Director and Operator cannot share the same email address.',
+        );
+      }
+      if (dto.directorPhone && dto.adminPhone &&
+          dto.directorPhone.trim() === dto.adminPhone.trim()) {
+        throw new BadRequestException(
+          'Director and Operator cannot share the same phone number.',
+        );
+      }
+    }
+
     // 1. Generate institution code
     const baseCode = this.buildInstitutionCode(dto.codeOverride, dto.name);
 
@@ -617,7 +635,6 @@ export class PlatformService {
     const passwordHash = await bcrypt.hash(rawPassword, 12);
 
     // 2b. Director credentials (optional — only if directorEmail/Phone provided)
-    const hasDirector = !!(dto.directorEmail || dto.directorPhone);
     const directorEmail = dto.directorEmail || (hasDirector ? `director@${code}.in` : null);
     const rawDirectorPassword = hasDirector ? generatePassword() : null;
     const directorPasswordHash = rawDirectorPassword

@@ -190,6 +190,24 @@ export default function OnboardClientPage() {
       errs.directorEmail = 'Enter a valid email address';
     if (form.directorPhone.trim() && !PHONE_RE.test(form.directorPhone.trim()))
       errs.directorPhone = 'Enter a valid 10-digit phone number';
+
+    // Director and Operator must have distinct login credentials.
+    // Using the same email (or phone) would make it impossible to know
+    // which account's password to enter, causing confusing login behavior.
+    if (
+      form.directorEmail.trim() &&
+      form.adminEmail.trim() &&
+      form.directorEmail.trim().toLowerCase() === form.adminEmail.trim().toLowerCase()
+    ) {
+      errs.directorEmail = 'Director email must differ from the Operator email';
+    }
+    if (
+      form.directorPhone.trim() &&
+      form.adminPhone.trim() &&
+      form.directorPhone.trim() === form.adminPhone.trim()
+    ) {
+      errs.directorPhone = 'Director phone must differ from the Operator phone';
+    }
     if (form.foundedYear && (parseInt(form.foundedYear) < 1800 || parseInt(form.foundedYear) > new Date().getFullYear()))
       errs.foundedYear = `Enter a year between 1800 and ${new Date().getFullYear()}`;
 

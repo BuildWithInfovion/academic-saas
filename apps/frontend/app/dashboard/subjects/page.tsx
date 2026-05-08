@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, clearApiCache } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 
 interface Subject { id: string; name: string; code?: string; }
@@ -146,6 +146,7 @@ export default function SubjectsPage() {
         method: 'POST',
         body: JSON.stringify({ subjectId: sid, teacherUserId: (teacherUserId ?? assignTeacherId) || null }),
       });
+      clearApiCache('/subjects/units');
       reloadUnitSubjects();
       if (!subjectId) { setAssignSubjectId(''); setAssignTeacherId(''); }
       showSuccess('Subject assigned');
@@ -158,6 +159,7 @@ export default function SubjectsPage() {
         method: 'POST',
         body: JSON.stringify({ subjectId: us.subjectId, teacherUserId: newTeacherId || null }),
       });
+      clearApiCache('/subjects/units');
       reloadUnitSubjects();
     } catch (e: unknown) { setError((e as Error).message || 'Failed'); }
   };
