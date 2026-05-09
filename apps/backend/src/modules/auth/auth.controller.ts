@@ -32,36 +32,31 @@ import { LoginRateLimitGuard } from '../../common/guards/login-rate-limit.guard'
 import { ParentLoginRateLimitGuard } from '../../common/guards/parent-login-rate-limit.guard';
 import { IS_PROD } from '../../common/constants/env';
 
-// SameSite=None is required for cross-subdomain fetch requests
-// (app.buildwithinfovion.com → api.buildwithinfovion.com). Some browser/CDN
-// configurations treat these as cross-site despite sharing the same eTLD+1,
-// causing SameSite=Lax cookies to be silently dropped.
-// Secure=true is always set in prod, which satisfies the SameSite=None requirement.
 const RT_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: IS_PROD,
-  sameSite: IS_PROD ? ('none' as const) : ('lax' as const),
+  sameSite: 'lax' as const,
   ...(IS_PROD ? { domain: '.buildwithinfovion.com' } : {}),
   path: '/',
 };
 
-// When we migrated from SameSite=Lax → SameSite=None, browsers stored BOTH
-// variants as separate cookies (same name, different SameSite). cookie-parser
-// returns the first one — which may be the old revoked token — causing 401.
-// Clearing the Lax variant on every set/clear evicts the duplicate permanently.
-const RT_COOKIE_OPTIONS_LAX_LEGACY = IS_PROD
+// During a brief period the cookies were set with SameSite=None, which Brave
+// and other privacy-focused browsers block for cross-subdomain navigation —
+// breaking the Edge Middleware auth check. We reverted to SameSite=Lax.
+// Clear the legacy None variants so they don't linger alongside the Lax ones.
+const RT_COOKIE_OPTIONS_NONE_LEGACY = IS_PROD
   ? {
       httpOnly: true,
       secure: true,
-      sameSite: 'lax' as const,
+      sameSite: 'none' as const,
       domain: '.buildwithinfovion.com',
       path: '/',
     }
   : null;
 
-function clearLegacyLaxCookie(res: Response, name: string) {
-  if (RT_COOKIE_OPTIONS_LAX_LEGACY) {
-    res.clearCookie(name, RT_COOKIE_OPTIONS_LAX_LEGACY);
+function clearLegacyNoneCookie(res: Response, name: string) {
+  if (RT_COOKIE_OPTIONS_NONE_LEGACY) {
+    res.clearCookie(name, RT_COOKIE_OPTIONS_NONE_LEGACY);
   }
 }
 
@@ -95,7 +90,7 @@ export class AuthController {
     // Full session — set httpOnly refresh token cookie
     const roles: string[] = result.user?.roles ?? [];
     const cookieName = roles.includes('admin') ? 'auth_rt_op' : 'auth_rt';
-    clearLegacyLaxCookie(res, cookieName);
+    clearLegacyNoneCookie(res, cookieName);
     res.cookie(cookieName, result.refreshToken, {
       ...RT_COOKIE_OPTIONS,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -125,7 +120,7 @@ export class AuthController {
 
     const roles: string[] = result.user?.roles ?? [];
     const cookieName = roles.includes('admin') ? 'auth_rt_op' : 'auth_rt';
-    clearLegacyLaxCookie(res, cookieName);
+    clearLegacyNoneCookie(res, cookieName);
     res.cookie(cookieName, result.refreshToken, {
       ...RT_COOKIE_OPTIONS,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -218,7 +213,7 @@ export class AuthController {
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
     const result = await this.authService.refreshByToken(refreshToken);
-    clearLegacyLaxCookie(res, 'auth_rt_op');
+    clearLegacyNoneCookie(res, 'auth_rt_op');
     res.cookie('auth_rt_op', result.refreshToken, {
       ...RT_COOKIE_OPTIONS,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -234,8 +229,8 @@ export class AuthController {
     @Req() req: AuthedReq,
     @Res({ passthrough: true }) res: Response,
   ) {
-    clearLegacyLaxCookie(res, 'auth_rt');
-    clearLegacyLaxCookie(res, 'auth_rt_op');
+    clearLegacyNoneCookie(res, 'auth_rt');
+    clearLegacyNoneCookie(res, 'auth_rt_op');
     res.clearCookie('auth_rt', RT_COOKIE_OPTIONS);
     res.clearCookie('auth_rt_op', RT_COOKIE_OPTIONS);
     // institutionId comes from the JWT payload — no TenantMiddleware needed for logout

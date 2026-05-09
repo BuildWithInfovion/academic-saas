@@ -164,10 +164,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const cached = useAuthStore.getState().accessToken;
     if (cached && !isJwtExpired(cached)) {
       setReady(true);
-      // Background-refresh so the JWT reflects current DB permissions.
-      // Do NOT redirect on failure — the JWT itself is still valid and is
-      // the security boundary; a failed refresh is non-fatal here.
-      void silentRefreshOp();
       return;
     }
     silentRefreshOp().then((status) => {
