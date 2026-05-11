@@ -129,12 +129,18 @@ export default function LoginPage() {
     const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
     setSuccessInfo({ institution: data.user.institutionName || fallbackCode });
     await new Promise<void>((resolve) => setTimeout(resolve, 1500));
-    // Set a same-origin cookie that the Edge Middleware can read. auth_rt is set by
-    // api. subdomain and is not reliably forwarded in cross-subdomain navigation
-    // headers on all browser/CDN configurations.
-    if (!isDashboard) {
-      const sec = window.location.protocol === 'https:' ? '; Secure' : '';
+    // Set a same-origin cookie that the Edge Middleware can read.
+    // auth_rt / auth_rt_op are set by api. subdomain and are not reliably forwarded
+    // in cross-subdomain navigation on all browser/CDN configurations (Vercel Edge
+    // Middleware in particular). portal_ready / dashboard_ready are set here, on the
+    // app. origin, so they are always present in the middleware's Cookie header.
+    const sec = window.location.protocol === 'https:' ? '; Secure' : '';
+    if (isDashboard) {
+      document.cookie = `dashboard_ready=1; path=/; max-age=604800; SameSite=Lax${sec}`;
+      document.cookie = `portal_ready=; path=/; max-age=0; SameSite=Lax`;
+    } else {
       document.cookie = `portal_ready=1; path=/; max-age=604800; SameSite=Lax${sec}`;
+      document.cookie = `dashboard_ready=; path=/; max-age=0; SameSite=Lax`;
     }
     window.location.href = destination;
   };
@@ -271,6 +277,7 @@ export default function LoginPage() {
       await new Promise<void>((resolve) => setTimeout(resolve, 400));
       const sec = window.location.protocol === 'https:' ? '; Secure' : '';
       document.cookie = `portal_ready=1; path=/; max-age=604800; SameSite=Lax${sec}`;
+      document.cookie = `dashboard_ready=; path=/; max-age=0; SameSite=Lax`;
       window.location.href = '/portal/parent';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
