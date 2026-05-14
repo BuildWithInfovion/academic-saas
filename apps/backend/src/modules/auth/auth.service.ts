@@ -496,12 +496,26 @@ export class AuthService {
       }),
     ]);
 
+    // Derive display name for parent users who have no name set
+    let userName = user.name ?? null;
+    if (!userName && roles.includes('parent')) {
+      const student = await this.prisma.student.findFirst({
+        where: {
+          parentUserId: user.id,
+          institutionId: user.institutionId,
+          deletedAt: null,
+        },
+        select: { fatherName: true, motherName: true },
+      });
+      userName = student?.fatherName || student?.motherName || null;
+    }
+
     return {
       accessToken: newAccessToken,
       refreshToken: rawToken,
       user: {
         id: user.id,
-        name: user.name ?? null,
+        name: userName,
         email: user.email,
         phone: user.phone,
         institutionId: user.institutionId,
@@ -724,8 +738,22 @@ export class AuthService {
       `[parentLogin] Login success — userId=${user.id} institution=${user.institutionId}`,
     );
 
+    // Derive display name from linked student if the user record has no name
+    let displayName = user.name;
+    if (!displayName) {
+      const student = await this.prisma.student.findFirst({
+        where: {
+          parentUserId: user.id,
+          institutionId: user.institutionId,
+          deletedAt: null,
+        },
+        select: { fatherName: true, motherName: true },
+      });
+      displayName = student?.fatherName || student?.motherName || null;
+    }
+
     return this.issueFullSession(
-      user,
+      { ...user, name: displayName },
       user.institutionId,
       user.institution.name,
       roles,

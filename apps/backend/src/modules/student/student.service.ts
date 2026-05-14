@@ -217,7 +217,7 @@ export class StudentService {
             if (!parentUser) {
               this.logger.debug('[confirmAdmission] tx:user.create — creating new parent user');
               parentUser = await tx.user.create({
-                data: { institutionId, phone: dto.parentPhone, passwordHash, isActive: true },
+                data: { institutionId, phone: dto.parentPhone, passwordHash, isActive: true, name: dto.fatherName || dto.motherName || null },
               });
               isNewParentUser = true;
               this.logger.debug(`[confirmAdmission] tx:user.created — userId=${parentUser.id}`);
