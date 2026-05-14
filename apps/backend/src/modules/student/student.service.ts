@@ -176,18 +176,49 @@ export class StudentService {
       where: { institutionId, code: 'parent' },
     });
 
-    // Check if a PARENT user with this phone already exists (reuse if so).
-    // Scoped to parent role — prevents staff/operator phones triggering reuse
-    // when a staff member's child is admitted (different scenario entirely).
+    // Check if a PARENT user with this phone already exists and belongs to the SAME FAMILY.
+    // We match on fatherName (or motherName if no fatherName) against already-linked students
+    // to distinguish siblings (same family, same phone) from unrelated students who happen
+    // to share the same contact number. Without this check, two different families with the
+    // same phone number would end up sharing one parent portal account.
     const existingParentUser = dto.parentPhone
-      ? await this.prisma.user.findFirst({
-          where: {
-            institutionId,
-            phone: dto.parentPhone,
-            deletedAt: null,
-            roles: { some: { role: { institutionId, code: 'parent' } } },
-          },
-        })
+      ? await (async () => {
+          const familyName = dto.fatherName?.trim() || dto.motherName?.trim();
+          if (familyName) {
+            // Strict match: same phone + at least one linked child shares fatherName or motherName
+            const byFamily = await this.prisma.user.findFirst({
+              where: {
+                institutionId,
+                phone: dto.parentPhone,
+                deletedAt: null,
+                roles: { some: { role: { institutionId, code: 'parent' } } },
+                parentOf: {
+                  some: {
+                    deletedAt: null,
+                    OR: [
+                      ...(dto.fatherName?.trim()
+                        ? [{ fatherName: { equals: dto.fatherName.trim(), mode: 'insensitive' as const } }]
+                        : []),
+                      ...(dto.motherName?.trim()
+                        ? [{ motherName: { equals: dto.motherName.trim(), mode: 'insensitive' as const } }]
+                        : []),
+                    ],
+                  },
+                },
+              },
+            });
+            return byFamily; // null = different family → new parent account will be created
+          }
+          // No family name provided: fall back to phone-only match (original behaviour)
+          return this.prisma.user.findFirst({
+            where: {
+              institutionId,
+              phone: dto.parentPhone,
+              deletedAt: null,
+              roles: { some: { role: { institutionId, code: 'parent' } } },
+            },
+          });
+        })()
       : null;
 
     // Generate parent credentials
@@ -501,14 +532,57 @@ export class StudentService {
             AND phone = ANY(${allPhones}::text[])
         `
       : [];
-    // Active accounts: can be used as-is
-    const parentByPhone = new Map(
-      allExistingParents.filter((u) => !u.deletedAt).map((u) => [u.phone, u.id]),
-    );
+    // Active accounts — candidatesby phone (may still be filtered by family name below)
+    const activeParentCandidates = allExistingParents.filter((u) => !u.deletedAt);
     // Soft-deleted accounts: will be reactivated with a new password during import
     const softDeletedByPhone = new Map(
       allExistingParents.filter((u) => !!u.deletedAt).map((u) => [u.phone, u.id]),
     );
+
+    // ── Family-name guard: only reuse an existing parent account if at least one
+    // of their already-linked students shares the same fatherName (or motherName).
+    // Without this, two unrelated families with the same phone number end up sharing
+    // one parent portal login — a serious data-privacy bug.
+    const activeCandidateIds = activeParentCandidates.map((u) => u.id);
+    const linkedFamilyNames = activeCandidateIds.length
+      ? await this.prisma.student.findMany({
+          where: { parentUserId: { in: activeCandidateIds }, deletedAt: null },
+          select: { parentUserId: true, fatherName: true, motherName: true },
+        })
+      : [];
+    // parentId → set of normalised family name tokens
+    const familyNamesByParentId = new Map<string, Set<string>>();
+    for (const s of linkedFamilyNames) {
+      if (!s.parentUserId) continue;
+      if (!familyNamesByParentId.has(s.parentUserId)) familyNamesByParentId.set(s.parentUserId, new Set());
+      if (s.fatherName) familyNamesByParentId.get(s.parentUserId)!.add(s.fatherName.trim().toLowerCase());
+      if (s.motherName) familyNamesByParentId.get(s.parentUserId)!.add(s.motherName.trim().toLowerCase());
+    }
+    // Build phone → userId only when the family name in the row matches
+    // a name already linked to that parent. Rows where no family-name provided
+    // fall back to phone-only match (can't discriminate).
+    const rowsByPhone = new Map<string, typeof validRows>();
+    for (const vr of validRows) {
+      if (!vr.phone) continue;
+      if (!rowsByPhone.has(vr.phone)) rowsByPhone.set(vr.phone, []);
+      rowsByPhone.get(vr.phone)!.push(vr);
+    }
+    const parentByPhone = new Map<string, string>();
+    for (const candidate of activeParentCandidates) {
+      if (!candidate.phone) continue;
+      const familyNames = familyNamesByParentId.get(candidate.id) ?? new Set();
+      const rowsForPhone = rowsByPhone.get(candidate.phone) ?? [];
+      const rowFamilyNames = new Set<string>();
+      for (const vr of rowsForPhone) {
+        if (vr.row.fatherName?.trim()) rowFamilyNames.add(vr.row.fatherName.trim().toLowerCase());
+        if (vr.row.motherName?.trim()) rowFamilyNames.add(vr.row.motherName.trim().toLowerCase());
+      }
+      // If the import provides family names, require at least one to match
+      const canReuse = rowFamilyNames.size === 0
+        ? true // no family name in import rows — fall back to phone match
+        : [...rowFamilyNames].some((n) => familyNames.has(n));
+      if (canReuse) parentByPhone.set(candidate.phone, candidate.id);
+    }
 
     // ── Phase 3: pre-compute bcrypt hashes for NEW phones in parallel ────────
     // 10 rounds instead of 12: ~4× faster, still plenty secure for bulk-imported
