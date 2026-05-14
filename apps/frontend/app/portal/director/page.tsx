@@ -8,98 +8,116 @@ import {
 } from 'recharts';
 
 type AcademicYear = { id: string; name: string; isCurrent: boolean };
-type Unit = { id: string; displayName: string; name: string };
 type Exam = { id: string; name: string; status: string };
 type StudentCount = { totalStudents: number; boys: number; girls: number };
 type TrendPoint = { month: string; label: string; amount: number };
-type ClassStat  = { unitId: string; name: string; percentage: number; totalRecords: number };
+type ClassStat = { unitId: string; name: string; percentage: number; totalRecords: number };
 type FeeSummary = { todayTotal: number; monthTotal: number; totalDue: number };
 
+type AttendanceProgress = {
+  totalClasses: number; markedCount: number; unmarkedCount: number; markedPercent: number;
+  unmarkedClasses: { id: string; name: string }[];
+};
+
+type TeacherEfficiency = {
+  teacherId: string; teacherEmail: string | null; className: string;
+  daysSinceLastMark: number | null; sessionsThisWeek: number; alert: boolean;
+};
+
+type PendingActions = {
+  pendingTCCount: number; pendingLeaveCount: number;
+  staffOnLeaveToday: { userId: string; email: string | null }[];
+  examAlerts: { examId: string; examName: string; completionPercent: number; pendingSlots: number }[];
+  lateStaffThisWeek: { userId: string; email: string | null; date: string }[];
+};
+
 function formatINR(n: number) {
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+  if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
+  return `₹${n.toLocaleString('en-IN')}`;
+}
+
+function emailToName(email: string | null) {
+  if (!email) return 'Unknown';
+  return email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export default function DirectorOverviewPage() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ students: 0, staff: 0, boys: 0, girls: 0 });
+  const [stats, setStats] = useState({ students: 0, boys: 0, girls: 0, staff: 0 });
   const [currentYear, setCurrentYear] = useState<AcademicYear | null>(null);
-  const [units, setUnits] = useState<Unit[]>([]);
   const [activeExams, setActiveExams] = useState<Exam[]>([]);
-  const [attendanceAlerts, setAttendanceAlerts] = useState(0);
   const [feeDefaultersCount, setFeeDefaultersCount] = useState(0);
   const [feeSummary, setFeeSummary] = useState<FeeSummary | null>(null);
-  const [trend, setTrend]     = useState<TrendPoint[]>([]);
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [classStat, setClassStat] = useState<ClassStat[]>([]);
 
-  const [todayDate] = useState(
-    new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  );
+  // Intelligence
+  const [attendanceProgress, setAttendanceProgress] = useState<AttendanceProgress | null>(null);
+  const [teacherEfficiency, setTeacherEfficiency] = useState<TeacherEfficiency[] | null>(null);
+  const [pendingActions, setPendingActions] = useState<PendingActions | null>(null);
+
+  const todayDate = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
   const now = new Date();
 
   useEffect(() => {
     Promise.all([
       apiFetch('/students/count'),
       apiFetch('/academic/years'),
-      apiFetch('/academic/units/leaf'),
       apiFetch('/users'),
       apiFetch('/fees/payments/summary'),
       apiFetch('/fees/payments/monthly-trend?months=6'),
       apiFetch(`/attendance/class-summary?year=${now.getFullYear()}&month=${now.getMonth() + 1}`),
-    ])
-      .then(([count, years, leafUnits, users, fs, tr, cs]) => {
-        const sc = count as StudentCount;
-        const staffUsers = (users as any[]).filter((u) => !u.roles.every((ur: any) => ['parent', 'student'].includes(ur.role.code)));
-        setStats({ students: sc.totalStudents ?? 0, staff: staffUsers.length ?? 0, boys: sc.boys ?? 0, girls: sc.girls ?? 0 });
-        const yr: AcademicYear = (years as AcademicYear[]).find((y) => y.isCurrent) ?? (years as AcademicYear[])[0] ?? null;
-        setCurrentYear(yr);
-        setUnits(leafUnits as Unit[]);
-        setFeeSummary(fs as FeeSummary);
-        setTrend(Array.isArray(tr) ? tr : []);
-        setClassStat(Array.isArray(cs) ? (cs as ClassStat[]).slice(0, 10) : []);
+    ]).then(([count, years, users, fs, tr, cs]) => {
+      const sc = count as StudentCount;
+      const staffUsers = (users as any[]).filter(
+        (u) => !u.roles.every((ur: any) => ['parent', 'student'].includes(ur.role.code)),
+      );
+      setStats({ students: sc.totalStudents ?? 0, boys: sc.boys ?? 0, girls: sc.girls ?? 0, staff: staffUsers.length });
+      setFeeSummary(fs as FeeSummary);
+      setTrend(Array.isArray(tr) ? tr : []);
+      setClassStat(Array.isArray(cs) ? (cs as ClassStat[]).slice(0, 12) : []);
 
-        if (yr) {
-          apiFetch(`/exams?yearId=${yr.id}`)
-            .then((exams) => setActiveExams((exams as Exam[]).filter((e) => e.status === 'active')))
-            .catch(() => {});
-          apiFetch(`/fees/defaulters?yearId=${yr.id}`)
-            .then((d) => setFeeDefaultersCount((d as any[])?.length ?? 0))
-            .catch(() => {});
-          const leafArr = leafUnits as Unit[];
-          if (leafArr.length > 0) {
-            Promise.all(
-              leafArr.slice(0, 5).map((u) =>
-                apiFetch(`/attendance/units/${u.id}/defaulters?year=${now.getFullYear()}&month=${now.getMonth() + 1}&threshold=75`).catch(() => [])
-              )
-            ).then((results) => setAttendanceAlerts((results as any[][]).flat().length));
-          }
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      const yr: AcademicYear = (years as AcademicYear[]).find((y) => y.isCurrent) ?? (years as AcademicYear[])[0] ?? null;
+      setCurrentYear(yr);
+      setLoading(false);
+
+      // Secondary data
+      if (yr) {
+        apiFetch(`/exams?yearId=${yr.id}`)
+          .then((exams) => setActiveExams((exams as Exam[]).filter((e) => e.status === 'active')))
+          .catch(() => {});
+        apiFetch(`/fees/defaulters?yearId=${yr.id}`)
+          .then((d) => setFeeDefaultersCount((d as any[])?.length ?? 0))
+          .catch(() => {});
+      }
+
+      // Intelligence endpoints
+      Promise.all([
+        apiFetch('/intelligence/today-attendance').catch(() => null),
+        apiFetch('/intelligence/teacher-efficiency').catch(() => []),
+        apiFetch('/intelligence/pending-actions').catch(() => null),
+      ]).then(([attn, teachers, actions]) => {
+        setAttendanceProgress(attn as AttendanceProgress);
+        setTeacherEfficiency(teachers as TeacherEfficiency[]);
+        setPendingActions(actions as PendingActions);
+      });
+    }).catch(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto animate-pulse">
-        <div className="mb-6">
-          <div className="h-7 w-48 bg-ds-border rounded" />
-          <div className="h-4 w-64 bg-ds-border rounded mt-2" />
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto animate-pulse space-y-6">
+        <div className="h-7 w-48 bg-ds-border rounded" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-ds-surface rounded-xl border border-ds-border p-4">
               <div className="h-7 w-16 bg-ds-border rounded mb-2" />
               <div className="h-4 w-24 bg-ds-border rounded" />
-              <div className="h-3 w-20 bg-ds-border rounded mt-1" />
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="rounded-xl border bg-ds-surface p-4">
-              <div className="h-10 w-12 bg-ds-border rounded mb-2" />
-              <div className="h-4 w-28 bg-ds-border rounded" />
             </div>
           ))}
         </div>
@@ -107,58 +125,143 @@ export default function DirectorOverviewPage() {
     );
   }
 
+  const alertTeachers = teacherEfficiency?.filter((t) => t.alert) ?? [];
+
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <div className="mb-6">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+
+      {/* Header */}
+      <div>
         <h1 className="text-xl sm:text-2xl font-bold text-ds-text1">Institution Overview</h1>
-        <p className="text-sm text-ds-text3 mt-1">{todayDate}{currentYear ? ` · AY ${currentYear.name}` : ''}</p>
+        <p className="text-sm text-ds-text3 mt-1">
+          {todayDate}{currentYear ? ` · AY ${currentYear.name}` : ''}
+        </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total Students', value: stats.students, sub: `Boys ${stats.boys} · Girls ${stats.girls}` },
-          { label: "Today's Collection", value: feeSummary ? formatINR(feeSummary.todayTotal) : '—', sub: feeSummary ? `Month: ${formatINR(feeSummary.monthTotal)}` : 'Loading…' },
-          { label: 'Outstanding Dues', value: feeSummary ? formatINR(feeSummary.totalDue) : '—', sub: 'Current academic year' },
-          { label: 'Staff Accounts', value: stats.staff, sub: 'System users' },
+          {
+            label: "Today's Attendance",
+            value: attendanceProgress ? `${attendanceProgress.markedPercent}%` : '—',
+            sub: attendanceProgress ? `${attendanceProgress.markedCount}/${attendanceProgress.totalClasses} classes` : 'Loading…',
+            err: attendanceProgress && attendanceProgress.markedPercent < 60,
+          },
+          {
+            label: 'Collected This Month',
+            value: feeSummary ? formatINR(feeSummary.monthTotal) : '—',
+            sub: feeSummary ? `Today: ${formatINR(feeSummary.todayTotal)}` : 'Loading…',
+          },
+          {
+            label: 'Outstanding Dues',
+            value: feeSummary ? formatINR(feeSummary.totalDue) : '—',
+            sub: 'Current academic year',
+            err: feeSummary && feeSummary.totalDue > 0,
+          },
         ].map((s) => (
           <div key={s.label} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4">
-            <p className="text-xl font-bold text-ds-text1">{s.value}</p>
+            <p className={`text-xl font-bold ${s.err ? 'text-ds-error-text' : 'text-ds-text1'}`}>{s.value}</p>
             <p className="text-sm font-medium text-ds-text2 mt-1">{s.label}</p>
             <p className="text-xs text-ds-text3">{s.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Alert panels */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        {[
-          {
-            label: 'Attendance Alerts', value: attendanceAlerts, desc: 'Students below 75% this month',
-            color: attendanceAlerts > 0 ? 'bg-ds-warning-bg border-ds-warning-border' : 'bg-ds-success-bg border-ds-success-border',
-            textColor: attendanceAlerts > 0 ? 'text-ds-warning-text' : 'text-ds-success-text',
-          },
-          {
-            label: 'Fee Defaulters', value: feeDefaultersCount, desc: 'Outstanding balances this year',
-            color: feeDefaultersCount > 0 ? 'bg-ds-error-bg border-ds-error-border' : 'bg-ds-success-bg border-ds-success-border',
-            textColor: feeDefaultersCount > 0 ? 'text-ds-error-text' : 'text-ds-success-text',
-          },
-          {
-            label: 'Active Exams', value: activeExams.length,
-            desc: activeExams.length > 0 ? activeExams.map((e) => e.name).join(', ') : 'No exams running',
-            color: 'bg-ds-info-bg border-ds-info-border', textColor: 'text-ds-info-text',
-          },
-        ].map((a) => (
-          <div key={a.label} className={`rounded-xl border p-4 ${a.color}`}>
-            <p className={`text-3xl font-bold ${a.textColor}`}>{a.value}</p>
-            <p className={`text-sm font-semibold mt-1 ${a.textColor}`}>{a.label}</p>
-            <p className="text-xs text-ds-text2 mt-0.5 truncate">{a.desc}</p>
+      {/* Today's Attendance + Alert Panels */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Attendance Progress */}
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4 sm:col-span-2">
+          <p className="text-sm font-semibold text-ds-text1 mb-1">Today's Attendance Progress</p>
+          {attendanceProgress ? (
+            <>
+              <div className="flex items-center gap-3 my-3">
+                <div className="flex-1 h-2.5 bg-ds-bg2 rounded-full overflow-hidden">
+                  <div
+                    className="h-2.5 rounded-full"
+                    style={{
+                      width: `${attendanceProgress.markedPercent}%`,
+                      background: attendanceProgress.markedPercent === 100 ? '#2d6a4f' : attendanceProgress.markedPercent >= 60 ? '#dc924b' : '#dc2626',
+                    }}
+                  />
+                </div>
+                <span className="text-sm font-bold text-ds-text1">{attendanceProgress.markedPercent}%</span>
+              </div>
+              <p className="text-xs text-ds-text3 mb-2">
+                {attendanceProgress.markedCount} of {attendanceProgress.totalClasses} classes marked
+              </p>
+              {attendanceProgress.unmarkedClasses.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {attendanceProgress.unmarkedClasses.map((c) => (
+                    <span key={c.id} className="badge badge-red text-xs">{c.name}</span>
+                  ))}
+                </div>
+              )}
+              {attendanceProgress.unmarkedClasses.length === 0 && (
+                <p className="text-xs font-semibold text-ds-success-text">All classes marked</p>
+              )}
+            </>
+          ) : (
+            <div className="h-12 animate-pulse bg-ds-bg2 rounded mt-2" />
+          )}
+        </div>
+
+        {/* Alert summary */}
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4">
+          <p className="text-sm font-semibold text-ds-text1 mb-3">Alerts</p>
+          <div className="space-y-2">
+            {[
+              { label: 'TC Requests', value: pendingActions?.pendingTCCount ?? '…', color: (pendingActions?.pendingTCCount ?? 0) > 0 ? 'text-ds-warning-text' : 'text-ds-text3' },
+              { label: 'Leave Requests', value: pendingActions?.pendingLeaveCount ?? '…', color: (pendingActions?.pendingLeaveCount ?? 0) > 0 ? 'text-ds-warning-text' : 'text-ds-text3' },
+              { label: 'Fee Defaulters', value: feeDefaultersCount, color: feeDefaultersCount > 0 ? 'text-ds-error-text' : 'text-ds-text3' },
+              { label: 'Active Exams', value: activeExams.length, color: 'text-ds-info-text' },
+              { label: 'Teacher Alerts', value: alertTeachers.length, color: alertTeachers.length > 0 ? 'text-ds-error-text' : 'text-ds-text3' },
+            ].map((a) => (
+              <div key={a.label} className="flex items-center justify-between">
+                <span className="text-xs text-ds-text3">{a.label}</span>
+                <span className={`text-sm font-bold ${a.color}`}>{a.value}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
+      {/* Teacher Efficiency */}
+      {teacherEfficiency && teacherEfficiency.length > 0 && (
+        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm">
+          <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-ds-text1">Teacher Efficiency</p>
+              <p className="text-xs text-ds-text3 mt-0.5">Days since last attendance marked by class teacher</p>
+            </div>
+            {alertTeachers.length > 0 && (
+              <span className="badge badge-red text-xs">{alertTeachers.length} alert{alertTeachers.length > 1 ? 's' : ''}</span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 divide-ds-border gap-px bg-ds-border">
+            {teacherEfficiency.slice(0, 12).map((t) => {
+              const days = t.daysSinceLastMark;
+              const color = days === null || days >= 2 ? 'text-ds-error-text' : days === 1 ? 'text-ds-warning-text' : 'text-ds-success-text';
+              const dayText = days === null ? 'Never' : days === 0 ? 'Today' : days === 1 ? 'Yesterday' : `${days}d ago`;
+              return (
+                <div key={t.teacherId + t.className} className="bg-ds-surface px-4 py-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-ds-text1 truncate">{t.className}</p>
+                    <p className="text-xs text-ds-text3 truncate">{emailToName(t.teacherEmail)}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-xs font-bold ${color}`}>{dayText}</p>
+                    <p className="text-xs text-ds-text3">{t.sessionsThisWeek}× this week</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-5">
           <p className="text-sm font-semibold text-ds-text1 mb-1">Fee Collection Trend</p>
           <p className="text-xs text-ds-text3 mb-4">Last 6 months</p>
@@ -209,9 +312,54 @@ export default function DirectorOverviewPage() {
         </div>
       </div>
 
-      {/* Quick navigation */}
-      <div className="mb-6">
-        <h2 className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Quick Access</h2>
+      {/* Pending actions detail */}
+      {pendingActions && (pendingActions.examAlerts.length > 0 || pendingActions.lateStaffThisWeek.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {pendingActions.examAlerts.length > 0 && (
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm">
+              <div className="px-5 py-4 border-b border-ds-border">
+                <p className="text-sm font-semibold text-ds-text1">Mark Entry Progress</p>
+                <p className="text-xs text-ds-text3 mt-0.5">Active exams with incomplete marks</p>
+              </div>
+              <div className="divide-y divide-ds-border">
+                {pendingActions.examAlerts.map((e) => (
+                  <div key={e.examId} className="px-5 py-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold text-ds-text1">{e.examName}</span>
+                      <span className="text-xs text-ds-error-text font-semibold">{e.pendingSlots} pending</span>
+                    </div>
+                    <div className="h-1.5 bg-ds-bg2 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-ds-brand rounded-full" style={{ width: `${e.completionPercent}%` }} />
+                    </div>
+                    <p className="text-xs text-ds-text3 mt-1">{e.completionPercent}% complete</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {pendingActions.lateStaffThisWeek.length > 0 && (
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm">
+              <div className="px-5 py-4 border-b border-ds-border">
+                <p className="text-sm font-semibold text-ds-text1">Late Arrivals This Week</p>
+                <p className="text-xs text-ds-text3 mt-0.5">{pendingActions.lateStaffThisWeek.length} late entries</p>
+              </div>
+              <div className="divide-y divide-ds-border max-h-48 overflow-y-auto">
+                {pendingActions.lateStaffThisWeek.map((s, i) => (
+                  <div key={i} className="px-5 py-3 flex items-center justify-between">
+                    <span className="text-xs text-ds-text1">{emailToName(s.email)}</span>
+                    <span className="text-xs text-ds-text3">{new Date(s.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Quick nav */}
+      <div>
+        <p className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">Quick Access</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: 'Detailed Reports', desc: 'Attendance, fees & exam breakdown', path: '/portal/director/reports', gradient: 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)' },
@@ -227,22 +375,6 @@ export default function DirectorOverviewPage() {
           ))}
         </div>
       </div>
-
-      {activeExams.length > 0 && (
-        <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm">
-          <div className="px-5 py-4 border-b border-ds-border">
-            <h2 className="font-semibold text-ds-text1 text-sm">Active Examinations</h2>
-          </div>
-          <div className="divide-y divide-ds-border">
-            {activeExams.map((e) => (
-              <div key={e.id} className="px-5 py-3 flex items-center justify-between">
-                <span className="text-sm text-ds-text1 font-medium">{e.name}</span>
-                <span className="badge badge-blue">Active</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

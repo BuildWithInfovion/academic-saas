@@ -32,6 +32,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { PlatformModule } from './platform/platform.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { IntelligenceModule } from './modules/intelligence/intelligence.module';
 
 import { StorageModule } from './common/storage/storage.module';
 import { CleanupModule } from './common/cleanup/cleanup.module';
@@ -76,6 +77,7 @@ import { AppController } from './app.controller';
     PlatformModule,
     MessagingModule,
     PaymentsModule,
+    IntelligenceModule,
   ],
   controllers: [AppController],
   providers: [
