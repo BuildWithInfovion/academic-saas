@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -107,6 +107,9 @@ export default function StudentDirectoryPage() {
   const CLASS_PAGE_SIZE = 50;
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const filterParam = searchParams.get('filter');
+  const isUnlinkedFilter = filterParam === 'unlinked';
 
   const [academicUnits, setAcademicUnits] = useState<AcademicUnit[]>([]);
   const [unitsLoading, setUnitsLoading]   = useState(true);
@@ -128,6 +131,10 @@ export default function StudentDirectoryPage() {
   const [classTotalPages, setClassTotalPages] = useState(1);
   const [exporting, setExporting]             = useState(false);
   const classDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Unlinked parents filter state
+  const [unlinkedStudents, setUnlinkedStudents] = useState<Student[]>([]);
+  const [unlinkedLoading, setUnlinkedLoading]   = useState(false);
 
   // Load academic units (fast — no student data)
   const loadUnits = useCallback(async () => {
@@ -151,6 +158,16 @@ export default function StudentDirectoryPage() {
   }, [user?.institutionId]);
 
   useEffect(() => { loadUnits(); }, [loadUnits]);
+
+  // Load unlinked students when filter=unlinked is active
+  useEffect(() => {
+    if (!isUnlinkedFilter || !user?.institutionId) return;
+    setUnlinkedLoading(true);
+    apiFetch('/students/unlinked-parents?limit=500')
+      .then((data) => setUnlinkedStudents(Array.isArray(data) ? (data as Student[]) : []))
+      .catch(() => setUnlinkedStudents([]))
+      .finally(() => setUnlinkedLoading(false));
+  }, [isUnlinkedFilter, user?.institutionId]);
 
   // Lazy-load students when a class is selected
   const loadClassStudents = useCallback(async (
@@ -286,6 +303,91 @@ export default function StudentDirectoryPage() {
       </div>
 
       {error && <div className="mb-4 bg-ds-error-bg border border-ds-error-border rounded-lg p-3 text-ds-error-text text-sm">{error}</div>}
+
+      {/* ── Unlinked parents filter view ── */}
+      {isUnlinkedFilter && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: '#fef3c7', color: '#92400e' }}>
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: '#92400e' }}>
+                  {unlinkedLoading ? 'Loading…' : `${unlinkedStudents.length} student${unlinkedStudents.length !== 1 ? 's' : ''} without parent portal access`}
+                </p>
+                <p className="text-xs" style={{ color: '#b45309' }}>Open a student profile to link their parent account</p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push('/dashboard/students/directory')}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-ds-border text-ds-text2 hover:bg-ds-bg2"
+            >
+              ← All students
+            </button>
+          </div>
+
+          {unlinkedLoading ? (
+            <div className="p-10 text-center text-ds-text3 text-sm">Loading…</div>
+          ) : unlinkedStudents.length === 0 ? (
+            <div className="bg-ds-surface rounded-xl border border-dashed border-ds-border p-16 text-center">
+              <p className="text-ds-text2 font-medium">All students have parent portal access</p>
+              <p className="text-ds-text3 text-sm mt-1">No unlinked accounts found.</p>
+            </div>
+          ) : (
+            <div className="bg-ds-surface rounded-xl border border-ds-border shadow-sm overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-ds-bg2">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Adm. No</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Class</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Parent Phone</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ds-text2 uppercase tracking-wider">Portal</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ds-border">
+                  {unlinkedStudents.map((s) => (
+                    <tr
+                      key={s.id}
+                      onClick={() => router.push(`/dashboard/students/${s.id}`)}
+                      className="cursor-pointer hover:bg-ds-bg2 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono text-xs text-ds-text2">{s.admissionNo}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-ds-text2 shrink-0">
+                            {initials(s)}
+                          </div>
+                          <p className="font-medium text-ds-text1">{s.firstName} {s.lastName}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-ds-text2">
+                        {s.academicUnit?.displayName || s.academicUnit?.name || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-ds-text2 text-xs">{s.parentPhone || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs text-ds-warning-text bg-ds-warning-bg border border-ds-warning-border rounded-full px-2 py-0.5">
+                          No portal
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-xs text-indigo-500">Link →</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Normal directory view (hidden when unlinked filter is active) ── */}
+      {!isUnlinkedFilter && <>
 
       {/* ── Global search bar ── */}
       <div className="mb-6">
@@ -498,6 +600,8 @@ export default function StudentDirectoryPage() {
           )}
         </>
       )}
+
+      </>}
     </div>
   );
 }

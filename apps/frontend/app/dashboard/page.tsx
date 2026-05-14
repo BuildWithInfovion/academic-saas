@@ -191,7 +191,7 @@ export default function DashboardPage() {
               <p className="text-xs" style={{ color: '#b45309' }}>Link parent accounts via Student Directory</p>
             </div>
           </div>
-          <button onClick={() => router.push('/dashboard/students/directory')}
+          <button onClick={() => router.push('/dashboard/students/directory?filter=unlinked')}
             className="text-xs font-medium px-3 py-1.5 rounded-lg"
             style={{ background: '#fde68a', color: '#92400e', border: '1px solid #fcd34d' }}>
             Go to Directory →
