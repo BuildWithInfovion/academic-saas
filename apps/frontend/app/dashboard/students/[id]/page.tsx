@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
+import { LinkModal } from '../_components/LinkModal';
+import type { Student as LibStudent } from '@/lib/types';
 
 interface Student {
   id: string;
@@ -111,6 +113,11 @@ export default function StudentProfilePage() {
   const [newPwd, setNewPwd] = useState('');
   const [resetDone, setResetDone] = useState<{ label: string; username: string; password: string } | null>(null);
   const [resetting, setResetting] = useState(false);
+
+  // Unlink / relink state
+  const [unlinkConfirm, setUnlinkConfirm] = useState<{ role: 'parent' | 'student'; userId: string; username: string } | null>(null);
+  const [unlinking, setUnlinking] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState<'parent' | 'student' | null>(null);
 
   const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 3000); };
 
@@ -222,6 +229,22 @@ export default function StudentProfilePage() {
       setError((err as Error).message || 'Failed to reset password');
     } finally {
       setResetting(false);
+    }
+  };
+
+  const handleUnlink = async () => {
+    if (!unlinkConfirm) return;
+    setUnlinking(true);
+    setError(null);
+    try {
+      await apiFetch(`/students/${id}/link-user?role=${unlinkConfirm.role}`, { method: 'DELETE' });
+      setUnlinkConfirm(null);
+      showSuccess(`${unlinkConfirm.role === 'parent' ? 'Parent' : 'Student'} portal unlinked`);
+      void load();
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to unlink');
+    } finally {
+      setUnlinking(false);
     }
   };
 
@@ -443,12 +466,16 @@ export default function StudentProfilePage() {
                   label="Parent Portal"
                   user={student.parentUser}
                   onReset={(userId, username) => openResetModal(userId, 'Parent Portal', username)}
+                  onUnlink={student.parentUser ? () => setUnlinkConfirm({ role: 'parent', userId: student.parentUser!.id, username: student.parentUser!.email || student.parentUser!.phone || '' }) : undefined}
+                  onLink={!student.parentUser ? () => setShowLinkModal('parent') : undefined}
                 />
                 {/* Student Portal */}
                 <CredentialCard
                   label="Student Portal"
                   user={student.userAccount}
                   onReset={(userId, username) => openResetModal(userId, 'Student Portal', username)}
+                  onUnlink={student.userAccount ? () => setUnlinkConfirm({ role: 'student', userId: student.userAccount!.id, username: student.userAccount!.email || student.userAccount!.phone || '' }) : undefined}
+                  onLink={!student.userAccount ? () => setShowLinkModal('student') : undefined}
                 />
               </div>
             </div>
@@ -579,23 +606,87 @@ export default function StudentProfilePage() {
           </div>
         </div>
       )}
+
+      {/* ── Unlink Confirmation Modal ── */}
+      {unlinkConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-ds-surface rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-ds-text1 text-center mb-1">Unlink Portal Account</h2>
+            <p className="text-xs text-ds-text3 text-center mb-2">
+              {unlinkConfirm.role === 'parent' ? 'Parent' : 'Student'} portal access will be removed for this student.
+            </p>
+            <div className="bg-ds-bg2 rounded-lg p-3 mb-4 text-xs font-mono text-ds-text1 text-center break-all">
+              {unlinkConfirm.username}
+            </div>
+            <p className="text-xs text-ds-text3 text-center mb-5">
+              The account itself is not deleted — it can be re-linked at any time.
+            </p>
+            {error && <p className="text-ds-error-text text-xs mb-3 text-center">{error}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setUnlinkConfirm(null); setError(null); }}
+                className="flex-1 border border-ds-border-strong text-ds-text1 py-2.5 rounded-lg text-sm hover:bg-ds-bg2"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleUnlink()}
+                disabled={unlinking}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              >
+                {unlinking ? 'Unlinking...' : 'Confirm Unlink'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Link / Re-link Modal ── */}
+      {showLinkModal && (
+        <LinkModal
+          student={student as unknown as LibStudent}
+          onClose={() => setShowLinkModal(null)}
+          onSuccess={(msg) => {
+            setShowLinkModal(null);
+            showSuccess(msg);
+            void load();
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // ── Portal credential card ────────────────────────────────────────────────────
 function CredentialCard({
-  label, user, onReset,
+  label, user, onReset, onUnlink, onLink,
 }: {
   label: string;
   user?: { id: string; email?: string; phone?: string; isActive: boolean } | null;
   onReset: (userId: string, username: string) => void;
+  onUnlink?: () => void;
+  onLink?: () => void;
 }) {
   if (!user) {
     return (
-      <div className="rounded-lg border border-dashed border-ds-border p-4">
-        <p className="text-xs font-semibold text-ds-text2 mb-2">{label}</p>
-        <span className="text-xs text-ds-warning-text bg-ds-warning-bg border border-ds-warning-border rounded-full px-2 py-0.5">Not linked</span>
+      <div className="rounded-lg border border-dashed border-ds-border p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-ds-text2">{label}</p>
+          <span className="text-xs text-ds-warning-text bg-ds-warning-bg border border-ds-warning-border rounded-full px-2 py-0.5">Not linked</span>
+        </div>
+        {onLink && (
+          <button
+            onClick={onLink}
+            className="w-full text-xs py-1.5 rounded-lg font-medium border border-ds-brand text-ds-brand hover:bg-ds-brand hover:text-white transition-colors"
+          >
+            Link Account
+          </button>
+        )}
       </div>
     );
   }
@@ -624,6 +715,14 @@ function CredentialCard({
       >
         Reset Password
       </button>
+      {onUnlink && (
+        <button
+          onClick={onUnlink}
+          className="w-full text-xs py-1.5 rounded-lg font-medium border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+        >
+          Unlink Account
+        </button>
+      )}
     </div>
   );
 }
