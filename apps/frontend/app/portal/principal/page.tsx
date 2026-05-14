@@ -65,12 +65,13 @@ type ClassAverage = {
 };
 
 type AcademicOverview = { exams: { id: string; name: string }[]; classAverages: ClassAverage[] };
-type FeeSummary = { todayTotal: number; monthTotal: number; totalDue: number };
+type FeeSummary = { todayTotal: number; monthTotal: number; totalDue?: number; totalStudents?: number };
 type StudentCount = { totalStudents: number; boys: number; girls: number };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatINR(n: number) {
+function formatINR(n: number | null | undefined) {
+  if (n == null || isNaN(n as number)) return '₹0';
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
   if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
   return `₹${n.toLocaleString('en-IN')}`;
@@ -417,9 +418,9 @@ export default function PrincipalCommandCenter() {
           />
           <KpiCard
             label="Outstanding Dues"
-            value={fs ? formatINR(fs.totalDue) : '—'}
+            value={fs ? formatINR(fs.totalDue ?? 0) : '—'}
             sub="Current academic year"
-            color={fs && fs.totalDue > 0 ? 'text-ds-error-text' : 'text-ds-text1'}
+            color={fs && (fs.totalDue ?? 0) > 0 ? 'text-ds-error-text' : 'text-ds-text1'}
           />
         </div>
       )}

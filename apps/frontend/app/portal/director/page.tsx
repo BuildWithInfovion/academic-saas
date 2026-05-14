@@ -12,7 +12,7 @@ type Exam = { id: string; name: string; status: string };
 type StudentCount = { totalStudents: number; boys: number; girls: number };
 type TrendPoint = { month: string; label: string; amount: number };
 type ClassStat = { unitId: string; name: string; percentage: number; totalRecords: number };
-type FeeSummary = { todayTotal: number; monthTotal: number; totalDue: number };
+type FeeSummary = { todayTotal: number; monthTotal: number; totalDue?: number; totalStudents?: number };
 
 type AttendanceProgress = {
   totalClasses: number; markedCount: number; unmarkedCount: number; markedPercent: number;
@@ -31,7 +31,8 @@ type PendingActions = {
   lateStaffThisWeek: { userId: string; email: string | null; date: string }[];
 };
 
-function formatINR(n: number) {
+function formatINR(n: number | null | undefined) {
+  if (n == null || isNaN(n as number)) return '₹0';
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
   if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
   return `₹${n.toLocaleString('en-IN')}`;
@@ -155,9 +156,9 @@ export default function DirectorOverviewPage() {
           },
           {
             label: 'Outstanding Dues',
-            value: feeSummary ? formatINR(feeSummary.totalDue) : '—',
+            value: feeSummary ? formatINR(feeSummary.totalDue ?? 0) : '—',
             sub: 'Current academic year',
-            err: feeSummary && feeSummary.totalDue > 0,
+            err: feeSummary && (feeSummary.totalDue ?? 0) > 0,
           },
         ].map((s) => (
           <div key={s.label} className="bg-ds-surface rounded-xl border border-ds-border shadow-sm p-4">

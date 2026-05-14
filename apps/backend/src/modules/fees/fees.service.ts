@@ -229,6 +229,12 @@ export class FeesService {
     const todayStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - IST_MS);
     const todayEnd   = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1) - IST_MS);
     const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1) - IST_MS);
+
+    const currentYear = await this.prisma.academicYear.findFirst({
+      where: { institutionId, isCurrent: true },
+      select: { id: true },
+    });
+
     const [todayLegacy, todayV2, monthLegacy, monthV2, studentCount] = await Promise.all([
       this.prisma.feePayment.aggregate({ where: { institutionId, paidOn: { gte: todayStart, lt: todayEnd } }, _sum: { amount: true } }),
       this.prisma.feeCollection.aggregate({ where: { institutionId, paidOn: { gte: todayStart, lt: todayEnd } }, _sum: { amount: true } }),
@@ -236,9 +242,26 @@ export class FeesService {
       this.prisma.feeCollection.aggregate({ where: { institutionId, paidOn: { gte: monthStart } }, _sum: { amount: true } }),
       this.prisma.student.count({ where: { institutionId, status: 'active', deletedAt: null } }),
     ]);
+
     const todayTotal = (todayLegacy._sum.amount ?? 0) + (todayV2._sum.amount ?? 0);
     const monthTotal = (monthLegacy._sum.amount ?? 0) + (monthV2._sum.amount ?? 0);
-    return { todayTotal, monthTotal, totalStudents: studentCount };
+
+    // Compute outstanding dues for current academic year
+    let totalDue = 0;
+    if (currentYear) {
+      const [feeStructures, studentsByUnit, paidLegacy, paidV2] = await Promise.all([
+        this.prisma.feeStructure.findMany({ where: { institutionId, academicYearId: currentYear.id, deletedAt: null }, select: { academicUnitId: true, amount: true } }),
+        this.prisma.student.groupBy({ by: ['academicUnitId'], where: { institutionId, status: 'active', deletedAt: null, academicUnitId: { not: null } }, _count: { id: true } }),
+        this.prisma.feePayment.aggregate({ where: { institutionId, academicYearId: currentYear.id }, _sum: { amount: true } }),
+        this.prisma.feeCollection.aggregate({ where: { institutionId, academicYearId: currentYear.id }, _sum: { amount: true } }),
+      ]);
+      const countByUnit = new Map(studentsByUnit.map((s) => [s.academicUnitId, s._count.id]));
+      const totalExpected = feeStructures.reduce((sum, fs) => sum + fs.amount * (countByUnit.get(fs.academicUnitId) ?? 0), 0);
+      const totalCollected = (paidLegacy._sum.amount ?? 0) + (paidV2._sum.amount ?? 0);
+      totalDue = Math.max(0, totalExpected - totalCollected);
+    }
+
+    return { todayTotal, monthTotal, totalStudents: studentCount, totalDue };
   }
 
   async getDefaulters(institutionId: string, academicYearId: string, academicUnitId?: string) {
