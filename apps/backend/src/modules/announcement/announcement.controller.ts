@@ -39,7 +39,7 @@ export class AnnouncementController {
   }
 
   @Post()
-  @Permissions('subjects.read')
+  @Permissions('announcements.write')
   async create(
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateAnnouncementDto,
@@ -52,7 +52,7 @@ export class AnnouncementController {
   }
 
   @Patch(':id')
-  @Permissions('subjects.read')
+  @Permissions('announcements.write')
   async update(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -67,7 +67,7 @@ export class AnnouncementController {
     if (
       announcement &&
       announcement.authorUserId !== userId &&
-      !permissions.includes('subjects.write')
+      !permissions.includes('announcements.write')
     ) {
       throw new ForbiddenException('You can only edit your own announcements');
     }
@@ -76,7 +76,7 @@ export class AnnouncementController {
   }
 
   @Delete(':id')
-  @Permissions('subjects.read')
+  @Permissions('announcements.write')
   async delete(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     const { institutionId, userId, permissions } = req.user;
 
@@ -87,7 +87,7 @@ export class AnnouncementController {
     if (
       announcement &&
       announcement.authorUserId !== userId &&
-      !permissions.includes('subjects.write')
+      !permissions.includes('announcements.write')
     ) {
       throw new ForbiddenException(
         'You can only delete your own announcements',

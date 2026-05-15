@@ -17,11 +17,12 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 import type { TenantContext } from '../../common/guards/tenant.guard';
 import { AuthGuard } from '../../common/guards/auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import type { AuthenticatedRequest } from '../../common/types/authenticated-request';
 
-@UseGuards(AuthGuard, RolesGuard) // ✅ Secured 
+@UseGuards(AuthGuard, TenantGuard, RolesGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

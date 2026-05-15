@@ -113,14 +113,34 @@ export class PaymentsService {
         const item = params.items[i];
         const receiptNo = `FRC-${rcpYear}-${String(baseCount + i + 1).padStart(5, '0')}`;
 
-        const installment = await tx.feePlanInstallment.findUnique({
-          where: { id: item.feePlanInstallmentId },
-          select: { label: true },
-        });
-        const category = await tx.feeCategory.findUnique({
-          where: { id: item.feeCategoryId },
-          select: { name: true },
-        });
+        // Verify all referenced fee records belong to this institution before writing.
+        // Prevents a tenant from supplying IDs from another school's fee plans.
+        const [installment, category, planItem] = await Promise.all([
+          tx.feePlanInstallment.findFirst({
+            where: {
+              id: item.feePlanInstallmentId,
+              feePlanItem: { feePlan: { institutionId: params.institutionId } },
+            },
+            select: { label: true },
+          }),
+          tx.feeCategory.findFirst({
+            where: { id: item.feeCategoryId, institutionId: params.institutionId },
+            select: { name: true },
+          }),
+          tx.feePlanItem.findFirst({
+            where: {
+              id: item.feePlanItemId,
+              feePlan: { institutionId: params.institutionId },
+            },
+            select: { id: true },
+          }),
+        ]);
+
+        if (!installment || !category || !planItem) {
+          throw new BadRequestException(
+            'One or more fee items are invalid. Please refresh and try again.',
+          );
+        }
 
         await tx.feeCollection.create({
           data: {
