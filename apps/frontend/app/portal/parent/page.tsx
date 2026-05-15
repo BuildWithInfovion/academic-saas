@@ -137,19 +137,32 @@ export default function ParentDashboard() {
       {/* Linked children */}
       {isLinked && notifications && notifications.students.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-xs font-semibold text-ds-text3 uppercase tracking-wider mb-3">
-            Your Children
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-semibold text-ds-text3 uppercase tracking-wider">
+              Your Children
+            </h2>
+            <button
+              onClick={() => router.push('/portal/parent/students')}
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              View all profiles →
+            </button>
+          </div>
           <div className="flex flex-wrap gap-3">
             {notifications.students.map((s) => (
-              <div key={s.id} className="bg-ds-surface border border-ds-border shadow-sm rounded-xl px-4 py-3">
+              <button
+                key={s.id}
+                onClick={() => router.push(`/portal/parent/students/${s.id}`)}
+                className="bg-ds-surface border border-ds-border shadow-sm rounded-xl px-4 py-3 text-left hover:border-indigo-300 hover:shadow-md transition-all"
+              >
                 <p className="font-semibold text-ds-text1 text-sm">
                   {s.firstName} {s.lastName}
                 </p>
                 {s.academicUnit && (
                   <p className="text-xs text-ds-text3 mt-0.5">{unitLabel(s.academicUnit)}</p>
                 )}
-              </div>
+                <p className="text-xs text-indigo-500 mt-1.5 font-medium">View profile →</p>
+              </button>
             ))}
           </div>
         </div>

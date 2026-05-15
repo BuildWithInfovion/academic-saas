@@ -1176,6 +1176,36 @@ export class StudentService {
     });
   }
 
+  // ── Parent-portal helpers (no @Permissions guard — ownership verified here) ─
+
+  async assertParentOwnership(institutionId: string, studentId: string, parentUserId: string): Promise<void> {
+    const exists = await this.prisma.student.findFirst({
+      where: { id: studentId, institutionId, parentUserId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!exists) throw new ForbiddenException('Access denied');
+  }
+
+  async findChildByParent(institutionId: string, studentId: string, parentUserId: string) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, institutionId, parentUserId, deletedAt: null },
+      include: {
+        academicUnit: {
+          include: { parent: { select: { name: true, displayName: true } } },
+        },
+      },
+    });
+    if (!student) throw new ForbiddenException('Student not found or access denied');
+    return student;
+  }
+
+  async updateChildPhoto(institutionId: string, studentId: string, parentUserId: string, photoUrl: string) {
+    await this.assertParentOwnership(institutionId, studentId, parentUserId);
+    const data = { ...({ photoUrl } as Prisma.StudentUncheckedUpdateInput) };
+    await this.prisma.student.update({ where: { id: studentId }, data });
+    return { id: studentId, photoUrl };
+  }
+
   async linkUser(
     institutionId: string,
     studentId: string,

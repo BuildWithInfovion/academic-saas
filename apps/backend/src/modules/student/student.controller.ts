@@ -136,11 +136,39 @@ export class StudentController {
     return this.studentService.findAll(tenant.institutionId, page, limit, search, unitId);
   }
 
-  // GET /students/:id/photo-signature — Cloudinary signed upload for student photo
+  // GET /students/:id/photo-signature — Cloudinary signed upload for student photo (operator)
   @Get(':id/photo-signature')
   @Permissions('users.write')
   getPhotoSignature(@Tenant() tenant: TenantContext, @Param('id') id: string) {
     return this.storageService.generateUploadSignature(tenant.institutionId, id);
+  }
+
+  // GET /students/:id/child-detail — parent fetches own child's full profile (no permission needed)
+  @Get(':id/child-detail')
+  getChildDetail(@Tenant() tenant: TenantContext, @Param('id') id: string, @Req() req: any) {
+    return this.studentService.findChildByParent(tenant.institutionId, id, req.user?.userId);
+  }
+
+  // GET /students/:id/parent-photo-signature — parent gets Cloudinary upload credentials for child
+  @Get(':id/parent-photo-signature')
+  async getParentPhotoSignature(
+    @Tenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
+    await this.studentService.assertParentOwnership(tenant.institutionId, id, req.user?.userId);
+    return this.storageService.generateUploadSignature(tenant.institutionId, id);
+  }
+
+  // PATCH /students/:id/parent-photo — parent saves child photo URL after Cloudinary upload
+  @Patch(':id/parent-photo')
+  updateChildPhoto(
+    @Tenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Body() body: { photoUrl: string },
+    @Req() req: any,
+  ) {
+    return this.studentService.updateChildPhoto(tenant.institutionId, id, req.user?.userId, body.photoUrl);
   }
 
   @Get(':id')

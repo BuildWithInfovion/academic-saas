@@ -5,13 +5,14 @@ import PortalShell from '@/components/portal-shell';
 
 const menuItems = [
   { label: 'Overview', path: '/portal/parent' },
+  { label: 'My Children', path: '/portal/parent/students' },
   { label: 'Attendance', path: '/portal/parent/attendance' },
   { label: 'Marks', path: '/portal/parent/marks' },
   { label: 'Timetable', path: '/portal/parent/timetable' },
   { label: 'Exam Schedule', path: '/portal/parent/exams' },
   { label: 'Fees', path: '/portal/parent/fees' },
   { label: 'Messages', path: '/portal/parent/messages' },
-  { label: 'Calendar',     path: '/portal/parent/calendar' },
+  { label: 'Calendar', path: '/portal/parent/calendar' },
   { label: 'Announcements', path: '/portal/parent/announcements' },
 ];
 
