@@ -189,64 +189,116 @@ ${sigRowHtml(inst)}
 
 function printIdCard(student: Student, inst: Institution, photoSrc: string | undefined, opts: IdCardOpts) {
   const accent = esc(opts.accentColor || '#0f172a');
-  const html = `<!DOCTYPE html><html><head><title>Student ID Card — ${esc(student.admissionNo)}</title>
+
+  // Single card markup — rendered twice (front side × 2 per A4 sheet)
+  const cardHtml = `
+  <div class="card">
+    <div class="card-top">
+      ${inst.logoUrl ? `<img class="card-logo" src="${esc(inst.logoUrl)}" alt="Logo" />` : ''}
+      <div class="card-school">
+        <div class="card-school-name">${esc(inst.name)}</div>
+        <div class="card-school-sub">${[inst.board, inst.address].filter(Boolean).map(esc).join('  ·  ')}</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="photo-wrap">
+        ${photoSrc
+          ? `<img src="${esc(photoSrc)}" alt="Photo" />`
+          : `<div class="photo-placeholder">STUDENT<br/>PHOTO</div>`}
+      </div>
+      <div class="student-info">
+        <div class="student-name">${esc(student.firstName)} ${esc(student.lastName)}</div>
+        <div class="info-row"><strong>Class:</strong> ${esc(cls(student))}</div>
+        <div class="info-row"><strong>Adm. No:</strong> ${esc(student.admissionNo)}</div>
+        ${opts.showDob && student.dateOfBirth ? `<div class="info-row"><strong>DOB:</strong> ${fmtDate(student.dateOfBirth)}</div>` : ''}
+        ${opts.showFather && student.fatherName ? `<div class="info-row"><strong>Father:</strong> ${esc(student.fatherName)}</div>` : ''}
+        ${opts.showContact && student.parentPhone ? `<div class="info-row"><strong>Contact:</strong> ${esc(student.parentPhone)}</div>` : ''}
+        ${opts.showBloodGroup && student.bloodGroup ? `<div class="info-row"><strong>Blood Grp:</strong> ${esc(student.bloodGroup)}</div>` : ''}
+        ${opts.showAddress && student.address ? `<div class="info-row"><strong>Address:</strong> ${esc(student.address)}</div>` : ''}
+      </div>
+    </div>
+    ${inst.signatureUrl ? `
+    <div class="sig-box">
+      <img src="${esc(inst.signatureUrl)}" alt="Signature" />
+      <div class="sig-label">${inst.principalName ? esc(inst.principalName) : 'Principal'}</div>
+    </div>` : ''}
+    <div class="card-footer">
+      <div class="adm-no">${esc(student.admissionNo)}</div>
+      <div class="valid-lbl">Valid till: ${esc(opts.validYear)} &nbsp;·&nbsp; STUDENT ID</div>
+    </div>
+  </div>`;
+
+  const html = `<!DOCTYPE html><html><head>
+<title>Student ID Card — ${esc(student.admissionNo)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;display:flex;justify-content:center;align-items:flex-start;padding:40px;min-height:100vh}
-  .card{width:340px;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#fff;font-size:13px;color:#1e293b}
-  .card-top{background:${accent};padding:16px;display:flex;align-items:center;gap:12px}
-  .card-logo{width:44px;height:44px;object-fit:contain;flex-shrink:0;background:#fff;border-radius:4px;padding:2px}
+
+  /* Screen preview */
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#e2e8f0;
+       display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+       padding:32px;gap:0;min-height:100vh}
+  .sheet{background:#fff;width:210mm;padding:12mm;box-shadow:0 4px 24px rgba(0,0,0,.18);
+         display:flex;flex-direction:column;align-items:center;gap:0}
+  .cut-hint{font-family:sans-serif;font-size:10px;color:#94a3b8;text-align:center;
+            margin:8px 0;letter-spacing:.05em}
+
+  /* Divider between the two cards on screen */
+  .cut-line{width:100%;border:none;border-top:1.5px dashed #cbd5e1;margin:10px 0}
+
+  /* The card itself — sized to 9 cm × 5.5 cm (common Indian school ID) */
+  .card{width:90mm;border-radius:10px;overflow:hidden;
+        box-shadow:0 2px 10px rgba(0,0,0,.12);background:#fff;
+        font-size:11px;color:#1e293b;border:1px solid #e2e8f0}
+  .card-top{background:${accent};padding:10px 12px;display:flex;align-items:center;gap:10px}
+  .card-logo{width:36px;height:36px;object-fit:contain;flex-shrink:0;
+             background:#fff;border-radius:3px;padding:2px}
   .card-school{flex:1;min-width:0}
-  .card-school-name{font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.04em;line-height:1.3}
-  .card-school-sub{font-size:9.5px;color:rgba(255,255,255,.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .card-body{padding:16px;display:flex;gap:14px;align-items:flex-start}
-  .photo-wrap{width:80px;height:96px;flex-shrink:0;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .card-school-name{font-size:11px;font-weight:700;color:#fff;
+                    text-transform:uppercase;letter-spacing:.04em;line-height:1.3}
+  .card-school-sub{font-size:8px;color:rgba(255,255,255,.65);margin-top:1px;
+                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card-body{padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+  .photo-wrap{width:58px;height:70px;flex-shrink:0;border-radius:5px;
+              border:1.5px solid #e2e8f0;background:#f8fafc;overflow:hidden;
+              display:flex;align-items:center;justify-content:center}
   .photo-wrap img{width:100%;height:100%;object-fit:cover}
-  .photo-placeholder{font-size:9.5px;color:#94a3b8;text-align:center;padding:4px;line-height:1.4}
+  .photo-placeholder{font-size:8px;color:#94a3b8;text-align:center;
+                     padding:3px;line-height:1.4}
   .student-info{flex:1}
-  .student-name{font-size:15px;font-weight:700;color:#0f172a;line-height:1.3;margin-bottom:6px}
-  .info-row{font-size:11px;color:#475569;line-height:1.8}
+  .student-name{font-size:12px;font-weight:700;color:#0f172a;
+                line-height:1.3;margin-bottom:4px}
+  .info-row{font-size:9.5px;color:#475569;line-height:1.75}
   .info-row strong{color:#1e293b;font-weight:600}
-  .card-footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
-  .adm-no{font-family:monospace;font-size:12px;font-weight:700;color:#0f172a}
-  .valid-lbl{font-size:9.5px;color:#6b7280}
-  .sig-box{text-align:center;padding:0 16px 14px}
-  .sig-box img{max-height:34px;max-width:120px;object-fit:contain}
-  .sig-label{font-size:9px;color:#9ca3af;border-top:1px solid #e2e8f0;padding-top:3px;margin-top:3px}
-  @media print{body{background:#fff;padding:0}.card{box-shadow:none;border-radius:0}}
+  .card-footer{background:#f8fafc;border-top:1px solid #e2e8f0;
+               padding:6px 12px;display:flex;justify-content:space-between;align-items:center}
+  .adm-no{font-family:monospace;font-size:10px;font-weight:700;color:#0f172a}
+  .valid-lbl{font-size:8px;color:#6b7280}
+  .sig-box{text-align:center;padding:0 12px 8px}
+  .sig-box img{max-height:26px;max-width:90px;object-fit:contain}
+  .sig-label{font-size:7.5px;color:#9ca3af;border-top:1px solid #e2e8f0;
+             padding-top:2px;margin-top:2px}
+
+  /* Print — A4 portrait, 2 cards centred, cut dashes visible, no page chrome */
+  @media print{
+    @page{size:A4 portrait;margin:10mm}
+    body{background:#fff;padding:0;display:block}
+    .sheet{box-shadow:none;width:100%;padding:0}
+    .cut-hint{display:none}
+    .cut-line{border-top:1px dashed #aaa}
+    .card{box-shadow:none}
+    .sheet{display:flex;flex-direction:column;align-items:center;
+           justify-content:space-evenly;height:277mm}
+  }
 </style></head><body>
-<div class="card">
-  <div class="card-top">
-    ${inst.logoUrl ? `<img class="card-logo" src="${esc(inst.logoUrl)}" alt="Logo" />` : ''}
-    <div class="card-school">
-      <div class="card-school-name">${esc(inst.name)}</div>
-      <div class="card-school-sub">${[inst.board, inst.address].filter(Boolean).map(esc).join('  ·  ')}</div>
-    </div>
-  </div>
-  <div class="card-body">
-    <div class="photo-wrap">
-      ${photoSrc
-        ? `<img src="${esc(photoSrc)}" alt="Photo" />`
-        : `<div class="photo-placeholder">STUDENT<br/>PHOTO</div>`}
-    </div>
-    <div class="student-info">
-      <div class="student-name">${esc(student.firstName)} ${esc(student.lastName)}</div>
-      <div class="info-row"><strong>Class:</strong> ${esc(cls(student))}</div>
-      <div class="info-row"><strong>Adm. No:</strong> ${esc(student.admissionNo)}</div>
-      ${opts.showDob && student.dateOfBirth ? `<div class="info-row"><strong>DOB:</strong> ${fmtDate(student.dateOfBirth)}</div>` : ''}
-      ${opts.showFather && student.fatherName ? `<div class="info-row"><strong>Father:</strong> ${esc(student.fatherName)}</div>` : ''}
-      ${opts.showContact && student.parentPhone ? `<div class="info-row"><strong>Contact:</strong> ${esc(student.parentPhone)}</div>` : ''}
-      ${opts.showBloodGroup && student.bloodGroup ? `<div class="info-row"><strong>Blood Grp:</strong> ${esc(student.bloodGroup)}</div>` : ''}
-      ${opts.showAddress && student.address ? `<div class="info-row"><strong>Address:</strong> ${esc(student.address)}</div>` : ''}
-    </div>
-  </div>
-  ${inst.signatureUrl ? `<div class="sig-box"><img src="${esc(inst.signatureUrl)}" alt="Signature" /><div class="sig-label">${inst.principalName ? esc(inst.principalName) : 'Principal'}</div></div>` : ''}
-  <div class="card-footer">
-    <div class="adm-no">${esc(student.admissionNo)}</div>
-    <div class="valid-lbl">Valid till: ${esc(opts.validYear)} &nbsp;·&nbsp; STUDENT ID</div>
-  </div>
+<div class="sheet">
+  ${cardHtml}
+  <hr class="cut-line" />
+  <div class="cut-hint">✂ Cut along the dotted line</div>
+  ${cardHtml}
 </div>
-<script>window.onload=function(){window.print();}</script></body></html>`;
+<script>window.onload=function(){window.print();}</script>
+</body></html>`;
+
   openPrint(html);
 }
 
