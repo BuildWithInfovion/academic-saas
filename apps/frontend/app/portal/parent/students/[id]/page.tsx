@@ -96,6 +96,7 @@ export default function ChildProfilePage() {
   const [fetchError, setFetchError] = useState('');
 
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoRemoving, setPhotoRemoving] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [photoSaved, setPhotoSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -163,6 +164,24 @@ export default function ChildProfilePage() {
       setPhotoError((e as Error).message || 'Upload failed');
     } finally {
       setPhotoUploading(false);
+    }
+  };
+
+  const handlePhotoRemove = async () => {
+    if (!student?.photoUrl) return;
+    setPhotoRemoving(true);
+    setPhotoError('');
+    setPhotoSaved(false);
+    try {
+      await apiFetch(`/students/${student.id}/parent-photo`, {
+        method: 'PATCH',
+        body: JSON.stringify({ photoUrl: null }),
+      });
+      setStudent((prev) => prev ? { ...prev, photoUrl: null } : prev);
+    } catch (e: unknown) {
+      setPhotoError((e as Error).message || 'Failed to remove photo');
+    } finally {
+      setPhotoRemoving(false);
     }
   };
 
@@ -246,31 +265,53 @@ export default function ChildProfilePage() {
 
           {/* Controls */}
           <div className="flex-1">
-            <label
-              className={`inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                photoUploading
-                  ? 'bg-slate-100 text-slate-400 border border-slate-200 pointer-events-none'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 border border-transparent'
-              }`}
-            >
-              {photoUploading ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  Uploading…
-                </>
-              ) : student.photoUrl ? 'Replace Photo' : 'Upload Photo'}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void handlePhotoUpload(f);
-                  e.target.value = '';
-                }}
-              />
-            </label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <label
+                className={`inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  photoUploading || photoRemoving
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 pointer-events-none'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 border border-transparent'
+                }`}
+              >
+                {photoUploading ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Uploading…
+                  </>
+                ) : student.photoUrl ? 'Replace Photo' : 'Upload Photo'}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handlePhotoUpload(f);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+
+              {student.photoUrl && (
+                <button
+                  type="button"
+                  onClick={() => void handlePhotoRemove()}
+                  disabled={photoUploading || photoRemoving}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    photoRemoving
+                      ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
+                      : 'bg-white text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300'
+                  }`}
+                >
+                  {photoRemoving ? (
+                    <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <span className="text-xs">✕</span>
+                  )}
+                  {photoRemoving ? 'Removing…' : 'Remove'}
+                </button>
+              )}
+            </div>
 
             <p className="text-xs text-ds-text3 mt-2 leading-relaxed">
               Upload any clear photo of your child. We automatically crop it to show the face — no need for a formal passport photo.

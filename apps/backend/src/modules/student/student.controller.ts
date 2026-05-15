@@ -165,7 +165,7 @@ export class StudentController {
   updateChildPhoto(
     @Tenant() tenant: TenantContext,
     @Param('id') id: string,
-    @Body() body: { photoUrl: string },
+    @Body() body: { photoUrl: string | null },
     @Req() req: any,
   ) {
     return this.studentService.updateChildPhoto(tenant.institutionId, id, req.user?.userId, body.photoUrl);

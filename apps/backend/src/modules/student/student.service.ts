@@ -1199,7 +1199,7 @@ export class StudentService {
     return student;
   }
 
-  async updateChildPhoto(institutionId: string, studentId: string, parentUserId: string, photoUrl: string) {
+  async updateChildPhoto(institutionId: string, studentId: string, parentUserId: string, photoUrl: string | null) {
     await this.assertParentOwnership(institutionId, studentId, parentUserId);
     const data = { ...({ photoUrl } as Prisma.StudentUncheckedUpdateInput) };
     await this.prisma.student.update({ where: { id: studentId }, data });
