@@ -61,9 +61,14 @@ export function LinkModal({ student, onClose, onSuccess }: {
     setLinking(true);
     setError(null);
     try {
-      const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      const randChar = (s: string) => { const arr = new Uint8Array(1); crypto.getRandomValues(arr); return s[arr[0] % s.length]; };
-      const tempPwd = Array.from({ length: 10 }, () => randChar(CHARS)).join('');
+      const upper = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+      const lower = 'abcdefghjkmnpqrstuvwxyz';
+      const digits = '23456789';
+      const all = upper + lower + digits;
+      const rand = (s: string) => { const arr = new Uint8Array(1); crypto.getRandomValues(arr); return s[arr[0] % s.length]; };
+      // Guarantee at least one of each required character class
+      const tempPwd = rand(upper) + rand(lower) + rand(digits) +
+        Array.from({ length: 7 }, () => rand(all)).join('');
       const newUser = await apiFetch('/users', {
         method: 'POST', body: JSON.stringify({ phone, password: tempPwd, role: 'parent' }),
       }) as { id: string };
