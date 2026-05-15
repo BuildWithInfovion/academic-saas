@@ -24,12 +24,20 @@ export const BASE_URL = (() => {
 export const apiUrl = (path: string) => `${BASE_URL}${path}`;
 
 /**
- * Returns the auth store that currently holds a valid session.
- * Portal store takes precedence when it has a token; otherwise falls back
- * to the dashboard store. This lets apiFetch work correctly on both
- * /dashboard and /portal routes without needing pathname context.
+ * Returns the auth store that currently holds the session for the CURRENT route.
+ * Dashboard routes always use the operator store, even when a portal session is
+ * also active (e.g. the operator tested the parent portal in the same browser tab).
+ * Portal routes use the portal store when it has a token.
+ * Falling back to the other store is intentionally avoided to prevent a portal
+ * token from being used for operator API calls (which returns 403 and triggers
+ * false logouts via the institution polling guard in the dashboard layout).
  */
 function getActiveAuthState() {
+  const onDashboard =
+    typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/dashboard');
+  if (onDashboard) return useAuthStore.getState();
+
   const portal = usePortalAuthStore.getState();
   if (portal.accessToken) return portal;
   return useAuthStore.getState();
@@ -165,13 +173,15 @@ async function doRefresh(endpoint: string): Promise<RefreshResult> {
 
 /**
  * Attempt one silent token refresh on 401, using the correct endpoint based on
- * which store holds the current user (operator → /auth/refresh-op, portal → /auth/refresh).
+ * the current route (dashboard → /auth/refresh-op, portal → /auth/refresh).
+ * Route-based detection prevents a portal session from being used to refresh
+ * an operator token when both sessions are active in the same browser tab.
  */
 async function tryRefreshToken(): Promise<RefreshResult> {
-  // Use the portal store if it has an active session (portal users: teacher,
-  // parent, principal, etc.). Only fall back to the operator endpoint when
-  // the portal store is empty, meaning this is an operator/dashboard session.
-  const isPortal = !!usePortalAuthStore.getState().user;
+  const onDashboard =
+    typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/dashboard');
+  const isPortal = !onDashboard && !!usePortalAuthStore.getState().user;
   const isOperator = !isPortal;
   const endpoint = isPortal ? '/auth/refresh' : '/auth/refresh-op';
 

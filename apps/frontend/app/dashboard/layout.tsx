@@ -214,7 +214,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       try {
         await apiFetch('/institution/me');
       } catch (e: unknown) {
-        if (e instanceof ApiError && (e.statusCode === 401 || e.statusCode === 403)) {
+        // Only treat 401 (unauthenticated) as a logout signal.
+        // 403 can happen when a portal token is briefly in-flight and must not
+        // evict the operator session — the next poll will use the correct token.
+        if (e instanceof ApiError && e.statusCode === 401) {
           logout();
           router.replace('/');
         }
