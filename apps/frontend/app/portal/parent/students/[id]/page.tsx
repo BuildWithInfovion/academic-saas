@@ -130,14 +130,13 @@ export default function ChildProfilePage() {
         folder: string;
       }>(`/students/${student.id}/parent-photo-signature`);
 
-      // 2. Upload directly to Cloudinary — request face detection in response
+      // 2. Upload directly to Cloudinary (only signed params in FormData)
       const fd = new FormData();
       fd.append('file', file);
       fd.append('api_key', sig.apiKey);
       fd.append('timestamp', String(sig.timestamp));
       fd.append('signature', sig.signature);
       fd.append('folder', sig.folder);
-      fd.append('faces', '1'); // ask Cloudinary to return detected face coordinates
 
       const uploadRes = await fetch(
         `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
@@ -149,19 +148,9 @@ export default function ChildProfilePage() {
         throw new Error(err?.error?.message || 'Upload failed — please try again.');
       }
 
-      const data = await uploadRes.json() as {
-        secure_url: string;
-        faces?: number[][];
-      };
+      const data = await uploadRes.json() as { secure_url: string };
 
-      // 3. Reject if no face found — ask parent to retry with a clearer photo
-      if (!data.faces || data.faces.length === 0) {
-        throw new Error(
-          "We couldn't detect a face in this photo. Please upload a clear, close-up photo of your child's face.",
-        );
-      }
-
-      // 4. Save the Cloudinary URL to the student record via parent-only endpoint
+      // 3. Save the Cloudinary URL to the student record via parent-only endpoint
       await apiFetch(`/students/${student.id}/parent-photo`, {
         method: 'PATCH',
         body: JSON.stringify({ photoUrl: data.secure_url }),
