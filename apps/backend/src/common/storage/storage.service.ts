@@ -36,6 +36,9 @@ export class StorageService implements OnModuleInit {
   // Generate a signed upload signature so the frontend can upload
   // directly to Cloudinary without routing the file through the backend.
   generateUploadSignature(institutionId: string, studentId: string): SignatureResult {
+    if (!this.isConfigured()) {
+      throw new Error('Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in the environment.');
+    }
     const timestamp = Math.round(Date.now() / 1000);
     const folder = `${institutionId}/${studentId}`;
 

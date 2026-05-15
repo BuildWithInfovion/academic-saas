@@ -15,7 +15,7 @@ const buildCSP = () => {
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https:`,
     `font-src 'self' data:`,
-    `connect-src 'self' ${apiOrigin} https://api.razorpay.com https://lumberjack.razorpay.com`,
+    `connect-src 'self' ${apiOrigin} https://api.razorpay.com https://lumberjack.razorpay.com https://api.cloudinary.com`,
     `frame-src https://api.razorpay.com`,
     `object-src 'none'`,
     `base-uri 'self'`,
