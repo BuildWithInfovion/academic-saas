@@ -16,6 +16,7 @@ export function LinkModal({ student, onClose, onSuccess }: {
   const [searchingUser, setSearchingUser] = useState(false);
   const [linking, setLinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdCreds, setCreatedCreds] = useState<{ phone: string; password: string } | null>(null);
 
   useEffect(() => {
     if (!student) return;
@@ -23,6 +24,7 @@ export function LinkModal({ student, onClose, onSuccess }: {
     setLinkUserId('');
     setFoundUser(null);
     setError(null);
+    setCreatedCreds(null);
     const preSearch = student.parentPhone || '';
     setLinkSearch(preSearch);
     if (preSearch) void searchByIdentifier(preSearch);
@@ -50,7 +52,7 @@ export function LinkModal({ student, onClose, onSuccess }: {
       await apiFetch(`/students/${student.id}/link-user`, {
         method: 'POST', body: JSON.stringify({ userId: linkUserId, role: linkType }),
       });
-      onSuccess(`${linkType} account linked`);
+      onSuccess(`${linkType === 'parent' ? 'Parent' : 'Student'} account linked`);
     } catch (e: any) { setError(e.message || 'Failed to link'); } finally { setLinking(false); }
   };
 
@@ -66,7 +68,6 @@ export function LinkModal({ student, onClose, onSuccess }: {
       const digits = '23456789';
       const all = upper + lower + digits;
       const rand = (s: string) => { const arr = new Uint8Array(1); crypto.getRandomValues(arr); return s[arr[0] % s.length]; };
-      // Guarantee at least one of each required character class
       const tempPwd = rand(upper) + rand(lower) + rand(digits) +
         Array.from({ length: 7 }, () => rand(all)).join('');
       const newUser = await apiFetch('/users', {
@@ -75,7 +76,7 @@ export function LinkModal({ student, onClose, onSuccess }: {
       await apiFetch(`/students/${student.id}/link-user`, {
         method: 'POST', body: JSON.stringify({ userId: newUser.id, role: 'parent' }),
       });
-      onSuccess(`Parent account created — Phone: ${phone} · Password: ${tempPwd}`);
+      setCreatedCreds({ phone, password: tempPwd });
     } catch (e: any) { setError(e.message || 'Failed to create account'); } finally { setLinking(false); }
   };
 
@@ -84,65 +85,104 @@ export function LinkModal({ student, onClose, onSuccess }: {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-ds-surface rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
-        <h2 className="text-lg font-semibold text-ds-text1 mb-0.5">Link Portal Account</h2>
-        <p className="text-xs text-ds-text3 mb-4">Student: <span className="font-medium text-ds-text1">{student.firstName} {student.lastName}</span></p>
-        <div className="space-y-4">
+
+        {/* ── Credentials reveal screen ── */}
+        {createdCreds ? (
           <div>
-            <label className="text-xs font-medium text-ds-text2 block mb-1">Account Type</label>
-            <div className="flex gap-2">
-              {(['parent', 'student'] as const).map((t) => (
-                <button key={t} onClick={() => { setLinkType(t); setFoundUser(null); setLinkUserId(''); }}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${linkType === t ? 'bg-ds-brand text-white border-ds-brand-dark' : 'bg-ds-surface text-ds-text2 border-ds-border-strong hover:border-gray-400'}`}>
-                  {t === 'student' ? 'Student Login' : 'Parent Login'}
-                </button>
-              ))}
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-ds-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-ds-text2 block mb-1">Search by Phone or Email</label>
-            <div className="flex gap-2">
-              <input type="text" className="flex-1 p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand"
-                placeholder="Phone or email" value={linkSearch}
-                onChange={(e) => { setLinkSearch(e.target.value); setFoundUser(null); setLinkUserId(''); }} />
-              <button onClick={() => void searchByIdentifier(linkSearch)} disabled={searchingUser || !linkSearch.trim()}
-                className="px-4 py-2 btn-brand rounded-lg text-sm font-medium disabled:opacity-50">
-                {searchingUser ? '...' : 'Search'}
-              </button>
+            <h2 className="text-lg font-bold text-ds-text1 text-center mb-1">Account Created &amp; Linked</h2>
+            <p className="text-xs text-ds-text3 text-center mb-5">
+              Share these credentials with the parent. The password will not be shown again.
+            </p>
+            <div className="bg-ds-bg2 rounded-xl p-4 space-y-3 font-mono text-sm mb-5">
+              <div>
+                <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Portal</p>
+                <p className="text-ds-text1 font-medium font-sans">Parent Portal</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Phone (Username)</p>
+                <p className="text-ds-text1 font-medium">{createdCreds.phone}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-ds-text3 uppercase font-sans mb-0.5">Password</p>
+                <p className="text-ds-text1 font-bold tracking-wider text-base">{createdCreds.password}</p>
+              </div>
             </div>
-            {linkType === 'parent' && student.parentPhone && (
-              <p className="text-xs text-ds-text3 mt-1">Registered parent phone: <span className="font-medium">{student.parentPhone}</span></p>
-            )}
+            <button
+              onClick={() => onSuccess('Parent account created and linked')}
+              className="btn-brand w-full py-2.5 rounded-lg font-medium"
+            >
+              Done
+            </button>
           </div>
-          {foundUser === 'not_found' && (
-            <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 text-xs text-ds-warning-text space-y-2">
-              <p>No account found. You can auto-create one using the phone number above.</p>
-              {linkType === 'parent' && (
-                <button onClick={() => void handleAutoCreateAndLink()} disabled={linking}
-                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">
-                  {linking ? 'Creating…' : 'Create Parent Account & Link'}
-                </button>
+        ) : (
+          /* ── Main link form ── */
+          <>
+            <h2 className="text-lg font-semibold text-ds-text1 mb-0.5">Link Portal Account</h2>
+            <p className="text-xs text-ds-text3 mb-4">Student: <span className="font-medium text-ds-text1">{student.firstName} {student.lastName}</span></p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Account Type</label>
+                <div className="flex gap-2">
+                  {(['parent', 'student'] as const).map((t) => (
+                    <button key={t} onClick={() => { setLinkType(t); setFoundUser(null); setLinkUserId(''); }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${linkType === t ? 'bg-ds-brand text-white border-ds-brand-dark' : 'bg-ds-surface text-ds-text2 border-ds-border-strong hover:border-gray-400'}`}>
+                      {t === 'student' ? 'Student Login' : 'Parent Login'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-ds-text2 block mb-1">Search by Phone or Email</label>
+                <div className="flex gap-2">
+                  <input type="text" className="flex-1 p-2.5 border border-ds-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ds-brand"
+                    placeholder="Phone or email" value={linkSearch}
+                    onChange={(e) => { setLinkSearch(e.target.value); setFoundUser(null); setLinkUserId(''); }} />
+                  <button onClick={() => void searchByIdentifier(linkSearch)} disabled={searchingUser || !linkSearch.trim()}
+                    className="px-4 py-2 btn-brand rounded-lg text-sm font-medium disabled:opacity-50">
+                    {searchingUser ? '...' : 'Search'}
+                  </button>
+                </div>
+                {linkType === 'parent' && student.parentPhone && (
+                  <p className="text-xs text-ds-text3 mt-1">Registered parent phone: <span className="font-medium">{student.parentPhone}</span></p>
+                )}
+              </div>
+              {foundUser === 'not_found' && (
+                <div className="bg-ds-warning-bg border border-ds-warning-border rounded-lg p-3 text-xs text-ds-warning-text space-y-2">
+                  <p>No account found. You can auto-create one using the phone number above.</p>
+                  {linkType === 'parent' && (
+                    <button onClick={() => void handleAutoCreateAndLink()} disabled={linking}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">
+                      {linking ? 'Creating…' : 'Create Parent Account & Link'}
+                    </button>
+                  )}
+                </div>
+              )}
+              {foundUser && foundUser !== 'not_found' && (
+                <div className="bg-ds-success-bg border border-ds-success-border rounded-lg p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-ds-success-text">Account found</p>
+                    <p className="text-xs text-ds-success-text mt-0.5">{foundUser.email || foundUser.phone}</p>
+                  </div>
+                  <span className="text-xs bg-ds-success-bg text-ds-success-text px-2 py-0.5 rounded-full font-medium">Ready to link</span>
+                </div>
               )}
             </div>
-          )}
-          {foundUser && foundUser !== 'not_found' && (
-            <div className="bg-ds-success-bg border border-ds-success-border rounded-lg p-3 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-ds-success-text">Account found</p>
-                <p className="text-xs text-ds-success-text mt-0.5">{foundUser.email || foundUser.phone}</p>
-              </div>
-              <span className="text-xs bg-ds-success-bg text-ds-success-text px-2 py-0.5 rounded-full font-medium">Ready to link</span>
+            {error && <p className="text-ds-error-text text-xs mt-3">{error}</p>}
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => void handleLink()} disabled={linking || !linkUserId} className="flex-1 py-2.5 btn-brand rounded-lg disabled:opacity-50">
+                {linking ? 'Linking...' : 'Link Account'}
+              </button>
+              <button onClick={onClose} className="px-5 py-2.5 border border-ds-border-strong rounded-lg text-sm text-ds-text2 hover:bg-ds-bg2">
+                Cancel
+              </button>
             </div>
-          )}
-        </div>
-        {error && <p className="text-ds-error-text text-xs mt-3">{error}</p>}
-        <div className="flex gap-2 mt-5">
-          <button onClick={() => void handleLink()} disabled={linking || !linkUserId} className="flex-1 py-2.5 btn-brand rounded-lg disabled:opacity-50">
-            {linking ? 'Linking...' : 'Link Account'}
-          </button>
-          <button onClick={onClose} className="px-5 py-2.5 border border-ds-border-strong rounded-lg text-sm text-ds-text2 hover:bg-ds-bg2">
-            Cancel
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
