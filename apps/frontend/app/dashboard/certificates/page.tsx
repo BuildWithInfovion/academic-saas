@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 
-import type { Institution, Student, AcademicYear } from '@/lib/types';
+import type { Institution, Student, AcademicYear, AcademicUnit } from '@/lib/types';
 
 // ── Customisation state shapes ─────────────────────────────────────────────────
 
@@ -302,6 +302,206 @@ function printIdCard(student: Student, inst: Institution, photoSrc: string | und
   openPrint(html);
 }
 
+// ── Bulk ID card generator (4 portrait cards per A4 page, 2×2 grid) ──────────
+
+function printBulkIdCards(students: Student[], inst: Institution, opts: IdCardOpts) {
+  if (!students.length) return;
+  const accent = esc(opts.accentColor || '#0f172a');
+  const accentFade = opts.accentColor
+    ? opts.accentColor + '22'
+    : '#0f172a22';
+
+  function buildCard(s: Student) {
+    return `
+    <div class="card">
+      <div class="card-hdr">
+        ${inst.logoUrl
+          ? `<img class="hdr-logo" src="${esc(inst.logoUrl)}" alt="" />`
+          : `<div class="hdr-logo-ph"></div>`}
+        <div class="hdr-text">
+          <div class="hdr-name">${esc(inst.name)}</div>
+          <div class="hdr-sub">${[inst.board, inst.address].filter(Boolean).map(esc).join(' · ')}</div>
+        </div>
+      </div>
+      <div class="card-mid">
+        <div class="photo-wrap">
+          ${s.photoUrl
+            ? `<img src="${esc(s.photoUrl)}" alt="Photo" />`
+            : `<div class="photo-ph">STUDENT<br/>PHOTO</div>`}
+        </div>
+        <div class="s-name">${esc(s.firstName)} ${esc(s.lastName)}</div>
+        <div class="s-class">${esc(cls(s))}</div>
+      </div>
+      <div class="info-section">
+        <div class="info-row"><span class="il">Adm. No</span><span class="iv">${esc(s.admissionNo)}</span></div>
+        ${opts.showDob && s.dateOfBirth
+          ? `<div class="info-row"><span class="il">DOB</span><span class="iv">${fmtDate(s.dateOfBirth)}</span></div>`
+          : ''}
+        ${opts.showFather && s.fatherName
+          ? `<div class="info-row"><span class="il">Father</span><span class="iv">${esc(s.fatherName)}</span></div>`
+          : ''}
+        ${opts.showContact && s.parentPhone
+          ? `<div class="info-row"><span class="il">Contact</span><span class="iv">${esc(s.parentPhone)}</span></div>`
+          : ''}
+        ${opts.showBloodGroup && s.bloodGroup
+          ? `<div class="info-row"><span class="il">Blood Grp</span><span class="iv">${esc(s.bloodGroup)}</span></div>`
+          : ''}
+      </div>
+      ${inst.signatureUrl ? `
+      <div class="sig-zone">
+        <img src="${esc(inst.signatureUrl)}" alt="Sig" />
+        <div>${inst.principalName ? esc(inst.principalName) : 'Principal'}</div>
+      </div>` : ''}
+      <div class="card-ftr">
+        <span class="adm-mono">${esc(s.admissionNo)}</span>
+        <span class="valid-txt">Valid: ${esc(opts.validYear)} · STUDENT ID</span>
+      </div>
+    </div>`;
+  }
+
+  // Group students into pages of 4
+  const pages: Student[][] = [];
+  for (let i = 0; i < students.length; i += 4) {
+    pages.push(students.slice(i, i + 4));
+  }
+
+  const pagesHtml = pages.map((page, pi) => `
+  <div class="page${pi > 0 ? ' pb' : ''}">
+    <div class="grid4">
+      ${page.map((s) => `<div class="cell">${buildCard(s)}</div>`).join('\n      ')}
+    </div>
+  </div>`).join('\n');
+
+  const html = `<!DOCTYPE html><html><head>
+<title>Bulk ID Cards — ${esc(inst.name)}</title>
+<meta charset="utf-8" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* ── Screen ── */
+body{
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:#94a3b8;
+  padding:28px 20px;
+  display:flex;flex-direction:column;align-items:center;gap:28px;
+}
+.page{
+  background:#fff;
+  width:210mm;
+  padding:10mm;
+  box-shadow:0 4px 28px rgba(0,0,0,.18);
+}
+.grid4{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8mm;
+  justify-items:center;
+}
+.cell{
+  position:relative;
+}
+
+/* ── Portrait card — 85mm × 120mm ── */
+.card{
+  width:85mm;
+  border:1.5px solid #e2e8f0;
+  border-radius:8px;
+  overflow:hidden;
+  background:#fff;
+  font-size:9px;
+  color:#1e293b;
+}
+.card-hdr{
+  background:${accent};
+  padding:7px 9px;
+  display:flex;align-items:center;gap:7px;
+}
+.hdr-logo{
+  width:28px;height:28px;
+  object-fit:contain;background:#fff;border-radius:3px;padding:2px;flex-shrink:0;
+}
+.hdr-logo-ph{width:28px;height:28px;flex-shrink:0}
+.hdr-text{flex:1;min-width:0}
+.hdr-name{
+  font-size:8.5px;font-weight:700;color:#fff;
+  text-transform:uppercase;letter-spacing:.04em;line-height:1.3;
+}
+.hdr-sub{
+  font-size:6.5px;color:rgba(255,255,255,.6);
+  margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.card-mid{
+  padding:9px 9px 4px;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+}
+.photo-wrap{
+  width:52px;height:65px;
+  border-radius:4px;border:2px solid #e2e8f0;
+  background:#f8fafc;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.photo-wrap img{width:100%;height:100%;object-fit:cover}
+.photo-ph{font-size:7px;color:#94a3b8;text-align:center;line-height:1.5;padding:4px}
+.s-name{
+  font-size:11px;font-weight:700;color:#0f172a;
+  text-align:center;line-height:1.3;
+}
+.s-class{
+  font-size:8.5px;font-weight:600;color:#4338ca;
+  background:#eef2ff;border-radius:10px;
+  padding:1px 8px;
+}
+.info-section{
+  padding:4px 9px 4px;
+  border-top:1px solid #f1f5f9;
+}
+.info-row{
+  display:flex;justify-content:space-between;
+  font-size:8px;color:#475569;line-height:1.8;
+}
+.il{font-weight:600;color:#1e293b}
+.iv{text-align:right;max-width:55mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sig-zone{
+  text-align:center;
+  border-top:1px solid #f1f5f9;
+  padding:3px 9px;
+  font-size:7px;color:#9ca3af;
+}
+.sig-zone img{max-height:20px;max-width:60px;object-fit:contain;display:block;margin:0 auto 1px}
+.card-ftr{
+  background:${accentFade};
+  border-top:1px solid #e2e8f0;
+  padding:4px 9px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.adm-mono{font-family:monospace;font-size:8.5px;font-weight:700;color:#0f172a}
+.valid-txt{font-size:7px;color:#64748b}
+
+/* ── Print ── */
+@media print{
+  @page{size:A4 portrait;margin:10mm}
+  body{background:#fff;padding:0;gap:0}
+  .page{
+    box-shadow:none;width:100%;padding:0;margin:0;
+  }
+  .pb{page-break-before:always}
+  .grid4{gap:6mm}
+  .card{
+    box-shadow:none;
+    border:1px dashed #bbb;
+    border-radius:4px;
+  }
+  /* Cut-mark corners via outline */
+  .cell::before,.cell::after{display:none}
+}
+</style></head><body>
+${pagesHtml}
+<script>window.onload=function(){window.print();}</script>
+</body></html>`;
+
+  openPrint(html);
+}
+
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
@@ -327,6 +527,7 @@ const CERT_TYPES = [
   { id: 'id_card', label: 'Student ID Card', icon: '🪪' },
 ] as const;
 type CertType = typeof CERT_TYPES[number]['id'];
+type IdCardMode = 'single' | 'bulk';
 
 export default function CertificatesPage() {
   const [institution, setInstitution] = useState<Institution | null>(null);
@@ -334,6 +535,7 @@ export default function CertificatesPage() {
   const [yearId, setYearId] = useState('');
   const [certType, setCertType] = useState<CertType>('bonafide');
 
+  // Student search (single mode)
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Student[]>([]);
   const [searching, setSearching] = useState(false);
@@ -347,10 +549,17 @@ export default function CertificatesPage() {
   const [character, setCharacter] = useState<CharacterOpts>({ ...DEFAULT_CHARACTER });
   const [idCard, setIdCard] = useState<IdCardOpts>({ ...DEFAULT_IDCARD });
 
-  // Photo upload state
+  // Photo upload state (single mode)
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Bulk ID card state
+  const [idCardMode, setIdCardMode] = useState<IdCardMode>('single');
+  const [academicUnits, setAcademicUnits] = useState<AcademicUnit[]>([]);
+  const [bulkUnitId, setBulkUnitId] = useState('');
+  const [bulkStudents, setBulkStudents] = useState<Student[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const [showCustomize, setShowCustomize] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -361,13 +570,22 @@ export default function CertificatesPage() {
   }
 
   useEffect(() => {
-    Promise.all([apiFetch('/academic/years'), apiFetch('/institution/me')])
-      .then(([yrs, inst]) => {
+    Promise.all([
+      apiFetch('/academic/years'),
+      apiFetch('/institution/me'),
+      apiFetch('/academic/units/leaf'),
+    ])
+      .then(([yrs, inst, units]) => {
         const list = Array.isArray(yrs) ? yrs : [];
         setYears(list);
         const cur = list.find((y: AcademicYear) => y.isCurrent) ?? list[0];
         if (cur) setYearId(cur.id);
         if (inst) setInstitution(inst as Institution);
+        const unitList: AcademicUnit[] = Array.isArray(units)
+          ? units
+          : (units as { data?: AcademicUnit[] })?.data ?? [];
+        setAcademicUnits(unitList);
+        if (unitList.length > 0) setBulkUnitId(unitList[0].id);
       })
       .catch(() => {});
   }, []);
@@ -378,15 +596,22 @@ export default function CertificatesPage() {
     if (photoInputRef.current) photoInputRef.current.value = '';
   }, [student]);
 
+  // Clear bulk students when cert type changes away from id_card
+  useEffect(() => {
+    if (certType !== 'id_card') {
+      setIdCardMode('single');
+      setBulkStudents([]);
+    }
+  }, [certType]);
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (query.length < 2) { setResults([]); return; }
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        // /students?search=... returns { data: [...], meta: {...} }
         const res = await apiFetch(`/students?search=${encodeURIComponent(query.trim())}&limit=8`);
-        setResults((res as any)?.data ?? []);
+        setResults((res as { data?: Student[] })?.data ?? []);
       } catch { setResults([]); }
       finally { setSearching(false); }
     }, 300);
@@ -405,7 +630,6 @@ export default function CertificatesPage() {
     if (!student) return;
     setPhotoUploading(true);
     try {
-      // Read as data URL for immediate preview in the print
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -414,7 +638,6 @@ export default function CertificatesPage() {
       });
       setPhotoDataUrl(dataUrl);
 
-      // Upload to Cloudinary (get signature, then upload directly)
       const sig = await apiFetch<{
         signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string;
       }>(`/students/${student.id}/photo-signature`);
@@ -431,22 +654,47 @@ export default function CertificatesPage() {
       if (!upload.ok) throw new Error('Upload failed');
       const data = await upload.json() as { secure_url: string };
 
-      // Save permanently to student record
       await apiFetch(`/students/${student.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ photoUrl: data.secure_url }),
       });
       setStudent((prev) => prev ? { ...prev, photoUrl: data.secure_url } : prev);
       showToast('Photo saved to student profile');
-    } catch (e: any) {
-      showToast(e.message || 'Photo upload failed', false);
+    } catch (e: unknown) {
+      showToast((e as Error).message || 'Photo upload failed', false);
     } finally {
       setPhotoUploading(false);
     }
   };
 
+  const loadBulkStudents = async () => {
+    if (!bulkUnitId) return;
+    setBulkLoading(true);
+    setBulkStudents([]);
+    try {
+      const res = await apiFetch(`/students?unitId=${encodeURIComponent(bulkUnitId)}&limit=500`);
+      const list: Student[] = (res as { data?: Student[] })?.data ?? (Array.isArray(res) ? res : []);
+      setBulkStudents(list);
+      if (list.length === 0) showToast('No students found in this class', false);
+      else showToast(`${list.length} student${list.length !== 1 ? 's' : ''} loaded`);
+    } catch {
+      showToast('Failed to load students', false);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const handleGenerate = () => {
-    if (!student || !institution) return;
+    if (!institution) return;
+
+    if (certType === 'id_card' && idCardMode === 'bulk') {
+      if (bulkStudents.length === 0) { showToast('Load students first', false); return; }
+      printBulkIdCards(bulkStudents, institution, idCard);
+      showToast(`Opening ${bulkStudents.length} ID cards for printing`);
+      return;
+    }
+
+    if (!student) return;
     const yearName = years.find((y) => y.id === yearId)?.name ?? '';
     const photoSrc = photoDataUrl ?? student.photoUrl ?? undefined;
     if (certType === 'bonafide') printBonafide(student, institution, yearName, purpose, certNo, bonafide);
@@ -457,6 +705,16 @@ export default function CertificatesPage() {
 
   const unitLabel = (s: Student) => s.academicUnit?.displayName || s.academicUnit?.name || '';
   const photoSrc = photoDataUrl ?? student?.photoUrl ?? null;
+
+  // How many bulk students have a saved photo
+  const photoCoverage = bulkStudents.length > 0
+    ? bulkStudents.filter((s) => s.photoUrl).length
+    : 0;
+
+  const isBulkMode = certType === 'id_card' && idCardMode === 'bulk';
+  const canGenerate = isBulkMode
+    ? bulkStudents.length > 0 && !!institution
+    : !!student && !!institution;
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
@@ -483,87 +741,187 @@ export default function CertificatesPage() {
         ))}
       </div>
 
-      {/* Student search */}
-      {!student ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4">
-          <h3 className="font-semibold text-slate-800 text-sm mb-3">Select Student</h3>
-          <div className="relative max-w-md">
-            <input
-              className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Type name or admission number…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            {searching && <div className="absolute right-3 top-3 w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />}
-            {results.length > 0 && (
-              <div className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 shadow-lg bg-white border border-slate-200">
-                {results.map((s) => (
-                  <button key={s.id} onClick={() => void selectStudent(s)}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 border-b border-slate-100 last:border-0 flex items-center justify-between">
-                    <span className="font-medium text-slate-900">{s.firstName} {s.lastName}</span>
-                    <span className="text-xs font-mono text-slate-400">{s.admissionNo}{unitLabel(s) ? ` · ${unitLabel(s)}` : ''}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {query.length >= 2 && !searching && results.length === 0 && (
-              <div className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 shadow-lg bg-white border border-slate-200 px-4 py-3 text-sm text-slate-400">
-                No students found for &ldquo;{query}&rdquo;
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {photoSrc ? (
-              <img src={photoSrc} alt="Photo" className="w-10 h-12 object-cover rounded border border-indigo-200" />
-            ) : (
-              <div className="w-10 h-12 bg-indigo-100 rounded border border-indigo-200 flex items-center justify-center text-indigo-400 text-xs">No<br/>Photo</div>
-            )}
-            <div>
-              <p className="font-semibold text-sm text-slate-900">{student.firstName} {student.lastName}</p>
-              <p className="text-xs font-mono mt-0.5 text-slate-500">{student.admissionNo}{unitLabel(student) ? ` · ${unitLabel(student)}` : ''}</p>
-            </div>
-          </div>
-          <button onClick={() => setStudent(null)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-white">Change</button>
+      {/* ── ID Card mode tabs (Single / Bulk) — only for id_card type ── */}
+      {certType === 'id_card' && (
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-5 w-fit">
+          <button
+            onClick={() => { setIdCardMode('single'); setBulkStudents([]); }}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${idCardMode === 'single' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            Single Student
+          </button>
+          <button
+            onClick={() => { setIdCardMode('bulk'); setStudent(null); }}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${idCardMode === 'bulk' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            Bulk by Class
+          </button>
         </div>
       )}
 
-      {/* Photo upload — shown for all types once student selected */}
-      {student && (
-        <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4">
-          <h3 className="font-semibold text-slate-800 text-sm mb-3">
-            Student Photo
-            {certType !== 'id_card' && <span className="font-normal text-slate-400 ml-1">(optional — used on ID card)</span>}
-          </h3>
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-24 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-              {photoSrc
-                ? <img src={photoSrc} alt="Photo" className="w-full h-full object-cover" />
-                : <span className="text-xs text-slate-400 text-center px-1 leading-tight">No photo</span>}
+      {/* ── Bulk class selector ── */}
+      {isBulkMode && (
+        <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4 space-y-4">
+          <div>
+            <h3 className="font-semibold text-slate-800 text-sm mb-1">Select Class</h3>
+            <p className="text-xs text-slate-500 mb-3">
+              All students in the selected class will be included. Photos already saved to student profiles will appear on the cards.
+            </p>
+            <div className="flex gap-3 items-end flex-wrap">
+              <div className="flex-1 min-w-48">
+                <label className="text-xs font-medium text-slate-600 block mb-1">Class / Section</label>
+                <select
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={bulkUnitId}
+                  onChange={(e) => { setBulkUnitId(e.target.value); setBulkStudents([]); }}
+                >
+                  {academicUnits.length === 0 && (
+                    <option value="">Loading classes…</option>
+                  )}
+                  {academicUnits.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.displayName || u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => void loadBulkStudents()}
+                disabled={!bulkUnitId || bulkLoading}
+                className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {bulkLoading && (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
+                {bulkLoading ? 'Loading…' : 'Load Students'}
+              </button>
             </div>
-            <div>
-              <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${photoUploading ? 'opacity-50 pointer-events-none' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
-                {photoUploading ? 'Uploading…' : student.photoUrl ? 'Replace Photo' : 'Upload Photo'}
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void handlePhotoUpload(f); e.target.value = ''; }}
-                />
-              </label>
+          </div>
+
+          {/* Results summary */}
+          {bulkStudents.length > 0 && (
+            <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {bulkStudents.length} student{bulkStudents.length !== 1 ? 's' : ''} ready
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {photoCoverage} of {bulkStudents.length} have saved photos
+                    {photoCoverage < bulkStudents.length && (
+                      <span className="text-amber-600 ml-1">
+                        — {bulkStudents.length - photoCoverage} will print without photo
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Small photo coverage bar */}
+                  <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 rounded-full transition-all"
+                      style={{ width: `${Math.round((photoCoverage / bulkStudents.length) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-slate-500 tabular-nums">
+                    {Math.round((photoCoverage / bulkStudents.length) * 100)}%
+                  </span>
+                </div>
+              </div>
               <p className="text-xs text-slate-400 mt-2">
-                {student.photoUrl ? 'Photo saved to student record.' : 'Upload a passport-size photo. It will be saved to the student profile.'}
+                Cards will be printed 4 per A4 page in portrait layout with cut marks. Upload photos
+                via individual student profiles for best results.
               </p>
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Certificate options + customization */}
-      {student && (
+      {/* ── Single student search ── */}
+      {!isBulkMode && (
+        <>
+          {!student ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4">
+              <h3 className="font-semibold text-slate-800 text-sm mb-3">Select Student</h3>
+              <div className="relative max-w-md">
+                <input
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Type name or admission number…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                {searching && <div className="absolute right-3 top-3 w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />}
+                {results.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 shadow-lg bg-white border border-slate-200">
+                    {results.map((s) => (
+                      <button key={s.id} onClick={() => void selectStudent(s)}
+                        className="w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 border-b border-slate-100 last:border-0 flex items-center justify-between">
+                        <span className="font-medium text-slate-900">{s.firstName} {s.lastName}</span>
+                        <span className="text-xs font-mono text-slate-400">{s.admissionNo}{unitLabel(s) ? ` · ${unitLabel(s)}` : ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {query.length >= 2 && !searching && results.length === 0 && (
+                  <div className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 shadow-lg bg-white border border-slate-200 px-4 py-3 text-sm text-slate-400">
+                    No students found for &ldquo;{query}&rdquo;
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {photoSrc ? (
+                  <img src={photoSrc} alt="Photo" className="w-10 h-12 object-cover rounded border border-indigo-200" />
+                ) : (
+                  <div className="w-10 h-12 bg-indigo-100 rounded border border-indigo-200 flex items-center justify-center text-indigo-400 text-xs">No<br/>Photo</div>
+                )}
+                <div>
+                  <p className="font-semibold text-sm text-slate-900">{student.firstName} {student.lastName}</p>
+                  <p className="text-xs font-mono mt-0.5 text-slate-500">{student.admissionNo}{unitLabel(student) ? ` · ${unitLabel(student)}` : ''}</p>
+                </div>
+              </div>
+              <button onClick={() => setStudent(null)} className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-white">Change</button>
+            </div>
+          )}
+
+          {/* Photo upload — shown for all types once student selected */}
+          {student && (
+            <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4">
+              <h3 className="font-semibold text-slate-800 text-sm mb-3">
+                Student Photo
+                {certType !== 'id_card' && <span className="font-normal text-slate-400 ml-1">(optional — used on ID card)</span>}
+              </h3>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-24 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                  {photoSrc
+                    ? <img src={photoSrc} alt="Photo" className="w-full h-full object-cover" />
+                    : <span className="text-xs text-slate-400 text-center px-1 leading-tight">No photo</span>}
+                </div>
+                <div>
+                  <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${photoUploading ? 'opacity-50 pointer-events-none' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
+                    {photoUploading ? 'Uploading…' : student.photoUrl ? 'Replace Photo' : 'Upload Photo'}
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) void handlePhotoUpload(f); e.target.value = ''; }}
+                    />
+                  </label>
+                  <p className="text-xs text-slate-400 mt-2">
+                    {student.photoUrl ? 'Photo saved to student record.' : 'Upload a passport-size photo. It will be saved to the student profile.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Certificate options + customization ── */}
+      {(student || isBulkMode) && (
         <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-slate-800 text-sm">Options</h3>
@@ -614,7 +972,7 @@ export default function CertificatesPage() {
             </div>
           )}
 
-          {/* ID Card-specific */}
+          {/* ID Card-specific options */}
           {certType === 'id_card' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -708,10 +1066,14 @@ export default function CertificatesPage() {
 
       <button
         onClick={handleGenerate}
-        disabled={!student || !institution}
+        disabled={!canGenerate}
         className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
-        Generate &amp; Print {CERT_TYPES.find((c) => c.id === certType)?.label}
+        {isBulkMode
+          ? bulkStudents.length > 0
+            ? `Generate & Print All ${bulkStudents.length} ID Cards`
+            : 'Generate & Print All ID Cards'
+          : `Generate & Print ${CERT_TYPES.find((c) => c.id === certType)?.label}`}
       </button>
 
       <p className="text-xs text-center mt-3 text-slate-400">
