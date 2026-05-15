@@ -281,6 +281,7 @@ function printIdCard(student: Student, inst: Institution, photoSrc: string | und
   /* Print — A4 portrait, 2 cards centred, cut dashes visible, no page chrome */
   @media print{
     @page{size:A4 portrait;margin:10mm}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{background:#fff;padding:0;display:block}
     .sheet{box-shadow:none;width:100%;padding:0}
     .cut-hint{display:none}
@@ -480,6 +481,7 @@ body{
 /* ── Print ── */
 @media print{
   @page{size:A4 portrait;margin:10mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#fff;padding:0;gap:0}
   .page{
     box-shadow:none;width:100%;padding:0;margin:0;
