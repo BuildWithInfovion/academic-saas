@@ -1,107 +1,52 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/auth.store';
 import { usePortalAuthStore } from '@/store/portal-auth.store';
 import { getRoleRoute, PORTAL_ROLES, DASHBOARD_ROLES } from '@/lib/auth-utils';
 import { apiUrl } from '@/lib/api';
 
-type Phase = 'init' | 'zoom-in' | 'zoom-out' | 'greet' | 'reveal' | 'done';
-
-const PARTICLES: { top?: string; bottom?: string; left?: string; right?: string; size: number; dur: string; delay: string }[] = [
-  { top:'6%',  left:'8%',   size:3, dur:'9s',  delay:'0s'   },
-  { top:'14%', right:'12%', size:2, dur:'13s', delay:'2.1s' },
-  { top:'28%', left:'5%',   size:4, dur:'11s', delay:'0.8s' },
-  { top:'42%', right:'7%',  size:2, dur:'8s',  delay:'3.4s' },
-  { top:'57%', left:'11%',  size:3, dur:'12s', delay:'1.5s' },
-  { top:'70%', right:'15%', size:2, dur:'7s',  delay:'4.2s' },
-  { top:'83%', left:'7%',   size:4, dur:'14s', delay:'0.4s' },
-  { top:'91%', right:'9%',  size:3, dur:'10s', delay:'2.8s' },
-  { top:'22%', left:'47%',  size:2, dur:'16s', delay:'3.7s' },
-  { top:'74%', left:'38%',  size:3, dur:'9s',  delay:'1.1s' },
-  { top:'38%', left:'28%',  size:2, dur:'11s', delay:'5s'   },
-  { top:'60%', right:'32%', size:2, dur:'8s',  delay:'0.6s' },
-];
-
-const getLogoTransition = (phase: Phase): string => {
-  if (phase === 'init')     return 'none';
-  if (phase === 'zoom-in')  return 'transform 0.9s cubic-bezier(0.16,1,0.3,1)';
-  if (phase === 'zoom-out') return 'transform 1.8s cubic-bezier(0.16,1,0.3,1)';
-  return 'transform 1s cubic-bezier(0.16,1,0.3,1)';
-};
-
-const getLogoTransform = (phase: Phase): string => {
-  switch (phase) {
-    case 'init':     return 'scale(0) translateY(20px)';
-    case 'zoom-in':  return 'scale(2.0)';
-    case 'zoom-out': return 'scale(1)';
-    case 'greet':    return 'translateY(-52px) scale(0.80)';
-    case 'reveal':   return 'translateY(-60px) scale(0.76)';
-    default:         return 'scale(1)';
-  }
-};
-
 export default function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const [logoError, setLogoError] = useState(false);
-  const [phase,     setPhase]     = useState<Phase>('init');
 
-  // Tab + step
   const [activeTab, setActiveTab] = useState<'staff' | 'parent'>('staff');
   const [staffStep, setStaffStep] = useState<1 | 2>(1);
 
-  // Staff step-1 fields
   const [institutionCode, setInstitutionCode] = useState('');
   const [staffEmail,      setStaffEmail]      = useState('');
   const [staffPassword,   setStaffPassword]   = useState('');
 
-  // Staff step-2 TOTP
   const [totpToken,  setTotpToken]  = useState<string | null>(null);
   const [totpDigits, setTotpDigits] = useState(['', '', '', '', '', '']);
   const totpRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null, null]);
 
-  // Parent fields
   const [parentPhone,    setParentPhone]    = useState('');
   const [parentPassword, setParentPassword] = useState('');
 
-  // Shared
   const [loading,     setLoading]     = useState(false);
   const [loadStep,    setLoadStep]    = useState(0);
   const [error,       setError]       = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<{ institution: string } | null>(null);
 
-  // Parent forgot-password modal
-  const [showParentForgot,    setShowParentForgot]    = useState(false);
-  const [pfPhone,             setPfPhone]             = useState('');
-  const [pfLoading,           setPfLoading]           = useState(false);
-  const [pfError,             setPfError]             = useState<string | null>(null);
-  const [pfSubmitted,         setPfSubmitted]         = useState(false);
+  const [showParentForgot, setShowParentForgot] = useState(false);
+  const [pfPhone,          setPfPhone]          = useState('');
+  const [pfLoading,        setPfLoading]        = useState(false);
+  const [pfError,          setPfError]          = useState<string | null>(null);
+  const [pfSubmitted,      setPfSubmitted]      = useState(false);
 
-  // Staff forgot-password modal
-  const [showForgot,     setShowForgot]     = useState(false);
-  const [fpStep,         setFpStep]         = useState<'form' | 'otp'>('form');
-  const [fpCode,         setFpCode]         = useState('');
-  const [fpEmail,        setFpEmail]        = useState('');
-  const [fpOtp,          setFpOtp]          = useState('');
-  const [fpNewPassword,  setFpNewPassword]  = useState('');
-  const [fpLoading,      setFpLoading]      = useState(false);
-  const [fpError,        setFpError]        = useState<string | null>(null);
-  const [fpSuccess,      setFpSuccess]      = useState<string | null>(null);
+  const [showForgot,    setShowForgot]    = useState(false);
+  const [fpStep,        setFpStep]        = useState<'form' | 'otp'>('form');
+  const [fpCode,        setFpCode]        = useState('');
+  const [fpEmail,       setFpEmail]       = useState('');
+  const [fpOtp,         setFpOtp]         = useState('');
+  const [fpNewPassword, setFpNewPassword] = useState('');
+  const [fpLoading,     setFpLoading]     = useState(false);
+  const [fpError,       setFpError]       = useState<string | null>(null);
+  const [fpSuccess,     setFpSuccess]     = useState<string | null>(null);
 
-  // Intro animation
-  useEffect(() => {
-    const r  = requestAnimationFrame(() => setPhase('zoom-in'));
-    const t1 = setTimeout(() => setPhase('zoom-out'), 1000);
-    const t2 = setTimeout(() => setPhase('greet'),    2900);
-    const t3 = setTimeout(() => setPhase('reveal'),   4100);
-    const t4 = setTimeout(() => setPhase('done'),     5100);
-    return () => { cancelAnimationFrame(r); [t1, t2, t3, t4].forEach(clearTimeout); };
-  }, []);
-
-
-  // ── Shared session handler ────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const applySession = async (data: any, fallbackCode: string) => {
     const roles: string[] = data.user?.roles ?? [];
@@ -118,22 +63,17 @@ export default function LoginPage() {
     };
     const isDashboard = (DASHBOARD_ROLES as string[]).some((r) => roles.includes(r));
     if (isDashboard) {
-      usePortalAuthStore.getState().logout(); // clear any stale portal session
+      usePortalAuthStore.getState().logout();
       setAuth(authPayload);
     } else {
-      useAuthStore.getState().logout(); // clear any stale operator session
+      useAuthStore.getState().logout();
       usePortalAuthStore.getState().setAuth(authPayload);
     }
     setLoadStep(3);
-    const portalRoles = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
+    const portalRoles  = roles.filter((r) => (PORTAL_ROLES as readonly string[]).includes(r));
     const destination  = portalRoles.length > 1 ? '/portal/select-role' : getRoleRoute(roles);
     setSuccessInfo({ institution: data.user.institutionName || fallbackCode });
-    await new Promise<void>((resolve) => setTimeout(resolve, 1500));
-    // Set a same-origin cookie that the Edge Middleware can read.
-    // auth_rt / auth_rt_op are set by api. subdomain and are not reliably forwarded
-    // in cross-subdomain navigation on all browser/CDN configurations (Vercel Edge
-    // Middleware in particular). portal_ready / dashboard_ready are set here, on the
-    // app. origin, so they are always present in the middleware's Cookie header.
+    await new Promise<void>((resolve) => setTimeout(resolve, 1200));
     const sec = window.location.protocol === 'https:' ? '; Secure' : '';
     if (isDashboard) {
       document.cookie = `dashboard_ready=1; path=/; max-age=604800; SameSite=Lax${sec}`;
@@ -145,7 +85,6 @@ export default function LoginPage() {
     window.location.href = destination;
   };
 
-  // ── Staff login (step 1: email + password) ────────────────────────────────
   const handleStaffLogin = async () => {
     if (!institutionCode.trim()) return setError('School code is required');
     if (!staffEmail.trim())      return setError('Email is required');
@@ -153,8 +92,7 @@ export default function LoginPage() {
     setLoading(true); setLoadStep(1); setError(null);
     try {
       const res = await fetch(apiUrl('/auth/login'), {
-        method: 'POST',
-        credentials: 'include',
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           institutionCode: institutionCode.trim().toLowerCase(),
@@ -165,17 +103,13 @@ export default function LoginPage() {
       setLoadStep(2);
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || 'Login failed');
-
-      // TOTP required — move to step 2
       if (data.requiresTOTP) {
         setTotpToken(data.totpToken);
         setStaffStep(2);
-        setLoading(false);
-        setLoadStep(0);
+        setLoading(false); setLoadStep(0);
         setTimeout(() => totpRefs.current[0]?.focus(), 120);
         return;
       }
-
       if (!data.accessToken) throw new Error('No token received');
       await applySession(data, institutionCode);
     } catch (err) {
@@ -186,16 +120,14 @@ export default function LoginPage() {
     }
   };
 
-  // ── TOTP verification (step 2) ────────────────────────────────────────────
   const handleTotpVerify = async () => {
     const code = totpDigits.join('');
-    if (code.length < 6)  return setError('Enter the complete 6-digit code');
-    if (!totpToken)        return setError('Session expired — please sign in again');
+    if (code.length < 6) return setError('Enter the complete 6-digit code');
+    if (!totpToken)       return setError('Session expired — please sign in again');
     setLoading(true); setLoadStep(1); setError(null);
     try {
       const res = await fetch(apiUrl('/auth/totp/authenticate'), {
-        method: 'POST',
-        credentials: 'include',
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ totpToken, code }),
       });
@@ -212,7 +144,6 @@ export default function LoginPage() {
     }
   };
 
-  // ── TOTP input helpers ────────────────────────────────────────────────────
   const handleTotpChange = (index: number, value: string) => {
     const digit = value.replace(/\D/g, '').slice(-1);
     const next  = [...totpDigits];
@@ -238,21 +169,18 @@ export default function LoginPage() {
     if (text.length > 0) {
       const next = (text + '      ').slice(0, 6).split('').map((c) => (/\d/.test(c) ? c : ''));
       setTotpDigits(next);
-      const focus = Math.min(text.length, 5);
-      totpRefs.current[focus]?.focus();
+      totpRefs.current[Math.min(text.length, 5)]?.focus();
     }
     e.preventDefault();
   };
 
-  // ── Parent login ──────────────────────────────────────────────────────────
   const handleParentLogin = async () => {
     if (!parentPhone.trim())    return setError('Phone number is required');
     if (!parentPassword.trim()) return setError('Password is required');
     setLoading(true); setLoadStep(1); setError(null);
     try {
       const res = await fetch(apiUrl('/auth/parent/login'), {
-        method: 'POST',
-        credentials: 'include',
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: parentPhone.trim(), password: parentPassword }),
       });
@@ -260,7 +188,7 @@ export default function LoginPage() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || 'Login failed');
       if (!data.accessToken) throw new Error('No token received');
-      useAuthStore.getState().logout(); // clear any stale operator session
+      useAuthStore.getState().logout();
       usePortalAuthStore.getState().setAuth({
         accessToken: data.accessToken,
         user: {
@@ -287,32 +215,18 @@ export default function LoginPage() {
     }
   };
 
-  // ── Misc ──────────────────────────────────────────────────────────────────
   const switchTab = (tab: 'staff' | 'parent') => {
-    setActiveTab(tab);
-    setStaffStep(1);
-    setTotpToken(null);
-    setTotpDigits(['', '', '', '', '', '']);
-    setError(null);
+    setActiveTab(tab); setStaffStep(1);
+    setTotpToken(null); setTotpDigits(['', '', '', '', '', '']); setError(null);
   };
 
   const openForgot = () => {
-    setFpCode(institutionCode);
-    setFpEmail('');
-    setFpOtp('');
-    setFpNewPassword('');
-    setFpStep('form');
-    setFpError(null);
-    setFpSuccess(null);
-    setShowForgot(true);
+    setFpCode(institutionCode); setFpEmail(''); setFpOtp(''); setFpNewPassword('');
+    setFpStep('form'); setFpError(null); setFpSuccess(null); setShowForgot(true);
   };
 
-  // ── Parent forgot password ───────────────────────────────────────────────
   const openParentForgot = () => {
-    setPfPhone(parentPhone);
-    setPfError(null);
-    setPfSubmitted(false);
-    setShowParentForgot(true);
+    setPfPhone(parentPhone); setPfError(null); setPfSubmitted(false); setShowParentForgot(true);
   };
 
   const handleParentForgotSubmit = async () => {
@@ -321,8 +235,7 @@ export default function LoginPage() {
     setPfLoading(true); setPfError(null);
     try {
       const res = await fetch(apiUrl('/auth/parent/request-password-reset'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: pfPhone.trim() }),
       });
       if (!res.ok) {
@@ -337,20 +250,15 @@ export default function LoginPage() {
     }
   };
 
-  // ── Forgot password: send OTP ─────────────────────────────────────────────
   const handleForgotSendOtp = async () => {
     if (!fpCode.trim())  return setFpError('School code is required');
     if (!fpEmail.trim()) return setFpError('Email is required');
-    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(fpEmail.trim())) return setFpError('Enter a valid email address (e.g. name@school.com)');
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(fpEmail.trim())) return setFpError('Enter a valid email address');
     setFpLoading(true); setFpError(null);
     try {
       const res = await fetch(apiUrl('/auth/forgot-password'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          institutionCode: fpCode.trim().toLowerCase(),
-          email: fpEmail.trim(),
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ institutionCode: fpCode.trim().toLowerCase(), email: fpEmail.trim() }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || 'Request failed');
@@ -362,7 +270,6 @@ export default function LoginPage() {
     }
   };
 
-  // ── Forgot password: verify OTP + set new password ────────────────────────
   const handleForgotReset = async () => {
     if (!fpOtp.trim())         return setFpError('Verification code is required');
     if (!fpNewPassword.trim()) return setFpError('New password is required');
@@ -370,13 +277,10 @@ export default function LoginPage() {
     setFpLoading(true); setFpError(null);
     try {
       const res = await fetch(apiUrl('/auth/reset-password'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           institutionCode: fpCode.trim().toLowerCase(),
-          email: fpEmail.trim(),
-          otp: fpOtp.trim(),
-          newPassword: fpNewPassword,
+          email: fpEmail.trim(), otp: fpOtp.trim(), newPassword: fpNewPassword,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -389,764 +293,554 @@ export default function LoginPage() {
     }
   };
 
-  const welcomeVisible = phase === 'greet' || phase === 'reveal';
-  const showOverlay    = phase !== 'done';
-  const showCard       = phase === 'reveal' || phase === 'done';
+  const submitLabel =
+    loading
+      ? loadStep === 1 ? 'Verifying...' : loadStep === 2 ? 'Authenticating...' : 'Signing you in...'
+      : staffStep === 2 ? 'Verify & Sign In' : 'Sign In';
 
-  // ── Card heading / subtext ────────────────────────────────────────────────
-  const cardHeading = activeTab === 'parent'
-    ? 'Parent Login'
-    : staffStep === 2 ? 'Two-Factor Auth' : 'Staff Login';
-
-  const cardSub = activeTab === 'parent'
-    ? 'Enter your phone number and password'
-    : staffStep === 2
-      ? 'Enter the 6-digit code from your authenticator app'
-      : 'Enter your school code and credentials';
+  const handleSubmit = activeTab === 'staff'
+    ? (staffStep === 2 ? handleTotpVerify : handleStaffLogin)
+    : handleParentLogin;
 
   return (
-    <div style={{ minHeight:'100vh', background:'#040d1a', position:'relative', overflow:'hidden',
-      display:'flex', alignItems:'center', justifyContent:'center' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
 
-      {/* ─── Component-scoped styles ─── */}
+      {/* ── Scoped styles ── */}
       <style>{`
-        @keyframes loginParticleDrift {
-          0%, 100% { transform: translateY(0px) scale(1);   opacity: 0; }
-          10%, 90% { opacity: 1; }
-          50%      { transform: translateY(-55px) scale(1.1); opacity: 0.5; }
+        .lef {
+          width: 100%; padding: 10px 12px 10px 38px;
+          font-size: 14px; border: 1px solid #e2e8f0; border-radius: 8px;
+          color: #0f172a; background: #fff; outline: none; box-sizing: border-box;
+          transition: border-color 0.15s, box-shadow 0.15s;
         }
-        @keyframes loginCardReveal {
-          from { opacity: 0; transform: translateY(28px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes loginGlowBreathe {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50%      { opacity: 0.7; transform: scale(1.12); }
-        }
-        @keyframes loginArcSpin    { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
-        @keyframes loginArcSpinRev { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
-        @keyframes loginWelcomeIn  {
-          from { opacity: 0; transform: scale(0.96) translateY(14px); letter-spacing: 0.1em; }
-          to   { opacity: 1; transform: scale(1) translateY(0); letter-spacing: 0.22em; }
-        }
-        @keyframes loginShimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
-        }
-        @keyframes cardBorderPulse {
-          0%, 100% { opacity: 0.5; }
-          50%      { opacity: 1; }
-        }
-        @keyframes successBgIn     { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes successCircleIn {
-          0%   { transform: scale(0);    opacity: 0; }
-          60%  { transform: scale(1.1);  opacity: 1; }
-          80%  { transform: scale(0.97); }
-          100% { transform: scale(1);    opacity: 1; }
-        }
-        @keyframes successRingOut  { 0% { transform: scale(1); opacity: 0.45; } 100% { transform: scale(2.8); opacity: 0; } }
-        @keyframes successCheckDraw {
-          from { stroke-dashoffset: 80; opacity: 0; }
-          15%  { opacity: 1; }
-          to   { stroke-dashoffset: 0; }
-        }
-        @keyframes successTextIn   { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes successDot {
-          0%, 70%, 100% { transform: translateY(0px);  opacity: 0.25; }
-          35%            { transform: translateY(-7px); opacity: 1; }
-        }
-        @keyframes successBarFill  { from { width: 0%; } to { width: 100%; } }
-        @keyframes totpReveal      { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .lef::placeholder { color: #94a3b8; }
+        .lef:hover  { border-color: #cbd5e1; }
+        .lef:focus  { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+        .lef:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
 
-        .login-btn {
-          transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        .login-btn:not(:disabled):hover {
-          background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
-          box-shadow: 0 6px 28px rgba(13,148,136,0.45), 0 2px 8px rgba(0,0,0,0.2) !important;
-          transform: translateY(-2px) scale(1.01) !important;
-        }
-        .login-btn:not(:disabled):active {
-          transform: translateY(0) scale(0.98) !important;
-          box-shadow: 0 2px 10px rgba(13,148,136,0.25) !important;
-        }
-
-        .ldf {
-          width: 100%; padding: 10px 12px 10px 36px;
-          font-size: 14px; border: 1px solid rgba(20,184,166,0.15);
-          border-radius: 9px; color: #e2f8f5;
-          background: rgba(255,255,255,0.04);
-          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; outline: none;
-          box-sizing: border-box;
-        }
-        .ldf::placeholder { color: rgba(148,163,184,0.4); }
-        .ldf:hover  { background: rgba(255,255,255,0.06); border-color: rgba(20,184,166,0.32); }
-        .ldf:focus  { background: rgba(255,255,255,0.07); border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(13,148,136,0.18), inset 0 1px 0 rgba(255,255,255,0.04); }
-        .ldf:disabled { opacity: 0.35; cursor: not-allowed; }
-
-        .ldf-plain {
+        .lef-plain {
           width: 100%; padding: 10px 12px;
-          font-size: 14px; border: 1px solid rgba(20,184,166,0.15);
-          border-radius: 9px; color: #e2f8f5;
-          background: rgba(255,255,255,0.04);
-          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; outline: none;
-          box-sizing: border-box;
+          font-size: 14px; border: 1px solid #e2e8f0; border-radius: 8px;
+          color: #0f172a; background: #fff; outline: none; box-sizing: border-box;
+          transition: border-color 0.15s, box-shadow 0.15s;
         }
-        .ldf-plain::placeholder { color: rgba(148,163,184,0.4); }
-        .ldf-plain:hover  { background: rgba(255,255,255,0.06); border-color: rgba(20,184,166,0.32); }
-        .ldf-plain:focus  { background: rgba(255,255,255,0.07); border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(13,148,136,0.18); }
+        .lef-plain::placeholder { color: #94a3b8; }
+        .lef-plain:hover  { border-color: #cbd5e1; }
+        .lef-plain:focus  { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+        .lef-plain:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
 
-        .otp-cell {
-          width: 44px; height: 52px; border-radius: 10px;
-          border: 1.5px solid rgba(20,184,166,0.2);
-          background: rgba(255,255,255,0.04);
-          color: #5eead4; font-size: 22px; font-weight: 600;
-          text-align: center; outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-          caret-color: transparent;
-        }
-        .otp-cell::placeholder { color: rgba(94,234,212,0.18); font-size: 16px; }
-        .otp-cell:hover  { background: rgba(255,255,255,0.06); border-color: rgba(20,184,166,0.38); }
-        .otp-cell:focus  { background: rgba(255,255,255,0.07); border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(13,148,136,0.18); }
-        .otp-cell.filled { border-color: rgba(20,184,166,0.5); background: rgba(13,148,136,0.07); }
-        .otp-cell:disabled { opacity: 0.35; cursor: not-allowed; }
-
-        .welcome-shimmer {
-          background: linear-gradient(90deg, #ffffff 0%, #99f6e4 40%, #ffffff 70%, #99f6e4 100%);
-          background-size: 250% auto;
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-          animation: loginShimmer 5s linear infinite;
-        }
-
-        .tab-btn {
+        .ltab {
           flex: 1; padding: 8px 0; font-size: 13px; font-weight: 600;
-          border-radius: 8px; cursor: pointer; border: none;
-          transition: all 0.2s ease; letter-spacing: 0.02em;
+          border-radius: 7px; cursor: pointer; border: none; background: transparent;
+          color: #64748b; transition: all 0.15s;
         }
-        .tab-btn.active {
-          background: linear-gradient(135deg, rgba(13,148,136,0.75), rgba(15,118,110,0.75));
-          color: #5eead4;
-          box-shadow: 0 2px 12px rgba(13,148,136,0.3);
+        .ltab:hover:not(:disabled) { color: #0f172a; }
+        .ltab.active {
+          background: #ffffff; color: #0d9488;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04);
         }
-        .tab-btn.inactive {
-          background: transparent; color: rgba(100,116,139,0.6);
-        }
-        .tab-btn.inactive:hover { color: rgba(45,212,191,0.8); background: rgba(255,255,255,0.05); }
+        .ltab:disabled { cursor: not-allowed; opacity: 0.55; }
 
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .lotp {
+          width: 44px; height: 52px; border-radius: 8px;
+          border: 1.5px solid #e2e8f0; background: #fff;
+          color: #0f172a; font-size: 22px; font-weight: 600;
+          text-align: center; outline: none; caret-color: transparent;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .lotp:focus  { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+        .lotp.filled { border-color: #0d9488; background: #f0fdfa; }
+        .lotp:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .lbtn {
+          transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.15s ease;
+        }
+        .lbtn:not(:disabled):hover {
+          background: linear-gradient(135deg, #14b8a6, #0d9488) !important;
+          box-shadow: 0 4px 20px rgba(13,148,136,0.35) !important;
+          transform: translateY(-1px) !important;
+        }
+        .lbtn:not(:disabled):active { transform: translateY(0) !important; }
+        .lbtn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+        .lfgt {
+          font-size: 13px; color: #94a3b8; background: none; border: none;
+          cursor: pointer; padding: 0; transition: color 0.15s;
+        }
+        .lfgt:hover { color: #0d9488; }
+
+        .lmod-field {
+          width: 100%; padding: 10px 12px; font-size: 14px;
+          border: 1px solid #e2e8f0; border-radius: 8px;
+          color: #0f172a; background: #fff; outline: none; box-sizing: border-box;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .lmod-field::placeholder { color: #94a3b8; }
+        .lmod-field:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+        .lmod-field:disabled { background: #f8fafc; cursor: not-allowed; }
+
+        @keyframes lspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes lfadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .l-fade { animation: lfadein 0.3s ease forwards; }
       `}</style>
 
-      {/* ─── Ambient background glows ─── */}
-      <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:0 }}>
-        <div style={{ position:'absolute', top:'-12%', left:'-8%', width:640, height:640,
-          borderRadius:'50%', filter:'blur(140px)',
-          background:'radial-gradient(circle, rgba(13,148,136,0.14) 0%, transparent 70%)',
-          animation:'loginGlowBreathe 10s ease-in-out infinite' }} />
-        <div style={{ position:'absolute', bottom:'-12%', right:'-8%', width:560, height:560,
-          borderRadius:'50%', filter:'blur(120px)',
-          background:'radial-gradient(circle, rgba(15,118,110,0.10) 0%, transparent 70%)',
-          animation:'loginGlowBreathe 14s ease-in-out infinite', animationDelay:'5s' }} />
-        <div style={{ position:'absolute', top:'40%', right:'16%', width:380, height:380,
-          borderRadius:'50%', filter:'blur(100px)',
-          background:'radial-gradient(circle, rgba(45,212,191,0.07) 0%, transparent 70%)',
-          animation:'loginGlowBreathe 12s ease-in-out infinite', animationDelay:'2.5s' }} />
-      </div>
-
-      {/* ─── Arc rings ─── */}
-      <div style={{ position:'fixed', top:-130, left:-130, width:440, height:440,
-        borderRadius:'50%', border:'1px solid rgba(20,184,166,0.06)',
-        pointerEvents:'none', zIndex:1, animation:'loginArcSpin 80s linear infinite' }} />
-      <div style={{ position:'fixed', top:-80,  left:-80,  width:280, height:280,
-        borderRadius:'50%', border:'0.5px dashed rgba(20,184,166,0.04)',
-        pointerEvents:'none', zIndex:1, animation:'loginArcSpinRev 50s linear infinite' }} />
-      <div style={{ position:'fixed', bottom:-110, right:-110, width:400, height:400,
-        borderRadius:'50%', border:'1px solid rgba(13,148,136,0.05)',
-        pointerEvents:'none', zIndex:1, animation:'loginArcSpinRev 65s linear infinite' }} />
-      <div style={{ position:'fixed', bottom:-60,  right:-60,  width:250, height:250,
-        borderRadius:'50%', border:'0.5px dashed rgba(15,118,110,0.04)',
-        pointerEvents:'none', zIndex:1, animation:'loginArcSpin 42s linear infinite' }} />
-
-      {/* ─── Floating particles ─── */}
-      {PARTICLES.map((p, i) => {
-        const pos: Record<string, string> = {};
-        if (p.top)    pos.top    = p.top;
-        if (p.bottom) pos.bottom = p.bottom;
-        if (p.left)   pos.left   = p.left;
-        if (p.right)  pos.right  = p.right;
-        return (
-          <div key={i} style={{
-            position:'fixed', ...pos,
-            width:p.size, height:p.size, borderRadius:'50%',
-            background: i%3===0 ? 'rgba(94,234,212,0.6)' : i%3===1 ? 'rgba(20,184,166,0.5)' : 'rgba(13,148,136,0.4)',
-            boxShadow: `0 0 ${p.size*3}px rgba(20,184,166,0.4)`,
-            pointerEvents:'none', zIndex:2,
-            animation:`loginParticleDrift ${p.dur} ease-in-out infinite`,
-            animationDelay: p.delay,
-          }} />
-        );
-      })}
-
-      {/* ══════════════════════════════════════════════════
-          INTRO OVERLAY
-      ══════════════════════════════════════════════════ */}
-      {showOverlay && (
+      {/* ════════════════════════════════════════
+          LEFT BRAND PANEL  (desktop only)
+      ════════════════════════════════════════ */}
+      <div className="hidden lg:flex" style={{
+        width: 420, minHeight: '100vh', flexDirection: 'column',
+        background: '#0f172a', padding: '52px 48px', position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Subtle dot grid */}
         <div style={{
-          position:'fixed', inset:0, zIndex:50,
-          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-          background:'#040d1a',
-          opacity: phase === 'reveal' ? 0 : 1,
-          transition: phase === 'reveal' ? 'opacity 0.72s ease' : 'none',
-          pointerEvents: phase === 'reveal' ? 'none' : 'auto',
-        }}>
-          <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
-            <div style={{ position:'absolute', top:'-10%', left:'-5%', width:600, height:600,
-              borderRadius:'50%', filter:'blur(130px)',
-              background:'radial-gradient(circle, rgba(13,148,136,0.16) 0%, transparent 70%)' }} />
-            <div style={{ position:'absolute', bottom:'-10%', right:'-5%', width:520, height:520,
-              borderRadius:'50%', filter:'blur(115px)',
-              background:'radial-gradient(circle, rgba(15,118,110,0.12) 0%, transparent 70%)' }} />
-          </div>
-          <div style={{
-            position:'relative', zIndex:1, marginBottom:36,
-            transform: getLogoTransform(phase),
-            transition: getLogoTransition(phase),
-          }}>
-            {!logoError ? (
-              <Image src="/logo.png" alt="Infovion" width={200} height={200}
-                style={{ objectFit:'contain', width:'auto', maxHeight:180, display:'block' }}
-                onError={() => setLogoError(true)} />
-            ) : (
-              <div style={{ textAlign:'center' }}>
-                <p style={{ color:'#5eead4', fontWeight:300, fontSize:'2.8rem', letterSpacing:'0.22em' }}>INFOVION</p>
-                <p style={{ color:'rgba(94,234,212,0.4)', fontSize:'0.75rem', letterSpacing:'0.18em', marginTop:6 }}>ACADEMIC SAAS</p>
-              </div>
-            )}
-          </div>
-          <div style={{
-            position:'relative', zIndex:1, textAlign:'center',
-            opacity: welcomeVisible ? 1 : 0,
-            transform: welcomeVisible ? 'translateY(0)' : 'translateY(18px)',
-            transition: 'opacity 0.6s ease, transform 0.6s ease',
-          }}>
-            <h1 style={{ margin:0, fontWeight:300, fontSize:'clamp(1.35rem,4vw,2.1rem)', letterSpacing:'0.22em', textTransform:'uppercase' }}>
-              <span className="welcome-shimmer">Welcome to Infovion</span>
-            </h1>
-            <div style={{ height:1, background:'linear-gradient(to right,transparent,rgba(20,184,166,0.3),transparent)',
-              margin:'20px auto 0', width:260, maxWidth:'80vw' }} />
-            <p style={{ color:'rgba(94,234,212,0.38)', fontSize:11, letterSpacing:'0.18em',
-              textTransform:'uppercase', marginTop:14, fontWeight:300 }}>
-              Intelligent School Management
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          backgroundImage: 'radial-gradient(circle, rgba(45,212,191,0.055) 1px, transparent 1px)',
+          backgroundSize: '26px 26px',
+        }} />
+        {/* Soft ambient teal orb */}
+        <div style={{
+          position: 'absolute', bottom: '-10%', right: '-15%',
+          width: 400, height: 400, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(13,148,136,0.08) 0%, transparent 70%)',
+          filter: 'blur(60px)', pointerEvents: 'none',
+        }} />
+
+        {/* Logo */}
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: 56 }}>
+          {!logoError ? (
+            <Image src="/logo.png" alt="Infovion" width={140} height={70}
+              style={{ objectFit: 'contain', width: 'auto', maxHeight: 54, display: 'block' }}
+              onError={() => setLogoError(true)} />
+          ) : (
+            <p style={{ color: '#2dd4bf', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
+              Infovion
             </p>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════
-          LOGIN CARD
-      ══════════════════════════════════════════════════ */}
-      {showCard && (
-        <div style={{
-          position:'relative', zIndex:30, width:'100%', maxWidth:430,
-          padding:'0 16px',
-          animation:'loginCardReveal 0.62s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
-        }}>
-          <div style={{
-            background:'linear-gradient(160deg, rgba(10,20,42,0.97) 0%, rgba(6,13,30,0.98) 100%)',
-            border:'1px solid rgba(20,184,166,0.16)',
-            borderRadius:22,
-            padding:'0 0 32px',
-            boxShadow:'0 48px 100px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(20,184,166,0.06), 0 0 80px rgba(13,148,136,0.08)',
-            backdropFilter:'blur(32px)',
-            WebkitBackdropFilter:'blur(32px)',
-            overflow:'hidden',
-            position:'relative',
+          )}
+          <p style={{
+            color: '#334155', fontSize: 10.5, fontWeight: 700,
+            letterSpacing: '0.13em', textTransform: 'uppercase', marginTop: 10, marginBottom: 0,
           }}>
-            {/* Teal top accent bar */}
-            <div style={{ height:2, background:'linear-gradient(90deg, transparent 0%, rgba(13,148,136,0.5) 25%, rgba(45,212,191,0.9) 50%, rgba(13,148,136,0.5) 75%, transparent 100%)', animation:'cardBorderPulse 5s ease-in-out infinite' }} />
-            {/* Inner top highlight */}
-            <div style={{ position:'absolute', top:2, left:0, right:0, height:60, background:'linear-gradient(180deg, rgba(13,148,136,0.04) 0%, transparent 100%)', pointerEvents:'none' }} />
-
-            <div style={{ padding:'28px 32px 0' }}>
-
-              {/* Card logo */}
-              <div style={{ textAlign:'center', marginBottom:22 }}>
-                {!logoError ? (
-                  <Image src="/logo.png" alt="Infovion" width={90} height={90}
-                    style={{ objectFit:'contain', width:'auto', maxHeight:56, margin:'0 auto', display:'block' }}
-                    onError={() => setLogoError(true)} />
-                ) : (
-                  <p style={{ color:'#5eead4', fontWeight:300, fontSize:'1.25rem', letterSpacing:'0.16em', margin:0 }}>INFOVION</p>
-                )}
-                <p style={{ color:'rgba(94,234,212,0.35)', fontSize:10, letterSpacing:'0.18em',
-                  textTransform:'uppercase', margin:'6px 0 0', fontWeight:300 }}>Academic Management</p>
-              </div>
-
-              {/* Thin divider */}
-              <div style={{ height:'0.5px', background:'linear-gradient(to right, transparent, rgba(20,184,166,0.15), transparent)', marginBottom:20 }} />
-
-              {/* ── Tab switcher ── */}
-              <div style={{
-                display:'flex', gap:4, padding:'4px',
-                background:'rgba(255,255,255,0.03)',
-                border:'1px solid rgba(20,184,166,0.1)',
-                borderRadius:11, marginBottom:24,
-              }}>
-                <button className={`tab-btn ${activeTab === 'staff' ? 'active' : 'inactive'}`}
-                  onClick={() => switchTab('staff')} disabled={loading}>
-                  School Staff
-                </button>
-                <button className={`tab-btn ${activeTab === 'parent' ? 'active' : 'inactive'}`}
-                  onClick={() => switchTab('parent')} disabled={loading}>
-                  Parent
-                </button>
-              </div>
-
-              {/* ── Heading ── */}
-              <div style={{ marginBottom:20 }}>
-                <h2 style={{ margin:0, color:'#e2f8f5', fontWeight:600, fontSize:19.5, letterSpacing:'-0.025em' }}>
-                  {cardHeading}
-                </h2>
-                <p style={{ margin:'5px 0 0', color:'rgba(148,163,184,0.6)', fontSize:13 }}>
-                  {cardSub}
-                </p>
-              </div>
-
-              {/* ════════════════════════════════════════
-                  SCHOOL STAFF TAB
-              ════════════════════════════════════════ */}
-              {activeTab === 'staff' && (
-                <>
-                  {/* Step 1: school code + email + password */}
-                  {staffStep === 1 && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:15 }}>
-                      <div>
-                        <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                          color:'rgba(94,234,212,0.65)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                          School Code
-                        </label>
-                        <div style={{ position:'relative' }}>
-                          <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                            alignItems:'center', pointerEvents:'none', color:'rgba(71,85,105,0.5)' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-                            </svg>
-                          </div>
-                          <input className="ldf" type="text" placeholder="Your school code"
-                            value={institutionCode} onChange={(e) => setInstitutionCode(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
-                            disabled={loading} autoCapitalize="none" autoCorrect="off" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                          color:'rgba(94,234,212,0.65)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                          Email Address
-                        </label>
-                        <div style={{ position:'relative' }}>
-                          <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                            alignItems:'center', pointerEvents:'none', color:'rgba(71,85,105,0.5)' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-                            </svg>
-                          </div>
-                          <input className="ldf" type="email" placeholder="Your email address"
-                            value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
-                            disabled={loading} autoCapitalize="none" autoCorrect="off" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                          color:'rgba(94,234,212,0.65)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                          Password
-                        </label>
-                        <div style={{ position:'relative' }}>
-                          <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                            alignItems:'center', pointerEvents:'none', color:'rgba(71,85,105,0.5)' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                            </svg>
-                          </div>
-                          <input className="ldf" type="password" placeholder="Your password"
-                            value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
-                            disabled={loading} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 2: TOTP code */}
-                  {staffStep === 2 && (
-                    <div style={{ animation:'totpReveal 0.35s ease forwards' }}>
-                      {/* Authenticator hint */}
-                      <div style={{
-                        marginBottom:16, padding:'10px 14px', borderRadius:9, fontSize:12.5,
-                        background:'rgba(13,148,136,0.08)', border:'1px solid rgba(20,184,166,0.18)',
-                        color:'rgba(94,234,212,0.7)', display:'flex', alignItems:'center', gap:8,
-                      }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}>
-                          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
-                        </svg>
-                        Open your authenticator app and enter the current code
-                      </div>
-
-                      {/* TOTP 6-cell input */}
-                      <div style={{ display:'flex', gap:8, justifyContent:'center', marginBottom:6 }}
-                        onPaste={handleTotpPaste}>
-                        {totpDigits.map((digit, i) => (
-                          <input
-                            key={i}
-                            ref={(el) => { totpRefs.current[i] = el; }}
-                            className={`otp-cell${digit ? ' filled' : ''}`}
-                            type="text" inputMode="numeric" pattern="[0-9]*"
-                            maxLength={1} value={digit} placeholder="·"
-                            onChange={(e) => handleTotpChange(i, e.target.value)}
-                            onKeyDown={(e) => handleTotpKeyDown(i, e)}
-                            disabled={loading}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Back link */}
-                      <div style={{ marginTop:14 }}>
-                        <button type="button"
-                          onClick={() => {
-                            setStaffStep(1);
-                            setTotpToken(null);
-                            setTotpDigits(['','','','','','']);
-                            setError(null);
-                          }}
-                          style={{ fontSize:12, color:'rgba(100,116,139,0.6)', background:'none', border:'none',
-                            cursor:'pointer', padding:0, display:'flex', alignItems:'center', gap:4 }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color='rgba(45,212,191,0.8)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color='rgba(100,116,139,0.6)')}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="15 18 9 12 15 6"/>
-                          </svg>
-                          Back to login
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Error */}
-                  {error && (
-                    <div style={{ marginTop:14, padding:'10px 13px', borderRadius:8, fontSize:13,
-                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)', color:'#ff9090' }}>
-                      {error}
-                    </div>
-                  )}
-
-                  {/* Action button */}
-                  {staffStep === 1 ? (
-                    <button onClick={handleStaffLogin} disabled={loading} className="login-btn"
-                      style={{
-                        marginTop:18, width:'100%', padding:'12px',
-                        fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
-                        background: loading ? 'rgba(13,148,136,0.5)' : 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
-                        color:'#ffffff', border:'1px solid rgba(15,118,110,0.3)',
-                        boxShadow: loading ? 'none' : '0 2px 18px rgba(13,148,136,0.35)',
-                      }}>
-                      {loading ? (
-                        <span style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-                          <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-                            <svg style={{ width:16, height:16, animation:'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
-                            </svg>
-                            {loadStep === 1 && 'Verifying credentials…'}
-                            {loadStep === 2 && 'Authenticating…'}
-                            {loadStep === 3 && 'Logging you in…'}
-                          </span>
-                          <span style={{ display:'flex', gap:4 }}>
-                            {[1,2,3].map((s) => (
-                              <span key={s} style={{ display:'inline-block', borderRadius:999, transition:'all 0.3s',
-                                width: loadStep >= s ? 20 : 6, height:4,
-                                background: loadStep >= s ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)' }} />
-                            ))}
-                          </span>
-                        </span>
-                      ) : (
-                        <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                          Sign In
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                          </svg>
-                        </span>
-                      )}
-                    </button>
-                  ) : (
-                    <button onClick={handleTotpVerify} disabled={loading} className="login-btn"
-                      style={{
-                        marginTop:18, width:'100%', padding:'12px',
-                        fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
-                        background: loading ? 'rgba(13,148,136,0.5)' : 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
-                        color:'#ffffff', border:'1px solid rgba(15,118,110,0.3)',
-                        boxShadow: loading ? 'none' : '0 2px 18px rgba(13,148,136,0.35)',
-                      }}>
-                      {loading ? (
-                        <span style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-                          <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-                            <svg style={{ width:16, height:16, animation:'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
-                            </svg>
-                            {loadStep === 1 && 'Verifying code…'}
-                            {loadStep === 2 && 'Authenticating…'}
-                            {loadStep === 3 && 'Logging you in…'}
-                          </span>
-                          <span style={{ display:'flex', gap:4 }}>
-                            {[1,2,3].map((s) => (
-                              <span key={s} style={{ display:'inline-block', borderRadius:999, transition:'all 0.3s',
-                                width: loadStep >= s ? 20 : 6, height:4,
-                                background: loadStep >= s ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)' }} />
-                            ))}
-                          </span>
-                        </span>
-                      ) : (
-                        <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                          Verify &amp; Sign In
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                          </svg>
-                        </span>
-                      )}
-                    </button>
-                  )}
-
-                  {/* Forgot password link — only on step 1 */}
-                  {staffStep === 1 && (
-                    <div style={{ textAlign:'center', marginTop:14 }}>
-                      <button type="button" onClick={openForgot}
-                        style={{ fontSize:12, fontWeight:500, color:'rgba(100,116,139,0.55)',
-                          background:'none', border:'none', cursor:'pointer', padding:0 }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color='#5eead4')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color='rgba(100,116,139,0.55)')}>
-                        Forgot password?
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* ════════════════════════════════════════
-                  PARENT TAB
-              ════════════════════════════════════════ */}
-              {activeTab === 'parent' && (
-                <>
-                  <div style={{ display:'flex', flexDirection:'column', gap:15 }}>
-                    <div>
-                      <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                        color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                        Phone Number
-                      </label>
-                      <div style={{ position:'relative' }}>
-                        <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                          alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.13 1 .38 1.97.74 2.91a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 5.16 5.16l.96-.96a2 2 0 0 1 2.11-.45c.94.36 1.92.61 2.91.74A2 2 0 0 1 22 16.92z"/>
-                          </svg>
-                        </div>
-                        <input className="ldf" type="tel" placeholder="Your registered phone number"
-                          value={parentPhone} onChange={(e) => setParentPhone(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleParentLogin()}
-                          disabled={loading} />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                        color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                        Password
-                      </label>
-                      <div style={{ position:'relative' }}>
-                        <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                          alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                          </svg>
-                        </div>
-                        <input className="ldf" type="password" placeholder="••••••••"
-                          value={parentPassword} onChange={(e) => setParentPassword(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleParentLogin()}
-                          disabled={loading} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Error */}
-                  {error && (
-                    <div style={{ marginTop:14, padding:'10px 13px', borderRadius:8, fontSize:13,
-                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)', color:'#ff9090' }}>
-                      {error}
-                    </div>
-                  )}
-
-                  <button onClick={handleParentLogin} disabled={loading} className="login-btn"
-                    style={{
-                      marginTop:18, width:'100%', padding:'12px',
-                      fontSize:14.5, fontWeight:600, borderRadius:10, cursor: loading ? 'default' : 'pointer',
-                      background: loading ? 'rgba(174,85,37,0.55)' : 'linear-gradient(135deg, #ae5525 0%, #8c3919 100%)',
-                      color:'#fcfbf7', border:'1px solid rgba(140,57,25,0.35)',
-                      boxShadow: loading ? 'none' : '0 2px 16px rgba(174,85,37,0.38)',
-                    }}>
-                    {loading ? (
-                      <span style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
-                        <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-                          <svg style={{ width:16, height:16, animation:'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30" strokeLinecap="round"/>
-                          </svg>
-                          {loadStep === 1 && 'Verifying credentials…'}
-                          {loadStep === 2 && 'Authenticating…'}
-                          {loadStep === 3 && 'Logging you in…'}
-                        </span>
-                        <span style={{ display:'flex', gap:4 }}>
-                          {[1,2,3].map((s) => (
-                            <span key={s} style={{ display:'inline-block', borderRadius:999, transition:'all 0.3s',
-                              width: loadStep >= s ? 20 : 6, height:4,
-                              background: loadStep >= s ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)' }} />
-                          ))}
-                        </span>
-                      </span>
-                    ) : (
-                      <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                        Sign In
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                        </svg>
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Forgot password — parent */}
-                  <div style={{ textAlign:'center', marginTop:14 }}>
-                    <button type="button" onClick={openParentForgot}
-                      style={{ fontSize:12, fontWeight:500, color:'rgba(220,146,75,0.5)',
-                        background:'none', border:'none', cursor:'pointer', padding:0 }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color='#f7c576')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color='rgba(220,146,75,0.5)')}>
-                      Forgot password?
-                    </button>
-                  </div>
-                </>
-              )}
-
-            </div>{/* /inner padding */}
-          </div>{/* /card */}
-
-          {/* Footer */}
-          <p style={{ textAlign:'center', color:'rgba(255,255,255,0.22)', fontSize:11,
-            letterSpacing:'0.04em', marginTop:20 }}>
-            © {new Date().getFullYear()} Infovion. All rights reserved.
+            Academic Management Platform
           </p>
         </div>
-      )}
 
-      {/* ══════════════════════════════════════════════════
-          PARENT FORGOT PASSWORD MODAL
-      ══════════════════════════════════════════════════ */}
-      {showParentForgot && (
-        <div style={{
-          position:'fixed', inset:0, zIndex:60, display:'flex', alignItems:'center', justifyContent:'center',
-          padding:16, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)',
-          WebkitBackdropFilter:'blur(8px)',
-        }}
-          onClick={(e) => e.target === e.currentTarget && setShowParentForgot(false)}>
-          <div style={{
-            width:'100%', maxWidth:380, borderRadius:18, overflow:'hidden',
-            background:'linear-gradient(160deg, rgba(10,20,42,0.98) 0%, rgba(6,13,30,0.99) 100%)',
-            border:'1px solid rgba(20,184,166,0.15)',
-            boxShadow:'0 32px 80px rgba(0,0,0,0.75)',
-            animation:'loginCardReveal 0.4s ease forwards',
+        {/* Headline */}
+        <div style={{ position: 'relative', zIndex: 1, flex: 1 }}>
+          <h1 style={{
+            color: '#f1f5f9', fontSize: 26, fontWeight: 700,
+            lineHeight: 1.35, letterSpacing: '-0.025em', margin: '0 0 14px 0',
           }}>
-            {/* Header */}
-            <div style={{ padding:'20px 24px 18px',
-              background:'linear-gradient(135deg, rgba(10,20,42,0.95), rgba(14,26,52,0.95))',
-              borderBottom:'1px solid rgba(20,184,166,0.08)' }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <div style={{ width:34, height:34, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center',
-                    background:'rgba(13,148,136,0.12)', border:'1px solid rgba(20,184,166,0.2)' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(45,212,191,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            Everything your school needs, in one place.
+          </h1>
+          <p style={{
+            color: '#475569', fontSize: 14, lineHeight: 1.75, margin: '0 0 44px 0',
+          }}>
+            Attendance, fees, exams, parent communication, and documents — purpose-built for Indian K-12 schools.
+          </p>
+
+          {/* Feature list */}
+          {[
+            'Student attendance & examination management',
+            'Fee collection with Razorpay online payments',
+            'Parent portal with real-time student updates',
+            'Transfer certificates & school documents',
+            'Staff salary, timetable & substitution covers',
+          ].map((feature) => (
+            <div key={feature} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                background: 'rgba(13,148,136,0.12)', border: '1px solid rgba(45,212,191,0.18)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <polyline points="2,6 5,9 10,3" stroke="#2dd4bf" strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span style={{ color: '#64748b', fontSize: 13.5, lineHeight: 1.5 }}>{feature}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Panel footer */}
+        <div style={{
+          position: 'relative', zIndex: 1,
+          borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, marginTop: 40,
+        }}>
+          <p style={{ color: '#1e293b', fontSize: 11, margin: 0 }}>
+            © {new Date().getFullYear()} Infovion Technologies · Pune, India
+          </p>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════
+          RIGHT FORM PANEL
+      ════════════════════════════════════════ */}
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#ffffff', padding: '40px 24px', minHeight: '100vh',
+      }}>
+        <div className="l-fade" style={{ width: '100%', maxWidth: 380 }}>
+
+          {/* Mobile logo (hidden on lg+) */}
+          <div className="lg:hidden" style={{ textAlign: 'center', marginBottom: 36 }}>
+            {!logoError ? (
+              <Image src="/logo.png" alt="Infovion" width={110} height={55}
+                style={{ objectFit: 'contain', width: 'auto', maxHeight: 46, display: 'block', margin: '0 auto' }}
+                onError={() => setLogoError(true)} />
+            ) : (
+              <p style={{ color: '#0d9488', fontSize: 20, fontWeight: 700, margin: 0 }}>Infovion</p>
+            )}
+            <p style={{
+              color: '#94a3b8', fontSize: 10.5, fontWeight: 700,
+              letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 8, marginBottom: 0,
+            }}>
+              Academic Management Platform
+            </p>
+          </div>
+
+          {/* Heading */}
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ color: '#0f172a', fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 5px 0' }}>
+              {staffStep === 2 ? 'Two-Step Verification' : 'Sign in'}
+            </h2>
+            <p style={{ color: '#64748b', fontSize: 14, margin: 0 }}>
+              {activeTab === 'parent'
+                ? 'Enter your phone number and password'
+                : staffStep === 2
+                  ? 'Enter the 6-digit code from your authenticator app'
+                  : 'Enter your school code and credentials to continue'}
+            </p>
+          </div>
+
+          {/* Tab switcher — only on step 1 */}
+          {staffStep === 1 && (
+            <div style={{
+              display: 'flex', gap: 0, background: '#f1f5f9',
+              borderRadius: 10, padding: 4, marginBottom: 26,
+              border: '1px solid #e2e8f0',
+            }}>
+              <button className={`ltab ${activeTab === 'staff' ? 'active' : ''}`}
+                onClick={() => switchTab('staff')} disabled={loading}>
+                School Staff
+              </button>
+              <button className={`ltab ${activeTab === 'parent' ? 'active' : ''}`}
+                onClick={() => switchTab('parent')} disabled={loading}>
+                Parent
+              </button>
+            </div>
+          )}
+
+          {/* ── Staff step 1 ── */}
+          {activeTab === 'staff' && staffStep === 1 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  School Code
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 12, top: 0, bottom: 0, display: 'flex', alignItems: 'center', color: '#94a3b8', pointerEvents: 'none' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
                     </svg>
                   </div>
-                  <div>
-                    <p style={{ fontSize:14, fontWeight:700, color:'#e2f8f5', margin:0 }}>Forgot Password</p>
-                    <p style={{ fontSize:11, color:'rgba(94,234,212,0.5)', margin:0 }}>Parent account recovery</p>
+                  <input className="lef" type="text" placeholder="Your school code"
+                    value={institutionCode} onChange={(e) => setInstitutionCode(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
+                    disabled={loading} autoCapitalize="none" autoCorrect="off" />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  Email Address
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 12, top: 0, bottom: 0, display: 'flex', alignItems: 'center', color: '#94a3b8', pointerEvents: 'none' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />
+                    </svg>
                   </div>
+                  <input className="lef" type="email" placeholder="Your email address"
+                    value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
+                    disabled={loading} autoCapitalize="none" autoCorrect="off" />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 12, top: 0, bottom: 0, display: 'flex', alignItems: 'center', color: '#94a3b8', pointerEvents: 'none' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </div>
+                  <input className="lef" type="password" placeholder="Your password"
+                    value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleStaffLogin()}
+                    disabled={loading} />
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ── TOTP step 2 ── */}
+          {activeTab === 'staff' && staffStep === 2 && (
+            <div>
+              <div style={{
+                padding: '12px 14px', borderRadius: 8, marginBottom: 22,
+                background: '#f0fdfa', border: '1px solid #99f6e4',
+                display: 'flex', alignItems: 'center', gap: 10, color: '#0f766e', fontSize: 13,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2" /><line x1="12" y1="18" x2="12.01" y2="18" />
+                </svg>
+                Open your authenticator app and enter the current 6-digit code
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 10 }}
+                onPaste={handleTotpPaste}>
+                {totpDigits.map((digit, i) => (
+                  <input key={i}
+                    ref={(el) => { totpRefs.current[i] = el; }}
+                    className={`lotp${digit ? ' filled' : ''}`}
+                    type="text" inputMode="numeric" pattern="[0-9]*"
+                    maxLength={1} value={digit} placeholder="·"
+                    onChange={(e) => handleTotpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleTotpKeyDown(i, e)}
+                    disabled={loading}
+                  />
+                ))}
+              </div>
+
+              <button type="button"
+                onClick={() => { setStaffStep(1); setTotpToken(null); setTotpDigits(['','','','','','']); setError(null); }}
+                style={{ fontSize: 13, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0', display: 'flex', alignItems: 'center', gap: 5, transition: 'color 0.15s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0d9488')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+                Back to login
+              </button>
+            </div>
+          )}
+
+          {/* ── Parent form ── */}
+          {activeTab === 'parent' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  Phone Number
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 12, top: 0, bottom: 0, display: 'flex', alignItems: 'center', color: '#94a3b8', pointerEvents: 'none' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.13 1 .38 1.97.74 2.91a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 5.16 5.16l.96-.96a2 2 0 0 1 2.11-.45c.94.36 1.92.61 2.91.74A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                  </div>
+                  <input className="lef" type="tel" placeholder="Your registered phone number"
+                    value={parentPhone} onChange={(e) => setParentPhone(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleParentLogin()}
+                    disabled={loading} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 12, top: 0, bottom: 0, display: 'flex', alignItems: 'center', color: '#94a3b8', pointerEvents: 'none' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </div>
+                  <input className="lef" type="password" placeholder="••••••••"
+                    value={parentPassword} onChange={(e) => setParentPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleParentLogin()}
+                    disabled={loading} />
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div style={{
+              marginTop: 16, padding: '10px 14px', borderRadius: 8,
+              background: '#fff1f2', border: '1px solid #fda4af', color: '#9f1239', fontSize: 13,
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Submit */}
+          <button onClick={handleSubmit} disabled={loading} className="lbtn"
+            style={{
+              marginTop: 22, width: '100%', padding: '12px',
+              fontSize: 15, fontWeight: 600, borderRadius: 9, cursor: loading ? 'default' : 'pointer',
+              background: loading
+                ? '#f0fdfa'
+                : 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+              color: loading ? '#0d9488' : '#ffffff',
+              border: '1px solid rgba(15,118,110,0.25)',
+              boxShadow: loading ? 'none' : '0 1px 6px rgba(13,148,136,0.28)',
+            }}>
+            {loading ? (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
+                <svg style={{ width: 16, height: 16, animation: 'lspin 0.8s linear infinite', flexShrink: 0 }}
+                  viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"
+                    strokeDasharray="30" strokeLinecap="round" />
+                </svg>
+                {submitLabel}
+              </span>
+            ) : (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {staffStep === 2 ? 'Verify & Sign In' : 'Sign In'}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                </svg>
+              </span>
+            )}
+          </button>
+
+          {/* Forgot password */}
+          {activeTab === 'staff' && staffStep === 1 && (
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button type="button" className="lfgt" onClick={openForgot}>Forgot password?</button>
+            </div>
+          )}
+          {activeTab === 'parent' && (
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button type="button" className="lfgt" onClick={openParentForgot}>Forgot password?</button>
+            </div>
+          )}
+
+          {/* Mobile footer */}
+          <div className="lg:hidden" style={{ textAlign: 'center', marginTop: 36, paddingTop: 24, borderTop: '1px solid #f1f5f9' }}>
+            <p style={{ color: '#cbd5e1', fontSize: 11, margin: 0 }}>
+              © {new Date().getFullYear()} Infovion Technologies · Pune, India
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════
+          SUCCESS OVERLAY  (minimal)
+      ════════════════════════════════════════ */}
+      {successInfo && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 80,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(255,255,255,0.96)',
+        }}>
+          <svg style={{ width: 34, height: 34, animation: 'lspin 0.8s linear infinite', color: '#0d9488', marginBottom: 18 }}
+            viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"
+              strokeDasharray="30" strokeLinecap="round" />
+          </svg>
+          <p style={{ color: '#0f172a', fontSize: 16, fontWeight: 700, margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+            {successInfo.institution}
+          </p>
+          <p style={{ color: '#64748b', fontSize: 13.5, margin: 0 }}>Signing you in…</p>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════
+          PARENT FORGOT PASSWORD MODAL
+      ════════════════════════════════════════ */}
+      {showParentForgot && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 60,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)',
+        }} onClick={(e) => e.target === e.currentTarget && setShowParentForgot(false)}>
+          <div style={{
+            width: '100%', maxWidth: 380, borderRadius: 16, overflow: 'hidden',
+            background: '#ffffff', boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
+          }}>
+            {/* Teal accent bar */}
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #0d9488, #2dd4bf, #0d9488)' }} />
+
+            {/* Header */}
+            <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Forgot Password</p>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>Parent account recovery</p>
                 </div>
                 <button onClick={() => setShowParentForgot(false)}
-                  style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(94,234,212,0.4)', fontSize:20, lineHeight:1, padding:4 }}>×</button>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1, padding: 4 }}>×</button>
               </div>
             </div>
 
             {/* Body */}
-            <div style={{ padding:'22px 24px 24px' }}>
+            <div style={{ padding: '22px 24px 24px' }}>
               {pfSubmitted ? (
-                <div style={{ textAlign:'center', padding:'8px 0' }}>
-                  <div style={{ width:52, height:52, borderRadius:'50%', margin:'0 auto 16px',
-                    background:'rgba(22,163,74,0.15)', border:'1px solid rgba(22,163,74,0.3)',
-                    display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(74,222,128,0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
+                <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                  <div style={{
+                    width: 50, height: 50, borderRadius: '50%', margin: '0 auto 16px',
+                    background: '#f0fdfa', border: '1px solid #99f6e4',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </div>
-                  <p style={{ fontSize:15, fontWeight:600, color:'#e2f8f5', marginBottom:8 }}>Request Submitted</p>
-                  <p style={{ fontSize:12.5, color:'rgba(148,163,184,0.7)', lineHeight:1.6, marginBottom:20 }}>
-                    Your school operator will reset your password and share it with you directly. Please contact the school if you don&apos;t hear back soon.
+                  <p style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>Request Submitted</p>
+                  <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: '0 0 22px 0' }}>
+                    Your school operator will reset your password and share it with you directly.
                   </p>
                   <button onClick={() => setShowParentForgot(false)}
-                    style={{ padding:'10px 28px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
-                      background:'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
-                      color:'#ffffff', border:'1px solid rgba(15,118,110,0.3)' }}>
+                    style={{
+                      padding: '10px 28px', borderRadius: 8, fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #0d9488, #0f766e)', color: '#ffffff',
+                      border: '1px solid rgba(15,118,110,0.3)',
+                    }}>
                     Back to Login
                   </button>
                 </div>
               ) : (
                 <>
-                  <p style={{ fontSize:12.5, color:'rgba(148,163,184,0.65)', marginBottom:18, lineHeight:1.5 }}>
+                  <p style={{ fontSize: 13, color: '#64748b', marginBottom: 18, lineHeight: 1.6 }}>
                     Enter your registered phone number. Your school operator will receive a request and reset your password.
                   </p>
-
-                  <div style={{ marginBottom:16 }}>
-                    <label style={{ display:'block', fontSize:11, fontWeight:600, marginBottom:6,
-                      color:'rgba(94,234,212,0.6)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
                       Phone Number
                     </label>
-                    <div style={{ position:'relative' }}>
-                      <div style={{ position:'absolute', top:0, bottom:0, left:11, display:'flex',
-                        alignItems:'center', pointerEvents:'none', color:'rgba(107,67,47,0.4)' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.13 1 .38 1.97.74 2.91a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 5.16 5.16l.96-.96a2 2 0 0 1 2.11-.45c.94.36 1.92.61 2.91.74A2 2 0 0 1 22 16.92z"/>
-                        </svg>
-                      </div>
-                      <input className="ldf" type="tel" placeholder="10-digit phone number"
-                        value={pfPhone} onChange={(e) => setPfPhone(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleParentForgotSubmit()}
-                        disabled={pfLoading} />
-                    </div>
+                    <input className="lmod-field" type="tel" placeholder="10-digit phone number"
+                      value={pfPhone} onChange={(e) => setPfPhone(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleParentForgotSubmit()}
+                      disabled={pfLoading} />
                   </div>
-
                   {pfError && (
-                    <div style={{ marginBottom:14, padding:'9px 12px', borderRadius:8, fontSize:12.5,
-                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)', color:'#ff9090' }}>
+                    <div style={{ marginBottom: 14, padding: '9px 12px', borderRadius: 8, fontSize: 13, background: '#fff1f2', border: '1px solid #fda4af', color: '#9f1239' }}>
                       {pfError}
                     </div>
                   )}
-
-                  <div style={{ display:'flex', gap:10 }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
                     <button onClick={() => setShowParentForgot(false)} disabled={pfLoading}
-                      style={{ flex:1, padding:'11px', borderRadius:10, fontSize:13, fontWeight:500, cursor:'pointer',
-                        background:'transparent', border:'1px solid rgba(20,184,166,0.18)', color:'rgba(94,234,212,0.55)' }}>
+                      style={{ flex: 1, padding: '10px', borderRadius: 8, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569' }}>
                       Cancel
                     </button>
                     <button onClick={handleParentForgotSubmit} disabled={pfLoading}
-                      style={{ flex:1, padding:'11px', borderRadius:10, fontSize:13, fontWeight:600,
-                        cursor: pfLoading ? 'default' : 'pointer',
-                        background: pfLoading ? 'rgba(13,148,136,0.5)' : 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
-                        color:'#ffffff', border:'1px solid rgba(15,118,110,0.3)' }}>
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: 8, fontSize: 13.5, fontWeight: 600,
+                        cursor: pfLoading ? 'default' : 'pointer', opacity: pfLoading ? 0.6 : 1,
+                        background: 'linear-gradient(135deg, #0d9488, #0f766e)', color: '#ffffff',
+                        border: '1px solid rgba(15,118,110,0.3)',
+                      }}>
                       {pfLoading ? 'Submitting…' : 'Submit Request'}
                     </button>
                   </div>
@@ -1157,34 +851,30 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════
-          FORGOT PASSWORD MODAL
-      ══════════════════════════════════════════════════ */}
+      {/* ════════════════════════════════════════
+          STAFF FORGOT PASSWORD MODAL
+      ════════════════════════════════════════ */}
       {showForgot && (
         <div style={{
-          position:'fixed', inset:0, zIndex:60, display:'flex', alignItems:'center', justifyContent:'center',
-          padding:16, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)',
-          WebkitBackdropFilter:'blur(8px)',
-        }}
-          onClick={(e) => e.target === e.currentTarget && setShowForgot(false)}>
+          position: 'fixed', inset: 0, zIndex: 60,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)',
+        }} onClick={(e) => e.target === e.currentTarget && setShowForgot(false)}>
           <div style={{
-            width:'100%', maxWidth:380, borderRadius:18, overflow:'hidden',
-            background:'linear-gradient(160deg, rgba(10,20,42,0.98) 0%, rgba(6,13,30,0.99) 100%)',
-            border:'1px solid rgba(20,184,166,0.15)',
-            boxShadow:'0 32px 80px rgba(0,0,0,0.75)',
-            animation:'loginCardReveal 0.4s ease forwards',
+            width: '100%', maxWidth: 380, borderRadius: 16, overflow: 'hidden',
+            background: '#ffffff', boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
           }}>
-            <div style={{ padding:'20px 24px 18px',
-              background:'linear-gradient(135deg, rgba(10,20,42,0.95), rgba(14,26,52,0.95))',
-              borderBottom:'1px solid rgba(20,184,166,0.08)' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ width:36, height:36, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center',
-                  background:'rgba(13,148,136,0.14)', border:'1px solid rgba(20,184,166,0.22)', fontSize:16 }}>🔑</div>
+            {/* Accent bar */}
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #0d9488, #2dd4bf, #0d9488)' }} />
+
+            {/* Header */}
+            <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <h2 style={{ margin:0, color:'#e2f8f5', fontSize:14, fontWeight:600 }}>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
                     {fpSuccess ? 'Password Reset' : fpStep === 'otp' ? 'Enter Reset Code' : 'Reset Password'}
-                  </h2>
-                  <p style={{ margin:'3px 0 0', color:'rgba(94,234,212,0.4)', fontSize:12 }}>
+                  </p>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>
                     {fpSuccess
                       ? 'Your password has been updated'
                       : fpStep === 'otp'
@@ -1192,123 +882,100 @@ export default function LoginPage() {
                         : 'A reset code will be sent to your email'}
                   </p>
                 </div>
+                <button onClick={() => setShowForgot(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1, padding: 4 }}>×</button>
               </div>
             </div>
-            <div style={{ padding:'20px 24px 24px' }}>
+
+            <div style={{ padding: '20px 24px 24px' }}>
               {fpSuccess ? (
-                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-                  <div style={{ padding:'11px 13px', borderRadius:8, fontSize:13,
-                    background:'rgba(13,148,136,0.12)', border:'1px solid rgba(20,184,166,0.25)', color:'#5eead4' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ padding: '11px 13px', borderRadius: 8, fontSize: 13, background: '#f0fdfa', border: '1px solid #99f6e4', color: '#0f766e' }}>
                     {fpSuccess}
                   </div>
-                  <button onClick={() => setShowForgot(false)} style={{
-                    width:'100%', padding:'11px', borderRadius:8, fontWeight:600, fontSize:14, cursor:'pointer',
-                    background:'linear-gradient(135deg,#0d9488,#0f766e)', color:'#ffffff',
-                    border:'1px solid rgba(15,118,110,0.3)', boxShadow:'0 2px 8px rgba(13,148,136,0.25)',
-                  }}>Back to Login</button>
+                  <button onClick={() => setShowForgot(false)}
+                    style={{
+                      width: '100%', padding: '11px', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #0d9488, #0f766e)', color: '#ffffff',
+                      border: '1px solid rgba(15,118,110,0.3)',
+                    }}>
+                    Back to Login
+                  </button>
                 </div>
               ) : fpStep === 'form' ? (
-                /* ── Step 1: enter school code + email ── */
-                <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
-                    <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                      color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                      School Code
-                    </label>
-                    <input className="ldf-plain" type="text" placeholder="Your school code"
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>School Code</label>
+                    <input className="lmod-field" type="text" placeholder="Your school code"
                       value={fpCode} onChange={(e) => setFpCode(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleForgotSendOtp()}
                       autoCapitalize="none" autoCorrect="off" />
                   </div>
                   <div>
-                    <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                      color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                      Email Address
-                    </label>
-                    <input className="ldf-plain" type="email" placeholder="Your registered email"
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Email Address</label>
+                    <input className="lmod-field" type="email" placeholder="Your registered email"
                       value={fpEmail} onChange={(e) => setFpEmail(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleForgotSendOtp()}
                       autoCapitalize="none" autoCorrect="off" />
                   </div>
                   {fpError && (
-                    <div style={{ padding:'9px 12px', borderRadius:8, fontSize:12.5,
-                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)', color:'#ff9090' }}>
+                    <div style={{ padding: '9px 12px', borderRadius: 8, fontSize: 13, background: '#fff1f2', border: '1px solid #fda4af', color: '#9f1239' }}>
                       {fpError}
                     </div>
                   )}
-                  <div style={{ display:'flex', gap:8, paddingTop:4 }}>
-                    <button onClick={() => setShowForgot(false)} style={{
-                      flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:500, cursor:'pointer',
-                      background:'rgba(255,255,255,0.04)', color:'rgba(148,163,184,0.7)',
-                      border:'1px solid rgba(20,184,166,0.14)', transition:'all 0.18s',
-                    }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.08)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.04)')}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setShowForgot(false)}
+                      style={{ flex: 1, padding: '10px', borderRadius: 8, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569' }}>
                       Cancel
                     </button>
-                    <button onClick={handleForgotSendOtp} disabled={fpLoading} style={{
-                      flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:600, cursor:'pointer',
-                      background:'linear-gradient(135deg,#0d9488,#0f766e)', color:'#ffffff',
-                      border:'1px solid rgba(15,118,110,0.3)', boxShadow:'0 2px 8px rgba(13,148,136,0.22)',
-                      opacity: fpLoading ? 0.55 : 1,
-                    }}>
+                    <button onClick={handleForgotSendOtp} disabled={fpLoading}
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: 8, fontSize: 13.5, fontWeight: 600,
+                        cursor: fpLoading ? 'default' : 'pointer', opacity: fpLoading ? 0.6 : 1,
+                        background: 'linear-gradient(135deg, #0d9488, #0f766e)', color: '#ffffff',
+                        border: '1px solid rgba(15,118,110,0.3)',
+                      }}>
                       {fpLoading ? 'Sending…' : 'Send Code'}
                     </button>
                   </div>
                 </div>
               ) : (
-                /* ── Step 2: enter OTP + new password ── */
-                <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
-                    <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                      color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                      Verification Code
-                    </label>
-                    <input className="ldf-plain" type="text" placeholder="6-digit code from email"
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Verification Code</label>
+                    <input className="lmod-field" type="text" placeholder="6-digit code from email"
                       value={fpOtp} onChange={(e) => setFpOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       onKeyDown={(e) => e.key === 'Enter' && handleForgotReset()}
                       inputMode="numeric" autoComplete="one-time-code" />
                   </div>
                   <div>
-                    <label style={{ display:'block', fontSize:11.5, fontWeight:600, marginBottom:6,
-                      color:'rgba(220,146,75,0.75)', letterSpacing:'0.05em', textTransform:'uppercase' }}>
-                      New Password
-                    </label>
-                    <input className="ldf-plain" type="password" placeholder="At least 8 characters"
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 6 }}>New Password</label>
+                    <input className="lmod-field" type="password" placeholder="At least 8 characters"
                       value={fpNewPassword} onChange={(e) => setFpNewPassword(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleForgotReset()} />
                   </div>
                   {fpError && (
-                    <div style={{ padding:'9px 12px', borderRadius:8, fontSize:12.5,
-                      background:'rgba(155,34,38,0.18)', border:'1px solid rgba(155,34,38,0.32)', color:'#ff9090' }}>
+                    <div style={{ padding: '9px 12px', borderRadius: 8, fontSize: 13, background: '#fff1f2', border: '1px solid #fda4af', color: '#9f1239' }}>
                       {fpError}
                     </div>
                   )}
-                  <div style={{ display:'flex', gap:8, paddingTop:4 }}>
-                    <button onClick={() => { setFpStep('form'); setFpError(null); }} style={{
-                      flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:500, cursor:'pointer',
-                      background:'rgba(255,255,255,0.04)', color:'rgba(148,163,184,0.7)',
-                      border:'1px solid rgba(20,184,166,0.14)', transition:'all 0.18s',
-                    }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.08)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background='rgba(255,255,255,0.04)')}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => { setFpStep('form'); setFpError(null); }}
+                      style={{ flex: 1, padding: '10px', borderRadius: 8, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569' }}>
                       Back
                     </button>
-                    <button onClick={handleForgotReset} disabled={fpLoading} style={{
-                      flex:1, padding:'10px', borderRadius:8, fontSize:13.5, fontWeight:600, cursor:'pointer',
-                      background:'linear-gradient(135deg,#0d9488,#0f766e)', color:'#ffffff',
-                      border:'1px solid rgba(15,118,110,0.3)', boxShadow:'0 2px 8px rgba(13,148,136,0.22)',
-                      opacity: fpLoading ? 0.55 : 1,
-                    }}>
+                    <button onClick={handleForgotReset} disabled={fpLoading}
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: 8, fontSize: 13.5, fontWeight: 600,
+                        cursor: fpLoading ? 'default' : 'pointer', opacity: fpLoading ? 0.6 : 1,
+                        background: 'linear-gradient(135deg, #0d9488, #0f766e)', color: '#ffffff',
+                        border: '1px solid rgba(15,118,110,0.3)',
+                      }}>
                       {fpLoading ? 'Resetting…' : 'Reset Password'}
                     </button>
                   </div>
-                  <div style={{ textAlign:'center' }}>
-                    <button type="button" onClick={handleForgotSendOtp} disabled={fpLoading}
-                      style={{ fontSize:12, color:'rgba(100,116,139,0.5)', background:'none', border:'none',
-                        cursor:'pointer', padding:0 }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color='rgba(45,212,191,0.8)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color='rgba(100,116,139,0.5)')}>
+                  <div style={{ textAlign: 'center' }}>
+                    <button type="button" className="lfgt" onClick={handleForgotSendOtp} disabled={fpLoading}>
                       Resend code
                     </button>
                   </div>
@@ -1319,93 +986,6 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════
-          SUCCESS OVERLAY
-      ══════════════════════════════════════════════════ */}
-      {successInfo && (
-        <div style={{
-          position:'fixed', inset:0, zIndex:80,
-          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-          background:'#040d1a',
-          animation:'successBgIn 0.5s ease forwards',
-        }}>
-          <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-            width:420, height:420, borderRadius:'50%', filter:'blur(110px)',
-            background:'radial-gradient(circle, rgba(13,148,136,0.2) 0%, transparent 65%)',
-            pointerEvents:'none' }} />
-          {[0, 0.65, 1.3].map((delay, i) => (
-            <div key={i} style={{
-              position:'absolute', top:'50%', left:'50%',
-              width:110, height:110, marginTop:-55, marginLeft:-55,
-              borderRadius:'50%',
-              border:`1.5px solid rgba(20,184,166,${0.45 - i * 0.1})`,
-              animation:`successRingOut 2.6s ${delay}s cubic-bezier(0.2,0.6,0.4,1) infinite`,
-              pointerEvents:'none',
-            }} />
-          ))}
-          <div style={{
-            width:100, height:100, borderRadius:'50%',
-            background:'linear-gradient(145deg, rgba(13,148,136,0.2), rgba(15,118,110,0.1))',
-            border:'2px solid rgba(20,184,166,0.5)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            animation:'successCircleIn 1.1s 0.15s cubic-bezier(0.34,1.56,0.64,1) both',
-            boxShadow:'0 0 48px rgba(13,148,136,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
-            position:'relative', zIndex:1,
-          }}>
-            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-              <polyline points="8,22 18,32 36,14" stroke="#5eead4" strokeWidth="3"
-                strokeLinecap="round" strokeLinejoin="round"
-                strokeDasharray="80" strokeDashoffset="80"
-                style={{ animation:'successCheckDraw 1.1s 1.0s cubic-bezier(0.25,0.46,0.45,0.94) forwards' }} />
-            </svg>
-          </div>
-          <div style={{
-            marginTop:28, padding:'5px 18px', borderRadius:999,
-            background:'rgba(13,148,136,0.1)', border:'1px solid rgba(20,184,166,0.2)',
-            animation:'successTextIn 0.7s 1.8s ease both',
-          }}>
-            <p style={{ margin:0, color:'rgba(94,234,212,0.75)', fontSize:11,
-              letterSpacing:'0.18em', textTransform:'uppercase', fontWeight:500 }}>
-              {successInfo.institution}
-            </p>
-          </div>
-          <h1 style={{
-            margin:'16px 0 0', color:'#e2f8f5', fontWeight:300,
-            fontSize:'clamp(1.8rem,5vw,2.5rem)', letterSpacing:'-0.01em',
-            textAlign:'center',
-            animation:'successTextIn 0.75s 2.1s ease both',
-          }}>
-            Welcome back!
-          </h1>
-          <p style={{
-            margin:'10px 0 0', color:'rgba(148,163,184,0.55)', fontSize:14,
-            letterSpacing:'0.01em', textAlign:'center',
-            animation:'successTextIn 0.75s 2.45s ease both',
-          }}>
-            Setting up your workspace
-          </p>
-          <div style={{ display:'flex', gap:7, marginTop:20, animation:'successTextIn 0.7s 2.75s ease both' }}>
-            {[0, 0.22, 0.44].map((delay, i) => (
-              <div key={i} style={{
-                width:7, height:7, borderRadius:'50%', background:'rgba(20,184,166,0.55)',
-                animation:`successDot 1.5s ${delay}s ease-in-out infinite`,
-              }} />
-            ))}
-          </div>
-          <div style={{
-            marginTop:32, width:200, height:2, borderRadius:999,
-            background:'rgba(13,148,136,0.1)', overflow:'hidden',
-            animation:'successTextIn 0.7s 2.9s ease both',
-          }}>
-            <div style={{
-              height:'100%',
-              background:'linear-gradient(90deg, #0d9488, #5eead4, #0d9488)',
-              animation:'successBarFill 3.8s 3.1s cubic-bezier(0.4,0,0.2,1) forwards',
-              width:0,
-            }} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
