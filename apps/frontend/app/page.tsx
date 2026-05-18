@@ -416,19 +416,19 @@ export default function LoginPage() {
         }} />
 
         {/* Logo */}
-        <div style={{ position: 'relative', zIndex: 1, marginBottom: 56 }}>
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: 48 }}>
           {!logoError ? (
-            <Image src="/logo.png" alt="Infovion" width={140} height={70}
-              style={{ objectFit: 'contain', width: 'auto', maxHeight: 54, display: 'block', filter: 'brightness(0) invert(1)' }}
+            <Image src="/logo.png" alt="Infovion" width={220} height={110}
+              style={{ objectFit: 'contain', width: 'auto', height: 90, display: 'block', filter: 'brightness(0) invert(1)' }}
               onError={() => setLogoError(true)} />
           ) : (
-            <p style={{ color: '#2dd4bf', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
+            <p style={{ color: '#2dd4bf', fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
               Infovion
             </p>
           )}
           <p style={{
-            color: '#94a3b8', fontSize: 10.5, fontWeight: 700,
-            letterSpacing: '0.13em', textTransform: 'uppercase', marginTop: 10, marginBottom: 0,
+            color: '#2dd4bf', fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 14, marginBottom: 0,
           }}>
             Academic Management Platform
           </p>
@@ -443,7 +443,7 @@ export default function LoginPage() {
             Everything your school needs, in one place.
           </h1>
           <p style={{
-            color: '#cbd5e1', fontSize: 14, lineHeight: 1.75, margin: '0 0 44px 0',
+            color: '#cbd5e1', fontSize: 14.5, lineHeight: 1.7, margin: '0 0 40px 0',
           }}>
             Attendance, fees, exams, parent communication, and documents — purpose-built for Indian K-12 schools.
           </p>
@@ -467,7 +467,7 @@ export default function LoginPage() {
                     strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <span style={{ color: '#cbd5e1', fontSize: 13.5, lineHeight: 1.5 }}>{feature}</span>
+              <span style={{ color: '#e2e8f0', fontSize: 13.5, lineHeight: 1.5 }}>{feature}</span>
             </div>
           ))}
         </div>
