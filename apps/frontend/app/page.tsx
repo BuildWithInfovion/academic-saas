@@ -382,12 +382,22 @@ export default function LoginPage() {
         @keyframes lspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes lfadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .l-fade { animation: lfadein 0.3s ease forwards; }
+
+        /* Responsive — brand panel */
+        .lbrand { display: none; }
+        .lmobile-logo { display: block; }
+        .lmobile-footer { display: block; }
+        @media (min-width: 1024px) {
+          .lbrand { display: flex !important; flex-direction: column; }
+          .lmobile-logo { display: none !important; }
+          .lmobile-footer { display: none !important; }
+        }
       `}</style>
 
       {/* ════════════════════════════════════════
           LEFT BRAND PANEL  (desktop only)
       ════════════════════════════════════════ */}
-      <div className="hidden lg:flex" style={{
+      <div className="lbrand" style={{
         width: 420, minHeight: '100vh', flexDirection: 'column',
         background: '#0f172a', padding: '52px 48px', position: 'relative', overflow: 'hidden',
       }}>
@@ -409,7 +419,7 @@ export default function LoginPage() {
         <div style={{ position: 'relative', zIndex: 1, marginBottom: 56 }}>
           {!logoError ? (
             <Image src="/logo.png" alt="Infovion" width={140} height={70}
-              style={{ objectFit: 'contain', width: 'auto', maxHeight: 54, display: 'block' }}
+              style={{ objectFit: 'contain', width: 'auto', maxHeight: 54, display: 'block', filter: 'brightness(0) invert(1)' }}
               onError={() => setLogoError(true)} />
           ) : (
             <p style={{ color: '#2dd4bf', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
@@ -417,7 +427,7 @@ export default function LoginPage() {
             </p>
           )}
           <p style={{
-            color: '#334155', fontSize: 10.5, fontWeight: 700,
+            color: '#94a3b8', fontSize: 10.5, fontWeight: 700,
             letterSpacing: '0.13em', textTransform: 'uppercase', marginTop: 10, marginBottom: 0,
           }}>
             Academic Management Platform
@@ -433,7 +443,7 @@ export default function LoginPage() {
             Everything your school needs, in one place.
           </h1>
           <p style={{
-            color: '#475569', fontSize: 14, lineHeight: 1.75, margin: '0 0 44px 0',
+            color: '#94a3b8', fontSize: 14, lineHeight: 1.75, margin: '0 0 44px 0',
           }}>
             Attendance, fees, exams, parent communication, and documents — purpose-built for Indian K-12 schools.
           </p>
@@ -457,7 +467,7 @@ export default function LoginPage() {
                     strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <span style={{ color: '#64748b', fontSize: 13.5, lineHeight: 1.5 }}>{feature}</span>
+              <span style={{ color: '#94a3b8', fontSize: 13.5, lineHeight: 1.5 }}>{feature}</span>
             </div>
           ))}
         </div>
@@ -467,7 +477,7 @@ export default function LoginPage() {
           position: 'relative', zIndex: 1,
           borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, marginTop: 40,
         }}>
-          <p style={{ color: '#1e293b', fontSize: 11, margin: 0 }}>
+          <p style={{ color: '#475569', fontSize: 11, margin: 0 }}>
             © {new Date().getFullYear()} Infovion Technologies · Pune, India
           </p>
         </div>
@@ -483,7 +493,7 @@ export default function LoginPage() {
         <div className="l-fade" style={{ width: '100%', maxWidth: 380 }}>
 
           {/* Mobile logo (hidden on lg+) */}
-          <div className="lg:hidden" style={{ textAlign: 'center', marginBottom: 36 }}>
+          <div className="lmobile-logo" style={{ textAlign: 'center', marginBottom: 36 }}>
             {!logoError ? (
               <Image src="/logo.png" alt="Infovion" width={110} height={55}
                 style={{ objectFit: 'contain', width: 'auto', maxHeight: 46, display: 'block', margin: '0 auto' }}
@@ -726,7 +736,7 @@ export default function LoginPage() {
           )}
 
           {/* Mobile footer */}
-          <div className="lg:hidden" style={{ textAlign: 'center', marginTop: 36, paddingTop: 24, borderTop: '1px solid #f1f5f9' }}>
+          <div className="lmobile-footer" style={{ textAlign: 'center', marginTop: 36, paddingTop: 24, borderTop: '1px solid #f1f5f9' }}>
             <p style={{ color: '#cbd5e1', fontSize: 11, margin: 0 }}>
               © {new Date().getFullYear()} Infovion Technologies · Pune, India
             </p>
