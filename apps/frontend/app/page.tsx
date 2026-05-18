@@ -398,7 +398,7 @@ export default function LoginPage() {
           LEFT BRAND PANEL  (desktop only)
       ════════════════════════════════════════ */}
       <div className="lbrand" style={{
-        width: 420, minHeight: '100vh', flexDirection: 'column',
+        display: 'none', width: 420, minHeight: '100vh', flexDirection: 'column',
         background: '#0f172a', padding: '52px 48px', position: 'relative', overflow: 'hidden',
       }}>
         {/* Subtle dot grid */}
@@ -443,7 +443,7 @@ export default function LoginPage() {
             Everything your school needs, in one place.
           </h1>
           <p style={{
-            color: '#94a3b8', fontSize: 14, lineHeight: 1.75, margin: '0 0 44px 0',
+            color: '#cbd5e1', fontSize: 14, lineHeight: 1.75, margin: '0 0 44px 0',
           }}>
             Attendance, fees, exams, parent communication, and documents — purpose-built for Indian K-12 schools.
           </p>
@@ -467,7 +467,7 @@ export default function LoginPage() {
                     strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <span style={{ color: '#94a3b8', fontSize: 13.5, lineHeight: 1.5 }}>{feature}</span>
+              <span style={{ color: '#cbd5e1', fontSize: 13.5, lineHeight: 1.5 }}>{feature}</span>
             </div>
           ))}
         </div>
@@ -477,7 +477,7 @@ export default function LoginPage() {
           position: 'relative', zIndex: 1,
           borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, marginTop: 40,
         }}>
-          <p style={{ color: '#475569', fontSize: 11, margin: 0 }}>
+          <p style={{ color: '#94a3b8', fontSize: 11, margin: 0 }}>
             © {new Date().getFullYear()} Infovion Technologies · Pune, India
           </p>
         </div>
