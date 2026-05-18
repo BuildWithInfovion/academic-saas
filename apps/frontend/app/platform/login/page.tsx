@@ -142,6 +142,8 @@ export default function PlatformLoginPage() {
       const data = await res.json();
       setLoadStep(3);
       setAuth(data.accessToken, data.admin);
+      const sec = window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `platform_ready=1; path=/; max-age=86400; SameSite=Lax${sec}`;
       const name = email.split('@')[0] || 'Admin';
       setSuccessInfo({ name });
       await new Promise<void>((res) => setTimeout(res, 5500));

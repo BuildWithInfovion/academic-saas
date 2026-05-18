@@ -134,6 +134,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const handleLogout = async () => {
     logout();
     await platformFetch('/platform/auth/logout', { method: 'POST' }).catch(() => {});
+    document.cookie = 'platform_ready=; path=/; max-age=0; SameSite=Lax';
     router.push('/platform/login');
   };
 

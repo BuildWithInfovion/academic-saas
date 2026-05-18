@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/platform') && pathname !== '/platform/login') {
-    if (!request.cookies.get('platform_rt')) {
+    if (!request.cookies.get('platform_rt') && !request.cookies.get('platform_ready')) {
       return NextResponse.redirect(new URL('/platform/login', request.url));
     }
   }
